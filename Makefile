@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server
+.PHONY: build up down server client ps logs fmt amend restart
 
 up:
 	docker compose up -d
