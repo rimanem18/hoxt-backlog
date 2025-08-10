@@ -90,7 +90,7 @@ docker compose exec client bun run dev
 
 ```bash
 # example
-docker compose exec client bun run dev
+docker compose exec server bun run dev
 ```
 
 ## コード品質・フォーマット
