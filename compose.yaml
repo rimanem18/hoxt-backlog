@@ -1,0 +1,13 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/server/Dockerfile
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    volumes:
+      - ./app/server:/home/bun/server
+    environment:
+      - NODE_ENV=development
+      - SERVER_PORT=${SERVER_PORT}
+    tty: true
