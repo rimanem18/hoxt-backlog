@@ -8,7 +8,7 @@ export default function HelloWorld() {
   const { data, isPending, error } = useQuery({
     queryKey: ['helloWorld'],
     queryFn: () =>
-      fetch('http://localhost:3001/api/hello').then((res) => {
+      fetch('http://localhost:3001/api/greet').then((res) => {
         return res.json();
       }),
   });
