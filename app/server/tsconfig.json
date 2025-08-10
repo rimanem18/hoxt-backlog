@@ -1,7 +1,33 @@
 {
   "compilerOptions": {
     "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    // Bun は ESM 前提＆モジュール解決はバンドラ流
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": true,
+
+    // Bun 環境の型（Node と被らせたくない場合は bun に限定）
+    // Bun の Node 互換APIも使うなら "types": ["bun-types"]
+    // できるだけ衝突を避けたいなら、まずは空配列にして必要時だけ追加
+    "types": ["bun-types"],
+
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
-  }
+    "jsxImportSource": "hono/jsx",
+
+    // 好みで安全性UP
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // DOM が要るなら lib を追加
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "build", "**/*.test.*", "**/*.spec.*"]
 }

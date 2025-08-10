@@ -12,6 +12,7 @@
   - feature-based ディレクトリ
 - **`app/server/`**: server コンテナにバインド（Hono API アプリケーション）
   - feature-based ディレクトリ
+- **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
 - **`compose.yml`**: Docker Compose 設定ファイル
 
@@ -53,7 +54,7 @@ docker compose exec client bun run dev
   - テストコードに記載するテストケース名は日本語で記載
 - **必須**: テストは Bun 標準を使用する
 - **必須**: ファイルの末尾には改行を入れて空行を作る
-- **必須**: `docker compose exec client bun tsc --noEmit` による型チェック
+- **必須**: `docker compose exec client bunx tsc --noEmit` による型チェック
 - **必須**: `docker compose exec client bun test` による自動テスト
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
@@ -69,6 +70,8 @@ docker compose exec client bun run dev
 - **禁止**: `var` の使用
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
+- **禁止**: `JSX.Element` 型の返却
+  - `React.ReactNode` 型で代用
 
 # バックエンド開発ガイドライン
 
@@ -99,7 +102,7 @@ docker compose exec client bun run dev
   - テストコードに記載するテストケース名は日本語で記載
 - **必須**: テストは Bun 標準を使用する
 - **必須**: ファイルの末尾には改行を入れて空行を作る
-- **必須**: `docker compose exec client bun tsc --noEmit` による型チェック
+- **必須**: `docker compose exec client bunx tsc --noEmit` による型チェック
 - **必須**: `docker compose exec client bun test` による自動テスト
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
@@ -115,3 +118,5 @@ docker compose exec client bun run dev
 - **禁止**: `var` の使用
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
+- **禁止**: `JSX.Element` 型の返却
+  - `React.ReactNode` 型で代用

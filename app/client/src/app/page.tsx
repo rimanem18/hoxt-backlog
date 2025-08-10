@@ -2,9 +2,9 @@ import { HelloWorld } from '@/features/hello-world';
 
 /**
  * ホームページコンポーネント
- * @returns {JSX.Element} ホームページのレイアウト
+ * @returns {React.ReactNode} ホームページのレイアウト
  */
-export default function Home(): JSX.Element {
+export default function Home(): React.ReactNode {
   return (
     <div className="font-sans min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="max-w-4xl mx-auto">
