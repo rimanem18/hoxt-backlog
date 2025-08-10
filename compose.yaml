@@ -10,6 +10,9 @@ services:
     environment:
       - NODE_ENV=development
       - SERVER_PORT=${SERVER_PORT}
+      - ACCESS_ALLOW_ORIGIN=${ACCESS_ALLOW_ORIGIN}
+      - ACCESS_ALLOW_METHODS=${ACCESS_ALLOW_METHODS}
+      - ACCESS_ALLOW_HEADERS=${ACCESS_ALLOW_HEADERS}
     tty: true
 
   client:

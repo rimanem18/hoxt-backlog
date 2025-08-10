@@ -1,7 +1,7 @@
 {
   "name": "server",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun run --hot src/bun.serve.ts",
     "check": "biome check src",
     "fix": "biome check src --write",
     "typecheck": "tsc --noEmit"
