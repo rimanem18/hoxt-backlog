@@ -19,5 +19,8 @@ ps:
 	docker compose ps
 logs:
 	docker compose logs -f
+fmt:
+	docker compose exec client bun run fix
+	docker compose exec server bun run fix
 amend:
 	git commit --amend --no-edit
