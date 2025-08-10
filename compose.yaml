@@ -11,3 +11,16 @@ services:
       - NODE_ENV=development
       - SERVER_PORT=${SERVER_PORT}
     tty: true
+
+  client:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    ports:
+      - "${CLIENT_PORT}:${CLIENT_PORT}"
+    volumes:
+      - ./app/client:/home/bun/client
+    environment:
+      - NODE_ENV=development
+      - CLIENT_PORT=${CLIENT_PORT}
+    tty: true
