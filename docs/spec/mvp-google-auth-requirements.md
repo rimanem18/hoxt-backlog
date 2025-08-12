@@ -65,6 +65,12 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
   - Application層（Use cases, Application services）
   - Domain層（Entities, Aggregates, Domain services）
   - Infrastructure層（Repository implementations, External services）
+- REQ-408: システムはプロバイダー非依存の認証アーキテクチャを実装しなければならない
+- REQ-409: Domain層は特定の認証プロバイダーに依存してはならない
+- REQ-410: 新規プロバイダー追加時、既存コードの変更を最小限に抑えなければならない（開放閉鎖の原則）
+- REQ-411: ユーザーエンティティはプロバイダー固有の情報を直接持ってはならない
+- REQ-412: 認証フローの抽象化インターフェースを定義しなければならない
+- REQ-413: 環境変数に定義した DB_TABLE_PREFIX がテーブル名接頭辞として利用できるようにしなければならない
 
 ## 非機能要件
 
@@ -78,6 +84,7 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 
 - NFR-101: すべての認証通信はHTTPS経由で行われなければならない（Supabaseが自動対応）
 - NFR-102: 認証トークンはSupabaseが管理するSecure Cookieに保存されなければならない
+- NFR-103: システムは RLS で、ユーザーが自分自身の情報のみが取得できるようにしなければならない
 
 ### ユーザビリティ
 
@@ -201,7 +208,7 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 - **AuthController**: HTTP リクエスト/レスポンスの処理
 - **AuthMiddleware**: リクエスト前のJWT検証処理
 
-## MVP後の拡張予定（対象外）
+## MVP後の拡張予定（今回の要件では対象外）
 
 以下は今回のMVPでは実装せず、将来的な拡張として考慮する：
 
@@ -209,5 +216,23 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 - セッション管理機能（user_sessions テーブル）  
 - 権限管理機能（RBAC）
 - イベントソーシング（domain_events テーブル）
-- 複数認証プロバイダー対応
+- 複数認証プロバイダー対応の実装
+- アカウント連携機能（同一ユーザーの複数プロバイダー紐付け）
 - 高度なセキュリティ機能
+
+将来対応予定の認証プロバイダー：
+
+- **Apple Sign In**: iOS/macOSユーザー向け
+- **Microsoft Azure AD**: 企業ユーザー向け  
+- **GitHub OAuth**: 開発者向け
+- **Facebook Login**: 一般ユーザー向け
+- **Twitter OAuth**: ソーシャル連携
+- **LINE Login**: 日本市場向け
+
+各プロバイダー固有の考慮事項:
+
+- Apple: プライバシー重視（メール非公開オプション）
+- Microsoft: 企業認証（テナント管理）
+- GitHub: 開発者向け（リポジトリアクセス権）
+- Facebook: ソーシャルデータ（友人関係）
+- LINE: 日本語UI対応
