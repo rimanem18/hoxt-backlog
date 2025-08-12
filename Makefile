@@ -15,6 +15,10 @@ server:
 	docker compose exec server ash
 client:
 	docker compose exec client ash
+db:
+	docker compose exec db bash
+sql:
+	docker compose exec db psql -U postgres -d postgres
 ps:
 	docker compose ps
 logs:

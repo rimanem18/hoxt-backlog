@@ -27,3 +27,16 @@ services:
       - NODE_ENV=development
       - CLIENT_PORT=${CLIENT_PORT}
     tty: true
+
+  db:
+    build:
+      context: .
+      dockerfile: docker/db/Dockerfile
+    volumes:
+      - ./app/server/src/infrastructure/database/migrations:/migrations:ro
+    ports:
+      - "5432:5432"
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_PASSWORD: postgres
+    tty: true
