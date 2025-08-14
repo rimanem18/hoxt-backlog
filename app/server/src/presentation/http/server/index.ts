@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import corsMiddleware from '../middleware/corsMiddleware';
-import greet from '../routes/greetRoutes';
+import { greet, health } from '../routes';
 
 /**
  * Hono アプリケーションサーバーを作成する
@@ -14,6 +14,7 @@ const createServer = (): Hono => {
 
   // API ルートをマウント
   app.route('/api', greet);
+  app.route("/api",health)
 
   return app;
 };

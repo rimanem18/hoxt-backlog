@@ -31,7 +31,7 @@
 
 #### TASK-002: バックエンド環境設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **要件リンク**: バックエンド技術スタック
 - **依存タスク**: TASK-001
@@ -40,17 +40,10 @@
   - 必要な npm（bun） パッケージのインストール
   - TypeScript設定の確認
   - ヘルスチェックエンドポイントの実装
-- **環境変数設定**:
-  ```
-  SUPABASE_JWT_SECRET=your_supabase_jwt_secret
-  DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
-  DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
-  PORT=3001
-  ENVIRONMENT=development
-  ```
+- [x] **環境変数設定**（.env）:
 - **完了条件**:
-  - [ ] サーバーが `http://localhost:3001` で起動する
-  - [ ] `GET /api/health` エンドポイントが200を返す
+  - [x] サーバーが `http://localhost:3001` で起動する
+  - [x] `GET /api/health` エンドポイントが200を返す
 - **確認コマンド**:
   ```bash
   docker compose exec server bun run dev
