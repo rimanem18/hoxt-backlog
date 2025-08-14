@@ -1,20 +1,15 @@
 -- ============================================================================
 -- MVP Google認証システム データベーススキーマ
--- 
+--
 -- 作成日: 2025-08-12
 -- 更新日: 2025-08-12
--- 
+--
 -- 設計原則:
 -- 1. プロバイダー非依存設計（将来的な拡張対応）
 -- 2. 環境変数による動的テーブル名接頭辞対応
 -- 3. DDD + クリーンアーキテクチャ対応
 -- 4. パフォーマンス最適化済みインデックス設計
 -- ============================================================================
-
--- 環境変数設定の例:
--- DB_TABLE_PREFIX=hoxt_dev_  (development)
--- DB_TABLE_PREFIX=hoxt_prod_ (production)
--- DB_TABLE_PREFIX=hoxt_test_ (testing)
 
 -- ============================================================================
 -- Extensions（必要な拡張機能を有効化）
@@ -34,7 +29,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- 将来的な拡張を考慮した enum 型
 CREATE TYPE auth_provider_type AS ENUM (
     'google',
-    'apple', 
+    'apple',
     'microsoft',
     'github',
     'facebook',
@@ -50,24 +45,24 @@ CREATE TYPE auth_provider_type AS ENUM (
 CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}users (
     -- プライマリキー（UUID v4）
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    
+
     -- 外部認証プロバイダーでのユーザーID
     -- Google の場合は sub claim、Apple の場合は user identifier など
     external_id VARCHAR(255) NOT NULL,
-    
+
     -- 認証プロバイダー種別
     provider auth_provider_type NOT NULL,
-    
+
     -- ユーザー基本情報
     email VARCHAR(320) NOT NULL, -- RFC 5321 準拠の最大長
     name VARCHAR(255) NOT NULL,
     avatar_url TEXT, -- 長いURL対応のためTEXT型使用
-    
+
     -- タイムスタンプ
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP WITH TIME ZONE,
-    
+
     -- 制約定義
     CONSTRAINT unique_external_id_provider UNIQUE (external_id, provider),
     CONSTRAINT valid_email CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
@@ -81,22 +76,22 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}users (
 
 -- 高速認証のための複合インデックス
 -- JWT検証時の external_id + provider での検索を最適化
-CREATE INDEX IF NOT EXISTS idx_users_external_id_provider 
+CREATE INDEX IF NOT EXISTS idx_users_external_id_provider
 ON ${DB_TABLE_PREFIX}users (external_id, provider);
 
 -- メールアドレス検索用インデックス
 -- 重複チェック・ユーザー検索用
-CREATE INDEX IF NOT EXISTS idx_users_email 
+CREATE INDEX IF NOT EXISTS idx_users_email
 ON ${DB_TABLE_PREFIX}users (email);
 
 -- 最終ログイン日時でのソート・フィルタ用インデックス
 -- 分析・管理画面での使用を想定
-CREATE INDEX IF NOT EXISTS idx_users_last_login_at 
+CREATE INDEX IF NOT EXISTS idx_users_last_login_at
 ON ${DB_TABLE_PREFIX}users (last_login_at DESC NULLS LAST);
 
--- プロバイダー別統計用インデックス  
+-- プロバイダー別統計用インデックス
 -- 管理画面・分析での使用を想定
-CREATE INDEX IF NOT EXISTS idx_users_provider_created_at 
+CREATE INDEX IF NOT EXISTS idx_users_provider_created_at
 ON ${DB_TABLE_PREFIX}users (provider, created_at DESC);
 
 -- ============================================================================
@@ -131,9 +126,9 @@ END;
 $$ language 'plpgsql';
 
 -- users テーブルの updated_at 自動更新トリガー
-CREATE TRIGGER update_users_updated_at 
-    BEFORE UPDATE ON ${DB_TABLE_PREFIX}users 
-    FOR EACH ROW 
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON ${DB_TABLE_PREFIX}users
+    FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
@@ -147,7 +142,7 @@ BEGIN
     IF current_setting('app.environment', true) = 'development' THEN
         INSERT INTO ${DB_TABLE_PREFIX}users (
             external_id,
-            provider, 
+            provider,
             email,
             name,
             avatar_url,
@@ -155,7 +150,7 @@ BEGIN
         ) VALUES (
             'dev_user_123456789',
             'google',
-            'developer@example.com', 
+            'developer@example.com',
             '開発テストユーザー',
             'https://example.com/avatar.jpg',
             CURRENT_TIMESTAMP - INTERVAL '1 day'
@@ -170,7 +165,7 @@ END $$;
 -- 統計・分析用ビュー
 -- 管理画面・ダッシュボードでの使用を想定
 CREATE OR REPLACE VIEW ${DB_TABLE_PREFIX}user_statistics AS
-SELECT 
+SELECT
     provider,
     COUNT(*) as total_users,
     COUNT(CASE WHEN last_login_at > CURRENT_TIMESTAMP - INTERVAL '30 days' THEN 1 END) as active_users_30d,

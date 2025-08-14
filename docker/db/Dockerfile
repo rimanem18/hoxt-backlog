@@ -1,8 +1,9 @@
-# DBマイグレーション専用コンテナ
-FROM supabase/postgres:17.4.1.073
+# ベースイメージ
+FROM oven/bun:1.2.19-alpine
 
-# マイグレーション実行用のスクリプトを追加
-COPY docker/db/scripts/ /usr/local/bin/
+# 作業ディレクトリを設定
+WORKDIR /home/bun/db
+RUN chown -R bun:bun /home/bun/
+USER bun
 
-# スクリプトに実行権限を付与
-RUN chmod +x /usr/local/bin/*.sh
+CMD ["ash"]

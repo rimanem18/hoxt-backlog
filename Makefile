@@ -16,9 +16,9 @@ server:
 client:
 	docker compose exec client ash
 db:
-	docker compose exec db bash
+	docker compose exec db ash
 sql:
-	docker compose exec db psql -U postgres -d postgres
+	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}
 ps:
 	docker compose ps
 logs:

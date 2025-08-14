@@ -35,7 +35,7 @@
 
 #### テーブル構造
 ```sql
-CREATE TABLE hoxt_dev_users (
+CREATE TABLE ${DB_TABLE_PREFIX}users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     external_id VARCHAR(255) NOT NULL,
     provider auth_provider_type NOT NULL,
@@ -131,21 +131,21 @@ CREATE TYPE auth_provider_type AS ENUM (
 #### 1. 高速認証用インデックス
 ```sql
 CREATE INDEX idx_users_external_id_provider 
-ON hoxt_dev_users (external_id, provider);
+ON ${DB_TABLE_PREFIX}users (external_id, provider);
 ```
 
 **用途**: ログイン時の「このGoogleアカウントのユーザーはいるかな？」検索
 **処理例**: 
 ```sql
 -- この検索が高速になる
-SELECT * FROM hoxt_dev_users 
+SELECT * FROM ${DB_TABLE_PREFIX}users 
 WHERE external_id = '103547991597142817347' 
   AND provider = 'google';
 ```
 
 #### 2. メール検索用インデックス
 ```sql
-CREATE INDEX idx_users_email ON hoxt_dev_users (email);
+CREATE INDEX idx_users_email ON ${DB_TABLE_PREFIX}users (email);
 ```
 
 **用途**: 
@@ -156,7 +156,7 @@ CREATE INDEX idx_users_email ON hoxt_dev_users (email);
 #### 3. ログイン履歴用インデックス
 ```sql
 CREATE INDEX idx_users_last_login_at 
-ON hoxt_dev_users (last_login_at DESC NULLS LAST);
+ON ${DB_TABLE_PREFIX}users (last_login_at DESC NULLS LAST);
 ```
 
 **用途**:
@@ -186,14 +186,14 @@ flowchart TD
 
 1. **存在チェック**
 ```sql
-SELECT * FROM hoxt_dev_users 
+SELECT * FROM ${DB_TABLE_PREFIX}users 
 WHERE external_id = '103547991597142817347' 
   AND provider = 'google';
 ```
 
 2. **新規作成（存在しない場合）**
 ```sql
-INSERT INTO hoxt_dev_users (
+INSERT INTO ${DB_TABLE_PREFIX}users (
     external_id, provider, email, name, avatar_url, last_login_at
 ) VALUES (
     '103547991597142817347',
@@ -207,7 +207,7 @@ INSERT INTO hoxt_dev_users (
 
 3. **ログイン記録更新（存在する場合）**
 ```sql
-UPDATE hoxt_dev_users 
+UPDATE ${DB_TABLE_PREFIX}users 
 SET last_login_at = CURRENT_TIMESTAMP 
 WHERE external_id = '103547991597142817347' 
   AND provider = 'google';
@@ -227,7 +227,7 @@ flowchart TD
 **実際の処理:**
 ```sql
 -- ユーザー情報取得と最終ログイン更新を同時実行
-UPDATE hoxt_dev_users 
+UPDATE ${DB_TABLE_PREFIX}users 
 SET last_login_at = CURRENT_TIMESTAMP 
 WHERE external_id = '103547991597142817347' 
   AND provider = 'google'
@@ -259,7 +259,7 @@ RETURNING *;
 **削除権への対応準備:**
 ```sql
 -- 将来のユーザー削除機能用
-DELETE FROM hoxt_dev_users 
+DELETE FROM ${DB_TABLE_PREFIX}users 
 WHERE id = 'ユーザーID';
 ```
 
@@ -271,7 +271,7 @@ SELECT json_build_object(
     'name', name,
     'created_at', created_at,
     'last_login_at', last_login_at
-) FROM hoxt_dev_users 
+) FROM ${DB_TABLE_PREFIX}users 
 WHERE id = 'ユーザーID';
 ```
 
@@ -325,7 +325,7 @@ interface IUserRepository {
 class PostgreSQLUserRepository implements IUserRepository {
   async findByExternalId(externalId: string, provider: AuthProvider): Promise<User | null> {
     const query = `
-      SELECT * FROM hoxt_dev_users 
+      SELECT * FROM ${DB_TABLE_PREFIX}users 
       WHERE external_id = $1 AND provider = $2
     `;
     const result = await this.db.query(query, [externalId, provider]);
@@ -341,7 +341,7 @@ class PostgreSQLUserRepository implements IUserRepository {
 ```sql
 BEGIN;
   -- ユーザー作成
-  INSERT INTO hoxt_dev_users (...) VALUES (...);
+  INSERT INTO ${DB_TABLE_PREFIX}users (...) VALUES (...);
   
   -- 将来の拡張: 作成ログの記録
   -- INSERT INTO user_creation_logs (...) VALUES (...);
@@ -354,7 +354,7 @@ COMMIT;
 **楽観的ロック（将来対応）:**
 ```sql
 -- updated_atを使ったバージョン管理
-UPDATE hoxt_dev_users 
+UPDATE ${DB_TABLE_PREFIX}users 
 SET name = $1, updated_at = CURRENT_TIMESTAMP 
 WHERE id = $2 AND updated_at = $3;
 ```
@@ -365,13 +365,13 @@ WHERE id = $2 AND updated_at = $3;
 
 **設定の意味:**
 ```sql
-ALTER TABLE hoxt_dev_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ${DB_TABLE_PREFIX}users ENABLE ROW LEVEL SECURITY;
 ```
 
 **将来の実装例:**
 ```sql
 -- ユーザーが自分の情報のみ見れるポリシー
-CREATE POLICY users_self_access ON hoxt_dev_users
+CREATE POLICY users_self_access ON ${DB_TABLE_PREFIX}users
     FOR ALL
     USING (auth.jwt() ->> 'sub' = external_id::text);
 ```
@@ -406,14 +406,14 @@ const result = await db.query(query, [userInput]);
 **EXPLAIN ANALYZE での性能確認:**
 ```sql
 EXPLAIN ANALYZE 
-SELECT * FROM hoxt_dev_users 
+SELECT * FROM ${DB_TABLE_PREFIX}users 
 WHERE external_id = '103547991597142817347' 
   AND provider = 'google';
 ```
 
 **期待結果:**
 ```
-Index Scan using idx_users_external_id_provider on hoxt_dev_users
+Index Scan using idx_users_external_id_provider on ${DB_TABLE_PREFIX}users
   (cost=0.28..8.29 rows=1 width=122) (actual time=0.012..0.013 rows=1 loops=1)
 ```
 
@@ -439,7 +439,7 @@ const pool = new Pool({
 **VACUUM ANALYZE の実行:**
 ```sql
 -- 統計情報更新とゴミデータ削除
-VACUUM ANALYZE hoxt_dev_users;
+VACUUM ANALYZE ${DB_TABLE_PREFIX}users;
 ```
 
 **インデックス統計の確認:**
@@ -448,7 +448,7 @@ SELECT
     schemaname, tablename, indexname,
     idx_scan, idx_tup_read, idx_tup_fetch
 FROM pg_stat_user_indexes 
-WHERE tablename = 'hoxt_dev_users';
+WHERE tablename = '${DB_TABLE_PREFIX}users';
 ```
 
 ### バックアップ戦略
@@ -456,7 +456,7 @@ WHERE tablename = 'hoxt_dev_users';
 **日次バックアップ:**
 ```bash
 pg_dump -h localhost -U postgres -d hoxt_dev \
-  --table=hoxt_dev_users \
+  --table=${DB_TABLE_PREFIX}users \
   --file=users_backup_$(date +%Y%m%d).sql
 ```
 
@@ -474,7 +474,7 @@ pg_dump -h localhost -U postgres -d hoxt_dev \
 SELECT 
     DATE(created_at) as date,
     COUNT(*) as new_users
-FROM hoxt_dev_users 
+FROM ${DB_TABLE_PREFIX}users 
 WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY DATE(created_at)
 ORDER BY date;
@@ -488,9 +488,9 @@ ORDER BY date;
 
 #### 1. 認証ログテーブル
 ```sql
-CREATE TABLE hoxt_dev_auth_logs (
+CREATE TABLE ${DB_TABLE_PREFIX}auth_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES hoxt_dev_users(id),
+    user_id UUID REFERENCES ${DB_TABLE_PREFIX}users(id),
     action VARCHAR(50) NOT NULL, -- 'login', 'logout'
     ip_address INET,
     user_agent TEXT,
@@ -501,9 +501,9 @@ CREATE TABLE hoxt_dev_auth_logs (
 
 #### 2. セッション管理テーブル
 ```sql
-CREATE TABLE hoxt_dev_user_sessions (
+CREATE TABLE ${DB_TABLE_PREFIX}user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES hoxt_dev_users(id),
+    user_id UUID REFERENCES ${DB_TABLE_PREFIX}users(id),
     session_token VARCHAR(255) NOT NULL UNIQUE,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

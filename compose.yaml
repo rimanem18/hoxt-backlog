@@ -8,7 +8,6 @@ services:
     volumes:
       - ./app/server:/home/bun/server
     environment:
-      - NODE_ENV=development
       - SERVER_PORT=${SERVER_PORT}
       - ACCESS_ALLOW_ORIGIN=${ACCESS_ALLOW_ORIGIN}
       - ACCESS_ALLOW_METHODS=${ACCESS_ALLOW_METHODS}
@@ -24,19 +23,18 @@ services:
     volumes:
       - ./app/client:/home/bun/client
     environment:
-      - NODE_ENV=development
       - CLIENT_PORT=${CLIENT_PORT}
+      - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
     tty: true
 
   db:
     build:
       context: .
       dockerfile: docker/db/Dockerfile
-    volumes:
-      - ./app/server/src/infrastructure/database/migrations:/migrations:ro
     ports:
       - "5432:5432"
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
-      POSTGRES_PASSWORD: postgres
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
     tty: true
