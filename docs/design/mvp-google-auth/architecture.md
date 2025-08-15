@@ -68,7 +68,7 @@ SupabaseとGoogle OAuthを使用したフロントエンド（Next.js）・バ�
 ##### Domain層（Entities & Business Logic）
 - **責務**: ビジネスルール・不変条件の管理
 - **コンポーネント**:
-  - `User`: ユーザーエンティティ（ID、email、name、プロバイダー情報）
+  - `UserEntity`: ユーザーエンティティ（ID、email、name、プロバイダー情報）
   - `UserAggregate`: ユーザー作成・更新の整合性管理
   - `AuthenticationDomainService`: 認証ビジネスロジック
   - `UserRepository`: ユーザー永続化の抽象化

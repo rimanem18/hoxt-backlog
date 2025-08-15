@@ -66,18 +66,16 @@
 - **ファイル構成**:
   ```
   app/server/src/domain/
-  ├── entities/
-  │   └── User.ts
-  ├── value-objects/
-  │   ├── AuthProvider.ts
-  │   ├── CreateUserInput.ts
-  │   └── UpdateUserInput.ts
-  └── errors/
-      ├── DomainError.ts
-      ├── AuthenticationError.ts
-      ├── JwtValidationError.ts
-      ├── UserNotFoundError.ts
-      └── InvalidProviderError.ts
+  └── user/
+      ├── valueobjects/
+      │    ├── CreateUserInput.ts
+      │    └──UpdateUserInput.ts
+      ├── errors/
+      │   ├── UserNotFoundError.ts
+      │   └── InvalidProviderError.ts
+      ├── AuthProvider.ts
+      ├── UserEntity.ts
+      └── index.ts
   ```
 - **単体テスト要件**:
   - [ ] User エンティティのバリデーションテスト
