@@ -16,6 +16,7 @@ export { InvalidProviderError } from './errors/InvalidProviderError';
 // ドメインエラー
 export { UserDomainError } from './errors/UserDomainError';
 export { UserNotFoundError } from './errors/UserNotFoundError';
+export type { User } from './UserEntity';
 // エンティティ
 export { UserEntity } from './UserEntity';
 export type { CreateUserInput } from './valueobjects/CreateUserInput';

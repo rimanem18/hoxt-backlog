@@ -7,6 +7,33 @@ import type { UpdateUserInput } from './valueobjects/UpdateUserInput';
 import { validateUpdateUserInput } from './valueobjects/UpdateUserInput';
 
 /**
+ * ユーザー型（エンティティの公開インターフェース）
+ *
+ * UserEntityのtoObject()メソッドが返すオブジェクトの型定義。
+ * 外部モジュールでの型チェックに使用される。
+ */
+export interface User {
+  /** ユーザー固有ID（UUID v4） */
+  id: string;
+  /** 外部プロバイダーでのユーザーID（Google Sub Claim等） */
+  externalId: string;
+  /** 認証プロバイダー種別 */
+  provider: AuthProvider;
+  /** メールアドレス（必須） */
+  email: string;
+  /** 表示名 */
+  name: string;
+  /** プロフィール画像URL（オプション） */
+  avatarUrl: string | null;
+  /** アカウント作成日時 */
+  createdAt: Date;
+  /** 最終更新日時 */
+  updatedAt: Date;
+  /** 最終ログイン日時 */
+  lastLoginAt: Date | null;
+}
+
+/**
  * ユーザーエンティティ
  *
  * ドメインの中核となるユーザー表現。
@@ -177,7 +204,7 @@ export class UserEntity {
    *
    * @returns ユーザー基本情報オブジェクト
    */
-  public toObject() {
+  public toObject(): User {
     return {
       id: this.id,
       externalId: this.externalId,

@@ -628,8 +628,8 @@ export class SupabaseAuthProvider implements IAuthProvider {
 
 #### 1-1. エンティティの実装
 ```typescript
-// app/server/src/domain/entities/User.ts
-export class User {
+// app/server/src/domain/entities/UserEntity.ts
+export class UserEntity {
   // What: ユーザーエンティティの基本属性とビジネスルールを管理
   // Why: ユーザーの不変条件を保証し、ビジネスロジックを集約するため
 }
