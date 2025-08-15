@@ -1,5 +1,5 @@
 import { cors } from 'hono/cors';
-import { parseCommaSeparated } from '../../../shared/array';
+import { parseCommaSeparated } from '@/shared/array';
 
 export const corsMiddleware = cors({
   origin: parseCommaSeparated(process.env.ACCESS_ALLOW_ORIGIN),
