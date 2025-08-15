@@ -78,6 +78,7 @@ docker compose exec client bun run dev
 ## 技術スタック
 
 - **バックエンド**: Hono 4 API + PostgreSQL
+  - **認証**: Supabase
   - **パッケージ管理**: Bun
   - **テスト**: Bun 標準
   - **フォーマット**: Biome + TypeScript
@@ -104,6 +105,8 @@ docker compose exec server bun run dev
 - **必須**: ファイルの末尾には改行を入れて空行を作る
 - **必須**: `docker compose exec client bunx tsc --noEmit` による型チェック
 - **必須**: `docker compose exec client bun test` による自動テスト
+- **必須**: 同一層の import には相対パスを使用し、他の層からの import には `@/...` を使った絶対パス import を使う
+- **必須**: ドメインエラーは `errors` ディレクトリ、値オブジェクトは `valueobjects` ディレクトリに配置する。エンティティは `index` と同じディレクトリに配置する
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
 - **非推奨**: テストでのモックの乱用
@@ -118,5 +121,3 @@ docker compose exec server bun run dev
 - **禁止**: `var` の使用
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
-- **禁止**: `JSX.Element` 型の返却
-  - `React.ReactNode` 型で代用
