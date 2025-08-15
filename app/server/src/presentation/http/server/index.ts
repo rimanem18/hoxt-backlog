@@ -14,7 +14,7 @@ const createServer = (): Hono => {
 
   // API ルートをマウント
   app.route('/api', greet);
-  app.route("/api",health)
+  app.route('/api', health);
 
   return app;
 };
