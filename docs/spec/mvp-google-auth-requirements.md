@@ -186,7 +186,7 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 ### 依存関係
 
 - フロントエンド: @supabase/supabase-js, Next.js 15, Tailwind CSS
-- バックエンド: Hono, PostgreSQL client, JWT verification library
+- バックエンド: Hono, PostgreSQL client,Drizzle ORM, JWT verification library
 
 ## DDD学習のポイント
 

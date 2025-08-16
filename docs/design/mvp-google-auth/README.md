@@ -45,7 +45,7 @@ graph TB
 
 ### 主要技術スタック
 - **フロントエンド**: Next.js 15 + TypeScript + Tailwind CSS + Redux
-- **バックエンド**: Hono 4 + TypeScript + PostgreSQL
+- **バックエンド**: Hono 4 + TypeScript + PostgreSQL（Supabase DB + Drizzle ORM） 
 - **認証**: Supabase Auth + Google OAuth 2.0
 - **アーキテクチャ**: DDD + クリーンアーキテクチャ
 - **データベース**: PostgreSQL（環境変数による動的テーブル名対応）

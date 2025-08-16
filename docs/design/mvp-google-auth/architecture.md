@@ -45,7 +45,7 @@ SupabaseとGoogle OAuthを使用したフロントエンド（Next.js）・バ�
 - **フレームワーク**: Hono 4
 - **認証方式**: JWT検証（Supabase JWT Secret）
 - **アーキテクチャ**: DDD + クリーンアーキテクチャ
-- **データベース**: PostgreSQL
+- **データベース**: PostgreSQL（Supabase DB + Drizzle ORM）
 
 #### DDD層構造
 
@@ -84,6 +84,7 @@ SupabaseとGoogle OAuthを使用したフロントエンド（Next.js）・バ�
 
 ### データベース（PostgreSQL + Supabase）
 - **DBMS**: PostgreSQL（Supabase DB）
+- **ORM**: Drizzle ORM
 - **接続方式**: Transaction Pooler（port: 6543）- サーバーレス環境最適化
 - **テーブル設計**: プロバイダー非依存・拡張可能設計
 - **接頭辞対応**: 環境変数による動的テーブル名
