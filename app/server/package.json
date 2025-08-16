@@ -7,10 +7,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.9.0"
+    "hono": "^4.9.0",
+    "uuid": "^11.1.0",
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
-    "@types/bun": "latest"
+    "@types/bun": "^1.2.20",
+    "@types/uuid": "^10.0.0"
   }
 }

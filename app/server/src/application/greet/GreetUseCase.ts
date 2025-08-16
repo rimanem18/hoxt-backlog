@@ -1,4 +1,4 @@
-import { GreetEntity } from '../../domain/greet/GreetEntity';
+import { GreetEntity } from '@/domain/greet/GreetEntity';
 
 /**
  * Greet を取得するユースケース

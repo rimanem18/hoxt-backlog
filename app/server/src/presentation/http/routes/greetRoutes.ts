@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { GreetUseCase } from '../../../application/greet/GreetUseCase';
+import { GreetUseCase } from '@/application/greet/GreetUseCase';
 
 /**
  * Greet API のルート定義
