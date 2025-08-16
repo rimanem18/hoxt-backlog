@@ -1,5 +1,9 @@
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { CreateUserInput, UpdateUserInput } from '@/domain/user';
+import type {
+  AuthProvider,
+  CreateUserInput,
+  UpdateUserInput,
+} from '@/domain/user';
 import { UserEntity, UserNotFoundError } from '@/domain/user';
 
 /**
@@ -56,9 +60,6 @@ export class UserAggregate {
       return new UserAggregate(userEntity, userRepository);
     }
 
-    // 新規ユーザーエンティティを作成
-    const newUserEntity = UserEntity.create(createInput);
-
     // データベースに永続化
     const persistedUser = await userRepository.create(createInput);
 
@@ -100,7 +101,7 @@ export class UserAggregate {
    */
   public static async findByExternalId(
     externalId: string,
-    provider: any,
+    provider: AuthProvider,
     userRepository: IUserRepository,
   ): Promise<UserAggregate | null> {
     const userEntity = await userRepository.findByExternalId(

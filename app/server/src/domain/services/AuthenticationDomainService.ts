@@ -71,9 +71,6 @@ export class AuthenticationDomainService
       ...(externalInfo.avatarUrl ? { avatarUrl: externalInfo.avatarUrl } : {}),
     };
 
-    // 新規ユーザーエンティティを作成
-    const newUser = UserEntity.create(createInput);
-
     // データベースに永続化
     const createdUser = await this.userRepository.create(createInput);
 
