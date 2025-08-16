@@ -121,7 +121,7 @@
 
 #### TASK-103: PostgreSQLリポジトリ実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **要件リンク**: database-schema.sql, IUserRepository
 - **依存タスク**: TASK-102
