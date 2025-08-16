@@ -6,7 +6,8 @@ services:
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
     volumes:
-      - ./app/server:/home/bun/server
+      - ./app/server:/home/bun/app/server
+      - ./app/packages:/home/bun/app/packages
     environment:
       - SERVER_PORT=${SERVER_PORT}
       - ACCESS_ALLOW_ORIGIN=${ACCESS_ALLOW_ORIGIN}
@@ -31,7 +32,8 @@ services:
     ports:
       - "${CLIENT_PORT}:${CLIENT_PORT}"
     volumes:
-      - ./app/client:/home/bun/client
+      - ./app/client:/home/bun/app/client
+      - ./app/packages:/home/bun/app/packages
     environment:
       - CLIENT_PORT=${CLIENT_PORT}
       - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
