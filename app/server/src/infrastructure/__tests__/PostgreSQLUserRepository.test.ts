@@ -93,12 +93,12 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     test('異なるプロバイダーでは検索できないこと', async () => {
       // Given: Googleプロバイダーでユーザー作成
       const testInput = createTestUserInput();
-      testInput.provider = 'google';
-      await repository.create(testInput);
+      const updatedInput = { ...testInput, provider: 'google' as AuthProvider };
+      await repository.create(updatedInput);
 
       // When: 同じ外部IDでAppleプロバイダーで検索
       const foundUser = await repository.findByExternalId(
-        testInput.externalId,
+        updatedInput.externalId,
         'apple' as AuthProvider,
       );
 
@@ -170,8 +170,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     test('メールアドレスの大文字小文字が正しく処理されること', async () => {
       // Given: 小文字のメールアドレスでユーザー作成
       const testInput = createTestUserInput();
-      testInput.email = 'test@example.com';
-      await repository.create(testInput);
+      const updatedTestInput = { ...testInput, email: 'test@example.com' };
+      await repository.create(updatedTestInput);
 
       // When: 大文字のメールアドレスで検索
       const foundUser = await repository.findByEmail('TEST@EXAMPLE.COM');
@@ -197,7 +197,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       expect(createdUser.provider).toBe(testInput.provider);
       expect(createdUser.email).toBe(testInput.email);
       expect(createdUser.name).toBe(testInput.name);
-      expect(createdUser.avatarUrl).toBe(testInput.avatarUrl);
+      expect(createdUser.avatarUrl).toBe(testInput.avatarUrl ?? null);
       expect(createdUser.createdAt).toBeInstanceOf(Date);
       expect(createdUser.updatedAt).toBeInstanceOf(Date);
       expect(createdUser.lastLoginAt).toBeNull();
@@ -220,10 +220,11 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     test('avatarUrlがnullでもユーザーが正常に作成されること', async () => {
       // Given: avatarUrlがnullの入力
       const testInput = createTestUserInput();
-      delete testInput.avatarUrl;
+      const inputWithoutAvatar = { ...testInput };
+      delete inputWithoutAvatar.avatarUrl;
 
       // When: ユーザーを作成
-      const createdUser = await repository.create(testInput);
+      const createdUser = await repository.create(inputWithoutAvatar);
 
       // Then: avatarUrlがnullで作成される
       expect(createdUser.avatarUrl).toBeNull();
@@ -247,9 +248,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // Then: ユーザーが正しく更新される
       expect(updatedUser.id).toBe(createdUser.id);
-      expect(updatedUser.name).toBe(updateInput.name);
-      expect(updatedUser.avatarUrl).toBe(updateInput.avatarUrl);
-      expect(updatedUser.lastLoginAt).toEqual(updateInput.lastLoginAt);
+      expect(updatedUser.name).toBe('更新されたユーザー名');
+      expect(updatedUser.avatarUrl).toBe(updateInput.avatarUrl ?? null);
+      expect(updatedUser.lastLoginAt).toEqual(updateInput.lastLoginAt ?? null);
       expect(updatedUser.updatedAt.getTime()).toBeGreaterThan(
         createdUser.updatedAt.getTime(),
       );
@@ -285,9 +286,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const updatedUser = await repository.update(createdUser.id, updateInput);
 
       // Then: 指定したフィールドのみ更新される
-      expect(updatedUser.name).toBe(updateInput.name);
-      expect(updatedUser.avatarUrl).toBe(createdUser.avatarUrl);
-      expect(updatedUser.lastLoginAt).toBe(createdUser.lastLoginAt);
+      expect(updatedUser.name).toBe(updateInput.name ?? createdUser.name);
+      expect(updatedUser.avatarUrl).toBe(createdUser.avatarUrl ?? null);
+      expect(updatedUser.lastLoginAt).toBe(createdUser.lastLoginAt ?? null);
     });
   });
 

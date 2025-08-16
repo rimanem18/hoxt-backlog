@@ -29,7 +29,7 @@ describe('UserEntity', () => {
       expect(user.provider).toBe(validCreateInput.provider);
       expect(user.email).toBe(validCreateInput.email);
       expect(user.name).toBe(validCreateInput.name);
-      expect(user.avatarUrl).toBe(validCreateInput.avatarUrl);
+      expect(user.avatarUrl).toBe(validCreateInput.avatarUrl ?? null);
       expect(user.createdAt).toBeInstanceOf(Date);
       expect(user.updatedAt).toBeInstanceOf(Date);
       expect(user.lastLoginAt).toBeNull();
