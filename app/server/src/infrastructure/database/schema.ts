@@ -22,7 +22,6 @@ import { getDatabaseConfig } from '../config/env';
 // データベース接続設定の取得
 const config = getDatabaseConfig();
 
-
 /**
  * 認証プロバイダー種別のenum定義
  * 将来的な拡張を考慮した設計

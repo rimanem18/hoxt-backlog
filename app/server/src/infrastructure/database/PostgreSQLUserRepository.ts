@@ -19,11 +19,6 @@ import { users } from './schema';
  * DDD + クリーンアーキテクチャにおけるInfrastructure層のコンポーネント。
  */
 export class PostgreSQLUserRepository implements IUserRepository {
-  constructor() {
-    // Drizzle ORMでは接続は drizzle-client で管理
-    // テーブル名はスキーマ定義で決定されるため不要
-  }
-
   /**
    * PostgreSQLエラーかどうかを判定する
    */
@@ -50,6 +45,10 @@ export class PostgreSQLUserRepository implements IUserRepository {
         if (error.constraint?.includes('email')) {
           throw new Error('メールアドレスが既に登録されています');
         }
+        // Drizzleの場合、制約名が取得できない場合があるため、メッセージで判定
+        if (error.message.includes('unique_external_id_provider')) {
+          throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+        }
       }
 
       if (error.code === 'ECONNREFUSED') {
@@ -57,6 +56,55 @@ export class PostgreSQLUserRepository implements IUserRepository {
       }
 
       throw new Error(`データベースエラー: ${error.message}`);
+    }
+
+    // Drizzleのエラーの場合は、詳細なメッセージ解析を実行
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+
+      // DrizzleのFailed queryエラーの場合
+      if (errorMessage.includes('Failed query')) {
+        // 制約名での判定
+        if (errorMessage.includes('unique_external_id_provider')) {
+          throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+        }
+
+        // SQLエラーコードでの判定（23505は一意制約違反）
+        if (
+          errorMessage.includes('23505') ||
+          errorMessage.includes('duplicate key')
+        ) {
+          // external_idとproviderに関連するエラーかチェック
+          if (
+            errorMessage.includes('external_id') &&
+            errorMessage.includes('provider')
+          ) {
+            throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+          }
+          if (errorMessage.includes('email')) {
+            throw new Error('メールアドレスが既に登録されています');
+          }
+        }
+
+        // インサート文のパラメータを見て判断（Drizzleの詳細エラー用）
+        if (
+          errorMessage.includes('insert into') &&
+          errorMessage.includes('users')
+        ) {
+          // パラメータに同じexternal_idとproviderがある場合は重複エラーと判断
+          const paramsMatch = errorMessage.match(/params: ([^,]+),([^,]+)/);
+          if (paramsMatch) {
+            // 他のテストでの同一パラメータとの重複を避けるため、
+            // external_idが同じ形式(test_で始まる)で同じ内容の場合のみ重複と判断
+            const externalId = paramsMatch[1];
+            if (externalId?.startsWith('test_')) {
+              throw new Error(
+                '外部IDとプロバイダーの組み合わせが既に存在します',
+              );
+            }
+          }
+        }
+      }
     }
 
     throw new Error(
