@@ -12,6 +12,16 @@ services:
       - ACCESS_ALLOW_ORIGIN=${ACCESS_ALLOW_ORIGIN}
       - ACCESS_ALLOW_METHODS=${ACCESS_ALLOW_METHODS}
       - ACCESS_ALLOW_HEADERS=${ACCESS_ALLOW_HEADERS}
+      # テスト用のローカルDB設定
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=test_password
+      - DB_TABLE_PREFIX=test_
+      - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
+    depends_on:
+      - db
     tty: true
 
   client:
@@ -28,13 +38,17 @@ services:
     tty: true
 
   db:
-    build:
-      context: .
-      dockerfile: docker/db/Dockerfile
+    image: postgres:15-alpine
     ports:
       - "5432:5432"
     environment:
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
-    tty: true
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=test_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/db/init-test-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,8 +1,19 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
-import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
-import { DatabaseConnection } from '../database/DatabaseConnection';
-import type { CreateUserInput, UpdateUserInput, AuthProvider } from '@/domain/user';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from 'bun:test';
+import type {
+  AuthProvider,
+  CreateUserInput,
+  UpdateUserInput,
+} from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
+import { DatabaseConnection } from '../database/DatabaseConnection';
+import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
 
 // テストデータ生成ヘルパー
 function createTestUserInput(): CreateUserInput {
@@ -11,7 +22,7 @@ function createTestUserInput(): CreateUserInput {
     provider: 'google' as AuthProvider,
     email: `test${Date.now()}${Math.random()}@example.com`,
     name: 'テストユーザー',
-    avatarUrl: 'https://example.com/avatar.jpg'
+    avatarUrl: 'https://example.com/avatar.jpg',
   };
 }
 
@@ -26,7 +37,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     process.env.DB_USER = 'test_user';
     process.env.DB_PASSWORD = 'test_password';
     process.env.DB_TABLE_PREFIX = 'test_';
-    process.env.DATABASE_URL = 'postgresql://test_user:test_password@localhost:5432/test_db';
+    process.env.DATABASE_URL =
+      'postgresql://test_user:test_password@localhost:5432/test_db';
 
     repository = new PostgreSQLUserRepository();
   });
@@ -49,7 +61,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       // When: 外部IDで検索
       const foundUser = await repository.findByExternalId(
         testInput.externalId,
-        testInput.provider
+        testInput.provider,
       );
 
       // Then: ユーザーが正しく取得される
@@ -64,7 +76,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       // When: 存在しない外部IDで検索
       const foundUser = await repository.findByExternalId(
         'non_existent_id',
-        'google'
+        'google',
       );
 
       // Then: nullが返される
@@ -80,7 +92,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       // When: 同じ外部IDでAppleプロバイダーで検索
       const foundUser = await repository.findByExternalId(
         testInput.externalId,
-        'apple' as AuthProvider
+        'apple' as AuthProvider,
       );
 
       // Then: nullが返される
@@ -119,8 +131,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const invalidId = 'invalid-uuid-format';
 
       // When & Then: エラーが発生
-      await expect(repository.findById(invalidId))
-        .rejects.toThrow('無効なUUID形式です');
+      await expect(repository.findById(invalidId)).rejects.toThrow(
+        '無効なUUID形式です',
+      );
     });
   });
 
@@ -192,8 +205,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // When & Then: 同じ外部ID・プロバイダーで再作成するとエラー
       const duplicateInput = { ...testInput, email: 'another@example.com' };
-      await expect(repository.create(duplicateInput))
-        .rejects.toThrow('外部IDとプロバイダーの組み合わせが既に存在します');
+      await expect(repository.create(duplicateInput)).rejects.toThrow(
+        '外部IDとプロバイダーの組み合わせが既に存在します',
+      );
     });
 
     test('avatarUrlがnullでもユーザーが正常に作成されること', async () => {
@@ -218,7 +232,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const updateInput: UpdateUserInput = {
         name: '更新されたユーザー名',
         avatarUrl: 'https://example.com/new-avatar.jpg',
-        lastLoginAt: new Date()
+        lastLoginAt: new Date(),
       };
 
       // When: ユーザーを更新
@@ -229,7 +243,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       expect(updatedUser.name).toBe(updateInput.name);
       expect(updatedUser.avatarUrl).toBe(updateInput.avatarUrl);
       expect(updatedUser.lastLoginAt).toEqual(updateInput.lastLoginAt);
-      expect(updatedUser.updatedAt.getTime()).toBeGreaterThan(createdUser.updatedAt.getTime());
+      expect(updatedUser.updatedAt.getTime()).toBeGreaterThan(
+        createdUser.updatedAt.getTime(),
+      );
 
       // 更新されない項目の確認
       expect(updatedUser.email).toBe(createdUser.email);
@@ -243,8 +259,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const updateInput: UpdateUserInput = { name: '更新名' };
 
       // When & Then: UserNotFoundErrorが発生
-      await expect(repository.update(nonExistentId, updateInput))
-        .rejects.toThrow(UserNotFoundError);
+      await expect(
+        repository.update(nonExistentId, updateInput),
+      ).rejects.toThrow(UserNotFoundError);
     });
 
     test('部分的な更新が正しく動作すること', async () => {
@@ -253,7 +270,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const createdUser = await repository.create(testInput);
 
       const updateInput: UpdateUserInput = {
-        name: '更新されたユーザー名'
+        name: '更新されたユーザー名',
         // avatarUrl と lastLoginAt は更新しない
       };
 
@@ -286,8 +303,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
       const nonExistentId = crypto.randomUUID();
 
       // When & Then: UserNotFoundErrorが発生
-      await expect(repository.delete(nonExistentId))
-        .rejects.toThrow(UserNotFoundError);
+      await expect(repository.delete(nonExistentId)).rejects.toThrow(
+        UserNotFoundError,
+      );
     });
   });
 });
@@ -296,7 +314,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 async function cleanupTestData() {
   const client = await DatabaseConnection.getConnection();
   try {
-    await client.query('DELETE FROM test_users WHERE email LIKE \'%@example.com\'');
+    await client.query(
+      "DELETE FROM test_users WHERE email LIKE '%@example.com'",
+    );
   } catch (error) {
     // テーブルが存在しない場合などのエラーは無視
   }

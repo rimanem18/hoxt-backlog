@@ -1,6 +1,6 @@
 /**
  * 環境設定管理クラス
- * 
+ *
  * 環境変数の検証・変換を行い、型安全な設定値を提供する。
  * アプリケーション起動時に設定の検証を行い、不正な設定での起動を防ぐ。
  */
@@ -24,10 +24,10 @@ export interface DatabaseConfig {
 export class EnvironmentConfig {
   /**
    * データベース設定を取得する
-   * 
+   *
    * 環境変数からデータベース接続に必要な設定を取得し、
    * 型安全な形式で返却する。
-   * 
+   *
    * @returns データベース設定オブジェクト
    * @throws 必須環境変数が不足している場合のエラー
    */
@@ -85,18 +85,20 @@ export class EnvironmentConfig {
 
   /**
    * 設定の検証を行う
-   * 
+   *
    * アプリケーション起動時に呼び出され、
    * 必要な環境変数がすべて設定されているかを確認する。
-   * 
+   *
    * @throws 設定エラーがある場合の詳細エラー
    */
   static validateConfig(): void {
     try {
       // getDatabaseConfigを呼び出すことで検証を実行
-      this.getDatabaseConfig();
+      EnvironmentConfig.getDatabaseConfig();
     } catch (error) {
-      throw new Error(`環境変数設定エラー: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `環境変数設定エラー: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

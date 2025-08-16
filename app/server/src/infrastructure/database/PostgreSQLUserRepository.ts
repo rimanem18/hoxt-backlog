@@ -1,3 +1,4 @@
+import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type {
   AuthProvider,
   CreateUserInput,
@@ -5,14 +6,13 @@ import type {
   User,
   UserEntity,
 } from '@/domain/user';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { DatabaseConnection } from './DatabaseConnection';
 import { EnvironmentConfig } from '../config/EnvironmentConfig';
+import { DatabaseConnection } from './DatabaseConnection';
 
 /**
  * PostgreSQLユーザーリポジトリ実装
- * 
+ *
  * IUserRepositoryインターフェースのPostgreSQL実装。
  * ユーザーデータの永続化層を提供し、CRUD操作を実行する。
  * DDD + クリーンアーキテクチャにおけるInfrastructure層のコンポーネント。
@@ -37,7 +37,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
         throw new Error('メールアドレスが既に登録されています');
       }
     }
-    
+
     if (error.code === 'ECONNREFUSED') {
       throw new Error('データベースへの接続に失敗しました');
     }
@@ -63,27 +63,27 @@ export class PostgreSQLUserRepository implements IUserRepository {
   }
   /**
    * 外部IDとプロバイダーでユーザーを検索
-   * 
+   *
    * JWT認証時の高速検索用。複合インデックスを使用。
-   * 
+   *
    * @param externalId - 外部プロバイダーでのユーザーID
    * @param provider - 認証プロバイダー種別
    * @returns ユーザーエンティティまたはnull
    */
   async findByExternalId(
     externalId: string,
-    provider: AuthProvider
+    provider: AuthProvider,
   ): Promise<User | null> {
     try {
       const client = await DatabaseConnection.getConnection();
       try {
         const query = `SELECT * FROM ${this.tableName} WHERE external_id = $1 AND provider = $2`;
         const result = await client.query(query, [externalId, provider]);
-        
+
         if (result.rows.length === 0) {
           return null;
         }
-        
+
         return this.rowToUser(result.rows[0]);
       } finally {
         client.release();
@@ -95,13 +95,14 @@ export class PostgreSQLUserRepository implements IUserRepository {
 
   /**
    * ユーザーIDでユーザーを検索
-   * 
+   *
    * @param id - ユーザー固有ID（UUID v4）
    * @returns ユーザーエンティティまたはnull
    */
   async findById(id: string): Promise<User | null> {
     // UUID形式の検証
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new Error('無効なUUID形式です');
     }
@@ -111,11 +112,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
       try {
         const query = `SELECT * FROM ${this.tableName} WHERE id = $1`;
         const result = await client.query(query, [id]);
-        
+
         if (result.rows.length === 0) {
           return null;
         }
-        
+
         return this.rowToUser(result.rows[0]);
       } finally {
         client.release();
@@ -127,7 +128,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
 
   /**
    * メールアドレスでユーザーを検索
-   * 
+   *
    * @param email - メールアドレス
    * @returns ユーザーエンティティまたはnull
    */
@@ -138,11 +139,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
         // 大文字小文字を区別しない検索
         const query = `SELECT * FROM ${this.tableName} WHERE LOWER(email) = LOWER($1)`;
         const result = await client.query(query, [email]);
-        
+
         if (result.rows.length === 0) {
           return null;
         }
-        
+
         return this.rowToUser(result.rows[0]);
       } finally {
         client.release();
@@ -154,9 +155,9 @@ export class PostgreSQLUserRepository implements IUserRepository {
 
   /**
    * 新規ユーザー作成
-   * 
+   *
    * JITプロビジョニング時に使用。
-   * 
+   *
    * @param input - ユーザー作成時の値オブジェクト
    * @returns 作成されたユーザーエンティティ
    * @throws 一意制約違反等のデータベースエラー
@@ -179,9 +180,9 @@ export class PostgreSQLUserRepository implements IUserRepository {
           input.name,
           input.avatarUrl || null,
           now,
-          now
+          now,
         ];
-        
+
         const result = await client.query(query, values);
         return this.rowToUser(result.rows[0]);
       } finally {
@@ -194,7 +195,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
 
   /**
    * ユーザー情報更新
-   * 
+   *
    * @param id - 更新対象のユーザーID
    * @param input - ユーザー更新時の値オブジェクト
    * @returns 更新されたユーザーエンティティ
@@ -239,11 +240,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
         `;
 
         const result = await client.query(query, [id, ...values]);
-        
+
         if (result.rows.length === 0) {
           throw new UserNotFoundError(id);
         }
-        
+
         return this.rowToUser(result.rows[0]);
       } finally {
         client.release();
@@ -258,7 +259,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
 
   /**
    * ユーザー削除
-   * 
+   *
    * @param id - 削除対象のユーザーID
    * @throws ユーザーが存在しない場合のエラー
    */
@@ -268,7 +269,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
       try {
         const query = `DELETE FROM ${this.tableName} WHERE id = $1`;
         const result = await client.query(query, [id]);
-        
+
         if (result.rowCount === 0) {
           throw new UserNotFoundError(id);
         }

@@ -1,7 +1,7 @@
 # MVP Google認証 アーキテクチャ設計
 
 作成日: 2025-08-12
-更新日: 2025-08-12
+更新日: 2025-08-16
 
 ## システム概要
 
@@ -82,8 +82,9 @@ SupabaseとGoogle OAuthを使用したフロントエンド（Next.js）・バ�
   - `DatabaseConnection`: DB接続管理
   - `EnvironmentConfig`: 環境設定管理
 
-### データベース（PostgreSQL）
-- **DBMS**: PostgreSQL
+### データベース（PostgreSQL + Supabase）
+- **DBMS**: PostgreSQL（Supabase DB）
+- **接続方式**: Transaction Pooler（port: 6543）- サーバーレス環境最適化
 - **テーブル設計**: プロバイダー非依存・拡張可能設計
 - **接頭辞対応**: 環境変数による動的テーブル名
 - **インデックス戦略**: email・external_idによる高速検索
@@ -144,8 +145,23 @@ Presentation → Application → Domain ← Infrastructure
 ### 最適化戦略
 - **データベースインデックス**: email・external_idの複合インデックス
 - **JWT検証**: メモリ内署名検証
-- **コネクションプール**: PostgreSQL接続プール使用
+- **コネクションプール**: サーバーレス環境最適化（max: 2接続、短縮アイドルタイムアウト）
+- **Transaction Pooler**: Supabaseの接続プーリングでDB接続効率化
 - **キャッシュ戦略**: 将来拡張でユーザー情報キャッシュ対応予定
+
+## サーバーレス環境対応
+
+### Transaction Pooler最適化
+- **接続数制限**: max 2接続（サーバーレス関数のスケールアウトに対応）
+- **タイムアウト短縮**: idleTimeoutMillis 5秒（短時間実行モデルに最適化）
+- **プロセス終了制御**: allowExitOnIdle設定でLambda等での適切な終了を保証
+- **エラーハンドリング**: 接続エラー時のプロセス終了で障害の連鎖を防止
+
+### 将来のサーバーレス展開予定
+- **AWS Lambda**: イベント駆動型の認証処理
+- **Cloudflare Workers**: エッジでの高速JWT検証
+- **Google Cloud Run**: コンテナベースの自動スケール
+- **Vercel Functions**: Next.jsとの統合最適化
 
 ## 開発・運用考慮事項
 
