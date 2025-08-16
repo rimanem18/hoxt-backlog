@@ -4,6 +4,7 @@
     "dev": "bun run --hot src/presentation/http/server/bun.serve.ts",
     "check": "biome check src",
     "fix": "biome check src --write",
+    "fix:unsafe": "biome check src --write --unsafe",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

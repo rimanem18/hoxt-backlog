@@ -4,11 +4,25 @@ import type {
   CreateUserInput,
   UpdateUserInput,
   User,
-  UserEntity,
 } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { EnvironmentConfig } from '../config/EnvironmentConfig';
-import { DatabaseConnection } from './DatabaseConnection';
+import { getDatabaseConfig } from '../config/env';
+import { getConnection } from './connection';
+
+/**
+ * データベースのユーザー行の型定義
+ */
+interface DBUserRow {
+  id: string;
+  external_id: string;
+  provider: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  created_at: Date;
+  updated_at: Date;
+  last_login_at: Date | null;
+}
 
 /**
  * PostgreSQLユーザーリポジトリ実装
@@ -21,34 +35,54 @@ export class PostgreSQLUserRepository implements IUserRepository {
   private readonly tableName: string;
 
   constructor() {
-    const config = EnvironmentConfig.getDatabaseConfig();
+    const config = getDatabaseConfig();
     this.tableName = `${config.tablePrefix}users`;
+  }
+
+  /**
+   * PostgreSQLエラーかどうかを判定する
+   */
+  private isPgDatabaseError(
+    error: unknown,
+  ): error is { code: string; constraint?: string; message: string } {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code: unknown }).code === 'string'
+    );
   }
 
   /**
    * データベースエラーをドメインエラーに変換する
    */
-  private handleDatabaseError(error: any): never {
-    if (error.code === '23505') {
-      if (error.constraint === 'unique_external_id_provider') {
-        throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+  private handleDatabaseError(error: unknown): never {
+    if (this.isPgDatabaseError(error)) {
+      if (error.code === '23505') {
+        if (error.constraint === 'unique_external_id_provider') {
+          throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+        }
+        if (error.constraint?.includes('email')) {
+          throw new Error('メールアドレスが既に登録されています');
+        }
       }
-      if (error.constraint?.includes('email')) {
-        throw new Error('メールアドレスが既に登録されています');
+
+      if (error.code === 'ECONNREFUSED') {
+        throw new Error('データベースへの接続に失敗しました');
       }
+
+      throw new Error(`データベースエラー: ${error.message}`);
     }
 
-    if (error.code === 'ECONNREFUSED') {
-      throw new Error('データベースへの接続に失敗しました');
-    }
-
-    throw new Error(`データベースエラー: ${error.message}`);
+    throw new Error(
+      `データベースエラー: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   /**
    * データベースの行をUserオブジェクトに変換する
    */
-  private rowToUser(row: any): User {
+  private rowToUser(row: DBUserRow): User {
     return {
       id: row.id,
       externalId: row.external_id,
@@ -75,16 +109,23 @@ export class PostgreSQLUserRepository implements IUserRepository {
     provider: AuthProvider,
   ): Promise<User | null> {
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         const query = `SELECT * FROM ${this.tableName} WHERE external_id = $1 AND provider = $2`;
-        const result = await client.query(query, [externalId, provider]);
+        const result = await client.query<DBUserRow>(query, [
+          externalId,
+          provider,
+        ]);
 
         if (result.rows.length === 0) {
           return null;
         }
 
-        return this.rowToUser(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          return null;
+        }
+        return this.rowToUser(row);
       } finally {
         client.release();
       }
@@ -108,16 +149,20 @@ export class PostgreSQLUserRepository implements IUserRepository {
     }
 
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         const query = `SELECT * FROM ${this.tableName} WHERE id = $1`;
-        const result = await client.query(query, [id]);
+        const result = await client.query<DBUserRow>(query, [id]);
 
         if (result.rows.length === 0) {
           return null;
         }
 
-        return this.rowToUser(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          return null;
+        }
+        return this.rowToUser(row);
       } finally {
         client.release();
       }
@@ -134,17 +179,21 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         // 大文字小文字を区別しない検索
         const query = `SELECT * FROM ${this.tableName} WHERE LOWER(email) = LOWER($1)`;
-        const result = await client.query(query, [email]);
+        const result = await client.query<DBUserRow>(query, [email]);
 
         if (result.rows.length === 0) {
           return null;
         }
 
-        return this.rowToUser(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          return null;
+        }
+        return this.rowToUser(row);
       } finally {
         client.release();
       }
@@ -164,7 +213,7 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async create(input: CreateUserInput): Promise<User> {
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         const now = new Date();
         const query = `
@@ -184,7 +233,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
         ];
 
         const result = await client.query(query, values);
-        return this.rowToUser(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          throw new Error('ユーザー作成に失敗しました');
+        }
+        return this.rowToUser(row);
       } finally {
         client.release();
       }
@@ -203,11 +256,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async update(id: string, input: UpdateUserInput): Promise<User> {
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         // 部分更新用のクエリ構築
         const updateFields: string[] = [];
-        const values: any[] = [];
+        const values: Array<string | number | boolean | Date | null> = [];
         let paramIndex = 2; // $1はidで使用
 
         if (input.name !== undefined) {
@@ -239,13 +292,17 @@ export class PostgreSQLUserRepository implements IUserRepository {
           RETURNING *
         `;
 
-        const result = await client.query(query, [id, ...values]);
+        const result = await client.query<DBUserRow>(query, [id, ...values]);
 
         if (result.rows.length === 0) {
           throw new UserNotFoundError(id);
         }
 
-        return this.rowToUser(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          throw new UserNotFoundError(id);
+        }
+        return this.rowToUser(row);
       } finally {
         client.release();
       }
@@ -265,10 +322,10 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async delete(id: string): Promise<void> {
     try {
-      const client = await DatabaseConnection.getConnection();
+      const client = await getConnection();
       try {
         const query = `DELETE FROM ${this.tableName} WHERE id = $1`;
-        const result = await client.query(query, [id]);
+        const result = await client.query<DBUserRow>(query, [id]);
 
         if (result.rowCount === 0) {
           throw new UserNotFoundError(id);

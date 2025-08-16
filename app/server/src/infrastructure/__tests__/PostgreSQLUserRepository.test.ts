@@ -12,7 +12,11 @@ import type {
   UpdateUserInput,
 } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { DatabaseConnection } from '../database/DatabaseConnection';
+import {
+  closePool,
+  getConnection,
+  resetPoolForTesting,
+} from '../database/connection';
 import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
 
 // テストデータ生成ヘルパー
@@ -30,21 +34,24 @@ describe('PostgreSQLUserRepository統合テスト', () => {
   let repository: PostgreSQLUserRepository;
 
   beforeAll(async () => {
-    // テストデータベース接続設定
-    process.env.DB_HOST = 'localhost';
+    // テスト用環境変数を直接上書き
+    process.env.DB_HOST = 'db';
     process.env.DB_PORT = '5432';
-    process.env.DB_NAME = 'test_db';
-    process.env.DB_USER = 'test_user';
+    process.env.DB_NAME = 'postgres';
+    process.env.DB_USER = 'postgres';
     process.env.DB_PASSWORD = 'test_password';
     process.env.DB_TABLE_PREFIX = 'test_';
     process.env.DATABASE_URL =
-      'postgresql://test_user:test_password@localhost:5432/test_db';
+      'postgresql://postgres:test_password@db:5432/postgres';
+
+    // プールをリセットして新しい設定を反映
+    resetPoolForTesting();
 
     repository = new PostgreSQLUserRepository();
   });
 
   afterAll(async () => {
-    await DatabaseConnection.close();
+    await closePool();
   });
 
   beforeEach(async () => {
@@ -56,7 +63,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     test('存在する外部IDでユーザーが取得できること', async () => {
       // Given: データベースにテストユーザーを作成
       const testInput = createTestUserInput();
-      const createdUser = await repository.create(testInput);
+      const _createdUser = await repository.create(testInput);
 
       // When: 外部IDで検索
       const foundUser = await repository.findByExternalId(
@@ -66,10 +73,10 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // Then: ユーザーが正しく取得される
       expect(foundUser).not.toBeNull();
-      expect(foundUser!.externalId).toBe(testInput.externalId);
-      expect(foundUser!.provider).toBe(testInput.provider);
-      expect(foundUser!.email).toBe(testInput.email);
-      expect(foundUser!.name).toBe(testInput.name);
+      expect(foundUser?.externalId).toBe(testInput.externalId);
+      expect(foundUser?.provider).toBe(testInput.provider);
+      expect(foundUser?.email).toBe(testInput.email);
+      expect(foundUser?.name).toBe(testInput.name);
     });
 
     test('存在しない外部IDでnullが返されること', async () => {
@@ -111,8 +118,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // Then: ユーザーが正しく取得される
       expect(foundUser).not.toBeNull();
-      expect(foundUser!.id).toBe(createdUser.id);
-      expect(foundUser!.email).toBe(createdUser.email);
+      expect(foundUser?.id).toBe(createdUser.id);
+      expect(foundUser?.email).toBe(createdUser.email);
     });
 
     test('存在しないIDでnullが返されること', async () => {
@@ -148,8 +155,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // Then: ユーザーが正しく取得される
       expect(foundUser).not.toBeNull();
-      expect(foundUser!.email).toBe(testInput.email);
-      expect(foundUser!.id).toBe(createdUser.id);
+      expect(foundUser?.email).toBe(testInput.email);
+      expect(foundUser?.id).toBe(createdUser.id);
     });
 
     test('存在しないメールアドレスでnullが返されること', async () => {
@@ -171,7 +178,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
       // Then: 大文字小文字を区別せずに検索される
       expect(foundUser).not.toBeNull();
-      expect(foundUser!.email).toBe('test@example.com');
+      expect(foundUser?.email).toBe('test@example.com');
     });
   });
 
@@ -312,12 +319,12 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
 // テストデータクリーンアップ関数
 async function cleanupTestData() {
-  const client = await DatabaseConnection.getConnection();
+  const client = await getConnection();
   try {
     await client.query(
       "DELETE FROM test_users WHERE email LIKE '%@example.com'",
     );
-  } catch (error) {
+  } catch (_error) {
     // テーブルが存在しない場合などのエラーは無視
   }
   client.release();

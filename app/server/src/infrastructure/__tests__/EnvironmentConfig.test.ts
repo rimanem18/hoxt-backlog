@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { EnvironmentConfig } from '../config/EnvironmentConfig';
+import { getDatabaseConfig, validateConfig } from '../config/env';
 
 describe('EnvironmentConfig', () => {
   // 各テスト前に環境変数をクリア
@@ -26,7 +26,7 @@ describe('EnvironmentConfig', () => {
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
       // When: 設定を取得
-      const config = EnvironmentConfig.getDatabaseConfig();
+      const config = getDatabaseConfig();
 
       // Then: 設定値が正しい
       expect(config.host).toBe('localhost');
@@ -49,9 +49,7 @@ describe('EnvironmentConfig', () => {
       process.env.DB_TABLE_PREFIX = 'test_';
 
       // When & Then: 設定エラーが発生
-      expect(() => EnvironmentConfig.getDatabaseConfig()).toThrow(
-        'DB_HOST環境変数が設定されていません',
-      );
+      expect(() => getDatabaseConfig()).toThrow('環境変数設定エラー');
     });
 
     test('必須環境変数が不足している場合にエラーが発生すること - DB_PORT', () => {
@@ -63,9 +61,7 @@ describe('EnvironmentConfig', () => {
       process.env.DB_TABLE_PREFIX = 'test_';
 
       // When & Then: 設定エラーが発生
-      expect(() => EnvironmentConfig.getDatabaseConfig()).toThrow(
-        'DB_PORT環境変数が設定されていません',
-      );
+      expect(() => getDatabaseConfig()).toThrow('環境変数設定エラー');
     });
 
     test('不正なポート番号でエラーが発生すること', () => {
@@ -78,9 +74,7 @@ describe('EnvironmentConfig', () => {
       process.env.DB_TABLE_PREFIX = 'test_';
 
       // When & Then: 設定エラーが発生
-      expect(() => EnvironmentConfig.getDatabaseConfig()).toThrow(
-        'DB_PORTは有効な数値である必要があります',
-      );
+      expect(() => getDatabaseConfig()).toThrow('環境変数設定エラー');
     });
   });
 
@@ -97,7 +91,7 @@ describe('EnvironmentConfig', () => {
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
       // When & Then: エラーが発生しない
-      expect(() => EnvironmentConfig.validateConfig()).not.toThrow();
+      expect(() => validateConfig()).not.toThrow();
     });
 
     test('設定が不足している場合に詳細なエラーが発生すること', () => {
@@ -105,9 +99,7 @@ describe('EnvironmentConfig', () => {
       // 環境変数を設定しない
 
       // When & Then: 詳細なエラーが発生
-      expect(() => EnvironmentConfig.validateConfig()).toThrow(
-        '環境変数設定エラー',
-      );
+      expect(() => validateConfig()).toThrow('環境変数設定エラー');
     });
   });
 });
