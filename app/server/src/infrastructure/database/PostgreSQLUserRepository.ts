@@ -1,3 +1,4 @@
+import { and, eq, sql } from 'drizzle-orm';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type {
   AuthProvider,
@@ -6,37 +7,21 @@ import type {
   User,
 } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { getDatabaseConfig } from '../config/env';
-import { getConnection } from './connection';
+import { db } from './drizzle-client';
+import type { User as DrizzleUser } from './schema';
+import { users } from './schema';
 
 /**
- * データベースのユーザー行の型定義
- */
-interface DBUserRow {
-  id: string;
-  external_id: string;
-  provider: string;
-  email: string;
-  name: string;
-  avatar_url: string | null;
-  created_at: Date;
-  updated_at: Date;
-  last_login_at: Date | null;
-}
-
-/**
- * PostgreSQLユーザーリポジトリ実装
+ * PostgreSQLユーザーリポジトリ実装（Drizzle ORM版）
  *
  * IUserRepositoryインターフェースのPostgreSQL実装。
- * ユーザーデータの永続化層を提供し、CRUD操作を実行する。
+ * Drizzle ORMを使用してユーザーデータの永続化層を提供し、CRUD操作を実行する。
  * DDD + クリーンアーキテクチャにおけるInfrastructure層のコンポーネント。
  */
 export class PostgreSQLUserRepository implements IUserRepository {
-  private readonly tableName: string;
-
   constructor() {
-    const config = getDatabaseConfig();
-    this.tableName = `${config.tablePrefix}users`;
+    // Drizzle ORMでは接続は drizzle-client で管理
+    // テーブル名はスキーマ定義で決定されるため不要
   }
 
   /**
@@ -80,19 +65,22 @@ export class PostgreSQLUserRepository implements IUserRepository {
   }
 
   /**
-   * データベースの行をUserオブジェクトに変換する
+   * Drizzleの行データをUserオブジェクトに変換する
+   *
+   * @param row - Drizzleから取得した型安全な行データ
+   * @returns ドメインのUserエンティティ
    */
-  private rowToUser(row: DBUserRow): User {
+  private drizzleRowToUser(row: DrizzleUser): User {
     return {
       id: row.id,
-      externalId: row.external_id,
+      externalId: row.externalId,
       provider: row.provider as AuthProvider,
       email: row.email,
       name: row.name,
-      avatarUrl: row.avatar_url,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      lastLoginAt: row.last_login_at,
+      avatarUrl: row.avatarUrl,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      lastLoginAt: row.lastLoginAt,
     };
   }
   /**
@@ -109,26 +97,23 @@ export class PostgreSQLUserRepository implements IUserRepository {
     provider: AuthProvider,
   ): Promise<User | null> {
     try {
-      const client = await getConnection();
-      try {
-        const query = `SELECT * FROM ${this.tableName} WHERE external_id = $1 AND provider = $2`;
-        const result = await client.query<DBUserRow>(query, [
-          externalId,
-          provider,
-        ]);
+      const result = await db
+        .select()
+        .from(users)
+        .where(
+          and(eq(users.externalId, externalId), eq(users.provider, provider)),
+        )
+        .limit(1);
 
-        if (result.rows.length === 0) {
-          return null;
-        }
-
-        const row = result.rows[0];
-        if (!row) {
-          return null;
-        }
-        return this.rowToUser(row);
-      } finally {
-        client.release();
+      if (result.length === 0) {
+        return null;
       }
+
+      const row = result[0];
+      if (!row) {
+        return null;
+      }
+      return this.drizzleRowToUser(row);
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -149,23 +134,21 @@ export class PostgreSQLUserRepository implements IUserRepository {
     }
 
     try {
-      const client = await getConnection();
-      try {
-        const query = `SELECT * FROM ${this.tableName} WHERE id = $1`;
-        const result = await client.query<DBUserRow>(query, [id]);
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
 
-        if (result.rows.length === 0) {
-          return null;
-        }
-
-        const row = result.rows[0];
-        if (!row) {
-          return null;
-        }
-        return this.rowToUser(row);
-      } finally {
-        client.release();
+      if (result.length === 0) {
+        return null;
       }
+
+      const row = result[0];
+      if (!row) {
+        return null;
+      }
+      return this.drizzleRowToUser(row);
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -179,24 +162,21 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
-      const client = await getConnection();
-      try {
-        // 大文字小文字を区別しない検索
-        const query = `SELECT * FROM ${this.tableName} WHERE LOWER(email) = LOWER($1)`;
-        const result = await client.query<DBUserRow>(query, [email]);
+      const result = await db
+        .select()
+        .from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${email})`)
+        .limit(1);
 
-        if (result.rows.length === 0) {
-          return null;
-        }
-
-        const row = result.rows[0];
-        if (!row) {
-          return null;
-        }
-        return this.rowToUser(row);
-      } finally {
-        client.release();
+      if (result.length === 0) {
+        return null;
       }
+
+      const row = result[0];
+      if (!row) {
+        return null;
+      }
+      return this.drizzleRowToUser(row);
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -213,34 +193,26 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async create(input: CreateUserInput): Promise<User> {
     try {
-      const client = await getConnection();
-      try {
-        const now = new Date();
-        const query = `
-          INSERT INTO ${this.tableName} (
-            external_id, provider, email, name, avatar_url, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-          RETURNING *
-        `;
-        const values = [
-          input.externalId,
-          input.provider,
-          input.email,
-          input.name,
-          input.avatarUrl || null,
-          now,
-          now,
-        ];
+      const result = await db
+        .insert(users)
+        .values({
+          externalId: input.externalId,
+          provider: input.provider,
+          email: input.email,
+          name: input.name,
+          avatarUrl: input.avatarUrl || null,
+        })
+        .returning();
 
-        const result = await client.query(query, values);
-        const row = result.rows[0];
-        if (!row) {
-          throw new Error('ユーザー作成に失敗しました');
-        }
-        return this.rowToUser(row);
-      } finally {
-        client.release();
+      if (result.length === 0) {
+        throw new Error('ユーザー作成に失敗しました');
       }
+
+      const row = result[0];
+      if (!row) {
+        throw new Error('ユーザー作成に失敗しました');
+      }
+      return this.drizzleRowToUser(row);
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -256,56 +228,38 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async update(id: string, input: UpdateUserInput): Promise<User> {
     try {
-      const client = await getConnection();
-      try {
-        // 部分更新用のクエリ構築
-        const updateFields: string[] = [];
-        const values: Array<string | number | boolean | Date | null> = [];
-        let paramIndex = 2; // $1はidで使用
+      // 部分更新用のオブジェクト構築
+      const updateData: Partial<typeof users.$inferInsert> = {
+        updatedAt: new Date(), // updated_atは常に更新
+      };
 
-        if (input.name !== undefined) {
-          updateFields.push(`name = $${paramIndex}`);
-          values.push(input.name);
-          paramIndex++;
-        }
-
-        if (input.avatarUrl !== undefined) {
-          updateFields.push(`avatar_url = $${paramIndex}`);
-          values.push(input.avatarUrl || null);
-          paramIndex++;
-        }
-
-        if (input.lastLoginAt !== undefined) {
-          updateFields.push(`last_login_at = $${paramIndex}`);
-          values.push(input.lastLoginAt);
-          paramIndex++;
-        }
-
-        // updated_atは常に更新
-        updateFields.push(`updated_at = $${paramIndex}`);
-        values.push(new Date());
-
-        const query = `
-          UPDATE ${this.tableName} 
-          SET ${updateFields.join(', ')}
-          WHERE id = $1
-          RETURNING *
-        `;
-
-        const result = await client.query<DBUserRow>(query, [id, ...values]);
-
-        if (result.rows.length === 0) {
-          throw new UserNotFoundError(id);
-        }
-
-        const row = result.rows[0];
-        if (!row) {
-          throw new UserNotFoundError(id);
-        }
-        return this.rowToUser(row);
-      } finally {
-        client.release();
+      if (input.name !== undefined) {
+        updateData.name = input.name;
       }
+
+      if (input.avatarUrl !== undefined) {
+        updateData.avatarUrl = input.avatarUrl || null;
+      }
+
+      if (input.lastLoginAt !== undefined) {
+        updateData.lastLoginAt = input.lastLoginAt;
+      }
+
+      const result = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        throw new UserNotFoundError(id);
+      }
+
+      const row = result[0];
+      if (!row) {
+        throw new UserNotFoundError(id);
+      }
+      return this.drizzleRowToUser(row);
     } catch (error) {
       if (error instanceof UserNotFoundError) {
         throw error;
@@ -322,16 +276,13 @@ export class PostgreSQLUserRepository implements IUserRepository {
    */
   async delete(id: string): Promise<void> {
     try {
-      const client = await getConnection();
-      try {
-        const query = `DELETE FROM ${this.tableName} WHERE id = $1`;
-        const result = await client.query<DBUserRow>(query, [id]);
+      const result = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning({ id: users.id });
 
-        if (result.rowCount === 0) {
-          throw new UserNotFoundError(id);
-        }
-      } finally {
-        client.release();
+      if (result.length === 0) {
+        throw new UserNotFoundError(id);
       }
     } catch (error) {
       if (error instanceof UserNotFoundError) {
