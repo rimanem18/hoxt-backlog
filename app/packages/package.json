@@ -1,0 +1,13 @@
+{
+  "name": "package",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-zod": "^0.8.3",
+    "zod": "^4.0.17"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
