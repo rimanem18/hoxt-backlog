@@ -423,8 +423,8 @@ Index Scan using idx_users_external_id_provider on ${DB_TABLE_PREFIX}users
 ```javascript
 const pool = new Pool({
   host: 'localhost',
-  database: 'hoxt_dev',
-  user: 'hoxt_api',
+  database: 'postgres',
+  user: 'postgres',
   password: process.env.DB_PASSWORD,
   max: 20,        // 最大接続数
   idleTimeoutMillis: 30000,
@@ -455,7 +455,7 @@ WHERE tablename = '${DB_TABLE_PREFIX}users';
 
 **日次バックアップ:**
 ```bash
-pg_dump -h localhost -U postgres -d hoxt_dev \
+pg_dump -h localhost -U postgres -d postgres \
   --table=${DB_TABLE_PREFIX}users \
   --file=users_backup_$(date +%Y%m%d).sql
 ```
