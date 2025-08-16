@@ -554,3 +554,541 @@ export class UserDomainService {
 - 複数プロバイダー間の調整
 
 この判断基準を覚えておくと、機能拡張時にどこに処理を配置すべきかが明確になります。
+
+---
+
+## Q. TASK102で追加されたUserAggregateとUserEntityの違いがよくわかりません。なぜ両方が必要なのですか？
+
+A. **UserEntityは「ユーザーという概念そのもの」、UserAggregateは「ユーザーの永続化やビジネスルールの管理を含めた操作単位」です**。
+
+### エンティティとアグリゲートの役割分担
+
+| 要素 | 責任 | TASK102での実装例 |
+|------|------|-------------------|
+| **UserEntity** | ユーザーの状態・振る舞い | `recordLogin()`、`isNewUser()`、`update()` |
+| **UserAggregate** | 永続化・トランザクション境界 | `createNew()`、`recordLogin()`でのDB更新 |
+
+### 具体的な違い
+
+**UserEntity**（ドメインの純粋な表現）：
+```typescript
+export class UserEntity {
+  // ✅ ユーザー自身の状態変更
+  public recordLogin(): void {
+    this._lastLoginAt = new Date();
+    this._updatedAt = new Date();
+    // ※DBへの保存はしない（メモリ内での状態変更のみ）
+  }
+  
+  // ✅ ユーザー自身の判定ロジック
+  public isNewUser(): boolean {
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    return this.createdAt > oneMinuteAgo;
+  }
+}
+```
+
+**UserAggregate**（永続化を含む操作単位）：
+```typescript
+export class UserAggregate {
+  // ✅ 永続化を含むビジネス操作
+  public async recordLogin(): Promise<UserEntity> {
+    const now = new Date();
+    
+    // 1. エンティティの状態変更
+    this.userEntity.recordLogin();
+    
+    // 2. データベースに永続化
+    const updatedUser = await this.userRepository.update(this.userEntity.id, {
+      lastLoginAt: now,
+    });
+    
+    // 3. 更新されたエンティティを返却
+    return UserEntity.restore(updatedUser);
+  }
+}
+```
+
+### なぜ分離するのか？
+
+1. **純粋性の保持**：UserEntityはDBやHTTPを知らない純粋なドメイン概念
+2. **テストしやすさ**：UserEntityは外部依存なしでテストできる
+3. **再利用性**：UserEntityは異なる永続化方法（Redis、ファイル等）でも使える
+
+### よくある間違い
+
+❌ **エンティティで直接DB操作**：
+```typescript
+export class UserEntity {
+  // これはダメ：エンティティがリポジトリを知っている
+  public async saveLogin(repository: IUserRepository): Promise<void> { // ❌
+    this._lastLoginAt = new Date();
+    await repository.update(this.id, { lastLoginAt: this._lastLoginAt });
+  }
+}
+```
+
+✅ **アグリゲートでDB操作を管理**：
+```typescript
+export class UserAggregate {
+  // これが正解：アグリゲートが永続化を管理
+  public async recordLogin(): Promise<UserEntity> { // ✅
+    this.userEntity.recordLogin(); // エンティティの状態変更
+    const updated = await this.userRepository.update(...); // DB更新
+    return UserEntity.restore(updated);
+  }
+}
+```
+
+---
+
+## Q. AuthenticationDomainServiceの責任範囲がよくわかりません。なぜUserAggregateではなくDomainServiceでJITプロビジョニングを実装したのですか？
+
+A. **JITプロビジョニングは「複数の判定軸」と「外部知識」が必要な処理なので、DomainServiceの責任だからです**。
+
+### JITプロビジョニングの複雑性
+
+**実装箇所**（`AuthenticationDomainService.ts:45-82`）：
+```typescript
+async createUserFromExternalInfo(externalInfo: ExternalUserInfo): Promise<UserEntity> {
+  // 1. プロバイダー検証（外部知識）
+  if (!this.isValidProvider(externalInfo.provider)) {
+    throw InvalidProviderError.forProvider(externalInfo.provider);
+  }
+  
+  // 2. 重複チェック（複数検索軸）
+  const existingUser = await this.userRepository.findByExternalId(
+    externalInfo.id,
+    externalInfo.provider as AuthProvider,
+  );
+  
+  // 3. 冪等性の保証（既存ユーザーがいたら返す）
+  if (existingUser) {
+    return UserEntity.restore(existingUser);
+  }
+  
+  // 4. 新規作成・永続化
+  const createInput: CreateUserInput = { /* ... */ };
+  const newUser = UserEntity.create(createInput);
+  const createdUser = await this.userRepository.create(createInput);
+  
+  return UserEntity.restore(createdUser);
+}
+```
+
+### なぜDomainServiceなのか？
+
+| 複雑性の要因 | UserAggregateでは困難な理由 | DomainServiceが適切な理由 |
+|-------------|---------------------------|-------------------------|
+| **外部知識** | プロバイダー検証ルールをエンティティが知るべきでない | 認証プロバイダーに関する外部知識を集約 |
+| **複数検索** | アグリゲートが複数の検索軸を持つと複雑化 | 中立的な立場で複数検索を調整 |
+| **冪等性** | 既存チェック+作成の組み合わせが複雑 | 処理全体の整合性を管理 |
+
+### 間違った実装例
+
+❌ **UserAggregateでJIT実装（複雑になる）**：
+```typescript
+export class UserAggregate {
+  // これはダメ：アグリゲートが外部知識を持つ
+  public static async createFromExternalInfo(
+    externalInfo: ExternalUserInfo,
+    userRepository: IUserRepository
+  ): Promise<UserAggregate> { // ❌
+    
+    // プロバイダー検証をアグリゲートで実装（外部知識の混入）
+    const VALID_PROVIDERS = ['google', 'apple']; // ❌ 外部知識
+    if (!VALID_PROVIDERS.includes(externalInfo.provider)) {
+      throw new Error('不正なプロバイダー');
+    }
+    
+    // 複数検索をアグリゲートで実装（複雑化）
+    const byExternal = await userRepository.findByExternalId(...);
+    const byEmail = await userRepository.findByEmail(externalInfo.email); // ❌ 複雑
+    
+    // 冲突処理をアグリゲートで実装（責任過多）
+    if (byExternal && byEmail && byExternal.id !== byEmail.id) { // ❌ 複雑
+      throw new Error('アカウント冲突');
+    }
+    
+    // アグリゲートが責任過多になる
+  }
+}
+```
+
+✅ **DomainServiceでJIT実装（適切）**：
+```typescript
+export class AuthenticationDomainService {
+  // ✅ 認証に関する外部知識を集約
+  private readonly VALID_PROVIDERS = new Set<AuthProvider>([
+    'google', 'apple', 'microsoft', 'github', 'facebook', 'line',
+  ]);
+  
+  // ✅ 複数エンティティにまたがる複雑な処理を管理
+  async createUserFromExternalInfo(externalInfo: ExternalUserInfo): Promise<UserEntity> {
+    // 外部知識の適用
+    if (!this.isValidProvider(externalInfo.provider)) {
+      throw InvalidProviderError.forProvider(externalInfo.provider);
+    }
+    
+    // 複数検索・冲突解決の調整
+    const existingUser = await this.userRepository.findByExternalId(...);
+    
+    // 処理の冪等性保証
+    if (existingUser) {
+      return UserEntity.restore(existingUser);
+    }
+    
+    // 純粋なエンティティ作成はUserEntityに委譲
+    const newUser = UserEntity.create(createInput);
+    const createdUser = await this.userRepository.create(createInput);
+    
+    return UserEntity.restore(createdUser);
+  }
+}
+```
+
+### DomainServiceとAggregateの協調
+
+UseCase内で適切に使い分けます：
+
+```typescript
+export class AuthenticateUserUseCase {
+  async execute(input: AuthenticateUserUseCaseInput) {
+    // 1. DomainServiceで複雑な認証処理
+    const { user, isNewUser } = await this.authenticationDomainService
+      .authenticateUser(externalInfo);
+    
+    // 2. Aggregateで永続化を伴う状態変更
+    const userAggregate = UserAggregate.fromEntity(user, this.userRepository);
+    const updatedUser = await userAggregate.recordLogin();
+    
+    return { user: updatedUser, isNewUser };
+  }
+}
+```
+
+この設計により、「複雑なビジネスロジック」はDomainService、「永続化を伴う状態管理」はAggregateと、適切に責任分担されています。
+
+---
+
+## Q. CreateUserInputやUpdateUserInputなどの値オブジェクトは、なぜinterfaceで定義してclassにしないのですか？
+
+A. **値オブジェクトの特性によってinterfaceとclassを使い分けています。データ転送が主目的ならinterface、振る舞いが重要ならclassを選択します**。
+
+### TASK102での値オブジェクト設計
+
+**interface型の値オブジェクト**（`CreateUserInput.ts`）：
+```typescript
+// ✅ データ転送が主目的：interface
+export interface CreateUserInput {
+  readonly externalId: string;
+  readonly provider: AuthProvider;
+  readonly email: string;
+  readonly name: string;
+  readonly avatarUrl?: string;
+}
+
+// ✅ 検証ロジックは分離された関数
+export function validateCreateUserInput(input: CreateUserInput): void {
+  const errors: string[] = [];
+  
+  if (!input.externalId?.trim()) {
+    errors.push('外部IDは必須です');
+  }
+  
+  if (input.email && !isValidEmail(input.email)) {
+    errors.push('メールアドレスの形式が正しくありません');
+  }
+  
+  if (errors.length > 0) {
+    throw new Error(`入力値検証エラー: ${errors.join(', ')}`);
+  }
+}
+```
+
+### なぜinterfaceを選択したのか？
+
+| 特徴 | interface | class | TASK102での選択 |
+|------|-----------|-------|----------------|
+| **主な用途** | データ構造定義 | 振る舞い+データ | データ転送 → interface |
+| **型チェック** | コンパイル時のみ | 実行時も可能 | コンパイル時で十分 |
+| **メモリ使用量** | 0（型情報のみ） | インスタンス作成 | 軽量性重視 → interface |
+| **JSON連携** | 自然 | シリアライズ必要 | APIとの連携 → interface |
+
+### classベースの値オブジェクト（より複雑な場合）
+
+**将来実装するかもしれない例**：
+```typescript
+// より複雑な値オブジェクトの場合はclass
+export class EmailAddress {
+  private readonly _value: string;
+  
+  private constructor(value: string) {
+    this._value = value;
+  }
+  
+  public static create(email: string): EmailAddress {
+    if (!this.isValidFormat(email)) {
+      throw new Error('無効なメールアドレス形式');
+    }
+    
+    if (this.isDisposableEmail(email)) {
+      throw new Error('使い捨てメールアドレスは使用できません');
+    }
+    
+    return new EmailAddress(email);
+  }
+  
+  // ✅ 値オブジェクトとしての振る舞い
+  public getDomain(): string {
+    return this._value.split('@')[1];
+  }
+  
+  public isCorporateEmail(): boolean {
+    const corporateDomains = ['company.com', 'enterprise.jp'];
+    return corporateDomains.includes(this.getDomain());
+  }
+  
+  public equals(other: EmailAddress): boolean {
+    return this._value === other._value;
+  }
+  
+  public toString(): string {
+    return this._value;
+  }
+  
+  private static isValidFormat(email: string): boolean {
+    // 複雑な検証ロジック
+  }
+  
+  private static isDisposableEmail(email: string): boolean {
+    // 使い捨てメール判定ロジック
+  }
+}
+```
+
+### 現在のinterfaceアプローチの利点
+
+**簡潔で実用的**：
+```typescript
+// ✅ シンプルで理解しやすい
+const createInput: CreateUserInput = {
+  externalId: 'google_123456789',
+  provider: 'google',
+  email: 'user@example.com',
+  name: '山田太郎',
+};
+
+// ✅ 検証は関数で実行
+validateCreateUserInput(createInput);
+
+// ✅ エンティティ作成に渡す
+const user = UserEntity.create(createInput);
+```
+
+**JSON APIとの親和性**：
+```typescript
+// ✅ APIからのデータをそのまま型付け
+app.post('/api/users', (req, res) => {
+  const input: CreateUserInput = req.body; // 自然な変換
+  validateCreateUserInput(input);
+  
+  const user = UserEntity.create(input);
+  // ...
+});
+```
+
+### いつclassに移行すべきか？
+
+以下の特徴が必要になったら、classベースの値オブジェクトを検討：
+
+1. **複雑な検証ロジック**：単純な形式チェックを超える場合
+2. **値特有の振る舞い**：計算や変換処理が必要な場合
+3. **不変性の強制**：値の変更を完全に防ぎたい場合
+4. **等価性の比較**：カスタムの等価性判定が必要な場合
+
+### 現在の設計の判断
+
+MVP段階では以下の理由でinterfaceが適切：
+
+- **シンプル性**：学習コストが低い
+- **軽量性**：メモリ使用量が少ない
+- **実用性**：APIとの連携が簡単
+- **段階的拡張**：必要に応じてclassに移行可能
+
+将来的に要件が複雑化したら、段階的にclassベースの値オブジェクトに移行できる設計になっています。
+
+---
+
+## Q. AuthProviderの定数定義で `as const` を使っているのはなぜですか？普通のobjectとどう違うのですか？
+
+A. **`as const`により「型レベルでの厳密な制約」と「実行時の安全性」を両立し、新しいプロバイダー追加時の型安全性を確保しているからです**。
+
+### `as const`ありなしの違い
+
+**TASK102の実装**（`AuthProvider.ts:7-28`）：
+```typescript
+// ✅ as const 使用
+export const AuthProviders = {
+  GOOGLE: 'google',
+  APPLE: 'apple',
+  MICROSOFT: 'microsoft',
+  GITHUB: 'github',
+  FACEBOOK: 'facebook',
+  LINE: 'line',
+} as const;
+
+export type AuthProvider = (typeof AuthProviders)[keyof typeof AuthProviders];
+```
+
+**as constなしの場合**：
+```typescript
+// ❌ as const なし
+export const AuthProviders = {
+  GOOGLE: 'google',
+  APPLE: 'apple',
+  // ...
+}; // as const なし
+
+export type AuthProvider = (typeof AuthProviders)[keyof typeof AuthProviders];
+```
+
+### 型レベルでの違い
+
+| コード | `as const` あり | `as const` なし |
+|--------|----------------|----------------|
+| **推論される型** | `{ readonly GOOGLE: "google"; readonly APPLE: "apple"; ... }` | `{ GOOGLE: string; APPLE: string; ... }` |
+| **AuthProvider型** | `"google" \| "apple" \| "microsoft" \| ...` | `string` |
+| **型安全性** | 厳密な文字列リテラル型 | 任意の文字列 |
+
+### 実際の影響
+
+**✅ as constありの場合（厳密な型チェック）**：
+```typescript
+function processAuth(provider: AuthProvider) {
+  // ✅ コンパイル時にチェックされる
+}
+
+processAuth('google');     // ✅ OK
+processAuth('invalid');    // ❌ コンパイルエラー
+processAuth(AuthProviders.GOOGLE); // ✅ OK
+
+// ✅ switch文で漏れをチェック
+function handleProvider(provider: AuthProvider) {
+  switch (provider) {
+    case 'google':
+    case 'apple':
+      return 'OK';
+    // default がないと TypeScript がエラー（網羅性チェック）
+  }
+}
+```
+
+**❌ as constなしの場合（緩い型チェック）**：
+```typescript
+function processAuth(provider: AuthProvider) {
+  // AuthProvider = string なので何でも通る
+}
+
+processAuth('google');     // ✅ OK
+processAuth('invalid');    // ✅ OK（本来はエラーにしたい）
+processAuth('typo');       // ✅ OK（タイポも通ってしまう）
+
+// ❌ switch文でも網羅性チェックができない
+function handleProvider(provider: AuthProvider) {
+  switch (provider) {
+    case 'google':
+      return 'OK';
+    // default なしでもエラーにならない（string型のため）
+  }
+}
+```
+
+### 実行時の安全性も確保
+
+**検証関数での型ガード**（`AuthProvider.ts:38-42`）：
+```typescript
+export function isValidAuthProvider(
+  provider: string,
+): provider is AuthProvider {
+  return Object.values(AuthProviders).includes(provider as AuthProvider);
+}
+
+// 使用例：実行時の型ガード
+function authenticateUser(providerString: string) {
+  if (isValidAuthProvider(providerString)) {
+    // この時点で providerString は AuthProvider 型として扱える
+    processAuth(providerString); // ✅ 型安全
+  } else {
+    throw new Error(`不正なプロバイダー: ${providerString}`);
+  }
+}
+```
+
+### 新規プロバイダー追加時の利点
+
+**プロバイダー追加時**：
+```typescript
+export const AuthProviders = {
+  GOOGLE: 'google',
+  APPLE: 'apple',
+  MICROSOFT: 'microsoft',
+  GITHUB: 'github',
+  FACEBOOK: 'facebook',
+  LINE: 'line',
+  DISCORD: 'discord', // ✅ 新規追加
+} as const;
+```
+
+**自動的に型チェックが更新**：
+```typescript
+function handleProvider(provider: AuthProvider) {
+  switch (provider) {
+    case 'google':
+    case 'apple':
+    case 'microsoft':
+    case 'github':
+    case 'facebook':
+    case 'line':
+      return 'handled';
+    // ❌ 'discord' がないためコンパイルエラー
+    // → 自動的に追加漏れを検出
+  }
+}
+```
+
+### 代替案との比較
+
+**enum使用**：
+```typescript
+// 代替案1: enum
+export enum AuthProvider {
+  GOOGLE = 'google',
+  APPLE = 'apple',
+  // ...
+}
+
+// 利点: 型安全性、名前空間分離
+// 欠点: より重い、JavaScript出力が複雑
+```
+
+**単純なunion型**：
+```typescript
+// 代替案2: 直接union型定義
+export type AuthProvider = 'google' | 'apple' | 'microsoft' | 'github' | 'facebook' | 'line';
+
+// 利点: 最軽量
+// 欠点: 定数オブジェクトがない、実行時チェックが困難
+```
+
+### TASK102での選択理由
+
+現在の `as const` アプローチが選ばれた理由：
+
+1. **型安全性**：厳密な文字列リテラル型
+2. **実行時安全性**：`Object.values()`で検証可能
+3. **軽量性**：enumより軽い
+4. **拡張性**：新規プロバイダー追加が簡単
+5. **可読性**：定数名でアクセス可能
+
+この設計により、コンパイル時と実行時の両方で安全性を確保しながら、軽量で拡張しやすい認証プロバイダー管理が実現されています。
