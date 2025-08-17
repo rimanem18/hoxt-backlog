@@ -586,7 +586,7 @@ gantt
 
 #### データベース接続エラー  
 - **原因**: PostgreSQLコンテナの起動失敗
-- **対処**: `docker compose logs postgres` でログ確認
+- **対処**: `docker compose logs db` でログ確認
 
 #### Google OAuth エラー
 - **原因**: Supabase プロジェクト設定の不備
