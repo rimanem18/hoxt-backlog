@@ -157,7 +157,7 @@
 
 #### TASK-104: Supabase認証プロバイダー実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **要件リンク**: IAuthProvider, JWT検証仕様
 - **依存タスク**: TASK-102
@@ -176,9 +176,9 @@
   - `verifyToken(token)`: JWT検証
   - `getExternalUserInfo(payload)`: ユーザー情報抽出
 - **統合テスト要件**:
-  - [ ] 有効なJWTでの検証成功テスト
-  - [ ] 無効なJWTでの検証失敗テスト
-  - [ ] 期限切れJWTでのエラーテスト
+  - [x] 有効なJWTでの検証成功テスト
+  - [x] 無効なJWTでの検証失敗テスト
+  - [x] 期限切れJWTでのエラーテスト
 - **テストケース例**:
   - 正常なGoogle OAuthのJWT検証
   - 不正な署名のJWT拒否
@@ -200,7 +200,7 @@
 - **ファイル構成**:
   ```
   app/server/src/application/
-  ├── use-cases/
+  ├── usecases/
   │   └── AuthenticateUserUseCase.ts
   └── services/
       └── ApplicationService.ts
@@ -234,7 +234,7 @@
 - **ファイル構成**:
   ```
   app/server/src/application/
-  └── use-cases/
+  └── usecases/
       └── GetUserProfileUseCase.ts
   ```
 - **単体テスト要件**:
@@ -586,7 +586,7 @@ gantt
 
 #### データベース接続エラー  
 - **原因**: PostgreSQLコンテナの起動失敗
-- **対処**: `docker compose logs postgres` でログ確認
+- **対処**: `docker compose logs db` でログ確認
 
 #### Google OAuth エラー
 - **原因**: Supabase プロジェクト設定の不備

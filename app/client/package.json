@@ -6,8 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "check": "biome check  src ../packages/src",
-    "fix": "biome check src ../packages/src --write",
+    "check": "biome check  src ../packages/shared-schemas",
+    "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
