@@ -2,18 +2,26 @@
   "name": "server",
   "scripts": {
     "dev": "bun run --hot src/presentation/http/server/bun.serve.ts",
-    "check": "biome check src",
-    "fix": "biome check src --write",
+    "check": "biome check  src ../packages/src",
+    "fix": "biome check src ../packages/src --write",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.44.4",
+    "drizzle-orm": "^0.44.4",
+    "drizzle-zod": "^0.8.3",
     "hono": "^4.9.0",
+    "pg": "^8.12.0",
+    "postgres": "^3.4.7",
     "uuid": "^11.1.0",
     "zod": "^4.0.17"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
     "@types/bun": "^1.2.20",
-    "@types/uuid": "^10.0.0"
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.11.0",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.31.4"
   }
 }

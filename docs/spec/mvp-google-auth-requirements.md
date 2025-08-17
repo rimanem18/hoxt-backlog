@@ -176,6 +176,9 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 - Supabaseプロジェクトのセットアップ
 - Google OAuth アプリケーションの設定
 - PostgreSQL データベースのセットアップ
+  - Supabase DB に対し、Transaction Pooler で接続（port: 6543）
+  - >Ideal for stateless applications like serverless functions where each interaction with Postgres is brief and isolated.
+  - 将来的にバックエンドは AWS Lambda や Claudflare Works, Cloud Run などのサーバーレス環境にのせる予定
 - 環境変数：
   - フロントエンド: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
   - バックエンド: SUPABASE_JWT_SECRET, DATABASE_URL
@@ -183,7 +186,7 @@ SupabaseとGoogle OAuthを使用した認証機能を、バックエンドAPI経
 ### 依存関係
 
 - フロントエンド: @supabase/supabase-js, Next.js 15, Tailwind CSS
-- バックエンド: Hono, PostgreSQL client, JWT verification library
+- バックエンド: Hono, PostgreSQL client,Drizzle ORM, JWT verification library
 
 ## DDD学習のポイント
 
