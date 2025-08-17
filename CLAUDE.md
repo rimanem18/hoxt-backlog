@@ -28,8 +28,10 @@ NG: feat: hoge を追加。
 
 - **`app/client/`**: client コンテナにバインド（Next.js アプリケーション）
   - feature-based ディレクトリ
+  - WORKDIR: /home/bun/app/client
 - **`app/server/`**: server コンテナにバインド（Hono API アプリケーション）
   - DDD + クリーンアーキテクチャ
+  - WORKDIR: /home/bun/app/server
 - **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
 - **`compose.yml`**: Docker Compose 設定ファイル

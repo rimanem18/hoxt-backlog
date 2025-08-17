@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { SupabaseAuthProvider } from "../SupabaseAuthProvider";
-import { JwtPayload, JwtVerificationResult, ExternalUserInfo } from "@/domain/services/IAuthProvider";
+import type { JwtPayload, JwtVerificationResult, ExternalUserInfo } from "@/domain/services/IAuthProvider";
 
 describe("SupabaseAuthProvider", () => {
   let authProvider: SupabaseAuthProvider;
