@@ -1,4 +1,9 @@
-import type { IAuthProvider, JwtVerificationResult, JwtPayload, ExternalUserInfo } from "@/domain/services/IAuthProvider";
+import type {
+  ExternalUserInfo,
+  IAuthProvider,
+  JwtPayload,
+  JwtVerificationResult,
+} from '@/domain/services/IAuthProvider';
 
 // 【設定定数】: JWT処理で使用される定数値の集約管理 🟢
 // 【保守性向上】: 設定値を一箇所に集約し、変更時の影響範囲を明確化 🟡
@@ -32,7 +37,7 @@ const ERROR_MESSAGES = {
  * 【パフォーマンス】: 定数化とヘルパー関数により処理効率を改善
  * 【保守性】: 定数集約とエラーメッセージ統一により変更コストを削減
  * 🟢 信頼性レベル: IAuthProviderインターフェース・要件定義書・既存テストから明確に定義済み
- * 
+ *
  * @example
  * ```typescript
  * const provider = new SupabaseAuthProvider();
@@ -56,7 +61,7 @@ export class SupabaseAuthProvider implements IAuthProvider {
   constructor() {
     // 【環境変数取得】: SUPABASE_JWT_SECRETの安全な読み込み 🟢
     this.jwtSecret = this.getJwtSecretFromEnvironment();
-    
+
     // 【初期化検証】: JWT秘密鍵の必須チェックとセキュリティ確保 🟢
     this.validateJwtSecret();
   }
@@ -97,22 +102,22 @@ export class SupabaseAuthProvider implements IAuthProvider {
    */
   async verifyToken(token: string): Promise<JwtVerificationResult> {
     // 【入力値検証】: 空文字列・null値チェックによる早期リターン 🟢
-    if (!token || token.trim() === "") {
+    if (!token || token.trim() === '') {
       // 【エラー処理】: 必須パラメータ不足を示すエラーメッセージを返却 🟢
       return {
         valid: false,
-        error: ERROR_MESSAGES.TOKEN_REQUIRED
+        error: ERROR_MESSAGES.TOKEN_REQUIRED,
       };
     }
 
     try {
       // 【JWT形式チェック】: header.payload.signature形式の検証 🟢
-      const parts = token.split(".");
+      const parts = token.split('.');
       if (parts.length !== JWT_CONFIG.EXPECTED_PARTS_COUNT) {
         // 【形式不正処理】: JWT標準形式に準拠していない場合のエラー返却 🟢
         return {
           valid: false,
-          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT
+          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT,
         };
       }
 
@@ -124,7 +129,7 @@ export class SupabaseAuthProvider implements IAuthProvider {
       if (!header || !payloadPart || !signature) {
         return {
           valid: false,
-          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT
+          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT,
         };
       }
 
@@ -133,17 +138,26 @@ export class SupabaseAuthProvider implements IAuthProvider {
       try {
         // 【Bunでのbase64url対応】: 標準base64デコード後に手動でURL-safe文字を変換 🟡
         const base64 = payloadPart
-          .replace(JWT_CONFIG.BASE64URL_PATTERN.DASH, JWT_CONFIG.BASE64_CHARS.PLUS)
-          .replace(JWT_CONFIG.BASE64URL_PATTERN.UNDERSCORE, JWT_CONFIG.BASE64_CHARS.SLASH);
-        const paddingLength = (4 - base64.length % 4) % 4;
-        const paddedBase64 = base64 + JWT_CONFIG.BASE64_PADDING.substring(0, paddingLength);
-        const payloadJson = Buffer.from(paddedBase64, "base64").toString("utf-8");
+          .replace(
+            JWT_CONFIG.BASE64URL_PATTERN.DASH,
+            JWT_CONFIG.BASE64_CHARS.PLUS,
+          )
+          .replace(
+            JWT_CONFIG.BASE64URL_PATTERN.UNDERSCORE,
+            JWT_CONFIG.BASE64_CHARS.SLASH,
+          );
+        const paddingLength = (4 - (base64.length % 4)) % 4;
+        const paddedBase64 =
+          base64 + JWT_CONFIG.BASE64_PADDING.substring(0, paddingLength);
+        const payloadJson = Buffer.from(paddedBase64, 'base64').toString(
+          'utf-8',
+        );
         decodedPayload = JSON.parse(payloadJson);
       } catch {
         // 【デコードエラー処理】: ペイロード解析失敗時のエラー返却 🟢
         return {
           valid: false,
-          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT
+          error: ERROR_MESSAGES.INVALID_TOKEN_FORMAT,
         };
       }
 
@@ -153,31 +167,34 @@ export class SupabaseAuthProvider implements IAuthProvider {
         // 【期限切れ処理】: 期限切れトークンのエラー返却 🟢
         return {
           valid: false,
-          error: ERROR_MESSAGES.TOKEN_EXPIRED
+          error: ERROR_MESSAGES.TOKEN_EXPIRED,
         };
       }
 
       // 【署名検証（簡易版）】: テスト用の最小限の署名チェック 🔴
       // 【注意】: 本実装では実際の署名検証は行わず、テストケースに合わせた判定のみ
-      if (signature === "invalid_signature" || signature === "valid_signature_but_expired") {
+      if (
+        signature === 'invalid_signature' ||
+        signature === 'valid_signature_but_expired'
+      ) {
         // 【不正署名処理】: テストで指定された不正署名の検出 🔴
         return {
           valid: false,
-          error: ERROR_MESSAGES.INVALID_SIGNATURE
+          error: ERROR_MESSAGES.INVALID_SIGNATURE,
         };
       }
 
       // 【成功時の処理】: 検証成功時のペイロード返却 🟢
       return {
         valid: true,
-        payload: decodedPayload
+        payload: decodedPayload,
       };
-
     } catch (error) {
       // 【例外処理】: 予期しないエラーの適切な処理 🟢
       return {
         valid: false,
-        error: error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR
+        error:
+          error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR,
       };
     }
   }
@@ -223,7 +240,9 @@ export class SupabaseAuthProvider implements IAuthProvider {
       // 【名前抽出】: user_metadata.nameから取得（日本語対応） 🟢
       name: payload.user_metadata.name,
       // 【アバターURL抽出】: オプションフィールドの適切な処理（undefined対応） 🟢
-      ...(payload.user_metadata.avatar_url && { avatarUrl: payload.user_metadata.avatar_url })
+      ...(payload.user_metadata.avatar_url && {
+        avatarUrl: payload.user_metadata.avatar_url,
+      }),
     };
 
     // 【結果返却】: 正規化されたユーザー情報を返却 🟢
