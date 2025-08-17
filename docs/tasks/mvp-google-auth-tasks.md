@@ -200,7 +200,7 @@
 - **ファイル構成**:
   ```
   app/server/src/application/
-  ├── use-cases/
+  ├── usecases/
   │   └── AuthenticateUserUseCase.ts
   └── services/
       └── ApplicationService.ts
@@ -234,7 +234,7 @@
 - **ファイル構成**:
   ```
   app/server/src/application/
-  └── use-cases/
+  └── usecases/
       └── GetUserProfileUseCase.ts
   ```
 - **単体テスト要件**:
