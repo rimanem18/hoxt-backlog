@@ -1,0 +1,186 @@
+# TDD開発メモ: mvp-google-auth TASK-105
+
+## 概要
+
+- 機能名: AuthenticateUserUseCase実装
+- 開発開始: 2025-08-19 17:48 JST
+- 現在のフェーズ: Red（失敗するテスト作成）
+
+## 関連ファイル
+
+- 要件定義: `docs/implementation/mvp-google-auth/TASK-105/tdd-requirements.md`
+- テストケース定義: `docs/implementation/mvp-google-auth/TASK-105/tdd-testcases.md`
+- 実装ファイル: `app/server/src/application/usecases/AuthenticateUserUseCase.ts` (未実装)
+- テストファイル: 
+  - `app/server/src/application/usecases/__tests__/AuthenticateUserUseCase.test.ts`
+  - `app/server/src/application/usecases/__tests__/AuthenticateUserUseCase-simple.test.ts`
+
+## Redフェーズ（失敗するテスト作成）
+
+### 作成日時
+
+2025-08-19 17:48 JST
+
+### 作成したテストケース
+
+#### 1. 基本的な失敗テスト
+- **ファイル**: `AuthenticateUserUseCase-simple.test.ts`
+- **目的**: UseCase実装前の状態確認
+- **内容**: AuthenticateUserUseCaseが未実装であることを明示的に確認
+- **結果**: ✅ 期待通り失敗（"AuthenticateUserUseCase is not implemented yet"）
+
+#### 2. 詳細なテストケース（実装準備完了）
+- **ファイル**: `AuthenticateUserUseCase.test.ts`
+- **内容**: 以下のテストカテゴリを網羅
+  - 正常系テスト（2件）
+    - 既存ユーザー認証成功
+    - 新規ユーザーJIT作成成功
+  - 異常系テスト（4件）
+    - 無効JWT認証エラー
+    - データベース接続エラー
+    - 外部サービス（Supabase）障害エラー
+    - 同一ユーザー同時JIT作成処理
+  - 境界値テスト（3件）
+    - 空文字・null JWT処理
+    - 非常に長いJWT処理
+    - 認証処理パフォーマンス要件確認
+  - 統合テスト（2件）
+    - 依存関係DI確認
+    - ログ出力適切性確認
+
+### 作成したサポートファイル
+
+#### インターフェース・型定義
+- `app/server/src/application/interfaces/IAuthenticateUserUseCase.ts`
+  - IAuthenticateUserUseCase
+  - AuthenticateUserUseCaseInput
+  - AuthenticateUserUseCaseOutput
+
+#### エラークラス
+- `app/server/src/domain/user/errors/AuthenticationError.ts`
+- `app/server/src/shared/errors/InfrastructureError.ts`
+- `app/server/src/shared/errors/ExternalServiceError.ts` 
+- `app/server/src/shared/errors/ValidationError.ts`
+
+#### ユーティリティ
+- `app/server/src/shared/logging/Logger.ts` (インターフェース)
+
+### 期待される失敗
+
+1. **基本的な実装エラー**: AuthenticateUserUseCaseクラスが存在しない
+2. **詳細テストでの失敗**: 各テストメソッドで実装されていないメソッドの呼び出し失敗
+
+### テスト実行結果
+
+```bash
+# 簡単なテストでの失敗確認
+$ docker compose exec server bun test src/application/usecases/__tests__/AuthenticateUserUseCase-simple.test.ts
+
+src/application/usecases/__tests__/AuthenticateUserUseCase-simple.test.ts:
+(fail) AuthenticateUserUseCase（TASK-105）基本テスト > AuthenticateUserUseCaseが未実装であることを確認
+error: AuthenticateUserUseCase is not implemented yet - this is expected in Red phase
+
+1 pass
+1 fail
+```
+
+### 日本語コメント実装状況
+
+✅ **完了**:
+- テスト目的の明確化（各テストケースの開始時）
+- テストデータ準備の理由説明（Givenフェーズ）
+- 実際処理の内容説明（Whenフェーズ）
+- 結果検証の詳細説明（Thenフェーズ）
+- 各expectステートメントの確認内容説明
+- セットアップ・クリーンアップの目的説明
+
+### 次のフェーズへの要求事項
+
+Greenフェーズで実装すべき内容：
+
+1. **AuthenticateUserUseCaseクラス実装**
+   - `app/server/src/application/usecases/AuthenticateUserUseCase.ts`
+   - IAuthenticateUserUseCaseインターフェースの実装
+   - 依存性注入（DI）対応コンストラクタ
+
+2. **核心機能実装**
+   - `execute`メソッドの実装
+   - JWT検証フロー
+   - 既存ユーザー認証フロー
+   - JITプロビジョニングフロー
+   - エラーハンドリング
+
+3. **品質要件の満足**
+   - パフォーマンス要件（既存ユーザー認証1秒以内、JIT作成2秒以内）
+   - セキュリティ要件（適切なエラー処理・ログ出力）
+   - アーキテクチャ制約（DDD・クリーンアーキテクチャ準拠）
+
+4. **テスト修正**
+   - `AuthenticateUserUseCase-simple.test.ts`の削除
+   - `AuthenticateUserUseCase.test.ts`のコメントアウト解除
+   - モック設定の調整
+
+## 学習・発見事項
+
+### Bun テストランナー特性
+- Jest互換性は部分的（`mock()`関数の使用法が異なる）
+- 型チェックが厳格で、インターフェース定義の一貫性が重要
+- パフォーマンステストの実装も可能（`performance.now()`利用）
+
+### TDD実践での気づき
+- 日本語コメントにより、テスト意図が明確化される
+- 🟢🟡🔴の信頼性レベル表示により、推測部分が可視化される
+- 失敗テスト作成により、実装すべき機能が明確になる
+
+### アーキテクチャ設計の重要性
+- インターフェース先行設計により、依存関係の方向が明確化される
+- エラークラスの体系的な設計により、適切な例外処理が可能
+- DI設計により、テスト時のモック化が容易になる
+
+## Greenフェーズ（最小実装）
+
+### 実装日時
+
+[未実行]
+
+### 実装方針
+
+[Greenフェーズで記載予定]
+
+### 実装コード
+
+[Greenフェーズで記載予定]
+
+### テスト結果
+
+[Greenフェーズで記載予定]
+
+### 課題・改善点
+
+[Greenフェーズで記載予定]
+
+## Refactorフェーズ（品質改善）
+
+### リファクタ日時
+
+[未実行]
+
+### 改善内容
+
+[Refactorフェーズで記載予定]
+
+### セキュリティレビュー
+
+[Refactorフェーズで記載予定]
+
+### パフォーマンスレビュー
+
+[Refactorフェーズで記載予定]
+
+### 最終コード
+
+[Refactorフェーズで記載予定]
+
+### 品質評価
+
+[Refactorフェーズで記載予定]
