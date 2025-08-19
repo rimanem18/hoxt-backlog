@@ -10,7 +10,7 @@
  * - 日本語コメントによる明確なテスト意図の記述
  */
 
-import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, mock, Mock } from "bun:test";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository";
 import type { 
   IAuthProvider, 
@@ -29,7 +29,7 @@ import { AuthenticationError } from "../../../domain/user/errors/AuthenticationE
 import { InfrastructureError } from "../../../shared/errors/InfrastructureError"; 
 import { ExternalServiceError } from "../../../shared/errors/ExternalServiceError";
 import { ValidationError } from "../../../shared/errors/ValidationError";
-import { Logger } from "../../../shared/logging/Logger";
+import type { Logger } from "../../../shared/logging/Logger";
 
 // AuthenticateUserUseCaseの実装完了（Greenフェーズ）
 import { AuthenticateUserUseCase } from "../AuthenticateUserUseCase";
@@ -103,7 +103,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【初期条件設定】: UserRepository・AuthProviderのモックを適切に設定
       // 【前提条件確認】: 依存関係が正しく注入され、UseCase初期化が完了している
       const input: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-existing-user-jwt"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5MCIsImVtYWlsIjoiZXhpc3RpbmdAZXhhbXBsZS5jb20ifQ.test-signature"
       };
 
       const existingUser: User = {
@@ -198,7 +198,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【テストデータ準備】: 初回ログインユーザーの有効なGoogle OAuth JWT
       // 【初期条件設定】: JITプロビジョニングが実行される条件の設定
       const input: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-new-user-jwt"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfOTg3NjU0MzIxMCIsImVtYWlsIjoibmV3dXNlckBleGFtcGxlLmNvbSJ9.test-signature"
       };
 
       const newUser: User = {
@@ -240,14 +240,14 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       };
 
       // 【モック設定】: 新規ユーザーJIT作成フローの成功パターン
-      (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
         valid: true,
         payload: jwtPayload
       } as JwtVerificationResult);
 
-      (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue(externalUserInfo);
+      (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue(externalUserInfo);
 
-      (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+      (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
         user: newUser,
         isNewUser: true
       });
@@ -306,7 +306,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       };
 
       // 【モック設定】: JWT検証失敗パターン
-      (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
         valid: false,
         error: "Invalid signature"
       } as JwtVerificationResult);
@@ -339,7 +339,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【テストデータ準備】: 有効なJWT（DB障害は別要因）
       // 【初期条件設定】: JWT検証は成功するがDB操作でエラーが発生
       const input: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-jwt-but-db-error"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfZGJlcnJvciIsImVtYWlsIjoiZGJlcnJvckBleGFtcGxlLmNvbSJ9.test-signature"
       };
 
       const jwtPayload: JwtPayload = {
@@ -367,14 +367,14 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       };
 
       // 【モック設定】: JWT検証成功後のDB障害パターン
-      (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
         valid: true,
         payload: jwtPayload
       });
 
-      (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue(externalUserInfo);
+      (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue(externalUserInfo);
 
-      (mockAuthDomainService.authenticateUser as jest.Mock).mockRejectedValue(
+      (mockAuthDomainService.authenticateUser as Mock).mockRejectedValue(
         new InfrastructureError("ユーザー情報の取得に失敗しました")
       );
 
@@ -402,11 +402,11 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【テストデータ準備】: 有効なJWTだがSupabase側で障害
       // 【初期条件設定】: Supabase API障害、ネットワーク接続問題、レート制限
       const input: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-jwt-but-supabase-error"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfc3VwYWJhc2VlcnJvciIsImVtYWlsIjoic3VwYWJhc2VlcnJvckBleGFtcGxlLmNvbSJ9.test-signature"
       };
 
       // 【モック設定】: Supabase障害パターン
-      (mockAuthProvider.verifyToken as jest.Mock).mockRejectedValue(
+      (mockAuthProvider.verifyToken as Mock).mockRejectedValue(
         new ExternalServiceError("認証サービスが一時的に利用できません")
       );
 
@@ -437,7 +437,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【テストデータ準備】: 複数の並行リクエストで同一ユーザーのJWT
       // 【初期条件設定】: unique制約違反（複数プロセスでの同時INSERT）
       const input: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.same-external-id-jwt"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfY29uY3VycmVudF91c2VyIiwiZW1haWwiOiJjb25jdXJyZW50QGV4YW1wbGUuY29tIn0.test-signature"
       };
 
       const existingUser: User = {
@@ -446,6 +446,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         provider: "google",
         email: "concurrent@example.com",
         name: "並行処理ユーザー",
+        avatarUrl: "https://lh3.googleusercontent.com/concurrent-avatar.jpg",
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: new Date()
@@ -476,14 +477,14 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       };
 
       // 【モック設定】: 2回目以降のリクエストで既存ユーザーとして処理
-      (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
         valid: true,
         payload: jwtPayload
       });
 
-      (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue(externalUserInfo);
+      (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue(externalUserInfo);
 
-      (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+      (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
         user: existingUser,
         isNewUser: false // 重複作成ではなく既存ユーザーとして扱う
       });
@@ -562,7 +563,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       };
 
       // 【モック設定】: 長大JWTでも正常処理またはサイズ制限エラー
-      (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
         valid: true,
         payload: {
           sub: "google_long_claims_user",
@@ -575,14 +576,14 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         }
       });
 
-      (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue({
+      (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue({
         id: "google_long_claims_user",
         provider: "google",
         email: "longclaims@example.com", 
         name: "長いクレームユーザー"
       });
 
-      (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+      (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
         user: {
           id: "uuid-4-long-claims-user",
           externalId: "google_long_claims_user",
@@ -613,7 +614,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       } catch (error) {
         // サイズ制限エラーの場合の確認
         expect(error).toBeInstanceOf(ValidationError);
-        expect(error.message).toContain("JWTサイズが上限を超えています");
+        expect((error as ValidationError).message).toContain("JWTサイズが上限を超えています");
       }
     });
 
@@ -626,26 +627,26 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 【テストデータ準備】: 既存ユーザーの認証性能測定
       // 【初期条件設定】: NFR-002（1秒）・NFR-003（2秒）の性能要件
       const existingUserInput: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.performance-test-existing-user"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfcGVyZm9ybWFuY2UiLCJlbWFpbCI6InBlcmZvcm1hbmNlQGV4YW1wbGUuY29tIn0.test-signature"
       };
 
       const newUserInput: AuthenticateUserUseCaseInput = {
-        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.performance-test-new-user"
+        jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfbmV3X3VzZXIiLCJlbWFpbCI6Im5ld3VzZXJAZXhhbXBsZS5jb20ifQ.test-signature"
       };
 
       // 既存ユーザー認証の性能テスト
       {
         // 【モック設定】: 既存ユーザー認証フロー
-        (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
           valid: true,
           payload: { sub: "existing_perf_user", email: "existing@perf.com", app_metadata: { provider: "google", providers: ["google"] }, user_metadata: { name: "性能テストユーザー", email: "existing@perf.com", full_name: "性能テストユーザー" }, iss: "https://supabase.co", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 }
         });
 
-        (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue({
           id: "existing_perf_user", provider: "google", email: "existing@perf.com", name: "性能テストユーザー"
         });
 
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+        (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
           user: { id: "uuid-existing-perf", externalId: "existing_perf_user", provider: "google", email: "existing@perf.com", name: "性能テストユーザー", createdAt: new Date("2025-08-01"), updatedAt: new Date(), lastLoginAt: new Date() },
           isNewUser: false
         });
@@ -670,20 +671,20 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       // 新規ユーザーJIT作成の性能テスト  
       {
         // 【モック設定】: 新規ユーザーJIT作成フロー
-        (mockAuthProvider.verifyToken as jest.Mock).mockClear();
-        (mockAuthProvider.getExternalUserInfo as jest.Mock).mockClear();
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockClear();
+        (mockAuthProvider.verifyToken as Mock).mockClear();
+        (mockAuthProvider.getExternalUserInfo as Mock).mockClear();
+        (mockAuthDomainService.authenticateUser as Mock).mockClear();
 
-        (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
           valid: true,
           payload: { sub: "new_perf_user", email: "new@perf.com", app_metadata: { provider: "google", providers: ["google"] }, user_metadata: { name: "新規性能テストユーザー", email: "new@perf.com", full_name: "新規性能テストユーザー" }, iss: "https://supabase.co", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 }
         });
 
-        (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue({
           id: "new_perf_user", provider: "google", email: "new@perf.com", name: "新規性能テストユーザー"
         });
 
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+        (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
           user: { id: "uuid-new-perf", externalId: "new_perf_user", provider: "google", email: "new@perf.com", name: "新規性能テストユーザー", createdAt: new Date(), updatedAt: new Date(), lastLoginAt: new Date() },
           isNewUser: true
         });
@@ -761,8 +762,8 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
 
       // 【テストデータ準備】: 各種認証シナリオのJWT
       // 【初期条件設定】: 成功・失敗・エラーの各パターンでのログ出力確認
-      const successJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.success-log-test";
-      const failureJwt = "invalid.jwt.for.log.test";
+      const successJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfbG9nX3Rlc3QiLCJlbWFpbCI6ImxvZ3Rlc3RAZXhhbXBsZS5jb20ifQ.test-signature";
+      const failureJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkX3VzZXIiLCJlbWFpbCI6ImludmFsaWRAZXhhbXBsZS5jb20ifQ.invalid-signature";
 
       // 成功時ログテスト
       {
@@ -772,21 +773,22 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
           provider: "google",
           email: "logtest@example.com",
           name: "ログテストユーザー",
+          avatarUrl: "https://lh3.googleusercontent.com/log-test-avatar.jpg",
           createdAt: new Date(),
           updatedAt: new Date(),
           lastLoginAt: new Date()
         };
 
-        (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
           valid: true,
           payload: { sub: "google_log_test", email: "logtest@example.com", app_metadata: { provider: "google", providers: ["google"] }, user_metadata: { name: "ログテストユーザー", email: "logtest@example.com", full_name: "ログテストユーザー" }, iss: "https://supabase.co", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 }
         });
 
-        (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue({
           id: "google_log_test", provider: "google", email: "logtest@example.com", name: "ログテストユーザー"
         });
 
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockResolvedValue({
+        (mockAuthDomainService.authenticateUser as Mock).mockResolvedValue({
           user: successUser,
           isNewUser: false
         });
@@ -808,10 +810,10 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
 
       // 失敗時ログテスト
       {
-        (mockAuthProvider.verifyToken as jest.Mock).mockClear();
-        (mockLogger.warn as jest.Mock).mockClear();
+        (mockAuthProvider.verifyToken as Mock).mockClear();
+        (mockLogger.warn as Mock).mockClear();
 
-        (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
           valid: false,
           error: "Invalid signature"
         });
@@ -823,8 +825,8 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
           // エラーは期待される動作
         }
 
-        // 【検証項目】: 失敗時の適切なログ出力確認
-        // 🟢 監査要件から明確に定義済み
+        // 【検証項目】: 失敗時の適切なログ出力確認（Refactor改善版）
+        // 🟢 監査要件 + Geminiセキュリティレビューの改善案を反映
         expect(mockLogger.warn).toHaveBeenCalledWith(
           "User authentication failed",
           expect.objectContaining({
@@ -835,20 +837,20 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
 
       // エラー時ログテスト（機密情報の秘匿確認）
       {
-        (mockAuthProvider.verifyToken as jest.Mock).mockClear();
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockClear();
-        (mockLogger.error as jest.Mock).mockClear();
+        (mockAuthProvider.verifyToken as Mock).mockClear();
+        (mockAuthDomainService.authenticateUser as Mock).mockClear();
+        (mockLogger.error as Mock).mockClear();
 
-        (mockAuthProvider.verifyToken as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.verifyToken as Mock).mockResolvedValue({
           valid: true,
           payload: { sub: "error_log_test", email: "error@example.com", app_metadata: { provider: "google", providers: ["google"] }, user_metadata: { name: "エラーテストユーザー", email: "error@example.com", full_name: "エラーテストユーザー" }, iss: "https://supabase.co", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 }
         });
 
-        (mockAuthProvider.getExternalUserInfo as jest.Mock).mockResolvedValue({
+        (mockAuthProvider.getExternalUserInfo as Mock).mockResolvedValue({
           id: "error_log_test", provider: "google", email: "error@example.com", name: "エラーテストユーザー"
         });
 
-        (mockAuthDomainService.authenticateUser as jest.Mock).mockRejectedValue(
+        (mockAuthDomainService.authenticateUser as Mock).mockRejectedValue(
           new Error("Database connection failed")
         );
 
