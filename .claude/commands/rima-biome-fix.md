@@ -12,5 +12,8 @@ description: import パスの修正や biome での lint & format を実施し�
 5. 問題があれば修正
 6. `docker compose exec {コンテナ名} bun run fix` を実施
 
+- **禁止**: `--unsafe` オプションの実行。
+
 問題が解決するまで繰り返します。
 三度繰り返しても解決しない場合、ユーザーに指示を求めます。
+
