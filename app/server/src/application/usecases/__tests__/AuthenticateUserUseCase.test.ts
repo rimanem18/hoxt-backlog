@@ -1,13 +1,8 @@
 /**
- * ユーザー認証UseCase実装 - TDDテスト（Redフェーズ）
- * TASK-105: mvp-google-auth
- *
- * 作成日: 2025-08-19
- *
- * 【テストファイル目的】
- * - AuthenticateUserUseCaseの全機能のテスト（正常系・異常系・境界値）
- * - TDD Redフェーズでの失敗テスト実装
- * - 日本語コメントによる明確なテスト意図の記述
+ * ユーザー認証UseCaseテスト
+ * 
+ * AuthenticateUserUseCaseの全機能をテストする。
+ * 正常系、異常系、境界値、依存関係の統合テストを含む。
  */
 
 import {
@@ -50,10 +45,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
   let authenticateUserUseCase: IAuthenticateUserUseCase;
 
   beforeEach(() => {
-    // 【テスト前準備】: モックオブジェクトの初期化とテストデータの準備
-    // 【環境初期化】: 各テストが独立実行できるようクリーンな状態に設定
-
-    // 【依存関係モック化】: Infrastructure層の実装詳細から完全独立
+    // 各テストで使用するモックオブジェクトを初期化
     mockUserRepository = {
       findByExternalId: mock(),
       findById: mock(),
@@ -80,7 +72,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
       debug: mock(),
     } as any;
 
-    // 【UseCase初期化】: 実装完了後のインスタンス化（Greenフェーズ）
+    // UseCaseインスタンスを初期化
     authenticateUserUseCase = new AuthenticateUserUseCase(
       mockUserRepository,
       mockAuthProvider,
@@ -90,9 +82,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
   });
 
   afterEach(() => {
-    // 【テスト後処理】: モックの状態リセットとメモリリークの防止
-    // 【状態復元】: 次のテストに影響しないよう全ての変更を元に戻す
-    // Bunではモッククリアは各テストで新しいmockインスタンスを作成することで対応
+    // Bunでは各テストで新しいmockインスタンスを作成することでモックをクリア
   });
 
   // ========================================================================
@@ -101,14 +91,6 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
 
   describe('正常系テスト', () => {
     test('有効なJWTで既存ユーザーの認証が成功する', async () => {
-      // 【テスト目的】: JWT検証→既存ユーザー検索→lastLoginAt更新→認証完了までの一連のフロー
-      // 【テスト内容】: JWT検証・ユーザー検索・lastLoginAt更新・認証成功レスポンス
-      // 【期待される動作】: 認証成功・既存ユーザー情報返却・isNewUser=false
-      // 🟢 要件定義書の既存ユーザー認証仕様から明確に定義済み
-
-      // 【テストデータ準備】: 既存ユーザーのGoogle OAuth JWTと対応するUserエンティティを準備
-      // 【初期条件設定】: UserRepository・AuthProviderのモックを適切に設定
-      // 【前提条件確認】: 依存関係が正しく注入され、UseCase初期化が完了している
       const input: AuthenticateUserUseCaseInput = {
         jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5MCIsImVtYWlsIjoiZXhpc3RpbmdAZXhhbXBsZS5jb20ifQ.test-signature',
       };
@@ -151,7 +133,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         avatarUrl: 'https://lh3.googleusercontent.com/avatar.jpg',
       };
 
-      // 【モック設定】: 既存ユーザー認証フローの成功パターン
+      // Given: 既存ユーザー認証フローのモック設定
       (mockAuthProvider.verifyToken as Mock<any>).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
@@ -166,33 +148,22 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         isNewUser: false,
       });
 
-      // 【実際の処理実行】: AuthenticateUserUseCase.executeメソッドにJWTを渡して実行
-      // 【処理内容】: JWT検証・外部ユーザー情報抽出・既存ユーザー検索・lastLoginAt更新
-      // 【実行タイミング】: AuthController経由で実際にAPI呼び出しされるフローを再現
-
+      // When: 認証処理を実行
       const result = await authenticateUserUseCase.execute(input);
 
-      // 【結果検証】: AuthenticateUserUseCaseOutputの構造とUser情報の確認
-      // 【期待値確認】: 既存ユーザー情報・isNewUser=false・lastLoginAt更新の確認
-      // 【品質保証】: アーキテクチャ制約・パフォーマンス要件・セキュリティ要件の遵守確認
-
-      // 【検証項目】: 認証処理の成功確認
-      // 🟢 AuthenticateUserUseCaseOutput型定義から明確に定義済み
+      // Then: 認証結果を検証
       expect(result).toBeDefined();
 
-      // 【検証項目】: 既存ユーザー情報の正確な返却確認
-      // 🟢 User エンティティ仕様から明確に定義済み
+      // 既存ユーザー情報が正確に返却されることを確認
       expect(result.user.id).toBe('uuid-4-existing-user');
       expect(result.user.externalId).toBe('google_1234567890');
       expect(result.user.email).toBe('existing@example.com');
       expect(result.user.name).toBe('田中太郎');
 
-      // 【検証項目】: 新規作成フラグの適切な設定確認
-      // 🟢 既存ユーザー認証フロー仕様から明確に定義済み
+      // 既存ユーザーなのisNewUserはfalse
       expect(result.isNewUser).toBe(false);
 
-      // 【検証項目】: 依存関係の適切な呼び出し確認
-      // 🟢 実装フロー仕様から明確に定義済み
+      // 依存関係が適切に呼び出されることを確認
       expect(mockAuthProvider.verifyToken).toHaveBeenCalledWith(input.jwt);
       expect(mockAuthProvider.getExternalUserInfo).toHaveBeenCalledWith(
         jwtPayload,
@@ -203,13 +174,6 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
     });
 
     test('有効なJWTで新規ユーザーのJIT作成が成功する', async () => {
-      // 【テスト目的】: JWT検証→ユーザー不存在確認→JIT作成→認証完了までの一連のフロー
-      // 【テスト内容】: JWT検証・ユーザー未存在確認・新規作成・初期値設定・認証成功レスポンス
-      // 【期待される動作】: 新規ユーザーが自動作成され、初回ログイン情報で認証が完了する
-      // 🟢 要件定義書・JITプロビジョニング仕様から明確に定義済み
-
-      // 【テストデータ準備】: 初回ログインユーザーの有効なGoogle OAuth JWT
-      // 【初期条件設定】: JITプロビジョニングが実行される条件の設定
       const input: AuthenticateUserUseCaseInput = {
         jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfOTg3NjU0MzIxMCIsImVtYWlsIjoibmV3dXNlckBleGFtcGxlLmNvbSJ9.test-signature',
       };
@@ -252,7 +216,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         avatarUrl: 'https://lh3.googleusercontent.com/new-avatar.jpg',
       };
 
-      // 【モック設定】: 新規ユーザーJIT作成フローの成功パターン
+      // Given: 新規ユーザーJIT作成フローのモック設定
       (
         mockAuthProvider.verifyToken as Mock<
           (token: string) => Promise<JwtVerificationResult>
@@ -279,37 +243,28 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         isNewUser: true,
       });
 
-      // 【実際の処理実行】: 新規ユーザーJIT作成フロー実行
-      // 【処理内容】: JWT検証・ユーザー不存在確認・新規作成・初期値設定
+      // When: JIT作成処理を実行
       const result = await authenticateUserUseCase.execute(input);
 
-      // 【結果検証】: JIT作成されたユーザー情報の確認
-      // 【期待値確認】: 新規作成されたユーザー情報が返却され、isNewUser=trueで新規作成を示す
-
-      // 【検証項目】: JIT作成処理の成功確認
-      // 🟢 JITプロビジョニング要件から明確に定義済み
+      // Then: JIT作成結果を検証
       expect(result).toBeDefined();
 
-      // 【検証項目】: 新規作成ユーザー情報の正確な返却確認
-      // 🟢 User エンティティ仕様から明確に定義済み
+      // 新規作成ユーザー情報が正確に返却されることを確認
       expect(result.user.id).toBe('uuid-4-new-user');
       expect(result.user.externalId).toBe('google_9876543210');
       expect(result.user.email).toBe('newuser@example.com');
       expect(result.user.name).toBe('山田花子');
 
-      // 【検証項目】: 新規作成フラグの適切な設定確認
-      // 🟢 JITプロビジョニングフロー仕様から明確に定義済み
+      // 新規ユーザーなのisNewUserはtrue
       expect(result.isNewUser).toBe(true);
 
-      // 【検証項目】: 初回ログイン日時の設定確認（現在時刻から5秒以内）
-      // 🟢 新規ユーザー作成時の要件から明確に定義済み
+      // 初回ログイン日時が現在時刻から5秒以内で設定されることを確認
       const timeDiff = Math.abs(
         (result.user.lastLoginAt?.getTime() || 0) - Date.now(),
       );
       expect(timeDiff).toBeLessThan(5000);
 
-      // 【検証項目】: 作成日時・更新日時の初期化確認（現在時刻から5秒以内）
-      // 🟢 新規ユーザー作成時の要件から明確に定義済み
+      // 作成日時・更新日時が現在時刻から5秒以内で初期化されることを確認
       const createdTimeDiff = Math.abs(
         result.user.createdAt.getTime() - Date.now(),
       );
@@ -327,18 +282,11 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
 
   describe('異常系テスト', () => {
     test('無効なJWTで認証エラーが発生する', async () => {
-      // 【テスト目的】: IAuthProviderのJWT検証が失敗した場合の適切なエラー処理
-      // 【テスト内容】: セキュリティ要件を満たす認証失敗時の適切な例外スロー
-      // 【期待される動作】: 不正なトークンでの認証を確実に防止
-      // 🟢 EARS要件EDGE-002から明確に定義済み
-
-      // 【テストデータ準備】: 不正なJWT（署名不正・期限切れ・形式不正のいずれか）
-      // 【初期条件設定】: JWT検証失敗をモックで再現
       const input: AuthenticateUserUseCaseInput = {
         jwt: 'invalid.jwt.token',
       };
 
-      // 【モック設定】: JWT検証失敗パターン
+      // Given: JWT検証失敗パターンのモック設定
       (
         mockAuthProvider.verifyToken as Mock<
           (token: string) => Promise<JwtVerificationResult>
@@ -348,12 +296,7 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         error: 'Invalid signature',
       } as JwtVerificationResult);
 
-      // 【実際の処理実行】: 無効なJWTでの認証試行
-      // 【処理内容】: JWT検証失敗→AuthenticationError例外スロー
-      // 【エラー処理の重要性】: セキュリティ要件を満たす認証失敗時の適切な例外処理
-
-      // 【結果検証】: AuthenticationError例外の適切なスロー確認
-      // 【期待値確認】: 攻撃者に詳細情報を漏洩しない適切なメッセージ
+      // When & Then: 無効なJWTで認証し、AuthenticationErrorがスローされることを確認
       await expect(authenticateUserUseCase.execute(input)).rejects.toThrow(
         AuthenticationError,
       );
@@ -361,12 +304,10 @@ describe('AuthenticateUserUseCase（TASK-105）', () => {
         '認証トークンが無効です',
       );
 
-      // 【検証項目】: JWT検証の呼び出し確認
-      // 🟢 セキュリティ制約から明確に定義済み
+      // JWT検証が呼び出されることを確認
       expect(mockAuthProvider.verifyToken).toHaveBeenCalledWith(input.jwt);
 
-      // 【検証項目】: 後続処理が実行されていないことの確認
-      // 🟢 セキュリティ要件から明確に定義済み
+      // 後続処理が実行されていないことを確認
       expect(mockAuthProvider.getExternalUserInfo).not.toHaveBeenCalled();
       expect(mockAuthDomainService.authenticateUser).not.toHaveBeenCalled();
     });

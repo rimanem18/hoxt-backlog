@@ -1,11 +1,8 @@
 /**
  * ユーザー認証UseCase実装
- * TASK-105: mvp-google-auth
  *
- * 【機能概要】: JWT検証からユーザー認証・JITプロビジョニングまでの一連のビジネスフローを管理するApplication層のUseCase実装
- * 【実装方針】: TDD Greenフェーズでの最小実装 - テストが通る最小限のコードを実装し、後のRefactorフェーズで品質向上
- * 【テスト対応】: AuthenticateUserUseCase.test.tsの全テストケースを通すための実装
- * 🟢🟡🔴 信頼性レベル: 🟢 EARS要件定義書・設計文書を参考にして実装、最小実装のためハードコーディング部分あり
+ * JWT検証からユーザー認証・JITプロビジョニングまでの
+ * 一連のビジネスフローを管理するApplication層のUseCase実装。
  */
 
 import type { IUserRepository } from '../../domain/repositories/IUserRepository';
@@ -32,7 +29,6 @@ import type {
 
 /**
  * 認証処理の設定値
- * 🟢 パフォーマンス最適化 - 設定の外部化
  */
 interface AuthenticationConfig {
   readonly JWT_MAX_LENGTH: number;
@@ -49,25 +45,39 @@ const DEFAULT_CONFIG: AuthenticationConfig = {
 /**
  * ユーザー認証UseCase
  *
- * 【責務】
- * - JWT検証の調整: SupabaseAuthProviderを使用したトークン検証処理の実行
- * - ユーザー認証: 既存ユーザーの特定と認証状態の確立
- * - JITプロビジョニング: 新規ユーザーの自動作成・永続化
- * - ビジネスフロー管理: 認証フロー全体の一貫した実行とトランザクション管理
- * - エラーハンドリング: 各層のエラーを適切にキャッチし、ビジネス例外として変換
+ * JWT検証、ユーザー認証、JITプロビジョニングを実行し、
+ * 認証フロー全体を管理するApplication層のUseCase。
  *
- * 【Refactorフェーズ改善点】
- * - 設定の外部化: ハードコーディング解消
- * - パフォーマンス最適化: 並列処理導入
- * - セキュリティ強化: JWT構造チェック、エラー判定改善
- *
- * 🟢 アーキテクチャ設計文書 + セキュリティ・パフォーマンスレビュー改善案から定義済み
+ * @example
+ * ```typescript
+ * const useCase = new AuthenticateUserUseCase(
+ *   userRepository,
+ *   authProvider,
+ *   authDomainService,
+ *   logger
+ * );
+ * const result = await useCase.execute({ jwt: 'eyJ...' });
+ * if (result.isNewUser) {
+ *   console.log('New user created:', result.user.id);
+ * }
+ * ```
  */
 export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
   private readonly config: AuthenticationConfig;
   private readonly jwtValidationService: IJwtValidationService;
   private readonly errorClassificationService: IErrorClassificationService;
 
+  /**
+   * AuthenticateUserUseCaseのコンストラクタ
+   *
+   * @param userRepository ユーザー情報の永続化を担当するリポジトリ
+   * @param authProvider JWT検証と外部ユーザー情報抽出を提供するプロバイダー
+   * @param authDomainService 認証に関するドメインロジックを実行するサービス
+   * @param logger ログ出力を担当するロガー
+   * @param config 認証処理の設定値（オプション）
+   * @param jwtValidationService JWT構造検証サービス（オプション）
+   * @param errorClassificationService エラー分類サービス（オプション）
+   */
   constructor(
     readonly userRepository: IUserRepository,
     private readonly authProvider: IAuthProvider,
@@ -77,26 +87,21 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
     jwtValidationService?: IJwtValidationService,
     errorClassificationService?: IErrorClassificationService,
   ) {
-    // 【設定初期化】: デフォルト設定とカスタム設定のマージ
-    // 🟢 パフォーマンス最適化 - 設定の外部化
+    // デフォルト設定とカスタム設定をマージ
     this.config = { ...DEFAULT_CONFIG, ...config };
 
-    // 【JWT検証サービス初期化】: 依存性注入またはデフォルト実装
-    // 🟢 SOLID原則強化 - Single Responsibility Principle適用
+    // JWT検証サービスの初期化（依存性注入またはデフォルト実装）
     this.jwtValidationService =
       jwtValidationService ||
       new JwtValidationService({
         maxLength: this.config.JWT_MAX_LENGTH,
       });
 
-    // 【エラー分類サービス初期化】: 依存性注入またはデフォルト実装
-    // 🟢 エラーハンドリング強化 - 堅牢なエラー分類ロジック
+    // エラー分類サービスの初期化（依存性注入またはデフォルト実装）
     this.errorClassificationService =
       errorClassificationService || new ErrorClassificationService();
 
-    // 【依存性注入の検証】: 必須依存関係のnullチェック
-    // 【初期化時の品質保証】: 依存関係が正しく注入されていることを確認
-    // 🟢 DRY原則適用 - 共通化されたエラーメッセージ生成関数を使用
+    // 必須依存関係のnullチェック
     if (!userRepository) {
       throw new Error(createDependencyNullError('userRepository'));
     }
@@ -114,22 +119,12 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
   /**
    * ユーザー認証実行
    *
-   * 【処理フロー】
-   * 1. 入力値検証（JWT形式・空文字チェック・構造チェック）
-   * 2. JWT検証（SupabaseAuthProvider.verifyToken）
-   * 3. 外部ユーザー情報抽出（SupabaseAuthProvider.getExternalUserInfo）
-   * 4. ユーザー認証またはJIT作成（AuthenticationDomainService.authenticateUser）
-   * 5. 認証結果返却
-   *
-   * 【Refactorフェーズ改善点】
-   * - JWT構造の高速チェック追加（セキュリティ強化）
-   * - エラー判定の改善（文字列比較からより堅牢な方法へ）
-   * - ログ出力の改善（機密情報秘匿強化）
-   *
    * @param input JWTトークンを含む入力パラメータ
    * @returns 認証済みユーザー情報と新規作成フラグ
-   *
-   * 🟢 dataflow.md認証フローシーケンス + セキュリティレビュー改善案から定義済み
+   * @throws ValidationError 入力検証失敗時
+   * @throws AuthenticationError JWT検証失敗時
+   * @throws InfrastructureError データベース接続失敗時
+   * @throws ExternalServiceError 外部サービス障害時
    */
   async execute(
     input: AuthenticateUserUseCaseInput,
@@ -137,8 +132,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
     const startTime = Date.now(); // パフォーマンス測定開始
 
     try {
-      // 【入力オブジェクト検証】: input自体のnull/undefinedチェック
-      // 🟢 Geminiセキュリティレビューからの改善提案
+      // 入力パラメータの事前検証
       if (!input || !input.jwt) {
         this.logger.warn('Authentication failed: Missing input or JWT', {
           input: '[REDACTED]',
@@ -146,21 +140,18 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         throw new ValidationError('JWTトークンが必要です');
       }
 
-      // 【JWT構造検証】: 専門サービスによる包括的な事前チェック
-      // 🟢 SOLID原則強化 - Single Responsibility Principle適用による関心の分離
+      // JWT構造の事前検証
       const jwtValidationResult = this.jwtValidationService.validateStructure(
         input.jwt,
       );
 
       if (!jwtValidationResult.isValid) {
-        // 【検証失敗のログ出力】: 詳細な失敗理由をデバッグ情報として記録
         this.logger.warn('JWT validation failed', {
           reason: jwtValidationResult.failureReason,
           jwtLength: input.jwt.length,
           errorMessage: jwtValidationResult.errorMessage,
         });
 
-        // 【統一されたエラーメッセージ】: JwtValidationServiceからの詳細メッセージを使用
         throw new ValidationError(
           jwtValidationResult.errorMessage || 'JWT検証に失敗しました',
         );
@@ -170,17 +161,14 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         jwtLength: input.jwt.length,
       });
 
-      // 【パフォーマンス最適化】: JWT検証と外部ユーザー情報取得の並列処理
-      // 🟢 o3パフォーマンスレビューからの改善提案
-      const [verificationResult /* 並列処理用プレースホルダー */] =
+      // JWT検証と外部ユーザー情報取得の並列処理
+      const [verificationResult] =
         await Promise.all([
           this.authProvider.verifyToken(input.jwt),
-          Promise.resolve(), // 将来の拡張用（例：キャッシュユーザー情報取得）
+          Promise.resolve(), // 将来の拡張用
         ]);
 
       if (!verificationResult.valid || !verificationResult.payload) {
-        // 【ログ出力の改善】: 機密情報の秘匿強化
-        // 🟢 Geminiセキュリティレビューからの改善提案
         this.logger.warn('User authentication failed', {
           reason: 'Invalid JWT',
           errorMessage: verificationResult.error,
@@ -188,20 +176,16 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         throw new AuthenticationError('認証トークンが無効です');
       }
 
-      // 【順次処理】: JWT検証成功後の後続処理
-      // 【外部ユーザー情報抽出】: JWTペイロードから正規化されたユーザー情報を取得
-      // 🟢 IAuthProvider仕様から明確に定義済み
+      // JWTペイロードから外部ユーザー情報を抽出
       const externalUserInfo = await this.authProvider.getExternalUserInfo(
         verificationResult.payload,
       );
 
-      // 【ユーザー認証またはJIT作成】: AuthenticationDomainServiceによる一連の認証フロー実行
-      // 🟢 IAuthenticationDomainService仕様から明確に定義済み
+      // ユーザー認証またはJITプロビジョニングを実行
       const authResult =
         await this.authDomainService.authenticateUser(externalUserInfo);
 
-      // 【パフォーマンス測定】: 要件で定められたレスポンス時間の確認
-      // 🟢 パフォーマンス最適化 - 設定の外部化
+      // パフォーマンス測定とログ出力
       const executionTime = Date.now() - startTime;
       const timeLimit = authResult.isNewUser
         ? this.config.NEW_USER_TIME_LIMIT_MS
@@ -215,8 +199,6 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         });
       }
 
-      // 【認証成功ログ】: 監査要件に基づく適切なログ出力
-      // 🟢 監査要件から明確に定義済み
       this.logger.info('User authentication successful', {
         userId: authResult.user.id,
         externalId: authResult.user.externalId,
@@ -230,37 +212,31 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         isNewUser: authResult.isNewUser,
       };
     } catch (error) {
-      // 【エラーハンドリング】: 各層のエラーを適切にキャッチし、ビジネス例外として変換
-      // 🟢 エラーハンドリング要件から明確に定義済み
       const executionTime = Date.now() - startTime;
 
+      // 既知のビジネス例外の場合はそのまま再スロー
       if (
         error instanceof ValidationError ||
         error instanceof AuthenticationError ||
         error instanceof InfrastructureError ||
         error instanceof ExternalServiceError
       ) {
-        // 既知のビジネス例外は再スロー
         throw error;
       }
 
-      // 【未知のエラーのログ出力】: デバッグ情報の充実と機密情報の秘匿
-      // 🟢 監査・デバッグ要件から明確に定義済み + DRY原則適用
+      // 未知のエラーはログ出力後に適切なビジネス例外に変換
       this.logger.error('User authentication error', {
         error: getErrorMessage(error),
         executionTime,
-        jwt: '[REDACTED]', // セキュリティ上の理由でJWTは記録しない
+        jwt: '[REDACTED]',
       });
 
-      // 【堅牢なエラー分類】: 専門サービスによる詳細なエラー分類
-      // 🟢 エラーハンドリング強化 - 文字列比較に依存しない堅牢な判定ロジック
       const classificationResult =
         this.errorClassificationService.classifyError(
           error,
           'user-authentication',
         );
 
-      // 【分類結果の詳細ログ】: エラー分類の根拠を詳細にログ出力
       this.logger.warn('Error classified for user authentication', {
         originalErrorName: classificationResult.originalError.name,
         originalErrorMessage: classificationResult.originalError.message,
@@ -269,7 +245,6 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         executionTime,
       });
 
-      // 【分類されたビジネス例外をスロー】: 適切に分類されたエラーを再スロー
       throw classificationResult.businessError;
     }
   }
