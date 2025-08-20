@@ -148,11 +148,13 @@ export function createValidJwt(payload?: Partial<JwtPayload>): string {
   const defaultPayload = createValidJwtPayload();
   const mergedPayload = { ...defaultPayload, ...payload };
 
-  // 実際のJWT形式（base64エンコードを模擬）
+  // 実際のJWT形式（Base64URLエンコードを使用）
   const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-  const encodedPayload = Buffer.from(JSON.stringify(mergedPayload)).toString(
-    'base64',
-  );
+  const encodedPayload = Buffer.from(JSON.stringify(mergedPayload))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, ''); // Base64URLエンコーディング（パディング削除）
   const signature = 'test-signature';
 
   return `${header}.${encodedPayload}.${signature}`;
