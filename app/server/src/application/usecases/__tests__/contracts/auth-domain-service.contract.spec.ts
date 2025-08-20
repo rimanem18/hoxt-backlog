@@ -1,16 +1,15 @@
 /**
  * AuthenticationDomainService契約テスト
- * 
+ *
  * IAuthenticationDomainServiceインターフェースの契約をテスト。
  * ユーザー認証・JIT作成の戻り値とエラーの仕様確認に特化。
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { IAuthenticationDomainService } from '../../../../domain/services/IAuthenticationDomainService';
 import type { ExternalUserInfo } from '../../../../domain/services/IAuthProvider';
 import type { User } from '../../../../domain/user/UserEntity';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
-import { mock } from 'bun:test';
 
 describe('AuthenticationDomainService契約テスト', () => {
   let authDomainService: IAuthenticationDomainService;
@@ -28,7 +27,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_existing_123',
         'existing@example.com',
-        '既存ユーザー'
+        '既存ユーザー',
       );
 
       const existingUser = UserFactory.existing({
@@ -50,17 +49,17 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Then: 既存ユーザー認証レスポンスの契約を確認
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
-      
+
       // ユーザーオブジェクトの契約
       expect(result.user).toBeDefined();
       expect(typeof result.user).toBe('object');
       expect(typeof result.user.id).toBe('string');
       expect(result.user.id.length).toBeGreaterThan(0);
-      
+
       // 既存ユーザーフラグの契約
       expect(typeof result.isNewUser).toBe('boolean');
       expect(result.isNewUser).toBe(false);
-      
+
       // ユーザー情報の整合性確認
       expect(result.user.externalId).toBe(externalUserInfo.id);
       expect(result.user.email).toBe(externalUserInfo.email);
@@ -72,7 +71,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_new_456',
         'newuser@example.com',
-        '新規ユーザー'
+        '新規ユーザー',
       );
 
       const newUser = UserFactory.new({
@@ -94,61 +93,71 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Then: 新規ユーザー作成レスポンスの契約を確認
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
-      
+
       // ユーザーオブジェクトの契約
       expect(result.user).toBeDefined();
       expect(typeof result.user.id).toBe('string');
       expect(result.user.id.length).toBeGreaterThan(0);
-      
+
       // 新規ユーザーフラグの契約
       expect(typeof result.isNewUser).toBe('boolean');
       expect(result.isNewUser).toBe(true);
-      
+
       // 新規作成時の時刻検証
       expect(result.user.createdAt).toBeInstanceOf(Date);
       expect(result.user.updatedAt).toBeInstanceOf(Date);
       expect(result.user.lastLoginAt).toBeInstanceOf(Date);
-      
+
       // 作成時刻が現在時刻に近いことを確認（5秒以内）
       const now = Date.now();
-      expect(Math.abs(result.user.createdAt.getTime() - now)).toBeLessThan(5000);
-      expect(Math.abs(result.user.updatedAt.getTime() - now)).toBeLessThan(5000);
+      expect(Math.abs(result.user.createdAt.getTime() - now)).toBeLessThan(
+        5000,
+      );
+      expect(Math.abs(result.user.updatedAt.getTime() - now)).toBeLessThan(
+        5000,
+      );
     });
 
     test.each([
       ['Googleプロバイダー', 'google', 'google_user_123'],
       ['GitHubプロバイダー', 'github', 'github_user_456'],
       ['Facebookプロバイダー', 'facebook', 'facebook_user_789'],
-    ])('%s で適切なプロバイダー認証契約を満たす', async (_description, provider, externalId) => {
-      // Given: プロバイダー別の認証シナリオ
-      const externalUserInfo = UserFactory.externalUserInfo(
-        externalId,
-        `user@${provider}.com`,
-        `${_description}ユーザー`,
-        provider as any
-      );
+    ])(
+      '%s で適切なプロバイダー認証契約を満たす',
+      async (_description, provider, externalId) => {
+        // Given: プロバイダー別の認証シナリオ
+        const externalUserInfo = UserFactory.externalUserInfo(
+          externalId,
+          `user@${provider}.com`,
+          `${_description}ユーザー`,
+          provider as any,
+        );
 
-      const user = UserFactory.existing({
-        externalId,
-        provider: provider as any,
-        email: `user@${provider}.com`,
-      });
+        const user = UserFactory.existing({
+          externalId,
+          provider: provider as any,
+          email: `user@${provider}.com`,
+        });
 
-      const mockResult = {
-        user,
-        isNewUser: false,
-      };
+        const mockResult = {
+          user,
+          isNewUser: false,
+        };
 
-      (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+        (authDomainService.authenticateUser as any).mockResolvedValue(
+          mockResult,
+        );
 
-      // When: プロバイダー別認証を実行
-      const result = await authDomainService.authenticateUser(externalUserInfo);
+        // When: プロバイダー別認証を実行
+        const result =
+          await authDomainService.authenticateUser(externalUserInfo);
 
-      // Then: プロバイダー情報の契約を満たす
-      expect(result.user.provider).toBe(provider);
-      expect(result.user.externalId).toBe(externalId);
-      expect(result.user.email).toContain(provider);
-    });
+        // Then: プロバイダー情報の契約を満たす
+        expect(result.user.provider).toBe(provider);
+        expect(result.user.externalId).toBe(externalId);
+        expect(result.user.email).toContain(provider);
+      },
+    );
 
     test('無効な外部ユーザー情報でエラーをスローする', async () => {
       // Given: 無効な外部ユーザー情報
@@ -162,20 +171,20 @@ describe('AuthenticationDomainService契約テスト', () => {
       for (const invalidInfo of invalidExternalInfo) {
         // エラーをスローするようにモック設定
         (authDomainService.authenticateUser as any).mockRejectedValue(
-          new Error('Invalid external user info')
+          new Error('Invalid external user info'),
         );
 
         // When & Then: 無効な情報でエラーがスローされる
-        await expect(authDomainService.authenticateUser(invalidInfo)).rejects.toThrow(
-          'Invalid external user info'
-        );
+        await expect(
+          authDomainService.authenticateUser(invalidInfo),
+        ).rejects.toThrow('Invalid external user info');
       }
     });
 
     test('Promiseを返すことの契約確認', () => {
       // Given: 任意の外部ユーザー情報
       const externalUserInfo = UserFactory.externalUserInfo();
-      
+
       // Promiseを返すようにモック設定
       (authDomainService.authenticateUser as any).mockResolvedValue({
         user: UserFactory.existing(),
@@ -198,7 +207,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_create_789',
         'create@example.com',
-        '作成テストユーザー'
+        '作成テストユーザー',
       );
 
       const createdUser = UserFactory.new({
@@ -207,23 +216,26 @@ describe('AuthenticationDomainService契約テスト', () => {
         name: '作成テストユーザー',
       });
 
-      (authDomainService.createUserFromExternalInfo as any).mockResolvedValue(createdUser);
+      (authDomainService.createUserFromExternalInfo as any).mockResolvedValue(
+        createdUser,
+      );
 
       // When: 外部情報から新規ユーザーを作成
-      const result = await authDomainService.createUserFromExternalInfo(externalUserInfo);
+      const result =
+        await authDomainService.createUserFromExternalInfo(externalUserInfo);
 
       // Then: 新規作成ユーザーの契約を確認
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
       expect(typeof result.id).toBe('string');
       expect(result.id.length).toBeGreaterThan(0);
-      
+
       // 外部情報からの変換確認
       expect(result.externalId).toBe(externalUserInfo.id);
       expect(result.provider).toBe(externalUserInfo.provider);
       expect(result.email).toBe(externalUserInfo.email);
       expect(result.name).toBe(externalUserInfo.name);
-      
+
       // 新規作成時のタイムスタンプ
       expect(result.createdAt).toBeInstanceOf(Date);
       expect(result.updatedAt).toBeInstanceOf(Date);
@@ -234,15 +246,17 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Given: 既に存在する外部ID
       const duplicateExternalInfo = UserFactory.externalUserInfo(
         'google_duplicate_123',
-        'duplicate@example.com'
+        'duplicate@example.com',
       );
 
       const duplicateError = new Error('User with external ID already exists');
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(duplicateError);
+      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
+        duplicateError,
+      );
 
       // When & Then: 重複外部IDでエラーがスローされる
       await expect(
-        authDomainService.createUserFromExternalInfo(duplicateExternalInfo)
+        authDomainService.createUserFromExternalInfo(duplicateExternalInfo),
       ).rejects.toThrow('User with external ID already exists');
     });
 
@@ -250,15 +264,17 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Given: 無効なメールアドレスの外部情報
       const invalidEmailInfo = UserFactory.externalUserInfo(
         'google_invalid_email',
-        'invalid-email-format'
+        'invalid-email-format',
       );
 
       const validationError = new Error('Invalid email address format');
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(validationError);
+      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
+        validationError,
+      );
 
       // When & Then: 無効メールでエラーがスローされる
       await expect(
-        authDomainService.createUserFromExternalInfo(invalidEmailInfo)
+        authDomainService.createUserFromExternalInfo(invalidEmailInfo),
       ).rejects.toThrow('Invalid email address format');
     });
   });
@@ -268,7 +284,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Given: 同時リクエストによる重複作成シナリオ
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_concurrent_user',
-        'concurrent@example.com'
+        'concurrent@example.com',
       );
 
       // 最初のリクエストは新規作成
@@ -299,11 +315,13 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
       const transactionError = new Error('Transaction rollback');
 
-      (authDomainService.authenticateUser as any).mockRejectedValue(transactionError);
+      (authDomainService.authenticateUser as any).mockRejectedValue(
+        transactionError,
+      );
 
       // When & Then: トランザクション失敗でエラーがスローされる
       await expect(
-        authDomainService.authenticateUser(externalUserInfo)
+        authDomainService.authenticateUser(externalUserInfo),
       ).rejects.toThrow('Transaction rollback');
     });
 
@@ -312,11 +330,13 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
       const constraintError = new Error('Foreign key constraint violation');
 
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(constraintError);
+      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
+        constraintError,
+      );
 
       // When & Then: 制約違反でエラーがスローされる
       await expect(
-        authDomainService.createUserFromExternalInfo(externalUserInfo)
+        authDomainService.createUserFromExternalInfo(externalUserInfo),
       ).rejects.toThrow('Foreign key constraint violation');
     });
   });
@@ -332,8 +352,8 @@ describe('AuthenticationDomainService契約テスト', () => {
         },
         {
           name: '休眠ユーザー',
-          user: UserFactory.existing({ 
-            lastLoginAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90日前
+          user: UserFactory.existing({
+            lastLoginAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90日前
           }),
           shouldAuthenticate: true, // 休眠でも認証は可能
         },
@@ -342,7 +362,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       for (const scenario of scenarios) {
         const externalUserInfo = UserFactory.externalUserInfo(
           scenario.user.externalId,
-          scenario.user.email
+          scenario.user.email,
         );
 
         const mockResult = {
@@ -350,10 +370,13 @@ describe('AuthenticationDomainService契約テスト', () => {
           isNewUser: false,
         };
 
-        (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+        (authDomainService.authenticateUser as any).mockResolvedValue(
+          mockResult,
+        );
 
         // When: 状態別認証を実行
-        const result = await authDomainService.authenticateUser(externalUserInfo);
+        const result =
+          await authDomainService.authenticateUser(externalUserInfo);
 
         // Then: 状態に応じた認証結果の契約を満たす
         if (scenario.shouldAuthenticate) {
@@ -368,7 +391,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_profile_update',
         'updated@example.com',
-        '更新されたユーザー名' // 名前が変更された
+        '更新されたユーザー名', // 名前が変更された
       );
 
       const updatedUser = UserFactory.existing({

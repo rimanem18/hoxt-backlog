@@ -1,15 +1,15 @@
 /**
  * 認証成功パステスト
- * 
+ *
  * AuthenticateUserUseCaseの最短経路での正常系テスト。
  * 既存ユーザー認証とJIT新規ユーザー作成の成功パターンを検証。
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { makeSUT } from './helpers/makeSUT';
-import { UserFactory } from './helpers/userFactory';
-import { TestMatchers } from './helpers/matchers';
 import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import { makeSUT } from './helpers/makeSUT';
+import { TestMatchers } from './helpers/matchers';
+import { UserFactory } from './helpers/userFactory';
 
 describe('認証成功パステスト', () => {
   let sut: ReturnType<typeof makeSUT>;
@@ -27,19 +27,19 @@ describe('認証成功パステスト', () => {
         email: 'existing@success.com',
         name: '既存成功ユーザー',
       });
-      
+
       const jwtPayload = UserFactory.jwtPayload(
         'google_existing_user',
         'existing@success.com',
-        '既存成功ユーザー'
+        '既存成功ユーザー',
       );
-      
+
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_existing_user',
         'existing@success.com',
-        '既存成功ユーザー'
+        '既存成功ユーザー',
       );
-      
+
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
@@ -48,9 +48,11 @@ describe('認証成功パステスト', () => {
         valid: true,
         payload: jwtPayload,
       });
-      
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(externalUserInfo);
-      
+
+      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+        externalUserInfo,
+      );
+
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
         user: existingUser,
         isNewUser: false,
@@ -73,14 +75,29 @@ describe('認証成功パステスト', () => {
       });
 
       // 依存関係の呼び出し確認
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.getExternalUserInfo, jwtPayload);
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authDomainService.authenticateUser, externalUserInfo);
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.verifyToken,
+        jwt,
+      );
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.getExternalUserInfo,
+        jwtPayload,
+      );
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authDomainService.authenticateUser,
+        externalUserInfo,
+      );
 
       // 各関数が1回ずつ呼び出されることを確認
       TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, 1);
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.getExternalUserInfo, 1);
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authDomainService.authenticateUser, 1);
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authProvider.getExternalUserInfo,
+        1,
+      );
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authDomainService.authenticateUser,
+        1,
+      );
     });
   });
 
@@ -93,19 +110,19 @@ describe('認証成功パステスト', () => {
         email: 'newuser@success.com',
         name: '新規成功ユーザー',
       });
-      
+
       const jwtPayload = UserFactory.jwtPayload(
         'google_new_user',
         'newuser@success.com',
-        '新規成功ユーザー'
+        '新規成功ユーザー',
       );
-      
+
       const externalUserInfo = UserFactory.externalUserInfo(
         'google_new_user',
         'newuser@success.com',
-        '新規成功ユーザー'
+        '新規成功ユーザー',
       );
-      
+
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
@@ -114,9 +131,11 @@ describe('認証成功パステスト', () => {
         valid: true,
         payload: jwtPayload,
       });
-      
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(externalUserInfo);
-      
+
+      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+        externalUserInfo,
+      );
+
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
         user: newUser,
         isNewUser: true,
@@ -144,9 +163,18 @@ describe('認証成功パステスト', () => {
       TestMatchers.beRecentTime(result.user.lastLoginAt!);
 
       // 依存関係の呼び出し確認
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.getExternalUserInfo, jwtPayload);
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authDomainService.authenticateUser, externalUserInfo);
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.verifyToken,
+        jwt,
+      );
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.getExternalUserInfo,
+        jwtPayload,
+      );
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authDomainService.authenticateUser,
+        externalUserInfo,
+      );
     });
   });
 
@@ -155,42 +183,57 @@ describe('認証成功パステスト', () => {
       ['Google', 'google', 'google_user_123', 'user@gmail.com'],
       ['GitHub', 'github', 'github_user_456', 'user@github.com'],
       ['Facebook', 'facebook', 'facebook_user_789', 'user@facebook.com'],
-    ])('%s プロバイダーでの認証が成功する', async (_provider, providerType, externalId, email) => {
-      // Given: プロバイダー別の認証フロー
-      const user = UserFactory.existing({
-        externalId,
-        provider: providerType as any,
-        email,
-        name: `${_provider}ユーザー`,
-      });
-      
-      const jwtPayload = UserFactory.jwtPayload(externalId, email, `${_provider}ユーザー`, providerType as any);
-      const externalUserInfo = UserFactory.externalUserInfo(externalId, email, `${_provider}ユーザー`, providerType as any);
-      const jwt = UserFactory.validJwt(jwtPayload);
-      const input: AuthenticateUserUseCaseInput = { jwt };
+    ])(
+      '%s プロバイダーでの認証が成功する',
+      async (_provider, providerType, externalId, email) => {
+        // Given: プロバイダー別の認証フロー
+        const user = UserFactory.existing({
+          externalId,
+          provider: providerType as any,
+          email,
+          name: `${_provider}ユーザー`,
+        });
 
-      // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
-        valid: true,
-        payload: jwtPayload,
-      });
-      
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(externalUserInfo);
-      
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
-        user,
-        isNewUser: false,
-      });
+        const jwtPayload = UserFactory.jwtPayload(
+          externalId,
+          email,
+          `${_provider}ユーザー`,
+          providerType as any,
+        );
+        const externalUserInfo = UserFactory.externalUserInfo(
+          externalId,
+          email,
+          `${_provider}ユーザー`,
+          providerType as any,
+        );
+        const jwt = UserFactory.validJwt(jwtPayload);
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      // When: 認証処理を実行
-      const result = await sut.sut.execute(input);
+        // モック設定
+        (sut.authProvider.verifyToken as any).mockResolvedValue({
+          valid: true,
+          payload: jwtPayload,
+        });
 
-      // Then: 認証結果を検証
-      expect(result).toBeDefined();
-      expect(result.user.provider).toBe(providerType);
-      expect(result.user.externalId).toBe(externalId);
-      expect(result.user.email).toBe(email);
-    });
+        (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+          externalUserInfo,
+        );
+
+        (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+          user,
+          isNewUser: false,
+        });
+
+        // When: 認証処理を実行
+        const result = await sut.sut.execute(input);
+
+        // Then: 認証結果を検証
+        expect(result).toBeDefined();
+        expect(result.user.provider).toBe(providerType);
+        expect(result.user.externalId).toBe(externalId);
+        expect(result.user.email).toBe(email);
+      },
+    );
   });
 
   describe('成功時ログ出力検証', () => {
@@ -205,7 +248,9 @@ describe('認証成功パステスト', () => {
         valid: true,
         payload: jwtPayload,
       });
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(UserFactory.externalUserInfo());
+      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+        UserFactory.externalUserInfo(),
+      );
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
         user,
         isNewUser: false,
@@ -219,7 +264,7 @@ describe('認証成功パステスト', () => {
         sut.logger,
         'info',
         'Starting user authentication',
-        { jwtLength: jwt.length }
+        { jwtLength: jwt.length },
       );
 
       TestMatchers.haveLoggedMessage(
@@ -230,7 +275,7 @@ describe('認証成功パステスト', () => {
           userId: user.id,
           externalId: user.externalId,
           isNewUser: false,
-        }
+        },
       );
     });
 
@@ -245,7 +290,9 @@ describe('認証成功パステスト', () => {
         valid: true,
         payload: jwtPayload,
       });
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(UserFactory.externalUserInfo());
+      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+        UserFactory.externalUserInfo(),
+      );
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
         user: newUser,
         isNewUser: true,
@@ -263,7 +310,7 @@ describe('認証成功パステスト', () => {
           userId: newUser.id,
           externalId: newUser.externalId,
           isNewUser: true,
-        }
+        },
       );
     });
   });

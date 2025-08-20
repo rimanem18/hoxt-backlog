@@ -1,12 +1,15 @@
 /**
  * テストユーザー生成ファクトリ
- * 
+ *
  * 各種テストシナリオに対応したユーザーデータを生成。
  * プリセットパターンによる一貫したテストデータ作成を支援。
  */
 
+import type {
+  ExternalUserInfo,
+  JwtPayload,
+} from '../../../../../domain/services/IAuthProvider';
 import type { User } from '../../../../../domain/user/UserEntity';
-import type { ExternalUserInfo, JwtPayload } from '../../../../../domain/services/IAuthProvider';
 
 /**
  * ベースユーザープロパティ
@@ -25,14 +28,16 @@ interface BaseUserProperties {
 
 /**
  * 既存ユーザーの作成
- * 
+ *
  * @param overrides 上書きしたいプロパティ
  * @returns 既存ユーザーエンティティ
  */
-export function createExistingUser(overrides: Partial<BaseUserProperties> = {}): User {
+export function createExistingUser(
+  overrides: Partial<BaseUserProperties> = {},
+): User {
   const now = new Date('2025-08-20T10:00:00Z');
   const createdAt = new Date('2025-08-01T10:00:00Z');
-  
+
   return {
     id: 'uuid-existing-user',
     externalId: 'google_existing_12345',
@@ -49,13 +54,15 @@ export function createExistingUser(overrides: Partial<BaseUserProperties> = {}):
 
 /**
  * 新規ユーザーの作成
- * 
+ *
  * @param overrides 上書きしたいプロパティ
  * @returns 新規ユーザーエンティティ
  */
-export function createNewUser(overrides: Partial<BaseUserProperties> = {}): User {
+export function createNewUser(
+  overrides: Partial<BaseUserProperties> = {},
+): User {
   const now = new Date();
-  
+
   return {
     id: 'uuid-new-user',
     externalId: 'google_new_67890',
@@ -72,7 +79,7 @@ export function createNewUser(overrides: Partial<BaseUserProperties> = {}): User
 
 /**
  * 有効なJWTペイロードの作成
- * 
+ *
  * @param externalId 外部ID（デフォルト値あり）
  * @param email メールアドレス（デフォルト値あり）
  * @param name ユーザー名（デフォルト値あり）
@@ -83,10 +90,10 @@ export function createValidJwtPayload(
   externalId = 'google_12345',
   email = 'user@example.com',
   name = 'テストユーザー',
-  provider = 'google' as const
+  provider = 'google' as const,
 ): JwtPayload {
   const now = Math.floor(Date.now() / 1000);
-  
+
   return {
     sub: externalId,
     email,
@@ -108,7 +115,7 @@ export function createValidJwtPayload(
 
 /**
  * 外部ユーザー情報の作成
- * 
+ *
  * @param externalId 外部ID（デフォルト値あり）
  * @param email メールアドレス（デフォルト値あり）
  * @param name ユーザー名（デフォルト値あり）
@@ -119,7 +126,7 @@ export function createExternalUserInfo(
   externalId = 'google_12345',
   email = 'user@example.com',
   name = 'テストユーザー',
-  provider = 'google' as const
+  provider = 'google' as const,
 ): ExternalUserInfo {
   return {
     id: externalId,
@@ -132,19 +139,21 @@ export function createExternalUserInfo(
 
 /**
  * 有効なJWTトークン（ダミー）の作成
- * 
+ *
  * @param payload JWTペイロード
  * @returns JWTトークン文字列
  */
 export function createValidJwt(payload?: Partial<JwtPayload>): string {
   const defaultPayload = createValidJwtPayload();
   const mergedPayload = { ...defaultPayload, ...payload };
-  
+
   // 実際のJWT形式（base64エンコードを模擬）
   const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
-  const encodedPayload = Buffer.from(JSON.stringify(mergedPayload)).toString('base64');
+  const encodedPayload = Buffer.from(JSON.stringify(mergedPayload)).toString(
+    'base64',
+  );
   const signature = 'test-signature';
-  
+
   return `${header}.${encodedPayload}.${signature}`;
 }
 
@@ -155,17 +164,18 @@ export const INVALID_JWT_PATTERNS = {
   // 構造が不正
   malformed: 'invalid.jwt',
   empty: '',
-  null: null as any,
-  undefined: undefined as any,
-  
+  null: null as string | null,
+  undefined: undefined as string | undefined,
+
   // 署名が無効
-  invalidSignature: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkIn0.invalid-signature',
-  
+  invalidSignature:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkIn0.invalid-signature',
+
   // 期限切れ
   expired: createValidJwt({ exp: Math.floor(Date.now() / 1000) - 3600 }),
-  
+
   // 長すぎるJWT (2KB超)
-  tooLong: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' + 'a'.repeat(2100) + '.signature',
+  tooLong: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${'a'.repeat(2100)}.signature`,
 } as const;
 
 /**

@@ -1,17 +1,17 @@
 /**
  * 認証失敗・資格情報エラーテスト
- * 
+ *
  * AuthenticateUserUseCaseの認証失敗パターンをテスト。
  * JWT検証失敗、不正な資格情報、期限切れトークンなどを検証。
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { makeSUT } from './helpers/makeSUT';
-import { UserFactory } from './helpers/userFactory';
-import { TestMatchers } from './helpers/matchers';
 import { AuthenticationError } from '../../../../domain/user/errors/AuthenticationError';
 import { ExternalServiceError } from '../../../../shared/errors/ExternalServiceError';
 import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import { makeSUT } from './helpers/makeSUT';
+import { TestMatchers } from './helpers/matchers';
+import { UserFactory } from './helpers/userFactory';
 
 describe('認証失敗・資格情報エラーテスト', () => {
   let sut: ReturnType<typeof makeSUT>;
@@ -26,30 +26,45 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ['期限切れトークン', { valid: false, error: 'Token expired' }],
       ['不正なissuer', { valid: false, error: 'Invalid issuer' }],
       ['不正なaudience', { valid: false, error: 'Invalid audience' }],
-      ['改ざんされたペイロード', { valid: false, error: 'Token verification failed' }],
-    ])('%s で AuthenticationError がスローされる', async (reason, verificationResult) => {
-      // Given: JWT検証失敗パターンの設定
-      const jwt = UserFactory.validJwt();
-      const input: AuthenticateUserUseCaseInput = { jwt };
+      [
+        '改ざんされたペイロード',
+        { valid: false, error: 'Token verification failed' },
+      ],
+    ])(
+      '%s で AuthenticationError がスローされる',
+      async (reason, verificationResult) => {
+        // Given: JWT検証失敗パターンの設定
+        const jwt = UserFactory.validJwt();
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue(verificationResult);
+        (sut.authProvider.verifyToken as any).mockResolvedValue(
+          verificationResult,
+        );
 
-      // When & Then: JWT検証失敗で AuthenticationError がスローされる
-      await TestMatchers.failWithError(
-        sut.sut.execute(input),
-        'authentication'
-      );
+        // When & Then: JWT検証失敗で AuthenticationError がスローされる
+        await TestMatchers.failWithError(
+          sut.sut.execute(input),
+          'authentication',
+        );
 
-      await TestMatchers.failWithMessage(
-        sut.sut.execute(input),
-        '認証トークンが無効です'
-      );
+        await TestMatchers.failWithMessage(
+          sut.sut.execute(input),
+          '認証トークンが無効です',
+        );
 
-      // JWT検証は実行されるが、後続処理は実行されない
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.getExternalUserInfo);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authDomainService.authenticateUser);
-    });
+        // JWT検証は実行されるが、後続処理は実行されない
+        TestMatchers.mock.toHaveBeenCalledWithArgs(
+          sut.authProvider.verifyToken,
+          jwt,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authProvider.getExternalUserInfo,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authDomainService.authenticateUser,
+        );
+      },
+    );
   });
 
   describe('ペイロード不正パターン', () => {
@@ -57,32 +72,42 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ['ペイロードがnull', null],
       ['ペイロードがundefined', undefined],
       ['空のペイロード', {}],
-    ])('%s で AuthenticationError がスローされる', async (description, payload) => {
-      // Given: 不正なペイロードの設定
-      const jwt = UserFactory.validJwt();
-      const input: AuthenticateUserUseCaseInput = { jwt };
+    ])(
+      '%s で AuthenticationError がスローされる',
+      async (description, payload) => {
+        // Given: 不正なペイロードの設定
+        const jwt = UserFactory.validJwt();
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
-        valid: true,
-        payload: payload,
-      });
+        (sut.authProvider.verifyToken as any).mockResolvedValue({
+          valid: true,
+          payload: payload,
+        });
 
-      // When & Then: 不正なペイロードで AuthenticationError がスローされる
-      await TestMatchers.failWithError(
-        sut.sut.execute(input),
-        'authentication'
-      );
+        // When & Then: 不正なペイロードで AuthenticationError がスローされる
+        await TestMatchers.failWithError(
+          sut.sut.execute(input),
+          'authentication',
+        );
 
-      await TestMatchers.failWithMessage(
-        sut.sut.execute(input),
-        '認証トークンが無効です'
-      );
+        await TestMatchers.failWithMessage(
+          sut.sut.execute(input),
+          '認証トークンが無効です',
+        );
 
-      // JWT検証は成功するが、ペイロードが不正なため後続処理は実行されない
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, 1);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.getExternalUserInfo);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authDomainService.authenticateUser);
-    });
+        // JWT検証は成功するが、ペイロードが不正なため後続処理は実行されない
+        TestMatchers.mock.toHaveBeenCalledTimes(
+          sut.authProvider.verifyToken,
+          1,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authProvider.getExternalUserInfo,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authDomainService.authenticateUser,
+        );
+      },
+    );
   });
 
   describe('外部サービス障害パターン', () => {
@@ -92,28 +117,40 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ['認証サービス一時停止', 'Service temporarily unavailable'],
       ['認証サービス内部エラー', 'Internal server error'],
       ['ネットワーク接続エラー', 'Network connection failed'],
-    ])('%s で ExternalServiceError がスローされる', async (scenario, errorMessage) => {
-      // Given: 外部サービス障害の設定
-      const jwt = UserFactory.validJwt();
-      const input: AuthenticateUserUseCaseInput = { jwt };
+    ])(
+      '%s で ExternalServiceError がスローされる',
+      async (scenario, errorMessage) => {
+        // Given: 外部サービス障害の設定
+        const jwt = UserFactory.validJwt();
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockRejectedValue(
-        new ExternalServiceError(`認証サービスエラー: ${errorMessage}`)
-      );
+        (sut.authProvider.verifyToken as any).mockRejectedValue(
+          new ExternalServiceError(`認証サービスエラー: ${errorMessage}`),
+        );
 
-      // When & Then: 外部サービス障害で ExternalServiceError がスローされる
-      await TestMatchers.failWithError(
-        sut.sut.execute(input),
-        'external-service'
-      );
+        // When & Then: 外部サービス障害で ExternalServiceError がスローされる
+        await TestMatchers.failWithError(
+          sut.sut.execute(input),
+          'external-service',
+        );
 
-      await expect(sut.sut.execute(input)).rejects.toThrow(`認証サービスエラー: ${errorMessage}`);
+        await expect(sut.sut.execute(input)).rejects.toThrow(
+          `認証サービスエラー: ${errorMessage}`,
+        );
 
-      // JWT検証の試行は行われるが、失敗するため後続処理は実行されない
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.getExternalUserInfo);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authDomainService.authenticateUser);
-    });
+        // JWT検証の試行は行われるが、失敗するため後続処理は実行されない
+        TestMatchers.mock.toHaveBeenCalledWithArgs(
+          sut.authProvider.verifyToken,
+          jwt,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authProvider.getExternalUserInfo,
+        );
+        TestMatchers.mock.notToHaveBeenCalled(
+          sut.authDomainService.authenticateUser,
+        );
+      },
+    );
   });
 
   describe('ユーザー情報取得失敗パターン', () => {
@@ -129,24 +166,32 @@ describe('認証失敗・資格情報エラーテスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockRejectedValue(
-        new ExternalServiceError('外部ユーザー情報の取得に失敗しました')
+        new ExternalServiceError('外部ユーザー情報の取得に失敗しました'),
       );
 
       // When & Then: ユーザー情報取得失敗で ExternalServiceError がスローされる
       await TestMatchers.failWithError(
         sut.sut.execute(input),
-        'external-service'
+        'external-service',
       );
 
       await TestMatchers.failWithMessage(
         sut.sut.execute(input),
-        '外部ユーザー情報の取得に失敗しました'
+        '外部ユーザー情報の取得に失敗しました',
       );
 
       // JWT検証とユーザー情報取得は実行されるが、認証処理は実行されない
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.getExternalUserInfo, jwtPayload);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authDomainService.authenticateUser);
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.verifyToken,
+        jwt,
+      );
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.getExternalUserInfo,
+        jwtPayload,
+      );
+      TestMatchers.mock.notToHaveBeenCalled(
+        sut.authDomainService.authenticateUser,
+      );
     });
   });
 
@@ -177,7 +222,7 @@ describe('認証失敗・資格情報エラーテスト', () => {
         {
           reason: 'Invalid JWT',
           errorMessage,
-        }
+        },
       );
     });
 
@@ -187,7 +232,7 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       (sut.authProvider.verifyToken as any).mockRejectedValue(
-        new ExternalServiceError('認証サービスが一時的に利用できません')
+        new ExternalServiceError('認証サービスが一時的に利用できません'),
       );
 
       // When: 外部サービス障害を実行
@@ -216,14 +261,14 @@ describe('認証失敗・資格情報エラーテスト', () => {
       // When: 複数の改ざんJWTで処理時間を測定
       for (const jwt of tamperedJwts) {
         const input: AuthenticateUserUseCaseInput = { jwt };
-        
+
         (sut.authProvider.verifyToken as any).mockResolvedValue({
           valid: false,
           error: 'Invalid signature',
         });
 
         const startTime = sut.fakeClock.now();
-        
+
         try {
           await sut.sut.execute(input);
         } catch (_error) {
@@ -238,7 +283,10 @@ describe('認証失敗・資格情報エラーテスト', () => {
       // 実際の実装では暗号化処理の一定時間実行を確認
       // ここでは同じ処理フローが実行されることを確認
       expect(results.length).toBe(tamperedJwts.length);
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, tamperedJwts.length);
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authProvider.verifyToken,
+        tamperedJwts.length,
+      );
     });
   });
 });

@@ -1,14 +1,18 @@
 /**
  * AuthProvider契約テスト
- * 
+ *
  * IAuthProviderインターフェースの契約（戻り値とエラーの仕様）をテスト。
  * 実装詳細に依存しない、インターフェース仕様の確認に特化。
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
-import type { IAuthProvider, JwtVerificationResult, JwtPayload, ExternalUserInfo } from '../../../../domain/services/IAuthProvider';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import type {
+  ExternalUserInfo,
+  IAuthProvider,
+  JwtPayload,
+  JwtVerificationResult,
+} from '../../../../domain/services/IAuthProvider';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
-import { mock } from 'bun:test';
 
 describe('AuthProvider契約テスト', () => {
   let authProvider: IAuthProvider;
@@ -40,17 +44,17 @@ describe('AuthProvider契約テスト', () => {
       expect(result).toBeDefined();
       expect(typeof result.valid).toBe('boolean');
       expect(result.valid).toBe(true);
-      
+
       // 成功時はpayloadが必須
       expect(result.payload).toBeDefined();
       expect(typeof result.payload).toBe('object');
-      
+
       // payloadの必須フィールド
       expect(typeof result.payload!.sub).toBe('string');
       expect(typeof result.payload!.email).toBe('string');
       expect(typeof result.payload!.iat).toBe('number');
       expect(typeof result.payload!.exp).toBe('number');
-      
+
       // 失敗時のフィールドは存在しない
       expect(result.error).toBeUndefined();
     });
@@ -72,12 +76,12 @@ describe('AuthProvider契約テスト', () => {
       expect(result).toBeDefined();
       expect(typeof result.valid).toBe('boolean');
       expect(result.valid).toBe(false);
-      
+
       // 失敗時はerrorが必須
       expect(result.error).toBeDefined();
       expect(typeof result.error).toBe('string');
       expect(result.error!.length).toBeGreaterThan(0);
-      
+
       // 成功時のフィールドは存在しない
       expect(result.payload).toBeUndefined();
     });
@@ -107,7 +111,7 @@ describe('AuthProvider契約テスト', () => {
     test('Promiseを返すことの契約確認', () => {
       // Given: 任意のJWT
       const jwt = 'any.jwt.token';
-      
+
       // Promiseを返すようにモック設定
       (authProvider.verifyToken as any).mockResolvedValue({
         valid: true,
@@ -144,20 +148,22 @@ describe('AuthProvider契約テスト', () => {
       // Then: 外部ユーザー情報の契約を確認
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
-      
+
       // 必須フィールドの型確認
       expect(typeof result.id).toBe('string');
       expect(result.id.length).toBeGreaterThan(0);
-      
+
       expect(typeof result.provider).toBe('string');
-      expect(['google', 'github', 'facebook'].includes(result.provider)).toBe(true);
-      
+      expect(['google', 'github', 'facebook'].includes(result.provider)).toBe(
+        true,
+      );
+
       expect(typeof result.email).toBe('string');
       expect(result.email).toMatch(/@/); // 簡単なemail形式確認
-      
+
       expect(typeof result.name).toBe('string');
       expect(result.name.length).toBeGreaterThan(0);
-      
+
       // オプションフィールド
       if (result.avatarUrl) {
         expect(typeof result.avatarUrl).toBe('string');
@@ -167,7 +173,7 @@ describe('AuthProvider契約テスト', () => {
 
     test.each([
       ['Googleプロバイダー', 'google'],
-      ['GitHubプロバイダー', 'github'], 
+      ['GitHubプロバイダー', 'github'],
       ['Facebookプロバイダー', 'facebook'],
     ])('%s で適切なプロバイダー情報を返す', async (_description, provider) => {
       // Given: プロバイダー別のペイロード
@@ -175,14 +181,14 @@ describe('AuthProvider契約テスト', () => {
         `${provider}_user_123`,
         `user@${provider}.com`,
         'プロバイダーテストユーザー',
-        provider as any
+        provider as any,
       );
 
       const mockUserInfo = UserFactory.externalUserInfo(
         `${provider}_user_123`,
         `user@${provider}.com`,
         'プロバイダーテストユーザー',
-        provider as any
+        provider as any,
       );
 
       (authProvider.getExternalUserInfo as any).mockResolvedValue(mockUserInfo);
@@ -208,21 +214,23 @@ describe('AuthProvider契約テスト', () => {
       for (const invalidPayload of invalidPayloads) {
         // エラーをスローするようにモック設定
         (authProvider.getExternalUserInfo as any).mockRejectedValue(
-          new Error('Invalid payload format')
+          new Error('Invalid payload format'),
         );
 
         // When & Then: 不正なペイロードでエラーがスローされる
-        await expect(authProvider.getExternalUserInfo(invalidPayload)).rejects.toThrow();
+        await expect(
+          authProvider.getExternalUserInfo(invalidPayload),
+        ).rejects.toThrow();
       }
     });
 
     test('Promiseを返すことの契約確認', () => {
       // Given: 任意のペイロード
       const payload = UserFactory.jwtPayload();
-      
+
       // Promiseを返すようにモック設定
       (authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       // When: メソッド呼び出し
@@ -244,7 +252,9 @@ describe('AuthProvider契約テスト', () => {
       (authProvider.verifyToken as any).mockRejectedValue(networkError);
 
       // When & Then: ネットワークエラーで例外がスローされる
-      await expect(authProvider.verifyToken(jwt)).rejects.toThrow('Network connection failed');
+      await expect(authProvider.verifyToken(jwt)).rejects.toThrow(
+        'Network connection failed',
+      );
     });
 
     test('タイムアウトエラー時の契約確認', async () => {
@@ -255,7 +265,9 @@ describe('AuthProvider契約テスト', () => {
       (authProvider.getExternalUserInfo as any).mockRejectedValue(timeoutError);
 
       // When & Then: タイムアウトで例外がスローされる
-      await expect(authProvider.getExternalUserInfo(payload)).rejects.toThrow('Request timeout');
+      await expect(authProvider.getExternalUserInfo(payload)).rejects.toThrow(
+        'Request timeout',
+      );
     });
 
     test('レート制限エラー時の契約確認', async () => {
@@ -266,7 +278,9 @@ describe('AuthProvider契約テスト', () => {
       (authProvider.verifyToken as any).mockRejectedValue(rateLimitError);
 
       // When & Then: レート制限で例外がスローされる
-      await expect(authProvider.verifyToken(jwt)).rejects.toThrow('Rate limit exceeded');
+      await expect(authProvider.verifyToken(jwt)).rejects.toThrow(
+        'Rate limit exceeded',
+      );
     });
   });
 
@@ -318,7 +332,7 @@ describe('AuthProvider契約テスト', () => {
       expect(payload.email).toBeDefined();
       expect(payload.iat).toBeDefined();
       expect(payload.exp).toBeDefined();
-      
+
       // オプションフィールドの確認
       expect(payload.app_metadata).toBeDefined();
       expect(payload.user_metadata).toBeDefined();
@@ -340,7 +354,7 @@ describe('AuthProvider契約テスト', () => {
       expect(userInfo.provider).toBeDefined();
       expect(userInfo.email).toBeDefined();
       expect(userInfo.name).toBeDefined();
-      
+
       // オプションフィールドの確認
       expect(userInfo.avatarUrl).toBeDefined();
     });

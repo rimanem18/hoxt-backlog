@@ -162,11 +162,10 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
       });
 
       // JWT検証と外部ユーザー情報取得の並列処理
-      const [verificationResult] =
-        await Promise.all([
-          this.authProvider.verifyToken(input.jwt),
-          Promise.resolve(), // 将来の拡張用
-        ]);
+      const [verificationResult] = await Promise.all([
+        this.authProvider.verifyToken(input.jwt),
+        Promise.resolve(), // 将来の拡張用
+      ]);
 
       if (!verificationResult.valid || !verificationResult.payload) {
         this.logger.warn('User authentication failed', {

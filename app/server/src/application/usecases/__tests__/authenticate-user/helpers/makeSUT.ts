@@ -1,16 +1,16 @@
 /**
  * テスト用システム・アンダー・テスト（SUT）ファクトリ
- * 
+ *
  * 依存関係を差し替え可能なAuthenticateUserUseCaseのビルダー。
  * テストの共通セットアップを簡素化し、個々のテストケースに特化したモックを提供する。
  */
 
-import { AuthenticateUserUseCase } from '../../../AuthenticateUserUseCase';
+import { mock } from 'bun:test';
 import type { IUserRepository } from '../../../../../domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '../../../../../domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '../../../../../domain/services/IAuthProvider';
 import type { Logger } from '../../../../../shared/logging/Logger';
-import { mock } from 'bun:test';
+import { AuthenticateUserUseCase } from '../../../AuthenticateUserUseCase';
 import { createFakeClock } from './fakeClock';
 
 /**
@@ -42,7 +42,7 @@ export interface SUTResult {
 
 /**
  * デフォルトの依存関係モック
- * 
+ *
  * @returns モックされた依存関係のセット
  */
 function createDefaultDependencies(): SUTDependencies {
@@ -68,21 +68,21 @@ function createDefaultDependencies(): SUTDependencies {
       warn: mock(),
       error: mock(),
       debug: mock(),
-    } as any,
+    } as Logger,
     config: {
       JWT_MAX_LENGTH: 2048,
       EXISTING_USER_TIME_LIMIT_MS: 1000,
       NEW_USER_TIME_LIMIT_MS: 2000,
-    }
+    },
   };
 }
 
 /**
  * テスト用SUTビルダー
- * 
+ *
  * 依存関係を差し替え可能なAuthenticateUserUseCaseインスタンスを作成。
  * テストの共通セットアップを簡素化し、固定時刻制御機能を提供。
- * 
+ *
  * @param overrides 置き換えたい依存関係のオーバーライド
  * @returns SUT（テスト対象システム）と依存関係のセット
  */
@@ -100,7 +100,7 @@ export function makeSUT(overrides: Partial<SUTDependencies> = {}): SUTResult {
     dependencies.authProvider,
     dependencies.authDomainService,
     dependencies.logger,
-    dependencies.config
+    dependencies.config,
   );
 
   return {

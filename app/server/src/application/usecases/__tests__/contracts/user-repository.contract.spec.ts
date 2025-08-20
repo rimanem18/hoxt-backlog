@@ -1,15 +1,14 @@
 /**
  * UserRepository契約テスト
- * 
+ *
  * IUserRepositoryインターフェースの契約（CRUD操作とエラーの仕様）をテスト。
  * 実装詳細に依存しない、リポジトリパターンの契約確認に特化。
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { IUserRepository } from '../../../../domain/repositories/IUserRepository';
 import type { User } from '../../../../domain/user/UserEntity';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
-import { mock } from 'bun:test';
 
 describe('UserRepository契約テスト', () => {
   let userRepository: IUserRepository;
@@ -36,28 +35,31 @@ describe('UserRepository契約テスト', () => {
       (userRepository.findByExternalId as any).mockResolvedValue(existingUser);
 
       // When: 外部IDで検索
-      const result = await userRepository.findByExternalId('google_12345', 'google');
+      const result = await userRepository.findByExternalId(
+        'google_12345',
+        'google',
+      );
 
       // Then: Userエンティティの契約を満たす
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
-      
+
       // 必須フィールドの確認
       expect(typeof result!.id).toBe('string');
       expect(result!.id.length).toBeGreaterThan(0);
-      
+
       expect(typeof result!.externalId).toBe('string');
       expect(result!.externalId).toBe('google_12345');
-      
+
       expect(typeof result!.provider).toBe('string');
       expect(result!.provider).toBe('google');
-      
+
       expect(typeof result!.email).toBe('string');
       expect(result!.email).toMatch(/@/);
-      
+
       expect(typeof result!.name).toBe('string');
       expect(result!.name.length).toBeGreaterThan(0);
-      
+
       expect(result!.createdAt).toBeInstanceOf(Date);
       expect(result!.updatedAt).toBeInstanceOf(Date);
     });
@@ -67,7 +69,10 @@ describe('UserRepository契約テスト', () => {
       (userRepository.findByExternalId as any).mockResolvedValue(null);
 
       // When: 存在しない外部IDで検索
-      const result = await userRepository.findByExternalId('nonexistent_12345', 'google');
+      const result = await userRepository.findByExternalId(
+        'nonexistent_12345',
+        'google',
+      );
 
       // Then: nullを返す
       expect(result).toBeNull();
@@ -87,7 +92,10 @@ describe('UserRepository契約テスト', () => {
       (userRepository.findByExternalId as any).mockResolvedValue(user);
 
       // When: プロバイダー別で検索
-      const result = await userRepository.findByExternalId(externalId, 'google');
+      const result = await userRepository.findByExternalId(
+        externalId,
+        'google',
+      );
 
       // Then: プロバイダーが一致するユーザーを返す
       expect(result).toBeDefined();
@@ -160,7 +168,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.findByEmail as any).mockResolvedValue(null);
 
       // When: 存在しないEmailで検索
-      const result = await userRepository.findByEmail('nonexistent@example.com');
+      const result = await userRepository.findByEmail(
+        'nonexistent@example.com',
+      );
 
       // Then: nullを返す
       expect(result).toBeNull();
@@ -196,7 +206,7 @@ describe('UserRepository契約テスト', () => {
       expect(typeof result.id).toBe('string');
       expect(result.id.length).toBeGreaterThan(0);
       expect(result.id).toBe('uuid-new-12345');
-      
+
       // 元のデータが保持される
       expect(result.externalId).toBe(newUserData.externalId);
       expect(result.email).toBe(newUserData.email);
@@ -219,7 +229,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.create as any).mockRejectedValue(constraintError);
 
       // When & Then: 重複データで制約エラーがスローされる
-      await expect(userRepository.create(duplicateUserData)).rejects.toThrow('UNIQUE constraint violation');
+      await expect(userRepository.create(duplicateUserData)).rejects.toThrow(
+        'UNIQUE constraint violation',
+      );
     });
 
     test('必須フィールド不足で検証エラーをスローする', async () => {
@@ -234,11 +246,15 @@ describe('UserRepository契約テスト', () => {
         lastLoginAt: new Date(),
       } as any;
 
-      const validationError = new Error('Validation failed: externalId is required');
+      const validationError = new Error(
+        'Validation failed: externalId is required',
+      );
       (userRepository.create as any).mockRejectedValue(validationError);
 
       // When & Then: 検証エラーがスローされる
-      await expect(userRepository.create(incompleteUserData)).rejects.toThrow('Validation failed');
+      await expect(userRepository.create(incompleteUserData)).rejects.toThrow(
+        'Validation failed',
+      );
     });
   });
 
@@ -263,7 +279,10 @@ describe('UserRepository契約テスト', () => {
       (userRepository.update as any).mockResolvedValue(updatedUser);
 
       // When: ユーザーを更新
-      const result = await userRepository.update('uuid-update-test', updateData);
+      const result = await userRepository.update(
+        'uuid-update-test',
+        updateData,
+      );
 
       // Then: 更新されたUserエンティティを返す
       expect(result).toBeDefined();
@@ -283,7 +302,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.update as any).mockRejectedValue(notFoundError);
 
       // When & Then: 存在しないIDで更新エラーがスローされる
-      await expect(userRepository.update('nonexistent-id', updateData)).rejects.toThrow('User not found');
+      await expect(
+        userRepository.update('nonexistent-id', updateData),
+      ).rejects.toThrow('User not found');
     });
   });
 
@@ -310,7 +331,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.delete as any).mockRejectedValue(notFoundError);
 
       // When & Then: 存在しないIDで削除エラーがスローされる
-      await expect(userRepository.delete('nonexistent-id')).rejects.toThrow('User not found');
+      await expect(userRepository.delete('nonexistent-id')).rejects.toThrow(
+        'User not found',
+      );
     });
   });
 
@@ -322,7 +345,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.findById as any).mockRejectedValue(connectionError);
 
       // When & Then: 接続エラーがスローされる
-      await expect(userRepository.findById('any-id')).rejects.toThrow('Database connection failed');
+      await expect(userRepository.findById('any-id')).rejects.toThrow(
+        'Database connection failed',
+      );
     });
 
     test('トランザクションエラー時の契約確認', async () => {
@@ -341,7 +366,9 @@ describe('UserRepository契約テスト', () => {
       (userRepository.create as any).mockRejectedValue(transactionError);
 
       // When & Then: トランザクションエラーがスローされる
-      await expect(userRepository.create(userData)).rejects.toThrow('Transaction failed');
+      await expect(userRepository.create(userData)).rejects.toThrow(
+        'Transaction failed',
+      );
     });
 
     test('タイムアウトエラー時の契約確認', async () => {
@@ -352,7 +379,7 @@ describe('UserRepository契約テスト', () => {
 
       // When & Then: タイムアウトエラーがスローされる
       await expect(
-        userRepository.findByExternalId('any_id', 'google')
+        userRepository.findByExternalId('any_id', 'google'),
       ).rejects.toThrow('Query timeout');
     });
   });
@@ -389,7 +416,7 @@ describe('UserRepository契約テスト', () => {
     test('CreateUserData型の確認', () => {
       // Given: ユーザー作成データ（IDなし）
       type CreateUserData = Omit<User, 'id'>;
-      
+
       const createData: CreateUserData = {
         externalId: 'google_create_123',
         provider: 'google',
@@ -406,15 +433,17 @@ describe('UserRepository契約テスト', () => {
       expect(createData.provider).toBeDefined();
       expect(createData.email).toBeDefined();
       expect(createData.name).toBeDefined();
-      
+
       // IDが含まれていないことを確認
       expect((createData as any).id).toBeUndefined();
     });
 
     test('UpdateUserData型の確認', () => {
       // Given: ユーザー更新データ（部分更新）
-      type UpdateUserData = Partial<Omit<User, 'id' | 'externalId' | 'provider' | 'createdAt'>>;
-      
+      type UpdateUserData = Partial<
+        Omit<User, 'id' | 'externalId' | 'provider' | 'createdAt'>
+      >;
+
       const updateData: UpdateUserData = {
         email: 'updated@example.com',
         name: '更新後テストユーザー',
@@ -425,7 +454,7 @@ describe('UserRepository契約テスト', () => {
       expect(updateData.email).toBeDefined();
       expect(updateData.name).toBeDefined();
       expect(updateData.updatedAt).toBeDefined();
-      
+
       // 更新不可フィールドが含まれていないことを確認
       expect((updateData as any).id).toBeUndefined();
       expect((updateData as any).externalId).toBeUndefined();

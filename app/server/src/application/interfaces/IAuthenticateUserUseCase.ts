@@ -1,6 +1,6 @@
 /**
  * ユーザー認証UseCaseインターフェース
- * 
+ *
  * JWTトークンを受け取り、ユーザー認証・JITプロビジョニングを実行する。
  */
 import type { User } from '../../domain/user/UserEntity';
@@ -29,7 +29,7 @@ export interface AuthenticateUserUseCaseOutput {
 export interface IAuthenticateUserUseCase {
   /**
    * ユーザー認証実行
-   * 
+   *
    * @param input JWTトークンを含む入力パラメータ
    * @returns 認証済みユーザー情報と新規作成フラグ
    */

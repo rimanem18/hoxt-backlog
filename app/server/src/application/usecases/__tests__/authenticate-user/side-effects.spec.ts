@@ -1,19 +1,19 @@
 /**
  * 副作用・ログ出力テスト
- * 
+ *
  * AuthenticateUserUseCaseの副作用（ログ、イベント、メトリクス）をテスト。
  * 監査ログ、イベント発行、パフォーマンスメトリクス記録などを検証。
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { makeSUT } from './helpers/makeSUT';
-import { UserFactory } from './helpers/userFactory';
-import { TestMatchers } from './helpers/matchers';
-import { ValidationError } from '../../../../shared/errors/ValidationError';
 import { AuthenticationError } from '../../../../domain/user/errors/AuthenticationError';
-import { InfrastructureError } from '../../../../shared/errors/InfrastructureError';
 import { ExternalServiceError } from '../../../../shared/errors/ExternalServiceError';
+import { InfrastructureError } from '../../../../shared/errors/InfrastructureError';
+import { ValidationError } from '../../../../shared/errors/ValidationError';
 import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import { makeSUT } from './helpers/makeSUT';
+import { TestMatchers } from './helpers/matchers';
+import { UserFactory } from './helpers/userFactory';
 
 describe('副作用・ログ出力テスト', () => {
   let sut: ReturnType<typeof makeSUT>;
@@ -32,7 +32,10 @@ describe('副作用・ログ出力テスト', () => {
         email: 'audit@example.com',
       });
 
-      const jwtPayload = UserFactory.jwtPayload('google_audit_123', 'audit@example.com');
+      const jwtPayload = UserFactory.jwtPayload(
+        'google_audit_123',
+        'audit@example.com',
+      );
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
@@ -43,7 +46,7 @@ describe('副作用・ログ出力テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo('google_audit_123', 'audit@example.com')
+        UserFactory.externalUserInfo('google_audit_123', 'audit@example.com'),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -63,7 +66,7 @@ describe('副作用・ログ出力テスト', () => {
         'Starting user authentication',
         {
           jwtLength: jwt.length,
-        }
+        },
       );
 
       // 2. 認証成功ログ（完全な情報含む）
@@ -76,7 +79,7 @@ describe('副作用・ログ出力テスト', () => {
           externalId: 'google_audit_123',
           isNewUser: false,
           provider: 'google',
-        }
+        },
       );
 
       // 3. エラーログが出力されていないことを確認
@@ -93,7 +96,10 @@ describe('副作用・ログ出力テスト', () => {
         email: 'newaudit@example.com',
       });
 
-      const jwtPayload = UserFactory.jwtPayload('google_new_audit_456', 'newaudit@example.com');
+      const jwtPayload = UserFactory.jwtPayload(
+        'google_new_audit_456',
+        'newaudit@example.com',
+      );
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
@@ -104,7 +110,10 @@ describe('副作用・ログ出力テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo('google_new_audit_456', 'newaudit@example.com')
+        UserFactory.externalUserInfo(
+          'google_new_audit_456',
+          'newaudit@example.com',
+        ),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -125,7 +134,7 @@ describe('副作用・ログ出力テスト', () => {
           externalId: 'google_new_audit_456',
           isNewUser: true, // 新規作成フラグ
           provider: 'google',
-        }
+        },
       );
     });
   });
@@ -149,7 +158,7 @@ describe('副作用・ログ出力テスト', () => {
         'Authentication failed: Missing input or JWT',
         {
           input: '[REDACTED]', // 機密情報の秘匿確認
-        }
+        },
       );
     });
 
@@ -179,7 +188,7 @@ describe('副作用・ログ出力テスト', () => {
         {
           reason: 'Invalid JWT',
           errorMessage,
-        }
+        },
       );
     });
 
@@ -196,11 +205,13 @@ describe('副作用・ログ出力テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       // 予期しないエラーをシミュレート
-      (sut.authDomainService.authenticateUser as any).mockRejectedValue(unexpectedError);
+      (sut.authDomainService.authenticateUser as any).mockRejectedValue(
+        unexpectedError,
+      );
 
       // When: 予期しないエラーを実行
       try {
@@ -217,7 +228,7 @@ describe('副作用・ログ出力テスト', () => {
         {
           error: 'Unexpected database error',
           jwt: '[REDACTED]', // JWT情報の秘匿確認
-        }
+        },
       );
 
       // エラー分類の警告ログも出力される
@@ -226,7 +237,7 @@ describe('副作用・ログ出力テスト', () => {
         expect.objectContaining({
           originalErrorName: 'Error',
           originalErrorMessage: 'Unexpected database error',
-        })
+        }),
       );
     });
   });
@@ -246,7 +257,7 @@ describe('副作用・ログ出力テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -262,7 +273,7 @@ describe('副作用・ログ出力テスト', () => {
         'User authentication successful',
         expect.objectContaining({
           executionTime: expect.any(Number), // 実行時間の記録確認
-        })
+        }),
       );
     });
 
@@ -280,7 +291,7 @@ describe('副作用・ログ出力テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -300,7 +311,7 @@ describe('副作用・ログ出力テスト', () => {
         expect.objectContaining({
           timeLimit: 2000, // 新規ユーザーの制限時間
           isNewUser: true,
-        })
+        }),
       );
     });
   });
@@ -316,7 +327,7 @@ describe('副作用・ログ出力テスト', () => {
           setupMock: () => {},
         },
         {
-          name: 'JWT検証失敗', 
+          name: 'JWT検証失敗',
           input: { jwt: sensitiveJwt },
           setupMock: () => {
             (sut.authProvider.verifyToken as any).mockResolvedValue({
@@ -334,7 +345,7 @@ describe('副作用・ログ出力テスト', () => {
               payload: UserFactory.jwtPayload(),
             });
             (sut.authProvider.getExternalUserInfo as any).mockRejectedValue(
-              new Error('Database error')
+              new Error('Database error'),
             );
           },
         },
@@ -422,7 +433,9 @@ describe('副作用・ログ出力テスト', () => {
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(externalUserInfo);
+      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+        externalUserInfo,
+      );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
         user,
@@ -433,20 +446,35 @@ describe('副作用・ログ出力テスト', () => {
       await sut.sut.execute(input);
 
       // Then: 依存関係が正しい順序と引数で呼び出される
-      
+
       // 1. JWT検証
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-      
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.verifyToken,
+        jwt,
+      );
+
       // 2. 外部ユーザー情報取得
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.getExternalUserInfo, jwtPayload);
-      
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authProvider.getExternalUserInfo,
+        jwtPayload,
+      );
+
       // 3. ユーザー認証/作成
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authDomainService.authenticateUser, externalUserInfo);
+      TestMatchers.mock.toHaveBeenCalledWithArgs(
+        sut.authDomainService.authenticateUser,
+        externalUserInfo,
+      );
 
       // 各依存関係が1回ずつ呼び出される
       TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, 1);
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.getExternalUserInfo, 1);
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authDomainService.authenticateUser, 1);
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authProvider.getExternalUserInfo,
+        1,
+      );
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authDomainService.authenticateUser,
+        1,
+      );
     });
 
     test('失敗時に後続の依存関係が呼び出されない', async () => {
@@ -468,8 +496,12 @@ describe('副作用・ログ出力テスト', () => {
 
       // Then: 失敗した依存関係以降は呼び出されない
       TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, 1);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.getExternalUserInfo);
-      TestMatchers.mock.notToHaveBeenCalled(sut.authDomainService.authenticateUser);
+      TestMatchers.mock.notToHaveBeenCalled(
+        sut.authProvider.getExternalUserInfo,
+      );
+      TestMatchers.mock.notToHaveBeenCalled(
+        sut.authDomainService.authenticateUser,
+      );
     });
   });
 });

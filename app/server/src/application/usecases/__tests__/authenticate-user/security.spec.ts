@@ -1,18 +1,18 @@
 /**
  * セキュリティテスト
- * 
+ *
  * AuthenticateUserUseCaseのセキュリティ関連機能をテスト。
  * 長大入力、Unicode正規化、ゼロ幅スペース、タイミング攻撃耐性などを検証。
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { makeSUT } from './helpers/makeSUT';
-import { UserFactory } from './helpers/userFactory';
-import { TestMatchers } from './helpers/matchers';
-import { ValidationError } from '../../../../shared/errors/ValidationError';
 import { AuthenticationError } from '../../../../domain/user/errors/AuthenticationError';
-import { createPerformanceTimer } from './helpers/fakeClock';
+import { ValidationError } from '../../../../shared/errors/ValidationError';
 import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import { createPerformanceTimer } from './helpers/fakeClock';
+import { makeSUT } from './helpers/makeSUT';
+import { TestMatchers } from './helpers/matchers';
+import { UserFactory } from './helpers/userFactory';
 
 describe('セキュリティテスト', () => {
   let sut: ReturnType<typeof makeSUT>;
@@ -29,13 +29,16 @@ describe('セキュリティテスト', () => {
       ['異常に大きなペイロード', 10000],
     ])('%s の入力で適切に制限される', async (_description, size: number) => {
       // Given: 長大入力の攻撃シナリオ
-      const longInput = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' + 'A'.repeat(size) + '.signature';
+      const longInput =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+        'A'.repeat(size) +
+        '.signature';
       const input: AuthenticateUserUseCaseInput = { jwt: longInput };
 
       // When & Then: サイズ制限チェック
       try {
         await sut.sut.execute(input);
-        
+
         // 2KB以下の場合は後続処理に進む可能性があるが、
         // 無効なJWTなので検証エラーになる
         if (size <= 2048) {
@@ -106,7 +109,7 @@ describe('セキュリティテスト', () => {
       // Given: 異なる正規化形式の同じ文字
       const nfc = 'café'; // NFC正規化形式
       const nfd = 'cafe\u0301'; // NFD正規化形式（同じ意味）
-      
+
       expect(nfc).not.toBe(nfd); // 文字列としては異なる
       expect(nfc.normalize()).toBe(nfd.normalize()); // 正規化後は同じ
 
@@ -149,7 +152,7 @@ describe('セキュリティテスト', () => {
         const timer = createPerformanceTimer(sut.fakeClock);
 
         timer.start();
-        
+
         try {
           await sut.sut.execute(input);
         } catch (_error) {
@@ -162,8 +165,9 @@ describe('セキュリティテスト', () => {
 
       // Then: 処理時間の一定性を確認
       // すべて入力検証段階で拒否されるため、時間は一定であることが期待される
-      const avgTime = executionTimes.reduce((a, b) => a + b, 0) / executionTimes.length;
-      
+      const avgTime =
+        executionTimes.reduce((a, b) => a + b, 0) / executionTimes.length;
+
       for (const time of executionTimes) {
         // 平均から大きく乖離しない（タイミング攻撃を防ぐ）
         expect(Math.abs(time - avgTime)).toBeLessThan(avgTime * 0.5);
@@ -192,7 +196,7 @@ describe('セキュリティテスト', () => {
         const timer = createPerformanceTimer(sut.fakeClock);
 
         timer.start();
-        
+
         try {
           await sut.sut.execute(input);
         } catch (_error) {
@@ -206,9 +210,12 @@ describe('セキュリティテスト', () => {
       // Then: JWT検証処理の時間一定性を確認
       // 異なる内容のJWTでも検証失敗の処理時間が一定であることを確認
       expect(executionTimes.length).toBe(validStructureJwts.length);
-      
+
       // 各JWTでJWT検証が実行される
-      TestMatchers.mock.toHaveBeenCalledTimes(sut.authProvider.verifyToken, validStructureJwts.length);
+      TestMatchers.mock.toHaveBeenCalledTimes(
+        sut.authProvider.verifyToken,
+        validStructureJwts.length,
+      );
     });
   });
 
@@ -218,47 +225,55 @@ describe('セキュリティテスト', () => {
       ['NoSQL注入攻撃', '{"$ne": null}'],
       ['コマンド注入攻撃', '; rm -rf / #'],
       ['XSS攻撃', '<script>alert("xss")</script>'],
-      ['XXE攻撃', '<?xml version="1.0"?><!DOCTYPE test [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'],
+      [
+        'XXE攻撃',
+        '<?xml version="1.0"?><!DOCTYPE test [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>',
+      ],
       ['LDAP注入攻撃', '*)(&(objectClass=*)'],
-    ])('%s が適切に無害化される', async (_description, maliciousPayload: string) => {
-      const input: AuthenticateUserUseCaseInput = { jwt: maliciousPayload };
+    ])(
+      '%s が適切に無害化される',
+      async (_description, maliciousPayload: string) => {
+        const input: AuthenticateUserUseCaseInput = { jwt: maliciousPayload };
 
-      // When: 注入攻撃を実行
-      try {
-        await sut.sut.execute(input);
-      } catch (error) {
-        // 不正な入力は ValidationError で拒否される
-        expect(error).toBeInstanceOf(ValidationError);
-      }
+        // When: 注入攻撃を実行
+        try {
+          await sut.sut.execute(input);
+        } catch (error) {
+          // 不正な入力は ValidationError で拒否される
+          expect(error).toBeInstanceOf(ValidationError);
+        }
 
-      // Then: 注入攻撃は構造検証段階で拒否され、後続処理は実行されない
-      TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.verifyToken);
+        // Then: 注入攻撃は構造検証段階で拒否され、後続処理は実行されない
+        TestMatchers.mock.notToHaveBeenCalled(sut.authProvider.verifyToken);
 
-      // 悪意のあるペイロードがログに出力されないことを確認
-      const logCalls = [
-        ...(sut.logger.warn as any).mock.calls,
-        ...(sut.logger.error as any).mock.calls,
-        ...(sut.logger.info as any).mock.calls,
-      ];
+        // 悪意のあるペイロードがログに出力されないことを確認
+        const logCalls = [
+          ...(sut.logger.warn as any).mock.calls,
+          ...(sut.logger.error as any).mock.calls,
+          ...(sut.logger.info as any).mock.calls,
+        ];
 
-      const loggedContent = JSON.stringify(logCalls);
-      expect(loggedContent).not.toContain(maliciousPayload);
-    });
+        const loggedContent = JSON.stringify(logCalls);
+        expect(loggedContent).not.toContain(maliciousPayload);
+      },
+    );
   });
 
   describe('レート制限・リソース保護', () => {
     test('高頻度リクエストでもリソース枯渇しない', async () => {
       // Given: 高頻度リクエストのシミュレーション
-      const requests = Array(100).fill(null).map((_, i) => ({
-        jwt: `invalid-jwt-${i}`,
-      }));
+      const requests = Array(100)
+        .fill(null)
+        .map((_, i) => ({
+          jwt: `invalid-jwt-${i}`,
+        }));
 
       const timer = createPerformanceTimer(sut.fakeClock);
       timer.start();
 
       // When: 大量リクエストを処理
       const results = await Promise.allSettled(
-        requests.map(input => sut.sut.execute(input))
+        requests.map((input) => sut.sut.execute(input)),
       );
 
       const totalTime = timer.end();
@@ -287,8 +302,11 @@ describe('セキュリティテスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      const internalError = new Error('Internal server configuration error at /etc/secrets/config.json');
-      internalError.stack = 'Error: Secret info\n    at secretFunction (/app/secret.js:42:15)';
+      const internalError = new Error(
+        'Internal server configuration error at /etc/secrets/config.json',
+      );
+      internalError.stack =
+        'Error: Secret info\n    at secretFunction (/app/secret.js:42:15)';
 
       (sut.authProvider.verifyToken as any).mockResolvedValue({
         valid: true,
@@ -296,10 +314,12 @@ describe('セキュリティテスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
-      (sut.authDomainService.authenticateUser as any).mockRejectedValue(internalError);
+      (sut.authDomainService.authenticateUser as any).mockRejectedValue(
+        internalError,
+      );
 
       // When: 内部エラーを実行
       try {
@@ -316,7 +336,7 @@ describe('セキュリティテスト', () => {
       ];
 
       const loggedContent = JSON.stringify(logCalls);
-      
+
       // 機密情報がログに漏洩していないことを確認
       expect(loggedContent).not.toContain('/etc/secrets');
       expect(loggedContent).not.toContain('config.json');

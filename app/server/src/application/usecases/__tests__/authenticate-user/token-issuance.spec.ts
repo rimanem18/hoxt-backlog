@@ -1,16 +1,16 @@
 /**
  * トークン発行・時刻制御テスト
- * 
+ *
  * AuthenticateUserUseCaseのJWT処理と時刻依存ロジックをテスト。
  * トークン有効期限、発行時刻、更新時刻などの時間制御機能を検証。
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { makeSUT } from './helpers/makeSUT';
-import { UserFactory } from './helpers/userFactory';
-import { TestMatchers } from './helpers/matchers';
-import { createPerformanceTimer, TIME_CONSTANTS } from './helpers/fakeClock';
 import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import { createPerformanceTimer, TIME_CONSTANTS } from './helpers/fakeClock';
+import { makeSUT } from './helpers/makeSUT';
+import { TestMatchers } from './helpers/matchers';
+import { UserFactory } from './helpers/userFactory';
 
 describe('トークン発行・時刻制御テスト', () => {
   let sut: ReturnType<typeof makeSUT>;
@@ -26,72 +26,81 @@ describe('トークン発行・時刻制御テスト', () => {
       ['有効期限内のトークン', 3600], // 1時間後
       ['有効期限ギリギリのトークン', 60], // 1分後
       ['長期間有効なトークン', 86400], // 24時間後
-    ])('%s で正常に処理される', async (_description, expiresInSeconds: number) => {
-      // Given: 有効期限が設定されたJWT
-      const now = Math.floor(sut.fakeClock.now() / 1000);
-      const jwtPayload = UserFactory.jwtPayload();
-      jwtPayload.iat = now;
-      jwtPayload.exp = now + expiresInSeconds;
-      
-      const jwt = UserFactory.validJwt(jwtPayload);
-      const input: AuthenticateUserUseCaseInput = { jwt };
+    ])(
+      '%s で正常に処理される',
+      async (_description, expiresInSeconds: number) => {
+        // Given: 有効期限が設定されたJWT
+        const now = Math.floor(sut.fakeClock.now() / 1000);
+        const jwtPayload = UserFactory.jwtPayload();
+        jwtPayload.iat = now;
+        jwtPayload.exp = now + expiresInSeconds;
 
-      // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
-        valid: true,
-        payload: jwtPayload,
-      });
+        const jwt = UserFactory.validJwt(jwtPayload);
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
-      );
+        // モック設定
+        (sut.authProvider.verifyToken as any).mockResolvedValue({
+          valid: true,
+          payload: jwtPayload,
+        });
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
-        user: UserFactory.existing(),
-        isNewUser: false,
-      });
+        (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+          UserFactory.externalUserInfo(),
+        );
 
-      // When: 有効期限内のJWTで認証処理を実行
-      const result = await sut.sut.execute(input);
+        (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+          user: UserFactory.existing(),
+          isNewUser: false,
+        });
 
-      // Then: 正常に処理される
-      expect(result).toBeDefined();
-      expect(result.user).toBeDefined();
+        // When: 有効期限内のJWTで認証処理を実行
+        const result = await sut.sut.execute(input);
 
-      // JWT検証が実行される
-      TestMatchers.mock.toHaveBeenCalledWithArgs(sut.authProvider.verifyToken, jwt);
-    });
+        // Then: 正常に処理される
+        expect(result).toBeDefined();
+        expect(result.user).toBeDefined();
+
+        // JWT検証が実行される
+        TestMatchers.mock.toHaveBeenCalledWithArgs(
+          sut.authProvider.verifyToken,
+          jwt,
+        );
+      },
+    );
 
     test.each([
       ['期限切れトークン', -3600], // 1時間前
       ['大幅に期限切れ', -86400], // 24時間前
-    ])('%s で認証エラーが発生する', async (_description, expiredSecondsAgo: number) => {
-      // Given: 期限切れのJWT
-      const now = Math.floor(sut.fakeClock.now() / 1000);
-      const jwtPayload = UserFactory.jwtPayload();
-      jwtPayload.iat = now + expiredSecondsAgo - 1; // 発行時刻も古く設定
-      jwtPayload.exp = now + expiredSecondsAgo;
-      
-      const jwt = UserFactory.validJwt(jwtPayload);
-      const input: AuthenticateUserUseCaseInput = { jwt };
+    ])(
+      '%s で認証エラーが発生する',
+      async (_description, expiredSecondsAgo: number) => {
+        // Given: 期限切れのJWT
+        const now = Math.floor(sut.fakeClock.now() / 1000);
+        const jwtPayload = UserFactory.jwtPayload();
+        jwtPayload.iat = now + expiredSecondsAgo - 1; // 発行時刻も古く設定
+        jwtPayload.exp = now + expiredSecondsAgo;
 
-      // 期限切れトークンは検証失敗
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
-        valid: false,
-        error: 'Token expired',
-      });
+        const jwt = UserFactory.validJwt(jwtPayload);
+        const input: AuthenticateUserUseCaseInput = { jwt };
 
-      // When & Then: 期限切れトークンで認証エラーが発生
-      await TestMatchers.failWithError(
-        sut.sut.execute(input),
-        'authentication'
-      );
+        // 期限切れトークンは検証失敗
+        (sut.authProvider.verifyToken as any).mockResolvedValue({
+          valid: false,
+          error: 'Token expired',
+        });
 
-      await TestMatchers.failWithMessage(
-        sut.sut.execute(input),
-        '認証トークンが無効です'
-      );
-    });
+        // When & Then: 期限切れトークンで認証エラーが発生
+        await TestMatchers.failWithError(
+          sut.sut.execute(input),
+          'authentication',
+        );
+
+        await TestMatchers.failWithMessage(
+          sut.sut.execute(input),
+          '認証トークンが無効です',
+        );
+      },
+    );
   });
 
   describe('ユーザータイムスタンプ検証', () => {
@@ -115,7 +124,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -136,7 +145,7 @@ describe('トークン発行・時刻制御テスト', () => {
       // Given: 既存ユーザーのログインシナリオ
       const pastTime = new Date(sut.fakeClock.now() - TIME_CONSTANTS.ONE_DAY);
       const currentTime = sut.fakeClock.nowAsDate();
-      
+
       const existingUser = UserFactory.existing({
         createdAt: pastTime, // 過去の作成日
         updatedAt: currentTime, // 現在時刻で更新
@@ -154,7 +163,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -187,7 +196,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -206,7 +215,10 @@ describe('トークン発行・時刻制御テスト', () => {
       // Then: 既存ユーザー認証が1秒以内に完了
       expect(result).toBeDefined();
       expect(result.isNewUser).toBe(false);
-      TestMatchers.completeWithinTimeLimit(executionTime, TIME_CONSTANTS.EXISTING_USER_LIMIT);
+      TestMatchers.completeWithinTimeLimit(
+        executionTime,
+        TIME_CONSTANTS.EXISTING_USER_LIMIT,
+      );
     });
 
     test('新規ユーザーJIT作成が制限時間内に完了する', async () => {
@@ -223,7 +235,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -242,7 +254,10 @@ describe('トークン発行・時刻制御テスト', () => {
       // Then: JIT作成が2秒以内に完了
       expect(result).toBeDefined();
       expect(result.isNewUser).toBe(true);
-      TestMatchers.completeWithinTimeLimit(executionTime, TIME_CONSTANTS.NEW_USER_LIMIT);
+      TestMatchers.completeWithinTimeLimit(
+        executionTime,
+        TIME_CONSTANTS.NEW_USER_LIMIT,
+      );
     });
 
     test('パフォーマンス制限超過時に警告ログが出力される', async () => {
@@ -259,7 +274,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       (sut.authDomainService.authenticateUser as any).mockResolvedValue({
@@ -278,7 +293,7 @@ describe('トークン発行・時刻制御テスト', () => {
         expect.objectContaining({
           timeLimit: TIME_CONSTANTS.EXISTING_USER_LIMIT,
           isNewUser: false,
-        })
+        }),
       );
     });
   });
@@ -287,9 +302,18 @@ describe('トークン発行・時刻制御テスト', () => {
     test('異なる時刻での認証処理が適切に動作する', async () => {
       // Given: 複数の時刻でのテストケース
       const testTimes = [
-        { name: '平日午前', time: new Date('2025-08-20T09:00:00+09:00').getTime() },
-        { name: '平日深夜', time: new Date('2025-08-20T23:59:59+09:00').getTime() },
-        { name: '休日昼間', time: new Date('2025-08-23T12:00:00+09:00').getTime() },
+        {
+          name: '平日午前',
+          time: new Date('2025-08-20T09:00:00+09:00').getTime(),
+        },
+        {
+          name: '平日深夜',
+          time: new Date('2025-08-20T23:59:59+09:00').getTime(),
+        },
+        {
+          name: '休日昼間',
+          time: new Date('2025-08-23T12:00:00+09:00').getTime(),
+        },
       ];
 
       const user = UserFactory.existing();
@@ -304,7 +328,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       for (const { name, time } of testTimes) {
@@ -328,7 +352,7 @@ describe('トークン発行・時刻制御テスト', () => {
           sut.logger,
           'info',
           'User authentication successful',
-          { userId: user.id }
+          { userId: user.id },
         );
       }
     });
@@ -337,7 +361,7 @@ describe('トークン発行・時刻制御テスト', () => {
       // Given: 異なるタイムゾーンでの時刻処理
       const jstTime = new Date('2025-08-20T15:00:00+09:00').getTime(); // JST 15:00
       const utcTime = new Date('2025-08-20T06:00:00Z').getTime(); // UTC 06:00 (同時刻)
-      
+
       expect(jstTime).toBe(utcTime); // 同一時刻であることを確認
 
       const user = UserFactory.existing();
@@ -352,7 +376,7 @@ describe('トークン発行・時刻制御テスト', () => {
       });
 
       (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo()
+        UserFactory.externalUserInfo(),
       );
 
       sut.fakeClock.setTime(jstTime);
