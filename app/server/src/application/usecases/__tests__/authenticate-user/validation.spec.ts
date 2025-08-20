@@ -6,8 +6,8 @@
  */
 
 import { beforeEach, describe, expect, type Mock, test } from 'bun:test';
-import { ValidationError } from '../../../../shared/errors/ValidationError';
-import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
+import { ValidationError } from '@/shared/errors/ValidationError';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';
 import { UserFactory } from './helpers/userFactory';
@@ -96,7 +96,14 @@ describe('入力検証テスト', () => {
               typeof sut.authProvider.getExternalUserInfo
             >
           ).mockResolvedValue(UserFactory.externalUserInfo());
-          (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+          const mockAuthenticateUser = sut.authDomainService
+            .authenticateUser as unknown as {
+            mockResolvedValue: (value: {
+              user: unknown;
+              isNewUser: boolean;
+            }) => void;
+          };
+          mockAuthenticateUser.mockResolvedValue({
             user: UserFactory.existing(),
             isNewUser: false,
           });
@@ -163,12 +170,15 @@ describe('入力検証テスト', () => {
       ['undefined input', undefined],
       ['空オブジェクト', {}],
       ['jwt以外のプロパティのみ', { other: 'value' }],
-    ])('%s で適切なエラーが発生する', async (_description, input: any) => {
+    ])('%s で適切なエラーが発生する', async (_description, input: unknown) => {
       // When & Then: 不正な入力形式で ValidationError がスローされる
-      await TestMatchers.failWithError(sut.sut.execute(input), 'validation');
+      await TestMatchers.failWithError(
+        sut.sut.execute(input as AuthenticateUserUseCaseInput),
+        'validation',
+      );
 
       await TestMatchers.failWithMessage(
-        sut.sut.execute(input),
+        sut.sut.execute(input as AuthenticateUserUseCaseInput),
         'JWTトークンが必要です',
       );
     });

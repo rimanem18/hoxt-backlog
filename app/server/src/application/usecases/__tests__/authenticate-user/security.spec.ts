@@ -6,9 +6,9 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { AuthenticationError } from '../../../../domain/user/errors/AuthenticationError';
-import { ValidationError } from '../../../../shared/errors/ValidationError';
-import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
+import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 import { createPerformanceTimer } from './helpers/fakeClock';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';

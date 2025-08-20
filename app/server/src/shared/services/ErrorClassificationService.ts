@@ -9,7 +9,7 @@
  * 🟢 Refactorフェーズでのエラーハンドリング強化 - 分散していたエラー判定を統一
  */
 
-import { AuthenticationError } from '../../domain/user/errors/AuthenticationError';
+import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import { ExternalServiceError } from '../errors/ExternalServiceError';
 import { InfrastructureError } from '../errors/InfrastructureError';
 

@@ -3,7 +3,7 @@
  *
  * JWTトークンを受け取り、ユーザー認証・JITプロビジョニングを実行する。
  */
-import type { User } from '../../domain/user/UserEntity';
+import type { User } from '@/domain/user/UserEntity';
 
 /**
  * 認証UseCase入力

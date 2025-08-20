@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { createPerformanceTimer, TIME_CONSTANTS } from './helpers/fakeClock';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';

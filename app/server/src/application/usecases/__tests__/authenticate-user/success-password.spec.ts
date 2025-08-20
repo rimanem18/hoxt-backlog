@@ -6,7 +6,8 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';
 import { UserFactory } from './helpers/userFactory';
@@ -44,16 +45,31 @@ describe('認証成功パステスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      const mockVerifyToken = sut.authProvider.verifyToken as unknown as {
+        mockResolvedValue: (value: {
+          valid: boolean;
+          payload: unknown;
+        }) => void;
+      };
+      mockVerifyToken.mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        externalUserInfo,
-      );
+      const mockGetExternalUserInfo = sut.authProvider
+        .getExternalUserInfo as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      };
+      mockGetExternalUserInfo.mockResolvedValue(externalUserInfo);
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      const mockAuthenticateUser = sut.authDomainService
+        .authenticateUser as unknown as {
+        mockResolvedValue: (value: {
+          user: unknown;
+          isNewUser: boolean;
+        }) => void;
+      };
+      mockAuthenticateUser.mockResolvedValue({
         user: existingUser,
         isNewUser: false,
       });
@@ -127,16 +143,31 @@ describe('認証成功パステスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      const mockVerifyToken = sut.authProvider.verifyToken as unknown as {
+        mockResolvedValue: (value: {
+          valid: boolean;
+          payload: unknown;
+        }) => void;
+      };
+      mockVerifyToken.mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        externalUserInfo,
-      );
+      const mockGetExternalUserInfo = sut.authProvider
+        .getExternalUserInfo as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      };
+      mockGetExternalUserInfo.mockResolvedValue(externalUserInfo);
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      const mockAuthenticateUser = sut.authDomainService
+        .authenticateUser as unknown as {
+        mockResolvedValue: (value: {
+          user: unknown;
+          isNewUser: boolean;
+        }) => void;
+      };
+      mockAuthenticateUser.mockResolvedValue({
         user: newUser,
         isNewUser: true,
       });
@@ -160,7 +191,10 @@ describe('認証成功パステスト', () => {
       // 新規作成日時が現在時刻に近いことを確認
       TestMatchers.beRecentTime(result.user.createdAt);
       TestMatchers.beRecentTime(result.user.updatedAt);
-      TestMatchers.beRecentTime(result.user.lastLoginAt!);
+      expect(result.user.lastLoginAt).toBeDefined();
+      if (result.user.lastLoginAt) {
+        TestMatchers.beRecentTime(result.user.lastLoginAt);
+      }
 
       // 依存関係の呼び出し確認
       TestMatchers.mock.toHaveBeenCalledWithArgs(
@@ -189,7 +223,7 @@ describe('認証成功パステスト', () => {
         // Given: プロバイダー別の認証フロー
         const user = UserFactory.existing({
           externalId,
-          provider: providerType as any,
+          provider: providerType as AuthProvider,
           email,
           name: `${_provider}ユーザー`,
         });
@@ -198,28 +232,43 @@ describe('認証成功パステスト', () => {
           externalId,
           email,
           `${_provider}ユーザー`,
-          providerType as any,
+          providerType as AuthProvider,
         );
         const externalUserInfo = UserFactory.externalUserInfo(
           externalId,
           email,
           `${_provider}ユーザー`,
-          providerType as any,
+          providerType as AuthProvider,
         );
         const jwt = UserFactory.validJwt(jwtPayload);
         const input: AuthenticateUserUseCaseInput = { jwt };
 
         // モック設定
-        (sut.authProvider.verifyToken as any).mockResolvedValue({
+        const mockVerifyToken = sut.authProvider.verifyToken as unknown as {
+          mockResolvedValue: (value: {
+            valid: boolean;
+            payload: unknown;
+          }) => void;
+        };
+        mockVerifyToken.mockResolvedValue({
           valid: true,
           payload: jwtPayload,
         });
 
-        (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-          externalUserInfo,
-        );
+        const mockGetExternalUserInfo = sut.authProvider
+          .getExternalUserInfo as unknown as {
+          mockResolvedValue: (value: unknown) => void;
+        };
+        mockGetExternalUserInfo.mockResolvedValue(externalUserInfo);
 
-        (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+        const mockAuthenticateUser = sut.authDomainService
+          .authenticateUser as unknown as {
+          mockResolvedValue: (value: {
+            user: unknown;
+            isNewUser: boolean;
+          }) => void;
+        };
+        mockAuthenticateUser.mockResolvedValue({
           user,
           isNewUser: false,
         });
@@ -229,7 +278,7 @@ describe('認証成功パステスト', () => {
 
         // Then: 認証結果を検証
         expect(result).toBeDefined();
-        expect(result.user.provider).toBe(providerType);
+        expect(result.user.provider).toBe(providerType as AuthProvider);
         expect(result.user.externalId).toBe(externalId);
         expect(result.user.email).toBe(email);
       },
@@ -244,14 +293,29 @@ describe('認証成功パステスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      const mockVerifyToken = sut.authProvider.verifyToken as unknown as {
+        mockResolvedValue: (value: {
+          valid: boolean;
+          payload: unknown;
+        }) => void;
+      };
+      mockVerifyToken.mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      const mockGetExternalUserInfo = sut.authProvider
+        .getExternalUserInfo as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      };
+      mockGetExternalUserInfo.mockResolvedValue(UserFactory.externalUserInfo());
+      const mockAuthenticateUser = sut.authDomainService
+        .authenticateUser as unknown as {
+        mockResolvedValue: (value: {
+          user: unknown;
+          isNewUser: boolean;
+        }) => void;
+      };
+      mockAuthenticateUser.mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -286,14 +350,29 @@ describe('認証成功パステスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      const mockVerifyToken = sut.authProvider.verifyToken as unknown as {
+        mockResolvedValue: (value: {
+          valid: boolean;
+          payload: unknown;
+        }) => void;
+      };
+      mockVerifyToken.mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      const mockGetExternalUserInfo = sut.authProvider
+        .getExternalUserInfo as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      };
+      mockGetExternalUserInfo.mockResolvedValue(UserFactory.externalUserInfo());
+      const mockAuthenticateUser = sut.authDomainService
+        .authenticateUser as unknown as {
+        mockResolvedValue: (value: {
+          user: unknown;
+          isNewUser: boolean;
+        }) => void;
+      };
+      mockAuthenticateUser.mockResolvedValue({
         user: newUser,
         isNewUser: true,
       });

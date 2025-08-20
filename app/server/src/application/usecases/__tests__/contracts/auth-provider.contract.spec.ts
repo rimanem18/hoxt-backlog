@@ -11,7 +11,7 @@ import type {
   IAuthProvider,
   JwtPayload,
   JwtVerificationResult,
-} from '../../../../domain/services/IAuthProvider';
+} from '@/domain/services/IAuthProvider';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
 
 describe('AuthProvider契約テスト', () => {

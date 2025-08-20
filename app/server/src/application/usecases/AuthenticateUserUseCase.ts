@@ -5,22 +5,22 @@
  * 一連のビジネスフローを管理するApplication層のUseCase実装。
  */
 
-import type { IUserRepository } from '../../domain/repositories/IUserRepository';
-import type { IAuthenticationDomainService } from '../../domain/services/IAuthenticationDomainService';
-import type { IAuthProvider } from '../../domain/services/IAuthProvider';
-import { AuthenticationError } from '../../domain/user/errors/AuthenticationError';
-import { ExternalServiceError } from '../../shared/errors/ExternalServiceError';
-import { InfrastructureError } from '../../shared/errors/InfrastructureError';
-import { ValidationError } from '../../shared/errors/ValidationError';
-import type { Logger } from '../../shared/logging/Logger';
-import type { IErrorClassificationService } from '../../shared/services/ErrorClassificationService';
-import { ErrorClassificationService } from '../../shared/services/ErrorClassificationService';
-import type { IJwtValidationService } from '../../shared/services/JwtValidationService';
-import { JwtValidationService } from '../../shared/services/JwtValidationService';
+import type { IUserRepository } from '@/domain/repositories/IUserRepository';
+import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
+import { InfrastructureError } from '@/shared/errors/InfrastructureError';
+import { ValidationError } from '@/shared/errors/ValidationError';
+import type { Logger } from '@/shared/logging/Logger';
+import type { IErrorClassificationService } from '@/shared/services/ErrorClassificationService';
+import { ErrorClassificationService } from '@/shared/services/ErrorClassificationService';
+import type { IJwtValidationService } from '@/shared/services/JwtValidationService';
+import { JwtValidationService } from '@/shared/services/JwtValidationService';
 import {
   createDependencyNullError,
   getErrorMessage,
-} from '../../shared/utils/errorUtils';
+} from '@/shared/utils/errorUtils';
 import type {
   AuthenticateUserUseCaseInput,
   AuthenticateUserUseCaseOutput,

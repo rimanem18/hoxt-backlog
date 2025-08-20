@@ -8,8 +8,9 @@
 import type {
   ExternalUserInfo,
   JwtPayload,
-} from '../../../../../domain/services/IAuthProvider';
-import type { User } from '../../../../../domain/user/UserEntity';
+} from '@/domain/services/IAuthProvider';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
+import type { User } from '@/domain/user/UserEntity';
 
 /**
  * ベースユーザープロパティ
@@ -17,7 +18,7 @@ import type { User } from '../../../../../domain/user/UserEntity';
 interface BaseUserProperties {
   readonly id?: string;
   readonly externalId?: string;
-  readonly provider?: 'google' | 'github' | 'facebook';
+  readonly provider?: AuthProvider;
   readonly email?: string;
   readonly name?: string;
   readonly avatarUrl?: string;
@@ -90,7 +91,7 @@ export function createValidJwtPayload(
   externalId = 'google_12345',
   email = 'user@example.com',
   name = 'テストユーザー',
-  provider = 'google' as const,
+  provider: AuthProvider = 'google',
 ): JwtPayload {
   const now = Math.floor(Date.now() / 1000);
 
@@ -126,7 +127,7 @@ export function createExternalUserInfo(
   externalId = 'google_12345',
   email = 'user@example.com',
   name = 'テストユーザー',
-  provider = 'google' as const,
+  provider: AuthProvider = 'google',
 ): ExternalUserInfo {
   return {
     id: externalId,

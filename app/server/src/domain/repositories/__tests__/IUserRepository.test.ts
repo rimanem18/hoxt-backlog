@@ -4,7 +4,7 @@ import type {
   CreateUserInput,
   UpdateUserInput,
   User,
-} from '../../user';
+} from '@/domain/user';
 import type { IUserRepository } from '../IUserRepository';
 
 /**

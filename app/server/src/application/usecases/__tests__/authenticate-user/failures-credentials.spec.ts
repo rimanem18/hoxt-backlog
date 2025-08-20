@@ -6,9 +6,8 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { AuthenticationError } from '../../../../domain/user/errors/AuthenticationError';
-import { ExternalServiceError } from '../../../../shared/errors/ExternalServiceError';
-import type { AuthenticateUserUseCaseInput } from '../../../interfaces/IAuthenticateUserUseCase';
+import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
+import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';
 import { UserFactory } from './helpers/userFactory';
@@ -32,14 +31,16 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ],
     ])(
       '%s で AuthenticationError がスローされる',
-      async (reason, verificationResult) => {
+      async (_reason, verificationResult) => {
         // Given: JWT検証失敗パターンの設定
         const jwt = UserFactory.validJwt();
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as any).mockResolvedValue(
-          verificationResult,
-        );
+        (
+          sut.authProvider.verifyToken as unknown as {
+            mockResolvedValue: (value: unknown) => void;
+          }
+        ).mockResolvedValue(verificationResult);
 
         // When & Then: JWT検証失敗で AuthenticationError がスローされる
         await TestMatchers.failWithError(
@@ -74,12 +75,16 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ['空のペイロード', {}],
     ])(
       '%s で AuthenticationError がスローされる',
-      async (description, payload) => {
+      async (_description, payload) => {
         // Given: 不正なペイロードの設定
         const jwt = UserFactory.validJwt();
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as any).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as unknown as {
+            mockResolvedValue: (value: unknown) => void;
+          }
+        ).mockResolvedValue({
           valid: true,
           payload: payload,
         });
@@ -119,12 +124,16 @@ describe('認証失敗・資格情報エラーテスト', () => {
       ['ネットワーク接続エラー', 'Network connection failed'],
     ])(
       '%s で ExternalServiceError がスローされる',
-      async (scenario, errorMessage) => {
+      async (_scenario, errorMessage) => {
         // Given: 外部サービス障害の設定
         const jwt = UserFactory.validJwt();
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as any).mockRejectedValue(
+        (
+          sut.authProvider.verifyToken as unknown as {
+            mockRejectedValue: (value: unknown) => void;
+          }
+        ).mockRejectedValue(
           new ExternalServiceError(`認証サービスエラー: ${errorMessage}`),
         );
 
@@ -160,12 +169,20 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as unknown as {
+          mockResolvedValue: (value: unknown) => void;
+        }
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockRejectedValue(
+      (
+        sut.authProvider.getExternalUserInfo as unknown as {
+          mockRejectedValue: (value: unknown) => void;
+        }
+      ).mockRejectedValue(
         new ExternalServiceError('外部ユーザー情報の取得に失敗しました'),
       );
 
@@ -202,7 +219,11 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
       const errorMessage = 'Invalid signature';
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as unknown as {
+          mockResolvedValue: (value: unknown) => void;
+        }
+      ).mockResolvedValue({
         valid: false,
         error: errorMessage,
       });
@@ -231,7 +252,11 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const jwt = UserFactory.validJwt();
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockRejectedValue(
+      (
+        sut.authProvider.verifyToken as unknown as {
+          mockRejectedValue: (value: unknown) => void;
+        }
+      ).mockRejectedValue(
         new ExternalServiceError('認証サービスが一時的に利用できません'),
       );
 
@@ -262,7 +287,11 @@ describe('認証失敗・資格情報エラーテスト', () => {
       for (const jwt of tamperedJwts) {
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as any).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as unknown as {
+            mockResolvedValue: (value: unknown) => void;
+          }
+        ).mockResolvedValue({
           valid: false,
           error: 'Invalid signature',
         });

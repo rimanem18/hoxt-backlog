@@ -6,11 +6,11 @@
  */
 
 import { expect } from 'bun:test';
-import { AuthenticationError } from '../../../../../domain/user/errors/AuthenticationError';
-import type { User } from '../../../../../domain/user/UserEntity';
-import { ExternalServiceError } from '../../../../../shared/errors/ExternalServiceError';
-import { InfrastructureError } from '../../../../../shared/errors/InfrastructureError';
-import { ValidationError } from '../../../../../shared/errors/ValidationError';
+import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import type { User } from '@/domain/user/UserEntity';
+import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
+import { InfrastructureError } from '@/shared/errors/InfrastructureError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 
 /**
  * エラーコード別の期待値マッピング
@@ -103,12 +103,15 @@ export function toHaveLoggedMessage(
   expectedMessage: string,
   expectedMeta?: Record<string, unknown>,
 ) {
-  const calls = (
-    mockLogger as Record<
-      string,
-      { mock: { calls: [string, Record<string, unknown>?][] } }
-    >
-  )[level].mock.calls;
+  const mockLoggerTyped = mockLogger as Record<
+    string,
+    { mock: { calls: [string, Record<string, unknown>?][] } }
+  >;
+  const levelMethod = mockLoggerTyped[level];
+  if (!levelMethod) {
+    throw new Error(`Logger method '${level}' not found`);
+  }
+  const calls = levelMethod.mock.calls;
 
   const matchingCall = calls.find(
     (call: [string, Record<string, unknown>?]) => {
@@ -143,12 +146,23 @@ export function toHaveUserProperties(
     provider?: string;
     email?: string;
     name?: string;
+    avatarUrl?: string | null | undefined;
   },
 ) {
   return Object.keys(expectedProperties).every((key) => {
-    return expect(user[key]).toBe(
-      expectedProperties[key as keyof typeof expectedProperties],
-    );
+    const userKey = key as keyof User;
+    const expectedKey = key as keyof typeof expectedProperties;
+    const expectedValue = expectedProperties[expectedKey];
+    const actualValue = user[userKey];
+
+    if (key === 'avatarUrl') {
+      // avatarUrlは特別扱い: undefinedをnullに正規化
+      const normalizedExpected =
+        expectedValue === undefined ? null : expectedValue;
+      return expect(actualValue).toBe(normalizedExpected);
+    }
+
+    return expect(actualValue).toBe(expectedValue as string | Date | null);
   });
 }
 

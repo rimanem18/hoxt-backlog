@@ -6,8 +6,9 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { IUserRepository } from '../../../../domain/repositories/IUserRepository';
-import type { User } from '../../../../domain/user/UserEntity';
+import type { IUserRepository } from '@/domain/repositories/IUserRepository';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
+import type { User } from '@/domain/user/UserEntity';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
 
 describe('UserRepository契約テスト', () => {
@@ -100,7 +101,7 @@ describe('UserRepository契約テスト', () => {
       // Then: プロバイダーが一致するユーザーを返す
       expect(result).toBeDefined();
       expect(result!.externalId).toBe(externalId);
-      expect(result!.provider).toBe(provider);
+      expect(result!.provider).toBe(provider as AuthProvider);
     });
 
     test('Promiseを返すことの契約確認', () => {
@@ -318,11 +319,10 @@ describe('UserRepository契約テスト', () => {
       (userRepository.delete as any).mockResolvedValue(existingUser);
 
       // When: ユーザーを削除
-      const result = await userRepository.delete('uuid-delete-test');
+      await userRepository.delete('uuid-delete-test');
 
-      // Then: 削除されたUserエンティティを返す
-      expect(result).toBeDefined();
-      expect(result.id).toBe('uuid-delete-test');
+      // Then: 削除処理が正常に完了する
+      expect(userRepository.delete).toHaveBeenCalledWith('uuid-delete-test');
     });
 
     test('存在しないIDで削除時にエラーをスローする', async () => {

@@ -6,9 +6,10 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { IAuthenticationDomainService } from '../../../../domain/services/IAuthenticationDomainService';
-import type { ExternalUserInfo } from '../../../../domain/services/IAuthProvider';
-import type { User } from '../../../../domain/user/UserEntity';
+import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
+import type { ExternalUserInfo } from '@/domain/services/IAuthProvider';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
+import type { User } from '@/domain/user/UserEntity';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
 
 describe('AuthenticationDomainService契約テスト', () => {
@@ -28,6 +29,7 @@ describe('AuthenticationDomainService契約テスト', () => {
         'google_existing_123',
         'existing@example.com',
         '既存ユーザー',
+        'google',
       );
 
       const existingUser = UserFactory.existing({
@@ -63,7 +65,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       // ユーザー情報の整合性確認
       expect(result.user.externalId).toBe(externalUserInfo.id);
       expect(result.user.email).toBe(externalUserInfo.email);
-      expect(result.user.provider).toBe(externalUserInfo.provider);
+      expect(result.user.provider).toBe(
+        externalUserInfo.provider as AuthProvider,
+      );
     });
 
     test('新規ユーザーでJIT作成レスポンスの契約を満たす', async () => {
@@ -72,6 +76,7 @@ describe('AuthenticationDomainService契約テスト', () => {
         'google_new_456',
         'newuser@example.com',
         '新規ユーザー',
+        'google',
       );
 
       const newUser = UserFactory.new({
@@ -130,7 +135,7 @@ describe('AuthenticationDomainService契約テスト', () => {
           externalId,
           `user@${provider}.com`,
           `${_description}ユーザー`,
-          provider as any,
+          provider as AuthProvider,
         );
 
         const user = UserFactory.existing({
@@ -153,7 +158,7 @@ describe('AuthenticationDomainService契約テスト', () => {
           await authDomainService.authenticateUser(externalUserInfo);
 
         // Then: プロバイダー情報の契約を満たす
-        expect(result.user.provider).toBe(provider);
+        expect(result.user.provider).toBe(provider as AuthProvider);
         expect(result.user.externalId).toBe(externalId);
         expect(result.user.email).toContain(provider);
       },
@@ -232,7 +237,7 @@ describe('AuthenticationDomainService契約テスト', () => {
 
       // 外部情報からの変換確認
       expect(result.externalId).toBe(externalUserInfo.id);
-      expect(result.provider).toBe(externalUserInfo.provider);
+      expect(result.provider).toBe(externalUserInfo.provider as AuthProvider);
       expect(result.email).toBe(externalUserInfo.email);
       expect(result.name).toBe(externalUserInfo.name);
 
@@ -450,7 +455,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       // Given: 外部ユーザー情報とUserエンティティ
       const externalInfo: ExternalUserInfo = {
         id: 'google_consistency_123',
-        provider: 'google',
+        provider: 'google' as AuthProvider,
         email: 'consistency@example.com',
         name: '整合性テストユーザー',
         avatarUrl: 'https://example.com/avatar.jpg',
@@ -459,10 +464,10 @@ describe('AuthenticationDomainService契約テスト', () => {
       const user: User = {
         id: 'uuid-consistency-123',
         externalId: externalInfo.id,
-        provider: externalInfo.provider,
+        provider: externalInfo.provider as AuthProvider,
         email: externalInfo.email,
         name: externalInfo.name,
-        avatarUrl: externalInfo.avatarUrl,
+        avatarUrl: externalInfo.avatarUrl || null,
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: new Date(),
@@ -470,10 +475,10 @@ describe('AuthenticationDomainService契約テスト', () => {
 
       // Then: 外部情報とUserエンティティの整合性を確認
       expect(user.externalId).toBe(externalInfo.id);
-      expect(user.provider).toBe(externalInfo.provider);
+      expect(user.provider).toBe(externalInfo.provider as AuthProvider);
       expect(user.email).toBe(externalInfo.email);
       expect(user.name).toBe(externalInfo.name);
-      expect(user.avatarUrl).toBe(externalInfo.avatarUrl);
+      expect(user.avatarUrl).toBe(externalInfo.avatarUrl || null);
     });
   });
 });

@@ -6,11 +6,11 @@
  */
 
 import { mock } from 'bun:test';
-import type { IUserRepository } from '../../../../../domain/repositories/IUserRepository';
-import type { IAuthenticationDomainService } from '../../../../../domain/services/IAuthenticationDomainService';
-import type { IAuthProvider } from '../../../../../domain/services/IAuthProvider';
-import type { Logger } from '../../../../../shared/logging/Logger';
-import { AuthenticateUserUseCase } from '../../../AuthenticateUserUseCase';
+import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
+import type { IUserRepository } from '@/domain/repositories/IUserRepository';
+import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type { Logger } from '@/shared/logging/Logger';
 import { createFakeClock } from './fakeClock';
 
 /**
