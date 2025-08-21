@@ -1,12 +1,6 @@
 /**
  * エラー分類サービス
- *
- * 【機能概要】: 各種エラーを適切なビジネス例外に分類・変換する専門サービス
- * 【SOLID原則適用】: Single Responsibility Principle - エラー分類のみに責務を集中
- * 【設計方針】: 文字列比較に依存しない堅牢なエラー判定ロジック
- * 【保守性向上】: エラー分類ルールが一箇所に集約され、変更時の影響範囲を限定
- *
- * 🟢 Refactorフェーズでのエラーハンドリング強化 - 分散していたエラー判定を統一
+ * 各種エラーを適切なビジネス例外に分類・変換
  */
 
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
@@ -14,10 +8,7 @@ import { ExternalServiceError } from '../errors/ExternalServiceError';
 import { InfrastructureError } from '../errors/InfrastructureError';
 
 /**
- * エラー分類結果
- *
- * 【型定義】: エラー分類の結果を表現する型
- * 【設計思想】: 分類成功・失敗の詳細情報を含む結果オブジェクト
+ * エラー分類結果の型定義
  */
 export interface ErrorClassificationResult {
   /** 分類されたビジネス例外 */
@@ -32,63 +23,40 @@ export interface ErrorClassificationResult {
 }
 
 /**
- * エラー分類サービスインターフェース
- *
- * 【抽象化】: Dependency Inversion Principle - 具象ではなく抽象に依存
- * 【テスタビリティ】: モック作成を容易にするインターフェース定義
- * 【拡張性】: 将来的なエラー分類ロジック拡張に対応
+ * エラー分類サービスのインターフェース
  */
 export interface IErrorClassificationService {
   /**
    * エラーをビジネス例外に分類
    *
-   * 【機能概要】: 技術的エラーを適切なビジネス例外に変換
-   * 【分類基準】: エラーの特徴に基づいて最適なビジネス例外を選択
-   * 【フォールバック】: 不明なエラーはデフォルトのAuthenticationErrorに分類
-   *
    * @param error - 分類対象のエラー
-   * @param context - エラー発生のコンテキスト（オプション）
-   * @returns 分類結果オブジェクト
+   * @param context - エラー発生のコンテキスト
+   * @returns 分類結果
    */
   classifyError(error: unknown, context?: string): ErrorClassificationResult;
 }
 
 /**
- * エラー分類サービス実装
- *
- * 【責務】: 各種技術エラーの適切なビジネス例外への変換
- * 【判定基準】: エラー名・エラーコード・エラーメッセージの複合的な判定
- * 【堅牢性】: 文字列比較だけでなく、エラーの構造的特徴を活用
- * 【拡張性】: 新しいエラータイプへの対応が容易
- *
- * 🟢 AuthenticateUserUseCase の文字列ベース判定から改善
+ * エラー分類サービスの実装
+ * 技術エラーをビジネス例外に変換
  */
 export class ErrorClassificationService implements IErrorClassificationService {
   /**
    * エラー分類の実装
-   *
-   * 【処理フロー】:
-   * 1. エラーの基本情報抽出（名前・メッセージ・コード）
-   * 2. データベースエラーの判定
-   * 3. 外部サービスエラーの判定
-   * 4. ネットワークエラーの判定
-   * 5. 認証関連エラーの判定
-   * 6. フォールバック処理
-   *
-   * 【判定優先度】: より具体的なエラータイプから順に判定
+   * エラーをビジネス例外に分類
    *
    * @param error - 分類対象のエラー
    * @param context - エラー発生のコンテキスト
-   * @returns 分類結果オブジェクト
+   * @returns 分類結果
    */
   classifyError(
     error: unknown,
     _context = 'unknown',
   ): ErrorClassificationResult {
-    // 【エラー情報の正規化】: unknown 型のエラーから安全に情報抽出
+    // エラー情報を正規化
     const errorInfo = this.extractErrorInfo(error);
 
-    // 【データベースエラーの判定】: 最も詳細な判定から開始
+    // データベースエラーの判定
     if (this.isDatabaseError(errorInfo)) {
       return {
         businessError: new InfrastructureError(
@@ -99,7 +67,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       };
     }
 
-    // 【外部サービスエラーの判定】: Supabase等の外部サービス関連
+    // 外部サービスエラーの判定
     if (this.isExternalServiceError(errorInfo)) {
       return {
         businessError: new ExternalServiceError(
@@ -110,7 +78,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       };
     }
 
-    // 【ネットワークエラーの判定】: 接続・タイムアウト関連
+    // ネットワークエラーの判定
     if (this.isNetworkError(errorInfo)) {
       return {
         businessError: new InfrastructureError(
@@ -121,7 +89,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       };
     }
 
-    // 【認証エラーの判定】: JWT・認証関連の詳細判定
+    // 認証エラーの判定
     if (this.isAuthenticationError(errorInfo)) {
       return {
         businessError: new AuthenticationError(
@@ -132,7 +100,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       };
     }
 
-    // 【フォールバック】: 分類できないエラーはデフォルトの認証エラー
+    // フォールバック
     return {
       businessError: new AuthenticationError('処理中にエラーが発生しました'),
       classificationReason:
@@ -142,11 +110,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }
 
   /**
-   * エラー情報の抽出
-   *
-   * 【機能概要】: unknown 型のエラーから安全に構造化された情報を抽出
-   * 【安全性】: null/undefined でも安全に処理
-   * 【正規化】: 異なるエラータイプからの統一された情報抽出
+   * エラー情報を安全に抽出
    *
    * @param error - 抽出対象のエラー
    * @returns 正規化されたエラー情報
@@ -189,12 +153,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }
 
   /**
-   * データベースエラーの判定
-   *
-   * 【判定基準】:
-   * - エラーコード（PostgreSQL標準コード等）
-   * - エラー名の特徴パターン
-   * - エラーメッセージの特徴パターン
+   * データベースエラーを判定
    *
    * @param errorInfo - 正規化されたエラー情報
    * @returns データベースエラーかどうか
@@ -206,7 +165,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }): boolean {
     const { name, message, code } = errorInfo;
 
-    // 【エラーコードベース判定】: PostgreSQLの標準エラーコード
+    // エラーコードベース判定
     if (code) {
       const dbErrorCodes = [
         'ECONNREFUSED', // 接続拒否
@@ -223,7 +182,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       }
     }
 
-    // 【エラー名ベース判定】: 大文字小文字を考慮した部分マッチ
+    // エラー名を大文字小文字を考慮して部分マッチ
     const namePattern = name.toLowerCase();
     const dbNamePatterns = [
       'database',
@@ -241,7 +200,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       return true;
     }
 
-    // 【メッセージベース判定】: より具体的なパターンマッチ
+    // エラーメッセージを判定: より具体的なパターンマッチ
     const messagePattern = message.toLowerCase();
     const dbMessagePatterns = [
       'database',
@@ -265,12 +224,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }
 
   /**
-   * 外部サービスエラーの判定
-   *
-   * 【判定基準】:
-   * - Supabase関連のエラーパターン
-   * - API・HTTP関連のエラーパターン
-   * - サービス固有のエラー名・メッセージ
+   * 外部サービスエラーを判定
    *
    * @param errorInfo - 正規化されたエラー情報
    * @returns 外部サービスエラーかどうか
@@ -282,7 +236,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }): boolean {
     const { name, message } = errorInfo;
 
-    // 【エラー名ベース判定】
+    // エラー名を判定
     const namePattern = name.toLowerCase();
     const serviceNamePatterns = [
       'supabase',
@@ -300,7 +254,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       return true;
     }
 
-    // 【メッセージベース判定】
+    // エラーメッセージを判定
     const messagePattern = message.toLowerCase();
     const serviceMessagePatterns = [
       'supabase',
@@ -323,11 +277,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }
 
   /**
-   * ネットワークエラーの判定
-   *
-   * 【判定基準】:
-   * - ネットワーク関連のエラーコード
-   * - 接続・タイムアウト関連のパターン
+   * ネットワークエラーを判定
    *
    * @param errorInfo - 正規化されたエラー情報
    * @returns ネットワークエラーかどうか
@@ -339,7 +289,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }): boolean {
     const { name, message, code } = errorInfo;
 
-    // 【エラーコードベース判定】
+    // エラーコードベース判定
     if (code) {
       const networkErrorCodes = [
         'ECONNRESET',
@@ -356,7 +306,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
       }
     }
 
-    // 【名前・メッセージベース判定】
+    // 名前・メッセージベース判定
     const combinedPattern = `${name} ${message}`.toLowerCase();
     const networkPatterns = [
       'network',
@@ -377,11 +327,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
   }
 
   /**
-   * 認証エラーの判定
-   *
-   * 【判定基準】:
-   * - JWT・OAuth関連のパターン
-   * - 認証・認可関連のパターン
+   * 認証エラーを判定
    *
    * @param errorInfo - 正規化されたエラー情報
    * @returns 認証エラーかどうか
