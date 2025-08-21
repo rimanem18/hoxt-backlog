@@ -5,7 +5,7 @@
  * 実装詳細に依存しない、リポジトリパターンの契約確認に特化。
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, type Mock, mock, test } from 'bun:test';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { AuthProvider } from '@/domain/user/AuthProvider';
 import type { User } from '@/domain/user/UserEntity';
@@ -33,7 +33,9 @@ describe('UserRepository契約テスト', () => {
         provider: 'google',
       });
 
-      (userRepository.findByExternalId as any).mockResolvedValue(existingUser);
+      (userRepository.findByExternalId as Mock<any>).mockResolvedValue(
+        existingUser,
+      );
 
       // When: 外部IDで検索
       const result = await userRepository.findByExternalId(
@@ -67,7 +69,7 @@ describe('UserRepository契約テスト', () => {
 
     test('存在しないユーザーでnullを返す', async () => {
       // Given: 存在しないユーザー
-      (userRepository.findByExternalId as any).mockResolvedValue(null);
+      (userRepository.findByExternalId as Mock<any>).mockResolvedValue(null);
 
       // When: 存在しない外部IDで検索
       const result = await userRepository.findByExternalId(
@@ -87,15 +89,16 @@ describe('UserRepository契約テスト', () => {
       // Given: プロバイダー別のユーザー
       const user = UserFactory.existing({
         externalId,
-        provider: 'google',
+        // @ts-expect-error テスト用のプロバイダー型変換
+        provider: provider,
       });
 
-      (userRepository.findByExternalId as any).mockResolvedValue(user);
+      (userRepository.findByExternalId as Mock<any>).mockResolvedValue(user);
 
       // When: プロバイダー別で検索
       const result = await userRepository.findByExternalId(
         externalId,
-        'google',
+        provider as AuthProvider,
       );
 
       // Then: プロバイダーが一致するユーザーを返す
@@ -106,7 +109,7 @@ describe('UserRepository契約テスト', () => {
 
     test('Promiseを返すことの契約確認', () => {
       // Given: 任意の引数
-      (userRepository.findByExternalId as any).mockResolvedValue(null);
+      (userRepository.findByExternalId as Mock<any>).mockResolvedValue(null);
 
       // When: メソッド呼び出し
       const result = userRepository.findByExternalId('any_id', 'google');
@@ -125,7 +128,7 @@ describe('UserRepository契約テスト', () => {
         id: 'uuid-12345',
       });
 
-      (userRepository.findById as any).mockResolvedValue(existingUser);
+      (userRepository.findById as Mock<any>).mockResolvedValue(existingUser);
 
       // When: IDで検索
       const result = await userRepository.findById('uuid-12345');
@@ -137,7 +140,7 @@ describe('UserRepository契約テスト', () => {
 
     test('存在しないIDでnullを返す', async () => {
       // Given: 存在しないID
-      (userRepository.findById as any).mockResolvedValue(null);
+      (userRepository.findById as Mock<any>).mockResolvedValue(null);
 
       // When: 存在しないIDで検索
       const result = await userRepository.findById('nonexistent-uuid');
@@ -154,7 +157,7 @@ describe('UserRepository契約テスト', () => {
         email: 'user@example.com',
       });
 
-      (userRepository.findByEmail as any).mockResolvedValue(existingUser);
+      (userRepository.findByEmail as Mock<any>).mockResolvedValue(existingUser);
 
       // When: Emailで検索
       const result = await userRepository.findByEmail('user@example.com');
@@ -166,7 +169,7 @@ describe('UserRepository契約テスト', () => {
 
     test('存在しないEmailでnullを返す', async () => {
       // Given: 存在しないEmail
-      (userRepository.findByEmail as any).mockResolvedValue(null);
+      (userRepository.findByEmail as Mock<any>).mockResolvedValue(null);
 
       // When: 存在しないEmailで検索
       const result = await userRepository.findByEmail(
@@ -197,7 +200,7 @@ describe('UserRepository契約テスト', () => {
         ...newUserData,
       };
 
-      (userRepository.create as any).mockResolvedValue(createdUser);
+      (userRepository.create as Mock<any>).mockResolvedValue(createdUser);
 
       // When: ユーザーを新規作成
       const result = await userRepository.create(newUserData);
@@ -227,7 +230,7 @@ describe('UserRepository契約テスト', () => {
       };
 
       const constraintError = new Error('UNIQUE constraint violation');
-      (userRepository.create as any).mockRejectedValue(constraintError);
+      (userRepository.create as Mock<any>).mockRejectedValue(constraintError);
 
       // When & Then: 重複データで制約エラーがスローされる
       await expect(userRepository.create(duplicateUserData)).rejects.toThrow(
@@ -250,7 +253,7 @@ describe('UserRepository契約テスト', () => {
       const validationError = new Error(
         'Validation failed: externalId is required',
       );
-      (userRepository.create as any).mockRejectedValue(validationError);
+      (userRepository.create as Mock<any>).mockRejectedValue(validationError);
 
       // When & Then: 検証エラーがスローされる
       await expect(userRepository.create(incompleteUserData)).rejects.toThrow(
@@ -277,7 +280,7 @@ describe('UserRepository契約テスト', () => {
         ...updateData,
       };
 
-      (userRepository.update as any).mockResolvedValue(updatedUser);
+      (userRepository.update as Mock<any>).mockResolvedValue(updatedUser);
 
       // When: ユーザーを更新
       const result = await userRepository.update(
@@ -300,7 +303,7 @@ describe('UserRepository契約テスト', () => {
       };
 
       const notFoundError = new Error('User not found');
-      (userRepository.update as any).mockRejectedValue(notFoundError);
+      (userRepository.update as Mock<any>).mockRejectedValue(notFoundError);
 
       // When & Then: 存在しないIDで更新エラーがスローされる
       await expect(
@@ -316,7 +319,7 @@ describe('UserRepository契約テスト', () => {
         id: 'uuid-delete-test',
       });
 
-      (userRepository.delete as any).mockResolvedValue(existingUser);
+      (userRepository.delete as Mock<any>).mockResolvedValue(existingUser);
 
       // When: ユーザーを削除
       await userRepository.delete('uuid-delete-test');
@@ -328,7 +331,7 @@ describe('UserRepository契約テスト', () => {
     test('存在しないIDで削除時にエラーをスローする', async () => {
       // Given: 存在しないID
       const notFoundError = new Error('User not found');
-      (userRepository.delete as any).mockRejectedValue(notFoundError);
+      (userRepository.delete as Mock<any>).mockRejectedValue(notFoundError);
 
       // When & Then: 存在しないIDで削除エラーがスローされる
       await expect(userRepository.delete('nonexistent-id')).rejects.toThrow(
@@ -342,7 +345,7 @@ describe('UserRepository契約テスト', () => {
       // Given: データベース接続エラー
       const connectionError = new Error('Database connection failed');
 
-      (userRepository.findById as any).mockRejectedValue(connectionError);
+      (userRepository.findById as Mock<any>).mockRejectedValue(connectionError);
 
       // When & Then: 接続エラーがスローされる
       await expect(userRepository.findById('any-id')).rejects.toThrow(
@@ -363,7 +366,7 @@ describe('UserRepository契約テスト', () => {
         lastLoginAt: new Date(),
       };
 
-      (userRepository.create as any).mockRejectedValue(transactionError);
+      (userRepository.create as Mock<any>).mockRejectedValue(transactionError);
 
       // When & Then: トランザクションエラーがスローされる
       await expect(userRepository.create(userData)).rejects.toThrow(
@@ -375,7 +378,9 @@ describe('UserRepository契約テスト', () => {
       // Given: クエリタイムアウト
       const timeoutError = new Error('Query timeout');
 
-      (userRepository.findByExternalId as any).mockRejectedValue(timeoutError);
+      (userRepository.findByExternalId as Mock<any>).mockRejectedValue(
+        timeoutError,
+      );
 
       // When & Then: タイムアウトエラーがスローされる
       await expect(

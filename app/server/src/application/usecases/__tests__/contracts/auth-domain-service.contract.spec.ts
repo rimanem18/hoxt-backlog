@@ -5,7 +5,7 @@
  * ユーザー認証・JIT作成の戻り値とエラーの仕様確認に特化。
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, type Mock, mock, test } from 'bun:test';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { ExternalUserInfo } from '@/domain/services/IAuthProvider';
 import type { AuthProvider } from '@/domain/user/AuthProvider';
@@ -43,7 +43,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: false,
       };
 
-      (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
+        mockResult,
+      );
 
       // When: ユーザー認証を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);
@@ -90,7 +92,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: true,
       };
 
-      (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
+        mockResult,
+      );
 
       // When: ユーザー認証（JIT作成）を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);
@@ -140,7 +144,8 @@ describe('AuthenticationDomainService契約テスト', () => {
 
         const user = UserFactory.existing({
           externalId,
-          provider: provider as any,
+          // @ts-expect-error テスト用のプロバイダー型変換
+          provider: provider,
           email: `user@${provider}.com`,
         });
 
@@ -149,7 +154,7 @@ describe('AuthenticationDomainService契約テスト', () => {
           isNewUser: false,
         };
 
-        (authDomainService.authenticateUser as any).mockResolvedValue(
+        (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
           mockResult,
         );
 
@@ -167,15 +172,15 @@ describe('AuthenticationDomainService契約テスト', () => {
     test('無効な外部ユーザー情報でエラーをスローする', async () => {
       // Given: 無効な外部ユーザー情報
       const invalidExternalInfo = [
-        null as any,
-        undefined as any,
-        {} as any,
-        { id: '', provider: 'google', email: '', name: '' } as any,
-      ];
+        null,
+        undefined,
+        {},
+        { id: '', provider: 'google', email: '', name: '' },
+      ] as any[];
 
       for (const invalidInfo of invalidExternalInfo) {
         // エラーをスローするようにモック設定
-        (authDomainService.authenticateUser as any).mockRejectedValue(
+        (authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
           new Error('Invalid external user info'),
         );
 
@@ -191,7 +196,7 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
 
       // Promiseを返すようにモック設定
-      (authDomainService.authenticateUser as any).mockResolvedValue({
+      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue({
         user: UserFactory.existing(),
         isNewUser: false,
       });
