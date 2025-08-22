@@ -1,5 +1,5 @@
 ---
-description: issue 番号と機能名を与えてブランチ名を考え、 git switch -c します。
+description: issue 番号と要件名、TASK-ID を与えてブランチ名を考え、 git switch -c します。
 ---
 
 ### 前提条件
