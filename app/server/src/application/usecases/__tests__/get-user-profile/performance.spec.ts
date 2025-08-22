@@ -180,7 +180,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       const startTime = performance.now();
       
       try {
-        await sut.sut.execute(input);
+        await sut.sut.execute(validInput);
       } catch {
         // エラーは期待される動作
       }
