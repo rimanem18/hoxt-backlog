@@ -5,7 +5,7 @@
  * JWT検証失敗、不正な資格情報、期限切れトークンなどを検証。
  */
 
-import { beforeEach, describe, expect, type Mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
 import { makeSUT } from './helpers/makeSUT';
@@ -17,6 +17,10 @@ describe('認証失敗・資格情報エラーテスト', () => {
 
   beforeEach(() => {
     sut = makeSUT();
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('JWT検証失敗パターン', () => {
@@ -36,9 +40,9 @@ describe('認証失敗・資格情報エラーテスト', () => {
         const jwt = UserFactory.validJwt();
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue(
-          verificationResult,
-        );
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockResolvedValue(verificationResult);
 
         // When & Then: JWT検証失敗で AuthenticationError がスローされる
         await TestMatchers.failWithError(
@@ -75,7 +79,9 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const jwt = UserFactory.validJwt();
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: payload,
       });
@@ -105,15 +111,17 @@ describe('認証失敗・資格情報エラーテスト', () => {
       const jwt = UserFactory.validJwt();
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: {},
       });
 
       // getExternalUserInfoが実際のエラーをスローするように設定
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockRejectedValue(
-        new Error('Missing required field: sub'),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockRejectedValue(new Error('Missing required field: sub'));
 
       // When & Then: 空のペイロードでAuthenticationErrorがスローされる（フォールバック）
       await TestMatchers.failWithError(
@@ -151,7 +159,9 @@ describe('認証失敗・資格情報エラーテスト', () => {
         const jwt = UserFactory.validJwt();
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as Mock<any>).mockRejectedValue(
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockRejectedValue(
           new ExternalServiceError(`認証サービスエラー: ${errorMessage}`),
         );
 
@@ -305,7 +315,9 @@ describe('認証失敗・資格情報エラーテスト', () => {
       for (const jwt of tamperedJwts) {
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockResolvedValue({
           valid: false,
           error: 'Invalid signature',
         });

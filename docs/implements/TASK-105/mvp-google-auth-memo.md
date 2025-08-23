@@ -8,8 +8,8 @@
 
 ## 関連ファイル
 
-- 要件定義: `docs/implementation/mvp-google-auth/TASK-105/tdd-requirements.md`
-- テストケース定義: `docs/implementation/mvp-google-auth/TASK-105/tdd-testcases.md`
+- 要件定義: `docs/implements/TASK-105/mvp-google-auth-requirements.md`
+- テストケース定義: `docs/implements/TASK-105/mvp-google-auth-testcases.md`
 - 実装ファイル: `app/server/src/application/usecases/AuthenticateUserUseCase.ts` (未実装)
 - テストファイル: 
   - `app/server/src/application/usecases/__tests__/AuthenticateUserUseCase.test.ts`
@@ -190,8 +190,8 @@ Ran 11 tests across 1 file. [11.00ms]
 
 ## 確認すべきドキュメント
 
-- `docs/implementation/mvp-google-auth/TASK-105/tdd-requirements.md`
-- `docs/implementation/mvp-google-auth/TASK-105/tdd-testcases.md`
+- `docs/implements/TASK-105/mvp-google-auth-requirements.md`
+- `docs/implements/TASK-105/mvp-google-auth-testcases.md`
 
 ## 🎯 最終結果 (2025-08-19 JST)
 - **実装率**: 100% (11/11テストケース全通過)

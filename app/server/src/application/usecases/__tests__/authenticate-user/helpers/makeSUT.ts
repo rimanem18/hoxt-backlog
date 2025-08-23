@@ -9,7 +9,14 @@ import { mock } from 'bun:test';
 import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
-import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type {
+  ExternalUserInfo,
+  IAuthProvider,
+  JwtPayload,
+} from '@/domain/services/IAuthProvider';
+import type { User } from '@/domain/user/UserEntity';
+import type { CreateUserInput } from '@/domain/user/valueobjects/CreateUserInput';
+import type { UpdateUserInput } from '@/domain/user/valueobjects/UpdateUserInput';
 import type { Logger } from '@/shared/logging/Logger';
 import { createFakeClock } from './fakeClock';
 
@@ -48,21 +55,38 @@ export interface SUTResult {
 function createDefaultDependencies(): SUTDependencies {
   return {
     userRepository: {
-      findByExternalId: mock(),
-      findById: mock(),
-      findByEmail: mock(),
-      create: mock(),
-      update: mock(),
-      delete: mock(),
-    },
+      findByExternalId: mock((_externalId: string) => Promise.resolve(null)),
+      findById: mock((_id: string) => Promise.resolve(null)),
+      findByEmail: mock((_email: string) => Promise.resolve(null)),
+      create: mock((_input: CreateUserInput) => Promise.resolve({} as User)),
+      update: mock((_id: string, _input: UpdateUserInput) =>
+        Promise.resolve({} as User),
+      ),
+      delete: mock((_id: string) => Promise.resolve()),
+    } satisfies IUserRepository,
     authProvider: {
-      verifyToken: mock(),
-      getExternalUserInfo: mock(),
-    },
+      verifyToken: mock((_token: string) =>
+        Promise.resolve({
+          valid: false,
+          payload: {} as JwtPayload,
+          error: '',
+        }),
+      ),
+      getExternalUserInfo: mock((_payload: JwtPayload) =>
+        Promise.resolve({} as ExternalUserInfo),
+      ),
+    } satisfies IAuthProvider,
     authDomainService: {
-      createUserFromExternalInfo: mock(),
-      authenticateUser: mock(),
-    },
+      createUserFromExternalInfo: mock((_externalInfo: ExternalUserInfo) =>
+        Promise.resolve({} as User),
+      ),
+      authenticateUser: mock((_externalInfo: ExternalUserInfo) =>
+        Promise.resolve({
+          user: {} as User,
+          isNewUser: false,
+        }),
+      ),
+    } satisfies IAuthenticationDomainService,
     logger: {
       info: mock(),
       warn: mock(),

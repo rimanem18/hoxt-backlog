@@ -9,8 +9,8 @@
 
 ## 関連ファイル
 
-- 要件定義: `docs/implementation/mvp-google-auth/TASK-104/tdd-requirements.md`
-- テストケース定義: `docs/implementation/mvp-google-auth/TASK-104/tdd-testcases.md`
+- 要件定義: `docs/implements/TASK-104/mvp-google-auth-requirements.md`
+- テストケース定義: `docs/implements/TASK-104/mvp-google-auth-testcases.md`
 - 実装ファイル: `app/server/src/infrastructure/auth/SupabaseAuthProvider.ts`（未実装）
 - テストファイル: `app/server/src/infrastructure/auth/__tests__/SupabaseAuthProvider.test.ts`
 

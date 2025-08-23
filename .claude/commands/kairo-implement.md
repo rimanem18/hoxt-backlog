@@ -209,7 +209,7 @@ $ claude code kairo-implement --status
 
 ```
 ✅ Step 1/6: 要件定義 完了
-   ファイル: /implementation/{要件名}/TASK-101/requirements.md
+   ファイル: docs/implements/{要件名}/TASK-101/requirements.md
 
 🏃 Step 2/6: テストケース作成 実行中...
 ```

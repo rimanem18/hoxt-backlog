@@ -5,12 +5,8 @@
  * 監査ログ、イベント発行、パフォーマンスメトリクス記録などを検証。
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
-import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
-import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
-import { InfrastructureError } from '@/shared/errors/InfrastructureError';
-import { ValidationError } from '@/shared/errors/ValidationError';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';
 import { UserFactory } from './helpers/userFactory';
@@ -20,6 +16,10 @@ describe('副作用・ログ出力テスト', () => {
 
   beforeEach(() => {
     sut = makeSUT();
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('成功時ログ出力検証', () => {
@@ -40,16 +40,22 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(
         UserFactory.externalUserInfo('google_audit_123', 'audit@example.com'),
       );
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -104,19 +110,25 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(
         UserFactory.externalUserInfo(
           'google_new_audit_456',
           'newaudit@example.com',
         ),
       );
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: newUser,
         isNewUser: true,
       });
@@ -168,7 +180,9 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
       const errorMessage = 'Invalid signature';
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: false,
         error: errorMessage,
       });
@@ -199,19 +213,21 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
       const unexpectedError = new Error('Unexpected database error');
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
       // 予期しないエラーをシミュレート
-      (sut.authDomainService.authenticateUser as any).mockRejectedValue(
-        unexpectedError,
-      );
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(unexpectedError);
 
       // When: 予期しないエラーを実行
       try {
@@ -251,16 +267,20 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -285,16 +305,20 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: true,
       });
@@ -325,7 +349,9 @@ describe('副作用・ログ出力テスト', () => {
           name: 'JWT検証失敗',
           input: { jwt: sensitiveJwt },
           setupMock: () => {
-            (sut.authProvider.verifyToken as any).mockResolvedValue({
+            (
+              sut.authProvider.verifyToken as ReturnType<typeof mock>
+            ).mockResolvedValue({
               valid: false,
               error: 'Invalid signature',
             });
@@ -335,21 +361,23 @@ describe('副作用・ログ出力テスト', () => {
           name: '予期しないエラー',
           input: { jwt: sensitiveJwt },
           setupMock: () => {
-            (sut.authProvider.verifyToken as any).mockResolvedValue({
+            (
+              sut.authProvider.verifyToken as ReturnType<typeof mock>
+            ).mockResolvedValue({
               valid: true,
               payload: UserFactory.jwtPayload(),
             });
-            (sut.authProvider.getExternalUserInfo as any).mockRejectedValue(
-              new Error('Database error'),
-            );
+            (
+              sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+            ).mockRejectedValue(new Error('Database error'));
           },
         },
       ];
 
       for (const scenario of scenarios) {
         // モックをリセット
-        (sut.logger.warn as any).mockClear();
-        (sut.logger.error as any).mockClear();
+        (sut.logger.warn as ReturnType<typeof mock>).mockClear();
+        (sut.logger.error as ReturnType<typeof mock>).mockClear();
 
         scenario.setupMock();
 
@@ -362,8 +390,8 @@ describe('副作用・ログ出力テスト', () => {
 
         // Then: JWT情報が秘匿されていることを確認
         const allLogCalls = [
-          ...(sut.logger.warn as any).mock.calls,
-          ...(sut.logger.error as any).mock.calls,
+          ...(sut.logger.warn as ReturnType<typeof mock>).mock.calls,
+          ...(sut.logger.error as ReturnType<typeof mock>).mock.calls,
         ];
 
         for (const call of allLogCalls) {
@@ -406,7 +434,8 @@ describe('副作用・ログ出力テスト', () => {
         expect(sut.logger.warn).toHaveBeenCalled();
 
         // 実際の悪意のあるペイロードがログに出力されていないことを確認
-        const warnCalls = (sut.logger.warn as any).mock.calls;
+        const warnCalls = (sut.logger.warn as ReturnType<typeof mock>).mock
+          .calls;
         const loggedContent = JSON.stringify(warnCalls);
         expect(loggedContent).not.toContain(pattern.jwt);
       }
@@ -423,16 +452,20 @@ describe('副作用・ログ出力テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -477,7 +510,9 @@ describe('副作用・ログ出力テスト', () => {
       const jwt = UserFactory.validJwt();
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: false,
         error: 'Invalid signature',
       });

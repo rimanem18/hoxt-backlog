@@ -507,7 +507,7 @@ const mockAuthProvider: IAuthProvider = {
 
 ## 次のステップ
 
-**次のお勧めステップ**: `/tdd-red` でRedフェーズ（失敗テスト作成）を開始します。
+**次のお勧めステップ**: `tdd-red` でRedフェーズ（失敗テスト作成）を開始します。
 
 ### Redフェーズでの重点ポイント
 

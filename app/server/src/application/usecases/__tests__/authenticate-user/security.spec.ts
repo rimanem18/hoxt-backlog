@@ -5,7 +5,7 @@
  * 長大入力、Unicode正規化、ゼロ幅スペース、タイミング攻撃耐性などを検証。
  */
 
-import { beforeEach, describe, expect, type Mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { ValidationError } from '@/shared/errors/ValidationError';
 import { createPerformanceTimer } from './helpers/fakeClock';
@@ -18,6 +18,10 @@ describe('セキュリティテスト', () => {
 
   beforeEach(() => {
     sut = makeSUT();
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('長大入力攻撃耐性', () => {
@@ -189,7 +193,9 @@ describe('セキュリティテスト', () => {
       ];
 
       // 全て検証失敗を返すよう設定
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: false,
         error: 'Invalid signature',
       });
@@ -254,9 +260,9 @@ describe('セキュリティテスト', () => {
 
         // 悪意のあるペイロードがログに出力されないことを確認
         const logCalls = [
-          ...(sut.logger.warn as Mock<any>).mock.calls,
-          ...(sut.logger.error as Mock<any>).mock.calls,
-          ...(sut.logger.info as Mock<any>).mock.calls,
+          ...(sut.logger.warn as ReturnType<typeof mock>).mock.calls,
+          ...(sut.logger.error as ReturnType<typeof mock>).mock.calls,
+          ...(sut.logger.info as ReturnType<typeof mock>).mock.calls,
         ];
 
         const loggedContent = JSON.stringify(logCalls);
@@ -314,18 +320,20 @@ describe('セキュリティテスト', () => {
       internalError.stack =
         'Error: Secret info\n    at secretFunction (/app/secret.js:42:15)';
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
-        internalError,
-      );
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(internalError);
 
       // When: 内部エラーを実行
       try {
@@ -337,8 +345,8 @@ describe('セキュリティテスト', () => {
 
       // Then: 機密情報がログに含まれない
       const logCalls = [
-        ...(sut.logger.error as Mock<any>).mock.calls,
-        ...(sut.logger.warn as Mock<any>).mock.calls,
+        ...(sut.logger.error as ReturnType<typeof mock>).mock.calls,
+        ...(sut.logger.warn as ReturnType<typeof mock>).mock.calls,
       ];
 
       const loggedContent = JSON.stringify(logCalls);
@@ -363,7 +371,9 @@ describe('セキュリティテスト', () => {
         },
       });
 
-      (sut.authProvider.verifyToken as Mock<any>).mockRejectedValue(debugError);
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockRejectedValue(debugError);
 
       // When: デバッグ情報付きエラーを実行
       try {
@@ -374,8 +384,8 @@ describe('セキュリティテスト', () => {
 
       // Then: デバッグ情報が外部に漏洩しない
       const logCalls = [
-        ...(sut.logger.error as Mock<any>).mock.calls,
-        ...(sut.logger.warn as Mock<any>).mock.calls,
+        ...(sut.logger.error as ReturnType<typeof mock>).mock.calls,
+        ...(sut.logger.warn as ReturnType<typeof mock>).mock.calls,
       ];
 
       const loggedContent = JSON.stringify(logCalls);

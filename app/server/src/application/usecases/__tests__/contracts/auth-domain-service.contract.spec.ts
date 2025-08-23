@@ -5,7 +5,7 @@
  * ユーザー認証・JIT作成の戻り値とエラーの仕様確認に特化。
  */
 
-import { beforeEach, describe, expect, type Mock, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { ExternalUserInfo } from '@/domain/services/IAuthProvider';
 import type { AuthProvider } from '@/domain/user/AuthProvider';
@@ -20,6 +20,10 @@ describe('AuthenticationDomainService契約テスト', () => {
       createUserFromExternalInfo: mock(),
       authenticateUser: mock(),
     };
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('authenticateUser契約', () => {
@@ -43,9 +47,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: false,
       };
 
-      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
-        mockResult,
-      );
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue(mockResult);
 
       // When: ユーザー認証を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);
@@ -92,9 +96,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: true,
       };
 
-      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
-        mockResult,
-      );
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue(mockResult);
 
       // When: ユーザー認証（JIT作成）を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);
@@ -154,9 +158,9 @@ describe('AuthenticationDomainService契約テスト', () => {
           isNewUser: false,
         };
 
-        (authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
-          mockResult,
-        );
+        (
+          authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockResolvedValue(mockResult);
 
         // When: プロバイダー別認証を実行
         const result =
@@ -176,17 +180,17 @@ describe('AuthenticationDomainService契約テスト', () => {
         undefined,
         {},
         { id: '', provider: 'google', email: '', name: '' },
-      ] as any[];
+      ];
 
       for (const invalidInfo of invalidExternalInfo) {
         // エラーをスローするようにモック設定
-        (authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
-          new Error('Invalid external user info'),
-        );
+        (
+          authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockRejectedValue(new Error('Invalid external user info'));
 
         // When & Then: 無効な情報でエラーがスローされる
         await expect(
-          authDomainService.authenticateUser(invalidInfo),
+          authDomainService.authenticateUser(invalidInfo as ExternalUserInfo),
         ).rejects.toThrow('Invalid external user info');
       }
     });
@@ -196,7 +200,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
 
       // Promiseを返すようにモック設定
-      (authDomainService.authenticateUser as Mock<any>).mockResolvedValue({
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: UserFactory.existing(),
         isNewUser: false,
       });
@@ -226,9 +232,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         name: '作成テストユーザー',
       });
 
-      (authDomainService.createUserFromExternalInfo as any).mockResolvedValue(
-        createdUser,
-      );
+      (
+        authDomainService.createUserFromExternalInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(createdUser);
 
       // When: 外部情報から新規ユーザーを作成
       const result =
@@ -260,9 +266,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       );
 
       const duplicateError = new Error('User with external ID already exists');
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
-        duplicateError,
-      );
+      (
+        authDomainService.createUserFromExternalInfo as ReturnType<typeof mock>
+      ).mockRejectedValue(duplicateError);
 
       // When & Then: 重複外部IDでエラーがスローされる
       await expect(
@@ -278,9 +284,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       );
 
       const validationError = new Error('Invalid email address format');
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
-        validationError,
-      );
+      (
+        authDomainService.createUserFromExternalInfo as ReturnType<typeof mock>
+      ).mockRejectedValue(validationError);
 
       // When & Then: 無効メールでエラーがスローされる
       await expect(
@@ -309,7 +315,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: false, // 重複作成ではなく既存ユーザーとして扱う
       };
 
-      (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue(mockResult);
 
       // When: 並行処理での認証を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);
@@ -325,9 +333,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
       const transactionError = new Error('Transaction rollback');
 
-      (authDomainService.authenticateUser as any).mockRejectedValue(
-        transactionError,
-      );
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(transactionError);
 
       // When & Then: トランザクション失敗でエラーがスローされる
       await expect(
@@ -340,9 +348,9 @@ describe('AuthenticationDomainService契約テスト', () => {
       const externalUserInfo = UserFactory.externalUserInfo();
       const constraintError = new Error('Foreign key constraint violation');
 
-      (authDomainService.createUserFromExternalInfo as any).mockRejectedValue(
-        constraintError,
-      );
+      (
+        authDomainService.createUserFromExternalInfo as ReturnType<typeof mock>
+      ).mockRejectedValue(constraintError);
 
       // When & Then: 制約違反でエラーがスローされる
       await expect(
@@ -380,9 +388,9 @@ describe('AuthenticationDomainService契約テスト', () => {
           isNewUser: false,
         };
 
-        (authDomainService.authenticateUser as any).mockResolvedValue(
-          mockResult,
-        );
+        (
+          authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockResolvedValue(mockResult);
 
         // When: 状態別認証を実行
         const result =
@@ -416,7 +424,9 @@ describe('AuthenticationDomainService契約テスト', () => {
         isNewUser: false,
       };
 
-      (authDomainService.authenticateUser as any).mockResolvedValue(mockResult);
+      (
+        authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue(mockResult);
 
       // When: プロファイル更新を含む認証を実行
       const result = await authDomainService.authenticateUser(externalUserInfo);

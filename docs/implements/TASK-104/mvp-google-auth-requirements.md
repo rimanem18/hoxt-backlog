@@ -316,4 +316,4 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 
 ## 9. 次のステップ
 
-**次のお勧めステップ**: `/tdd-testcases` でテストケースの洗い出しを行います。
+**次のお勧めステップ**: `/tdd-testcases.md` でテストケースの洗い出しを行います。

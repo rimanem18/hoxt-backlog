@@ -5,7 +5,14 @@
  * アクティブ、非アクティブ、削除済み、ロック状態などの状態遷移を検証。
  */
 
-import { beforeEach, describe, expect, type Mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  type mock,
+  test,
+} from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { makeSUT } from './helpers/makeSUT';
@@ -17,6 +24,10 @@ describe('アカウント状態テスト', () => {
 
   beforeEach(() => {
     sut = makeSUT();
+  });
+
+  afterEach(() => {
+    // モックのクリアは各テストで個別に行う
   });
 
   describe('同時リクエスト・競合状態', () => {
@@ -46,17 +57,21 @@ describe('アカウント状態テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定: 2回目以降のリクエストで既存ユーザーとして処理
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
       // 最初は新規ユーザー作成を試行するが、unique制約違反で既存ユーザーを返す
-      (sut.authDomainService.authenticateUser as Mock<any>).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: existingUser,
         isNewUser: false, // 重複作成ではなく既存ユーザーとして扱う
       });
@@ -101,17 +116,21 @@ describe('アカウント状態テスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
       // unique制約違反をシミュレート
-      (sut.authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(
         new InfrastructureError('UNIQUE制約違反: ユーザーが既に存在します'),
       );
 
@@ -134,16 +153,20 @@ describe('アカウント状態テスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
-      (sut.authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(
         new InfrastructureError('外部キー制約違反: 参照先が存在しません'),
       );
 
@@ -168,17 +191,21 @@ describe('アカウント状態テスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
       // トランザクションタイムアウトをシミュレート
-      (sut.authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(
         new InfrastructureError(
           'トランザクションタイムアウト: 処理時間が制限を超過しました',
         ),
@@ -203,17 +230,21 @@ describe('アカウント状態テスト', () => {
       const jwt = UserFactory.validJwt(jwtPayload);
       const input: AuthenticateUserUseCaseInput = { jwt };
 
-      (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-        externalUserInfo,
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(externalUserInfo);
 
       // デッドロックをシミュレート
-      (sut.authDomainService.authenticateUser as Mock<any>).mockRejectedValue(
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockRejectedValue(
         new InfrastructureError(
           'デッドロック検出: トランザクションが中断されました',
         ),
@@ -247,21 +278,23 @@ describe('アカウント状態テスト', () => {
         const jwt = UserFactory.validJwt(jwtPayload);
         const input: AuthenticateUserUseCaseInput = { jwt };
 
-        (sut.authProvider.verifyToken as Mock<any>).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockResolvedValue({
           valid: true,
           payload: jwtPayload,
         });
 
-        (sut.authProvider.getExternalUserInfo as Mock<any>).mockResolvedValue(
-          externalUserInfo,
-        );
+        (
+          sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+        ).mockResolvedValue(externalUserInfo);
 
-        (sut.authDomainService.authenticateUser as Mock<any>).mockResolvedValue(
-          {
-            user: { ...user, status: expectedStatus },
-            isNewUser,
-          },
-        );
+        (
+          sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockResolvedValue({
+          user: { ...user, status: expectedStatus },
+          isNewUser,
+        });
 
         // When: 状態別認証処理を実行
         const result = await sut.sut.execute(input);
@@ -269,8 +302,9 @@ describe('アカウント状態テスト', () => {
         // Then: 適切な状態で処理される
         expect(result).toBeDefined();
         expect(result.isNewUser).toBe(isNewUser);
-        // @ts-expect-error テストでuser statusプロパティにアクセス
-        expect(result.user.status).toBe(expectedStatus);
+        expect(result.user).toEqual(
+          expect.objectContaining({ status: expectedStatus }),
+        );
 
         // ログ出力確認
         TestMatchers.haveLoggedMessage(
@@ -295,18 +329,14 @@ describe('アカウント状態テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       (
-        sut.authProvider.verifyToken as unknown as {
-          mockResolvedValue: (value: unknown) => void;
-        }
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
       ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
       (
-        sut.authProvider.getExternalUserInfo as unknown as {
-          mockResolvedValue: (value: unknown) => void;
-        }
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
       ).mockResolvedValue(externalUserInfo);
 
       // 同時接続数制限をシミュレート
@@ -342,9 +372,7 @@ describe('アカウント状態テスト', () => {
       const constraintError = new InfrastructureError('UNIQUE制約違反');
 
       (
-        sut.authProvider.verifyToken as unknown as {
-          mockResolvedValue: (value: unknown) => void;
-        }
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
       ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
