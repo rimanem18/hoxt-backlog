@@ -35,6 +35,9 @@ NG: feat: hoge を追加。
 - **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
 - **`compose.yml`**: Docker Compose 設定ファイル
+- sub agents に依頼する際は、以下を必ず伝えてください
+  - docker compose exec コマンドの活用は重要
+  - コンテナの WORKDIR
 
 ## アーキテクチャ概要
 
