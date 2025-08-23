@@ -5,7 +5,7 @@
  * トークン有効期限、発行時刻、更新時刻などの時間制御機能を検証。
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { createPerformanceTimer, TIME_CONSTANTS } from './helpers/fakeClock';
 import { makeSUT } from './helpers/makeSUT';
@@ -19,6 +19,10 @@ describe('トークン発行・時刻制御テスト', () => {
     sut = makeSUT();
     // 固定時刻の設定（テストの決定性確保）
     sut.fakeClock.setTime(TIME_CONSTANTS.BASE_TIME);
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('JWT有効期限検証', () => {
@@ -39,16 +43,20 @@ describe('トークン発行・時刻制御テスト', () => {
         const input: AuthenticateUserUseCaseInput = { jwt };
 
         // モック設定
-        (sut.authProvider.verifyToken as any).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockResolvedValue({
           valid: true,
           payload: jwtPayload,
         });
 
-        (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-          UserFactory.externalUserInfo(),
-        );
+        (
+          sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+        ).mockResolvedValue(UserFactory.externalUserInfo());
 
-        (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+        (
+          sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockResolvedValue({
           user: UserFactory.existing(),
           isNewUser: false,
         });
@@ -84,7 +92,9 @@ describe('トークン発行・時刻制御テスト', () => {
         const input: AuthenticateUserUseCaseInput = { jwt };
 
         // 期限切れトークンは検証失敗
-        (sut.authProvider.verifyToken as any).mockResolvedValue({
+        (
+          sut.authProvider.verifyToken as ReturnType<typeof mock>
+        ).mockResolvedValue({
           valid: false,
           error: 'Token expired',
         });
@@ -118,16 +128,20 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: newUser,
         isNewUser: true,
       });
@@ -157,16 +171,20 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: existingUser,
         isNewUser: false,
       });
@@ -190,16 +208,20 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定（即座に完了）
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -229,16 +251,20 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定（即座に完了）
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: newUser,
         isNewUser: true,
       });
@@ -268,16 +294,20 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user,
         isNewUser: false,
       });
@@ -317,20 +347,24 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
-      for (const { name, time } of testTimes) {
+      for (const { time } of testTimes) {
         // 各時刻で時計を設定
         sut.fakeClock.setTime(time);
 
-        (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+        (
+          sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+        ).mockResolvedValue({
           user: { ...user, updatedAt: new Date(time) },
           isNewUser: false,
         });
@@ -365,18 +399,22 @@ describe('トークン発行・時刻制御テスト', () => {
       const input: AuthenticateUserUseCaseInput = { jwt };
 
       // モック設定
-      (sut.authProvider.verifyToken as any).mockResolvedValue({
+      (
+        sut.authProvider.verifyToken as ReturnType<typeof mock>
+      ).mockResolvedValue({
         valid: true,
         payload: jwtPayload,
       });
 
-      (sut.authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
       sut.fakeClock.setTime(jstTime);
 
-      (sut.authDomainService.authenticateUser as any).mockResolvedValue({
+      (
+        sut.authDomainService.authenticateUser as ReturnType<typeof mock>
+      ).mockResolvedValue({
         user: { ...user, updatedAt: new Date(jstTime) },
         isNewUser: false,
       });

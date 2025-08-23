@@ -47,16 +47,19 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        `ユーザーID '${nonExistentUserId}' が見つかりません`
+        `ユーザーID '${nonExistentUserId}' が見つかりません`,
       ); // 【確認内容】: 存在しないuserIdを含む適切なエラーメッセージが設定されることを確認 🟢
 
       // 依存関係の呼び出し確認
       GetUserProfileTestMatchers.mock.toHaveBeenCalledWithUserId(
         sut.userRepository.findById,
-        nonExistentUserId
+        nonExistentUserId,
       ); // 【確認内容】: リポジトリが正しいuserIdで呼び出されたことを確認 🟢
 
-      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(sut.userRepository.findById, 1); // 【確認内容】: リポジトリが1回だけ呼び出されたことを確認 🟢
+      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(
+        sut.userRepository.findById,
+        1,
+      ); // 【確認内容】: リポジトリが1回だけ呼び出されたことを確認 🟢
     });
   });
 
@@ -65,37 +68,34 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
       ['UUID形式の存在しないID', '00000000-0000-0000-0000-000000000000'],
       ['削除済みユーザーのID', '87654321-4321-1234-dcba-987654321000'],
       ['有効だが未登録のID', '11111111-2222-3333-4444-555555555555'],
-    ])(
-      '%s でUserNotFoundErrorが発生する',
-      async (_description, userId) => {
-        // 【テスト目的】: 様々なパターンの存在しないuserIdに対して一貫してUserNotFoundErrorが発生することを確認
-        // 【テスト内容】: UUID形式は正しいが実際には存在しないuserIdパターンでのエラーハンドリング
-        // 【期待される動作】: userIdの形式によらず、存在しない場合は適切にUserNotFoundErrorが発生する
-        // 🟡 信頼性レベル: 様々なパターンの網羅的テストは要件定義から妥当な推測として実装
+    ])('%s でUserNotFoundErrorが発生する', async (_description, userId) => {
+      // 【テスト目的】: 様々なパターンの存在しないuserIdに対して一貫してUserNotFoundErrorが発生することを確認
+      // 【テスト内容】: UUID形式は正しいが実際には存在しないuserIdパターンでのエラーハンドリング
+      // 【期待される動作】: userIdの形式によらず、存在しない場合は適切にUserNotFoundErrorが発生する
+      // 🟡 信頼性レベル: 様々なパターンの網羅的テストは要件定義から妥当な推測として実装
 
-        // 【テストデータ準備】: 各パターン固有のユーザーIDを使用した入力データ作成
-        // 【初期条件設定】: 全パターンでリポジトリがnullを返すよう設定
-        const input = UserProfileFactory.validInput(userId);
+      // 【テストデータ準備】: 各パターン固有のユーザーIDを使用した入力データ作成
+      // 【初期条件設定】: 全パターンでリポジトリがnullを返すよう設定
+      const input = UserProfileFactory.validInput(userId);
 
-        const mockFindById = sut.userRepository.findById as unknown as {
-          mockResolvedValue: (value: unknown) => void;
-        };
-        mockFindById.mockResolvedValue(null);
+      const mockFindById = sut.userRepository.findById as unknown as {
+        mockResolvedValue: (value: unknown) => void;
+      };
+      mockFindById.mockResolvedValue(null);
 
-        // 【実際の処理実行】: パターン別の存在しないユーザーIDでプロフィール取得処理
-        // 【処理内容】: 各パターンで統一されたエラーハンドリングが動作することを確認
-        const promise = sut.sut.execute(input);
+      // 【実際の処理実行】: パターン別の存在しないユーザーIDでプロフィール取得処理
+      // 【処理内容】: 各パターンで統一されたエラーハンドリングが動作することを確認
+      const promise = sut.sut.execute(input);
 
-        // 【結果検証】: すべてのパターンで一貫したUserNotFoundErrorが発生することを確認
-        // 【期待値確認】: パターンに関わらずUserNotFoundErrorが適切に発生することを確認
-        await GetUserProfileTestMatchers.failWithError(promise, 'user-not-found'); // 【確認内容】: 全パターンでUserNotFoundErrorが発生することを確認 🟡
+      // 【結果検証】: すべてのパターンで一貫したUserNotFoundErrorが発生することを確認
+      // 【期待値確認】: パターンに関わらずUserNotFoundErrorが適切に発生することを確認
+      await GetUserProfileTestMatchers.failWithError(promise, 'user-not-found'); // 【確認内容】: 全パターンでUserNotFoundErrorが発生することを確認 🟡
 
-        await GetUserProfileTestMatchers.failWithMessage(
-          promise,
-          `ユーザーID '${userId}' が見つかりません`
-        ); // 【確認内容】: パターン固有のuserIdを含むエラーメッセージが生成されることを確認 🟡
-      },
-    );
+      await GetUserProfileTestMatchers.failWithMessage(
+        promise,
+        `ユーザーID '${userId}' が見つかりません`,
+      ); // 【確認内容】: パターン固有のuserIdを含むエラーメッセージが生成されることを確認 🟡
+    });
   });
 
   describe('エラーログ出力検証', () => {
@@ -129,7 +129,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
         sut.logger,
         'warn',
         'User not found',
-        { userId: nonExistentUserId }
+        { userId: nonExistentUserId },
       ); // 【確認内容】: ユーザー未存在エラーログが適切なuserIdメタデータと共に出力されることを確認 🔴
     });
   });

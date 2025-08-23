@@ -5,13 +5,14 @@
  * 実装詳細に依存しない、インターフェース仕様の確認に特化。
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type {
   ExternalUserInfo,
   IAuthProvider,
   JwtPayload,
   JwtVerificationResult,
 } from '@/domain/services/IAuthProvider';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
 
 describe('AuthProvider契約テスト', () => {
@@ -22,6 +23,10 @@ describe('AuthProvider契約テスト', () => {
       verifyToken: mock(),
       getExternalUserInfo: mock(),
     };
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('verifyToken契約', () => {
@@ -35,7 +40,9 @@ describe('AuthProvider契約テスト', () => {
         payload: expectedPayload,
       };
 
-      (authProvider.verifyToken as any).mockResolvedValue(mockResult);
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockResolvedValue(
+        mockResult,
+      );
 
       // When: JWT検証を実行
       const result = await authProvider.verifyToken(validJwt);
@@ -50,10 +57,10 @@ describe('AuthProvider契約テスト', () => {
       expect(typeof result.payload).toBe('object');
 
       // payloadの必須フィールド
-      expect(typeof result.payload!.sub).toBe('string');
-      expect(typeof result.payload!.email).toBe('string');
-      expect(typeof result.payload!.iat).toBe('number');
-      expect(typeof result.payload!.exp).toBe('number');
+      expect(typeof result.payload?.sub).toBe('string');
+      expect(typeof result.payload?.email).toBe('string');
+      expect(typeof result.payload?.iat).toBe('number');
+      expect(typeof result.payload?.exp).toBe('number');
 
       // 失敗時のフィールドは存在しない
       expect(result.error).toBeUndefined();
@@ -67,7 +74,9 @@ describe('AuthProvider契約テスト', () => {
         error: 'Invalid signature',
       };
 
-      (authProvider.verifyToken as any).mockResolvedValue(mockResult);
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockResolvedValue(
+        mockResult,
+      );
 
       // When: JWT検証を実行
       const result = await authProvider.verifyToken(invalidJwt);
@@ -80,7 +89,7 @@ describe('AuthProvider契約テスト', () => {
       // 失敗時はerrorが必須
       expect(result.error).toBeDefined();
       expect(typeof result.error).toBe('string');
-      expect(result.error!.length).toBeGreaterThan(0);
+      expect(result.error?.length).toBeGreaterThan(0);
 
       // 成功時のフィールドは存在しない
       expect(result.payload).toBeUndefined();
@@ -88,8 +97,8 @@ describe('AuthProvider契約テスト', () => {
 
     test.each([
       ['空文字JWT', ''],
-      ['null JWT', null as any],
-      ['undefined JWT', undefined as any],
+      ['null JWT', null as unknown as string],
+      ['undefined JWT', undefined as unknown as string],
     ])('%s で適切にエラーを返す', async (_description, jwt: string) => {
       // Given: 不正な入力
       const mockResult: JwtVerificationResult = {
@@ -97,7 +106,9 @@ describe('AuthProvider契約テスト', () => {
         error: 'Invalid JWT format',
       };
 
-      (authProvider.verifyToken as any).mockResolvedValue(mockResult);
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockResolvedValue(
+        mockResult,
+      );
 
       // When: 不正な入力でJWT検証を実行
       const result = await authProvider.verifyToken(jwt);
@@ -113,7 +124,7 @@ describe('AuthProvider契約テスト', () => {
       const jwt = 'any.jwt.token';
 
       // Promiseを返すようにモック設定
-      (authProvider.verifyToken as any).mockResolvedValue({
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockResolvedValue({
         valid: true,
         payload: UserFactory.jwtPayload(),
       });
@@ -140,7 +151,9 @@ describe('AuthProvider契約テスト', () => {
         avatarUrl: 'https://example.com/avatar.jpg',
       };
 
-      (authProvider.getExternalUserInfo as any).mockResolvedValue(mockUserInfo);
+      (
+        authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(mockUserInfo);
 
       // When: 外部ユーザー情報を取得
       const result = await authProvider.getExternalUserInfo(payload);
@@ -181,17 +194,19 @@ describe('AuthProvider契約テスト', () => {
         `${provider}_user_123`,
         `user@${provider}.com`,
         'プロバイダーテストユーザー',
-        provider as any,
+        provider as AuthProvider,
       );
 
       const mockUserInfo = UserFactory.externalUserInfo(
         `${provider}_user_123`,
         `user@${provider}.com`,
         'プロバイダーテストユーザー',
-        provider as any,
+        provider as AuthProvider,
       );
 
-      (authProvider.getExternalUserInfo as any).mockResolvedValue(mockUserInfo);
+      (
+        authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(mockUserInfo);
 
       // When: プロバイダー別ユーザー情報を取得
       const result = await authProvider.getExternalUserInfo(payload);
@@ -205,17 +220,17 @@ describe('AuthProvider契約テスト', () => {
     test('不正なペイロードでエラーをスローする', async () => {
       // Given: 不正なペイロード
       const invalidPayloads = [
-        null as any,
-        undefined as any,
-        {} as any,
-        { sub: '', email: '' } as any,
+        null as unknown as JwtPayload,
+        undefined as unknown as JwtPayload,
+        {} as JwtPayload,
+        { sub: '', email: '' } as JwtPayload,
       ];
 
       for (const invalidPayload of invalidPayloads) {
         // エラーをスローするようにモック設定
-        (authProvider.getExternalUserInfo as any).mockRejectedValue(
-          new Error('Invalid payload format'),
-        );
+        (
+          authProvider.getExternalUserInfo as ReturnType<typeof mock>
+        ).mockRejectedValue(new Error('Invalid payload format'));
 
         // When & Then: 不正なペイロードでエラーがスローされる
         await expect(
@@ -229,9 +244,9 @@ describe('AuthProvider契約テスト', () => {
       const payload = UserFactory.jwtPayload();
 
       // Promiseを返すようにモック設定
-      (authProvider.getExternalUserInfo as any).mockResolvedValue(
-        UserFactory.externalUserInfo(),
-      );
+      (
+        authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockResolvedValue(UserFactory.externalUserInfo());
 
       // When: メソッド呼び出し
       const result = authProvider.getExternalUserInfo(payload);
@@ -249,7 +264,9 @@ describe('AuthProvider契約テスト', () => {
       const jwt = UserFactory.validJwt();
       const networkError = new Error('Network connection failed');
 
-      (authProvider.verifyToken as any).mockRejectedValue(networkError);
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockRejectedValue(
+        networkError,
+      );
 
       // When & Then: ネットワークエラーで例外がスローされる
       await expect(authProvider.verifyToken(jwt)).rejects.toThrow(
@@ -262,7 +279,9 @@ describe('AuthProvider契約テスト', () => {
       const payload = UserFactory.jwtPayload();
       const timeoutError = new Error('Request timeout');
 
-      (authProvider.getExternalUserInfo as any).mockRejectedValue(timeoutError);
+      (
+        authProvider.getExternalUserInfo as ReturnType<typeof mock>
+      ).mockRejectedValue(timeoutError);
 
       // When & Then: タイムアウトで例外がスローされる
       await expect(authProvider.getExternalUserInfo(payload)).rejects.toThrow(
@@ -275,7 +294,9 @@ describe('AuthProvider契約テスト', () => {
       const jwt = UserFactory.validJwt();
       const rateLimitError = new Error('Rate limit exceeded');
 
-      (authProvider.verifyToken as any).mockRejectedValue(rateLimitError);
+      (authProvider.verifyToken as ReturnType<typeof mock>).mockRejectedValue(
+        rateLimitError,
+      );
 
       // When & Then: レート制限で例外がスローされる
       await expect(authProvider.verifyToken(jwt)).rejects.toThrow(

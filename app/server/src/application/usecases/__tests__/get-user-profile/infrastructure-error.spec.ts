@@ -47,16 +47,19 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザー情報の取得に失敗しました'
+        'ユーザー情報の取得に失敗しました',
       ); // 【確認内容】: インフラエラーに対する適切なエラーメッセージが設定されることを確認 🟢
 
       // 依存関係の呼び出し確認
       GetUserProfileTestMatchers.mock.toHaveBeenCalledWithUserId(
         sut.userRepository.findById,
-        validInput.userId
+        validInput.userId,
       ); // 【確認内容】: リポジトリが正しいuserIdで呼び出されたことを確認 🟢
 
-      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(sut.userRepository.findById, 1); // 【確認内容】: エラー発生時でもリポジトリが1回だけ呼び出されたことを確認 🟢
+      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(
+        sut.userRepository.findById,
+        1,
+      ); // 【確認内容】: エラー発生時でもリポジトリが1回だけ呼び出されたことを確認 🟢
     });
   });
 
@@ -89,11 +92,14 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
 
         // 【結果検証】: すべてのシステムエラーで一貫したInfrastructureErrorが発生することを確認
         // 【期待値確認】: エラーの種類によらずInfrastructureErrorが適切に発生する
-        await GetUserProfileTestMatchers.failWithError(promise, 'infrastructure'); // 【確認内容】: 全種類のシステムエラーでInfrastructureErrorが発生することを確認 🟡
+        await GetUserProfileTestMatchers.failWithError(
+          promise,
+          'infrastructure',
+        ); // 【確認内容】: 全種類のシステムエラーでInfrastructureErrorが発生することを確認 🟡
 
         await GetUserProfileTestMatchers.failWithMessage(
           promise,
-          'システムエラーが発生しました'
+          'システムエラーが発生しました',
         ); // 【確認内容】: システムエラーに対する統一されたエラーメッセージが生成されることを確認 🟡
       },
     );
@@ -126,7 +132,7 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'データベース接続エラー'
+        'データベース接続エラー',
       ); // 【確認内容】: タイムアウトに対する適切なエラーメッセージが設定されることを確認 🟡
     });
   });
@@ -140,7 +146,9 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
 
       // 【テストデータ準備】: インフラエラーログ検証用の入力データを準備
       // 【初期条件設定】: インフラエラーとログ出力を検証するための設定
-      const validInput = UserProfileFactory.validInput('44444444-5555-6666-7777-888888888888');
+      const validInput = UserProfileFactory.validInput(
+        '44444444-5555-6666-7777-888888888888',
+      );
       const infraError = new Error('データベース接続障害');
 
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -165,7 +173,7 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
         {
           userId: validInput.userId,
           error: 'データベース接続障害',
-        }
+        },
       ); // 【確認内容】: インフラエラーログが障害詳細と共に出力されることを確認 🔴
     });
   });

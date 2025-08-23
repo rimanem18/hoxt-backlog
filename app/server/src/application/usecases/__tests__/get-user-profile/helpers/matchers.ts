@@ -7,9 +7,9 @@
 
 import { expect } from 'bun:test';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { ValidationError } from '@/shared/errors/ValidationError';
-import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import type { User } from '@/domain/user/UserEntity';
+import { InfrastructureError } from '@/shared/errors/InfrastructureError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 
 /**
  * エラーコード別の期待値マッピング（GetUserProfile用）
@@ -53,7 +53,7 @@ export function toFailWithGetUserProfileError(
   errorType: keyof typeof GET_USER_PROFILE_ERROR_MAPPINGS,
 ) {
   const mapping = GET_USER_PROFILE_ERROR_MAPPINGS[errorType];
-  
+
   return expect(received).rejects.toThrow(mapping.errorClass);
 }
 
@@ -77,9 +77,7 @@ export function toFailWithGetUserProfileMessage(
  * @param executionTime 実行時間（ミリ秒）
  * @returns マッチャー結果
  */
-export function toCompleteWithinGetUserProfileTimeLimit(
-  executionTime: number,
-) {
+export function toCompleteWithinGetUserProfileTimeLimit(executionTime: number) {
   const PERFORMANCE_LIMIT_MS = 500;
   return expect(executionTime).toBeLessThan(PERFORMANCE_LIMIT_MS);
 }
@@ -161,7 +159,8 @@ export function toHaveGetUserProfileProperties(
     }
 
     // undefinedの場合はnullに正規化してから比較
-    const normalizedExpected = expectedValue === undefined ? null : expectedValue;
+    const normalizedExpected =
+      expectedValue === undefined ? null : expectedValue;
     return expect(actualValue).toBe(normalizedExpected);
   });
 }

@@ -5,7 +5,7 @@
  * 必須項目、形式、長さ、境界値の検証を行う。
  */
 
-import { beforeEach, describe, expect, type Mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseInput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { makeSUT } from './helpers/makeSUT';
 import { TestMatchers } from './helpers/matchers';
@@ -16,6 +16,10 @@ describe('入力検証テスト', () => {
 
   beforeEach(() => {
     sut = makeSUT();
+  });
+
+  afterEach(() => {
+    mock.restore();
   });
 
   describe('JWT必須項目検証', () => {
@@ -86,14 +90,10 @@ describe('入力検証テスト', () => {
             payload: UserFactory.jwtPayload(),
           };
           (
-            sut.authProvider.verifyToken as Mock<
-              typeof sut.authProvider.verifyToken
-            >
+            sut.authProvider.verifyToken as ReturnType<typeof mock>
           ).mockResolvedValue(mockResult);
           (
-            sut.authProvider.getExternalUserInfo as Mock<
-              typeof sut.authProvider.getExternalUserInfo
-            >
+            sut.authProvider.getExternalUserInfo as ReturnType<typeof mock>
           ).mockResolvedValue(UserFactory.externalUserInfo());
           const mockAuthenticateUser = sut.authDomainService
             .authenticateUser as unknown as {

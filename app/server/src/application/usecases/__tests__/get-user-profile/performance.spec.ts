@@ -64,7 +64,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
           id: `1234567${index}-1234-4321-abcd-123456789000`,
           email: `performance.test.${index}@example.com`,
           name: `パフォーマンステストユーザー${index}`,
-        })
+        }),
       );
 
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -144,13 +144,13 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       // 【実際の処理実行】: エラー処理の性能測定を含む処理実行
       // 【処理内容】: エラーハンドリングの処理時間を測定
       const startTime = performance.now();
-      
+
       try {
         await sut.sut.execute(input);
       } catch {
         // エラーは期待される動作
       }
-      
+
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 
@@ -178,13 +178,13 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       // 【実際の処理実行】: インフラエラー処理の性能測定を含む処理実行
       // 【処理内容】: インフラエラーハンドリングの処理時間を測定
       const startTime = performance.now();
-      
+
       try {
         await sut.sut.execute(validInput);
       } catch {
         // エラーは期待される動作
       }
-      
+
       const endTime = performance.now();
       const executionTime = endTime - startTime;
 

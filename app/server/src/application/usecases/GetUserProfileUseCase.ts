@@ -10,8 +10,8 @@
  */
 
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { User } from '@/domain/user/UserEntity';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
+import type { User } from '@/domain/user/UserEntity';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
 import type { Logger } from '@/shared/logging/Logger';
@@ -64,11 +64,11 @@ export interface IGetUserProfileUseCase {
  *   userRepository,    // IUserRepositoryの実装
  *   logger            // Logger実装（構造化ログ対応）
  * );
- * 
+ *
  * // 【実行例】: 安全なユーザー情報取得
  * const result = await useCase.execute({ userId: 'uuid-12345678-1234-4321-abcd-123456789abc' });
  * console.log('取得成功:', result.user.name);
- * 
+ *
  * // 【エラーハンドリング例】: 包括的例外処理
  * try {
  *   const result = await useCase.execute({ userId: 'invalid-id' });
@@ -90,7 +90,8 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
    * 【セキュリティ】: 厳密な形式チェックによる不正入力防止
    * 🟢 信頼性レベル: RFC4122準拠、カスタムプレフィックス対応
    */
-  private readonly uuidRegex = /^(?:uuid-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  private readonly uuidRegex =
+    /^(?:uuid-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   /**
    * 【入力検証エラー時の警告ログ出力ヘルパー】
@@ -98,7 +99,10 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
    * 【構造化ログ】: 一貫した形式でのデバッグ情報出力
    * 【保守性向上】: ログメッセージの統一管理
    */
-  private logInvalidInputWarning(input: GetUserProfileUseCaseInput, message: string): void {
+  private logInvalidInputWarning(
+    input: GetUserProfileUseCaseInput,
+    message: string,
+  ): void {
     this.logger.warn(message, { invalidInput: JSON.stringify(input) });
   }
 
@@ -107,7 +111,7 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
    * 【単一責任原則（SRP）】: 入力検証の責任を専用メソッドに分離
    * 【オープンクローズド原則（OCP）】: 新しい検証ルール追加時の拡張性確保
    * 【検証フロー】: 4段階の段階的検証による確実な不正入力ブロック
-   * 
+   *
    * @param input 検証対象の入力パラメータ
    * @throws ValidationError 任意の検証段階で失敗した場合
    * 🟢 信頼性レベル: 全検証パターンをテストケースで網羅済み
@@ -138,7 +142,7 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
    * 【依存関係】: リポジトリパターンとロガーインターフェースの注入
    * 【エラーハンドリング】: null依存関係の早期検出による堅牢性確保
    * 【設計方針】: Fail Fast原則により初期化時に問題を即座に特定
-   * 
+   *
    * @param userRepository ユーザー情報の永続化を担当するリポジトリ実装
    * @param logger 構造化ログ出力を担当するロガー実装
    * @throws Error 必須依存関係がnull/undefinedの場合
@@ -165,7 +169,7 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
    * 【品質保証】: 多層防御による堅牢な例外処理と詳細ログ出力
    * 【パフォーマンス】: データベースアクセス最小化（1回のみ）
    * 【セキュリティ】: 情報漏洩防止と不正入力の完全ブロック
-   * 
+   *
    * @param input ユーザーID文字列を含む入力パラメータ（UUID形式必須）
    * @returns 検証済みユーザーエンティティを含む出力オブジェクト
    * @throws ValidationError 入力検証失敗時（null/型不正/形式不正）
@@ -192,29 +196,39 @@ export class GetUserProfileUseCase implements IGetUserProfileUseCase {
       this.logger.info('User profile retrieved successfully', { userId });
       return { user };
     } catch (error) {
-      if (error instanceof UserNotFoundError || error instanceof ValidationError) {
+      if (
+        error instanceof UserNotFoundError ||
+        error instanceof ValidationError
+      ) {
         throw error;
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       const logContext = { userId, error: errorMessage };
-      
+
       this.logger.error('User profile retrieval error', logContext);
 
       const errorClassifications = [
-        { pattern: 'Query execution timeout', message: 'データベース接続エラー' },
-        { pattern: ['データベース接続', 'connection'], message: 'ユーザー情報の取得に失敗しました' },
-        { pattern: 'Network timeout', message: 'システムエラーが発生しました' }
+        {
+          pattern: 'Query execution timeout',
+          message: 'データベース接続エラー',
+        },
+        {
+          pattern: ['データベース接続', 'connection'],
+          message: 'ユーザー情報の取得に失敗しました',
+        },
+        { pattern: 'Network timeout', message: 'システムエラーが発生しました' },
       ];
 
-      const matchedError = errorClassifications.find(({ pattern }) => 
-        Array.isArray(pattern) 
-          ? pattern.some(p => errorMessage.includes(p))
-          : errorMessage.includes(pattern)
+      const matchedError = errorClassifications.find(({ pattern }) =>
+        Array.isArray(pattern)
+          ? pattern.some((p) => errorMessage.includes(p))
+          : errorMessage.includes(pattern),
       );
 
       throw new InfrastructureError(
-        matchedError?.message || 'システムエラーが発生しました'
+        matchedError?.message || 'システムエラーが発生しました',
       );
     }
   }

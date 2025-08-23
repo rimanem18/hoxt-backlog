@@ -5,8 +5,8 @@
  * 可読性とメンテナンス性を向上させる。
  */
 
-import type { User } from '@/domain/user/UserEntity';
 import type { AuthProvider } from '@/domain/user/AuthProvider';
+import type { User } from '@/domain/user/UserEntity';
 
 /**
  * テスト用ユーザーデータファクトリ
@@ -54,19 +54,19 @@ export const UserProfileFactory = {
   invalidInputs: {
     // 🔴 null値
     nullUserId: { userId: null as unknown as string },
-    
+
     // 🔴 undefined値
     undefinedUserId: { userId: undefined as unknown as string },
-    
+
     // 🔴 空文字列
     emptyUserId: { userId: '' },
-    
+
     // 🔴 UUID形式ではない文字列
     invalidFormatUserId: { userId: 'invalid-user-id' },
-    
+
     // 🔴 数値
     numberUserId: { userId: 12345 as unknown as string },
-    
+
     // 🔴 オブジェクト
     objectUserId: { userId: { id: 'test' } as unknown as string },
   },

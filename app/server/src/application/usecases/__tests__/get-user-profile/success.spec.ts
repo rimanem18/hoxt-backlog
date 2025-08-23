@@ -36,7 +36,9 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         name: 'テストユーザー',
       });
 
-      const input = UserProfileFactory.validInput('12345678-1234-4321-abcd-123456789abc');
+      const input = UserProfileFactory.validInput(
+        '12345678-1234-4321-abcd-123456789abc',
+      );
 
       // リポジトリモックの戻り値を設定
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -52,7 +54,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       // 【期待値確認】: 返されたユーザーオブジェクトがリポジトリから取得したものと一致することを確認
       expect(result).toBeDefined(); // 【確認内容】: 結果が定義されていることを確認 🟢
       expect(result.user).toBeDefined(); // 【確認内容】: userプロパティが存在することを確認 🟢
-      
+
       // ユーザー情報の詳細検証
       GetUserProfileTestMatchers.haveUserProperties(result.user, {
         id: '12345678-1234-4321-abcd-123456789abc',
@@ -64,10 +66,13 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       // 依存関係の呼び出し確認
       GetUserProfileTestMatchers.mock.toHaveBeenCalledWithUserId(
         sut.userRepository.findById,
-        '12345678-1234-4321-abcd-123456789abc'
+        '12345678-1234-4321-abcd-123456789abc',
       ); // 【確認内容】: リポジトリが正しいuserIdで呼び出されたことを確認 🟢
 
-      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(sut.userRepository.findById, 1); // 【確認内容】: リポジトリが1回だけ呼び出されたことを確認 🟢
+      GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(
+        sut.userRepository.findById,
+        1,
+      ); // 【確認内容】: リポジトリが1回だけ呼び出されたことを確認 🟢
     });
   });
 
@@ -75,7 +80,12 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
     test.each([
       ['Google', 'google', 'google_user_123', 'google.user@gmail.com'],
       ['GitHub', 'github', 'github_user_456', 'github.user@github.com'],
-      ['Facebook', 'facebook', 'facebook_user_789', 'facebook.user@facebook.com'],
+      [
+        'Facebook',
+        'facebook',
+        'facebook_user_789',
+        'facebook.user@facebook.com',
+      ],
     ])(
       '%s プロバイダーユーザーのプロフィール取得が成功する',
       async (_provider, providerType, externalId, email) => {
@@ -156,7 +166,9 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       const user = UserProfileFactory.existingUser({
         id: '12345678-1234-4321-abcd-123456789abc',
       });
-      const input = UserProfileFactory.validInput('12345678-1234-4321-abcd-123456789abc');
+      const input = UserProfileFactory.validInput(
+        '12345678-1234-4321-abcd-123456789abc',
+      );
 
       const mockFindById = sut.userRepository.findById as unknown as {
         mockResolvedValue: (value: unknown) => void;
@@ -173,14 +185,14 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         sut.logger,
         'info',
         'User profile retrieval started',
-        { userId: '12345678-1234-4321-abcd-123456789abc' }
+        { userId: '12345678-1234-4321-abcd-123456789abc' },
       ); // 【確認内容】: 処理開始ログが適切なuserIdメタデータと共に出力されることを確認 🟡
 
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
         'info',
         'User profile retrieved successfully',
-        { userId: '12345678-1234-4321-abcd-123456789abc' }
+        { userId: '12345678-1234-4321-abcd-123456789abc' },
       ); // 【確認内容】: 処理成功ログが適切なuserIdメタデータと共に出力されることを確認 🟡
     });
   });

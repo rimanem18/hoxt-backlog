@@ -40,11 +40,13 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDが必要です'
+        'ユーザーIDが必要です',
       ); // 【確認内容】: null値に対する適切なエラーメッセージが設定されることを確認 🟢
 
       // リポジトリが呼び出されないことを確認
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
     });
 
     test('undefined値のuserIdでValidationErrorが発生する', async () => {
@@ -67,10 +69,12 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDが必要です'
+        'ユーザーIDが必要です',
       ); // 【確認内容】: undefined値に対してもnullと同じエラーメッセージが設定されることを確認 🟢
 
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
     });
 
     test('空文字列のuserIdでValidationErrorが発生する', async () => {
@@ -93,10 +97,12 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDが必要です'
+        'ユーザーIDが必要です',
       ); // 【確認内容】: 空文字列に対して適切なエラーメッセージが設定されることを確認 🟢
 
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
     });
 
     test('UUID形式ではない文字列でValidationErrorが発生する', async () => {
@@ -119,10 +125,12 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDはUUID形式である必要があります'
+        'ユーザーIDはUUID形式である必要があります',
       ); // 【確認内容】: UUID形式に関する具体的なエラーメッセージが設定されることを確認 🟢
 
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟢
     });
   });
 
@@ -147,10 +155,12 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDは有効な文字列である必要があります'
+        'ユーザーIDは有効な文字列である必要があります',
       ); // 【確認内容】: 型違反に対する適切なエラーメッセージが設定されることを確認 🟡
 
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
     });
 
     test('オブジェクト型のuserIdでValidationErrorが発生する', async () => {
@@ -173,10 +183,12 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        'ユーザーIDは有効な文字列である必要があります'
+        'ユーザーIDは有効な文字列である必要があります',
       ); // 【確認内容】: オブジェクト型に対する適切なエラーメッセージが設定されることを確認 🟡
 
-      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
+      GetUserProfileTestMatchers.mock.notToHaveBeenCalled(
+        sut.userRepository.findById,
+      ); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
     });
   });
 
@@ -205,7 +217,7 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
         sut.logger,
         'warn',
         '必須パラメータが不足しています',
-        { invalidInput: JSON.stringify(invalidInput) }
+        { invalidInput: JSON.stringify(invalidInput) },
       ); // 【確認内容】: バリデーションエラーログが無効入力の詳細と共に出力されることを確認 🔴
     });
   });
