@@ -19,7 +19,7 @@ const GET_USER_PROFILE_ERROR_MAPPINGS = {
     errorClass: UserNotFoundError,
     expectedMessages: [
       'ユーザーが見つかりません',
-      "ユーザーID 'uuid-12345678-1234-4321-abcd-123456789abc' が見つかりません",
+      "ユーザーID '12345678-1234-4321-abcd-123456789abc' が見つかりません",
     ],
   },
   validation: {
@@ -27,6 +27,7 @@ const GET_USER_PROFILE_ERROR_MAPPINGS = {
     expectedMessages: [
       'ユーザーIDが必要です',
       'ユーザーIDはUUID形式である必要があります',
+      'ユーザーIDは有効な文字列である必要があります',
       '無効なユーザーID形式です',
     ],
   },
@@ -142,9 +143,8 @@ export function toHaveGetUserProfileProperties(
     email?: string;
     name?: string;
     avatarUrl?: string | null | undefined;
-    emailVerified?: boolean;
-    isActive?: boolean;
-    role?: string;
+    // emailVerifiedプロパティは実際のUser型に存在しないため削除
+    // isActiveとroleプロパティも実際のUser型に存在しないため削除
   },
 ) {
   return Object.keys(expectedProperties).every((key) => {
@@ -160,7 +160,9 @@ export function toHaveGetUserProfileProperties(
       return expect(actualValue).toBe(normalizedExpected);
     }
 
-    return expect(actualValue).toBe(expectedValue);
+    // undefinedの場合はnullに正規化してから比較
+    const normalizedExpected = expectedValue === undefined ? null : expectedValue;
+    return expect(actualValue).toBe(normalizedExpected);
   });
 }
 

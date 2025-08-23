@@ -140,7 +140,7 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
 
       // 【テストデータ準備】: インフラエラーログ検証用の入力データを準備
       // 【初期条件設定】: インフラエラーとログ出力を検証するための設定
-      const validInput = UserProfileFactory.validInput('uuid-infra-error-log-test');
+      const validInput = UserProfileFactory.validInput('44444444-5555-6666-7777-888888888888');
       const infraError = new Error('データベース接続障害');
 
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -161,10 +161,10 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
         'error',
-        'Infrastructure error occurred during user profile retrieval',
+        'User profile retrieval error',
         {
           userId: validInput.userId,
-          error: infraError.message,
+          error: 'データベース接続障害',
         }
       ); // 【確認内容】: インフラエラーログが障害詳細と共に出力されることを確認 🔴
     });

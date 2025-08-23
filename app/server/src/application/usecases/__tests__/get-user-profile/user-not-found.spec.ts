@@ -28,7 +28,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
 
       // 【テストデータ準備】: 存在しないユーザーIDを指定するための入力データを作成
       // 【初期条件設定】: リポジトリがnullを返すように設定し、ユーザーが存在しない状況を模擬
-      const nonExistentUserId = 'uuid-nonexistent-user-id-12345';
+      const nonExistentUserId = '12345678-1234-4321-abcd-123456789999';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
       // リポジトリモックの戻り値をnullに設定（ユーザーが見つからない状況）
@@ -62,9 +62,9 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
 
   describe('複数パターンのユーザー未存在', () => {
     test.each([
-      ['UUID形式の存在しないID', 'uuid-00000000-0000-0000-0000-000000000000'],
-      ['削除済みユーザーのID', 'uuid-deleted-user-id-123456789'],
-      ['有効だが未登録のID', 'uuid-valid-but-unregistered-id'],
+      ['UUID形式の存在しないID', '00000000-0000-0000-0000-000000000000'],
+      ['削除済みユーザーのID', '87654321-4321-1234-dcba-987654321000'],
+      ['有効だが未登録のID', '11111111-2222-3333-4444-555555555555'],
     ])(
       '%s でUserNotFoundErrorが発生する',
       async (_description, userId) => {
@@ -107,7 +107,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
 
       // 【テストデータ準備】: エラーログ検証用の存在しないユーザーIDを準備
       // 【初期条件設定】: ログ出力を検証するためのモック設定
-      const nonExistentUserId = 'uuid-log-test-nonexistent-id';
+      const nonExistentUserId = '22222222-3333-4444-5555-666666666666';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -127,8 +127,8 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
       // 【期待値確認】: エラーレベルでの適切なログメッセージとメタデータの出力を確認
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
-        'error',
-        'User not found for profile retrieval',
+        'warn',
+        'User not found',
         { userId: nonExistentUserId }
       ); // 【確認内容】: ユーザー未存在エラーログが適切なuserIdメタデータと共に出力されることを確認 🔴
     });

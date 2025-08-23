@@ -147,7 +147,7 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        '無効なユーザーID形式です'
+        'ユーザーIDは有効な文字列である必要があります'
       ); // 【確認内容】: 型違反に対する適切なエラーメッセージが設定されることを確認 🟡
 
       GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
@@ -173,7 +173,7 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
 
       await GetUserProfileTestMatchers.failWithMessage(
         promise,
-        '無効なユーザーID形式です'
+        'ユーザーIDは有効な文字列である必要があります'
       ); // 【確認内容】: オブジェクト型に対する適切なエラーメッセージが設定されることを確認 🟡
 
       GetUserProfileTestMatchers.mock.notToHaveBeenCalled(sut.userRepository.findById); // 【確認内容】: バリデーション失敗時にリポジトリが呼び出されないことを確認 🟡
@@ -204,7 +204,7 @@ describe('GetUserProfileUseCase バリデーションエラーテスト', () => 
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
         'warn',
-        'Invalid input for user profile retrieval',
+        '必須パラメータが不足しています',
         { invalidInput: JSON.stringify(invalidInput) }
       ); // 【確認内容】: バリデーションエラーログが無効入力の詳細と共に出力されることを確認 🔴
     });

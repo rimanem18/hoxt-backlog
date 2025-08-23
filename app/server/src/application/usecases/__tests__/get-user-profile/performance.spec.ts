@@ -61,7 +61,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       // 【初期条件設定】: 各ユーザーに対して通常の処理時間で応答するモックを設定
       const users = Array.from({ length: 10 }, (_, index) =>
         UserProfileFactory.existingUser({
-          id: `uuid-performance-test-user-${index}`,
+          id: `1234567${index}-1234-4321-abcd-123456789000`,
           email: `performance.test.${index}@example.com`,
           name: `パフォーマンステストユーザー${index}`,
         })
@@ -133,7 +133,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
 
       // 【テストデータ準備】: 存在しないユーザーIDを含む入力データを作成
       // 【初期条件設定】: リポジトリがnullを返すエラー状況を設定
-      const nonExistentUserId = 'uuid-performance-error-test';
+      const nonExistentUserId = '33333333-4444-5555-6666-777777777777';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
       const mockFindById = sut.userRepository.findById as unknown as {

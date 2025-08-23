@@ -23,15 +23,14 @@ export const UserProfileFactory = {
     const lastLogin = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1日前
 
     return {
-      id: 'uuid-12345678-1234-4321-abcd-123456789abc',
+      id: '12345678-1234-4321-abcd-123456789abc',
       externalId: 'google_existing_user_123',
       provider: 'google' as AuthProvider,
       email: 'existing.user@test.com',
       name: '既存テストユーザー',
       avatarUrl: 'https://example.com/avatar/existing.jpg',
-      emailVerified: true,
-      isActive: true,
-      role: 'user',
+      // emailVerifiedプロパティは実際のUser型に存在しないため削除
+      // isActiveとroleプロパティは実際のUser型に存在しないため削除
       createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7日前
       updatedAt: now,
       lastLoginAt: lastLogin,
@@ -45,7 +44,7 @@ export const UserProfileFactory = {
    * @param userId カスタムユーザーID（UUID v4形式）
    * @returns 入力オブジェクト
    */
-  validInput(userId = 'uuid-12345678-1234-4321-abcd-123456789abc') {
+  validInput(userId = '12345678-1234-4321-abcd-123456789abc') {
     return { userId };
   },
 

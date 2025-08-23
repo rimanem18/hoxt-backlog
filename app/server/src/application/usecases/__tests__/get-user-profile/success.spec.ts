@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { AuthProvider } from '@/domain/user/AuthProvider';
 import { makeSUT } from './helpers/makeSUT';
 import { GetUserProfileTestMatchers } from './helpers/matchers';
 import { UserProfileFactory } from './helpers/userFactory';
@@ -29,13 +30,13 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       // 【テストデータ準備】: リポジトリから返される既存ユーザーのモックデータを作成
       // 【初期条件設定】: 正常なユーザー検索が成功する前提でリポジトリモックを設定
       const existingUser = UserProfileFactory.existingUser({
-        id: 'uuid-12345678-1234-4321-abcd-123456789abc',
+        id: '12345678-1234-4321-abcd-123456789abc',
         externalId: 'google_test_user_123',
         email: 'test.user@example.com',
         name: 'テストユーザー',
       });
 
-      const input = UserProfileFactory.validInput('uuid-12345678-1234-4321-abcd-123456789abc');
+      const input = UserProfileFactory.validInput('12345678-1234-4321-abcd-123456789abc');
 
       // リポジトリモックの戻り値を設定
       const mockFindById = sut.userRepository.findById as unknown as {
@@ -54,7 +55,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       
       // ユーザー情報の詳細検証
       GetUserProfileTestMatchers.haveUserProperties(result.user, {
-        id: 'uuid-12345678-1234-4321-abcd-123456789abc',
+        id: '12345678-1234-4321-abcd-123456789abc',
         externalId: 'google_test_user_123',
         email: 'test.user@example.com',
         name: 'テストユーザー',
@@ -63,7 +64,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       // 依存関係の呼び出し確認
       GetUserProfileTestMatchers.mock.toHaveBeenCalledWithUserId(
         sut.userRepository.findById,
-        'uuid-12345678-1234-4321-abcd-123456789abc'
+        '12345678-1234-4321-abcd-123456789abc'
       ); // 【確認内容】: リポジトリが正しいuserIdで呼び出されたことを確認 🟢
 
       GetUserProfileTestMatchers.mock.toHaveBeenCalledTimes(sut.userRepository.findById, 1); // 【確認内容】: リポジトリが1回だけ呼び出されたことを確認 🟢
@@ -87,7 +88,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         // 【初期条件設定】: プロバイダー固有の情報を持つユーザーエンティティを準備
         const user = UserProfileFactory.existingUser({
           externalId,
-          provider: providerType as any,
+          provider: providerType as AuthProvider, // 型安全なキャストに変更
           email,
           name: `${_provider}ユーザー`,
         });
@@ -106,7 +107,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         // 【結果検証】: プロバイダー固有の情報が正しく返されることを確認
         // 【期待値確認】: 各プロバイダーのユーザー情報が適切に取得されることを確認
         expect(result).toBeDefined(); // 【確認内容】: 結果が定義されていることを確認 🟢
-        expect(result.user.provider).toBe(providerType); // 【確認内容】: プロバイダー情報が正しく設定されていることを確認 🟢
+        expect(result.user.provider).toBe(providerType as AuthProvider); // 【確認内容】: プロバイダー情報が正しく設定されていることを確認 🟢
         expect(result.user.externalId).toBe(externalId); // 【確認内容】: 外部IDが正しく設定されていることを確認 🟢
         expect(result.user.email).toBe(email); // 【確認内容】: メールアドレスが正しく設定されていることを確認 🟢
       },
@@ -153,9 +154,9 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       // 【テストデータ準備】: ログ検証用のユーザーデータを準備
       // 【初期条件設定】: ログ出力を検証するためのモックロガーを設定
       const user = UserProfileFactory.existingUser({
-        id: 'uuid-12345678-1234-4321-abcd-123456789abc',
+        id: '12345678-1234-4321-abcd-123456789abc',
       });
-      const input = UserProfileFactory.validInput('uuid-12345678-1234-4321-abcd-123456789abc');
+      const input = UserProfileFactory.validInput('12345678-1234-4321-abcd-123456789abc');
 
       const mockFindById = sut.userRepository.findById as unknown as {
         mockResolvedValue: (value: unknown) => void;
@@ -171,15 +172,15 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
         'info',
-        'Starting user profile retrieval',
-        { userId: 'uuid-12345678-1234-4321-abcd-123456789abc' }
+        'User profile retrieval started',
+        { userId: '12345678-1234-4321-abcd-123456789abc' }
       ); // 【確認内容】: 処理開始ログが適切なuserIdメタデータと共に出力されることを確認 🟡
 
       GetUserProfileTestMatchers.haveLoggedMessage(
         sut.logger,
         'info',
         'User profile retrieved successfully',
-        { userId: 'uuid-12345678-1234-4321-abcd-123456789abc' }
+        { userId: '12345678-1234-4321-abcd-123456789abc' }
       ); // 【確認内容】: 処理成功ログが適切なuserIdメタデータと共に出力されることを確認 🟡
     });
   });
