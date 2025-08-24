@@ -7,7 +7,7 @@ import type { Context } from 'hono';
 import { AuthController } from '../AuthController';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
-import { ValidationError } from '@/domain/user/errors/ValidationError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 import { UserEntity } from '@/domain/user/UserEntity';
 import type { AuthResponse, ErrorResponse } from '@/../../packages/shared-schemas';
 
@@ -59,7 +59,7 @@ describe('AuthController', () => {
     const expectedUser = new UserEntity('user123', 'test@example.com', 'Test User');
     
     mockContext.req.json = mock(() => Promise.resolve(requestBody));
-    mockAuthenticateUserUseCase.execute = mock(() => Promise.resolve({ user: expectedUser, success: true }));
+    mockAuthenticateUserUseCase.execute = mock(() => Promise.resolve({ user: expectedUser, isNewUser: false }));
 
     // 【実際の処理実行】: AuthController の verifyToken メソッドを呼び出し
     // 【処理内容】: JWTトークン検証と認証処理を実行
@@ -67,8 +67,8 @@ describe('AuthController', () => {
 
     // 【結果検証】: 認証成功時の期待値と実際の結果を比較
     // 【期待値確認】: HTTPステータス200と成功メッセージが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(validJwtToken); // 【確認内容】: UseCaseが正しいトークンで呼び出されたことを検証 🟢
-    expect(mockContext.json).toHaveBeenCalledWith({ success: true, user: expectedUser }, 200); // 【確認内容】: 200ステータスで成功レスポンスが返されることを確認 🟢
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: validJwtToken }); // 【確認内容】: UseCaseが正しいトークンで呼び出されたことを検証 🟢
+    expect(mockContext.json).toHaveBeenCalledWith({ success: true, user: expectedUser, isNewUser: false }, 200); // 【確認内容】: 200ステータスで成功レスポンスが返されることを確認 🟢
   });
 
   test('新規ユーザーの場合、JITプロビジョニングによりユーザーが作成される', async () => {
@@ -92,7 +92,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: JITプロビジョニングが正常に動作したことを検証
     // 【期待値確認】: 新規ユーザー作成成功と認証成功レスポンスが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(newUserJwtToken); // 【確認内容】: 新規ユーザーのトークンでUseCaseが呼び出されたことを確認 🟢
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: newUserJwtToken }); // 【確認内容】: 新規ユーザーのトークンでUseCaseが呼び出されたことを確認 🟢
     expect(mockContext.json).toHaveBeenCalledWith({ success: true, user: newUser, isNewUser: true }, 200); // 【確認内容】: JITプロビジョニング成功レスポンスが返されることを確認 🟢
   });
 
@@ -117,7 +117,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: 既存ユーザー認証が正常に動作したことを検証
     // 【期待値確認】: 新規作成フラグが設定されずに認証成功レスポンスが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(existingUserJwtToken); // 【確認内容】: 既存ユーザーのトークンでUseCaseが呼び出されたことを確認 🟢
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: existingUserJwtToken }); // 【確認内容】: 既存ユーザーのトークンでUseCaseが呼び出されたことを確認 🟢
     expect(mockContext.json).toHaveBeenCalledWith({ success: true, user: existingUser, isNewUser: false }, 200); // 【確認内容】: 既存ユーザー認証成功レスポンスが返されることを確認 🟢
   });
 
@@ -142,7 +142,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: 認証エラーが適切に処理されたことを検証
     // 【期待値確認】: 401ステータスでエラーメッセージが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(invalidJwtToken); // 【確認内容】: 不正トークンでUseCaseが呼び出されたことを確認 🟢
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: invalidJwtToken }); // 【確認内容】: 不正トークンでUseCaseが呼び出されたことを確認 🟢
     expect(mockContext.json).toHaveBeenCalledWith({ success: false, error: 'Invalid JWT token' }, 401); // 【確認内容】: 401ステータスで認証エラーが返されることを確認 🟢
   });
 
@@ -166,7 +166,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: 期限切れエラーが適切に処理されたことを検証
     // 【期待値確認】: 401ステータスで期限切れエラーメッセージが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(expiredJwtToken); // 【確認内容】: 期限切れトークンでUseCaseが呼び出されたことを確認 🟢
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: expiredJwtToken }); // 【確認内容】: 期限切れトークンでUseCaseが呼び出されたことを確認 🟢
     expect(mockContext.json).toHaveBeenCalledWith({ success: false, error: 'JWT token has expired' }, 401); // 【確認内容】: 401ステータスで期限切れエラーが返されることを確認 🟢
   });
 
@@ -254,7 +254,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: 外部サービスエラーが適切に処理されたことを検証
     // 【期待値確認】: 500ステータスで内部サーバーエラーメッセージが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(validJwtToken); // 【確認内容】: UseCaseが正常に呼び出されたことを確認 🟡
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: validJwtToken }); // 【確認内容】: UseCaseが正常に呼び出されたことを確認 🟡
     expect(mockContext.json).toHaveBeenCalledWith({ success: false, error: 'Internal server error' }, 500); // 【確認内容】: 500ステータスで内部サーバーエラーが返されることを確認 🟡
   });
 
@@ -278,7 +278,7 @@ describe('AuthController', () => {
 
     // 【結果検証】: 予期しないエラーが適切に処理されたことを検証
     // 【期待値確認】: 500ステータスで汎用エラーメッセージが返されることを確認
-    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith(validJwtToken); // 【確認内容】: UseCaseが正常に呼び出されたことを確認 🔴
+    expect(mockAuthenticateUserUseCase.execute).toHaveBeenCalledWith({ jwt: validJwtToken }); // 【確認内容】: UseCaseが正常に呼び出されたことを確認 🔴
     expect(mockContext.json).toHaveBeenCalledWith({ success: false, error: 'Internal server error' }, 500); // 【確認内容】: 500ステータスで汎用エラーが返されることを確認 🔴
   });
 
