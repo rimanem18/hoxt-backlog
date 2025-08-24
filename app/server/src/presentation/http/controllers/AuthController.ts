@@ -1,18 +1,21 @@
 /**
  * HTTP認証コントローラー
- * 
+ *
  * POST /api/auth/verify エンドポイントでJWT検証を実行する。
  */
 import type { Context } from 'hono';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import { ValidationError } from '@/shared/errors/ValidationError';
-import { getDefaultAuthValidatorService, type AuthValidatorService } from '../validators/AuthValidatorFactory';
 import { AuthResponseHelper } from '../responses/ResponseService';
+import {
+  type AuthValidatorService,
+  getDefaultAuthValidatorService,
+} from '../validators/AuthValidatorFactory';
 
 /**
  * HTTP認証コントローラークラス
- * 
+ *
  * HTTPリクエストの受信・バリデーションからApplication層への委譲、
  * レスポンス生成までを管理する。
  */
@@ -25,7 +28,7 @@ export class AuthController {
    */
   constructor(
     private readonly authenticateUserUseCase: IAuthenticateUserUseCase,
-    private readonly validatorService: AuthValidatorService = getDefaultAuthValidatorService()
+    private readonly validatorService: AuthValidatorService = getDefaultAuthValidatorService(),
   ) {}
 
   /**
@@ -42,38 +45,45 @@ export class AuthController {
         return AuthResponseHelper.legacyError(
           c,
           httpValidationResult.error ?? 'HTTP validation failed',
-          httpValidationResult.statusCode ?? 400
+          httpValidationResult.statusCode ?? 400,
         );
       }
 
       // リクエストボディをJSONとしてパース
-      let requestBody: any;
+      let requestBody: unknown;
       try {
         requestBody = await c.req.json();
-      } catch (jsonError) {
+      } catch {
         // JSONパースエラーの場合は400エラーを返す
         return AuthResponseHelper.legacyError(c, 'Invalid JSON format', 400);
       }
 
       // JWTトークンのバリデーション（存在、型、長さ制限）
-      const tokenValidationResult = this.validatorService.validateJwtToken(requestBody);
+      const tokenValidationResult = this.validatorService.validateJwtToken(
+        requestBody as any,
+      );
       if (!tokenValidationResult.isValid) {
         return AuthResponseHelper.legacyError(
           c,
           tokenValidationResult.error ?? 'Token validation failed',
-          tokenValidationResult.statusCode ?? 400
+          tokenValidationResult.statusCode ?? 400,
         );
       }
 
       // Application層の認証UseCaseを呼び出し
-      const authResult = await this.authenticateUserUseCase.execute({ jwt: requestBody.token });
+      const authResult = await this.authenticateUserUseCase.execute({
+        jwt: (requestBody as { token: string }).token,
+      });
 
       // 認証成功時のレスポンスを返却
-      return AuthResponseHelper.legacySuccess(c, authResult.user, authResult.isNewUser);
-
+      return AuthResponseHelper.legacySuccess(
+        c,
+        authResult.user,
+        authResult.isNewUser,
+      );
     } catch (error) {
       // エラーハンドリング - 各種エラーを適切なHTTPステータスコードに変換
-      
+
       if (error instanceof AuthenticationError) {
         // JWT検証失敗・期限切れ等の認証エラーは401で返却
         return AuthResponseHelper.legacyError(c, error.message, 401);
