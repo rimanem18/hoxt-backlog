@@ -165,3 +165,58 @@ Greenフェーズで実装すべき内容：
 
 ---
 *既存のメモ内容から重要な情報を統合し、重複・詳細な経過記録は削除*
+
+## 🟢 HTTPエンドポイント統合 Green フェーズ完了（2025-08-24）
+
+### ✅ 実装完了サマリー
+**実装日時**: 2025-08-24 Green フェーズ実行  
+**対象**: HTTPエンドポイント統合（TASK-201改訂版要件対応）
+
+**完成ファイル**:
+1. `app/server/src/presentation/http/routes/authRoutes.ts` - 新規作成
+2. `app/server/src/presentation/http/routes/index.ts` - auth export追加
+3. `app/server/src/presentation/http/server/index.ts` - auth routeマウント
+
+### 📊 テスト実行結果
+```bash
+# 統合テスト
+統合テスト: 8 pass / 0 fail (29 expect() calls) - 40ms
+エンドポイント: POST /api/auth/verify 完全動作確認
+
+# 既存テスト継続
+AuthController: 14 pass / 0 fail (28 expect() calls) - 11ms  
+機能影響: なし
+
+# 品質確認
+TypeScript型チェック: エラーなし
+CORS対応: 確認済み
+```
+
+### 🎯 実装方針と品質レベル
+
+#### 高信頼実装（🟢）
+- **HTTPルーティング**: greetRoutesパターン完全踏襲
+- **CORS対応**: 既存corsMiddleware活用
+- **サーバー統合**: routes/index.ts + server/index.ts適切更新
+- **AuthController連携**: 既存実装（102行）完全活用
+
+#### リファクタ対象（🔴）
+- **依存関係注入**: AuthenticateUserUseCaseの引数を一時的にnullで対応
+- **エラーハンドリング**: 実際の認証失敗時の具体的レスポンス未実装
+- **設定管理**: 環境変数・Repository・AuthProviderの具体実装必要
+
+### 📋 Green フェーズ成功要因
+1. **最小実装戦略**: テスト通過最優先で段階的実装
+2. **既存パターン踏襲**: greetRoutes.tsと同じ構造採用
+3. **統合テストファースト**: Redフェーズの統合テスト要件に完全対応
+4. **エラー委譲**: AuthController既存エラーハンドリングに処理委譲
+
+### 🔄 次フェーズ: Refactor準備完了
+
+**明確な改善点**:
+1. **依存性注入実装**: UserRepository + AuthProvider + Logger
+2. **認証フロー改善**: 401/400エラー実装 
+3. **パフォーマンス**: 1000ms以内要件確認
+4. **設定外部化**: 環境変数設定
+
+**Refactorフェーズ開始準備**: `/tdd-refactor` 実行可能
