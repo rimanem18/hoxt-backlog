@@ -61,7 +61,7 @@ export class AuthController {
 
       // JWTトークンのバリデーション
       const tokenValidationResult = this.validatorService.validateJwtToken(
-        requestBody as any,
+        requestBody as { token?: string },
       );
       if (!tokenValidationResult.isValid) {
         return AuthResponseHelper.legacyError(

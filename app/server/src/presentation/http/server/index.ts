@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import corsMiddleware from '../middleware/corsMiddleware';
-import { greet, health, auth } from '../routes';
+import { auth, greet, health } from '../routes';
 
 /**
  * Hono アプリケーションサーバーを作成する
