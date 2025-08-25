@@ -1,10 +1,8 @@
 /**
  * HTTPリクエスト基本バリデーター
  *
- * 【機能概要】: HTTPメソッド、Content-Type、URLパスの基本的なバリデーションを実行
- * 【分離理由】: AuthControllerから共通的なHTTPバリデーション処理を分離し、再利用性を向上
- * 【設計思想】: 単一責任原則に基づき、HTTPレベルの検証のみを担当
- * 🟢 信頼性レベル: REST APIの標準的なバリデーションパターン
+ * HTTPメソッド、Content-Type、URLパスの基本的なバリデーションを実行。
+ * AuthControllerから共通的なHTTPバリデーション処理を分離し、再利用性を向上。
  */
 
 import type { Context } from 'hono';
@@ -21,16 +19,15 @@ export class HttpMethodValidator implements IValidator<Context> {
   constructor(private readonly allowedMethods: string[]) {}
 
   /**
-   * 【HTTPメソッド検証】: 指定されたメソッドのみを許可
-   * 【エラーレスポンス】: 405 Method Not Allowed
-   * 🟢 信頼性レベル: HTTP仕様に基づく標準的な検証
+   * HTTPメソッド検証実行
    *
-   * @param context - Honoコンテキスト
+   * @param context Honoコンテキスト
    * @returns バリデーション結果
    */
   validate(context: Context): ValidationResult {
     const method = context.req.method;
 
+    // 許可されていないHTTPメソッドは405で拒否
     if (!this.allowedMethods.includes(method)) {
       return {
         isValid: false,
@@ -58,21 +55,20 @@ export class ContentTypeValidator implements IValidator<Context> {
   ) {}
 
   /**
-   * 【Content-Type検証】: application/json等の指定されたContent-Typeを検証
-   * 【エラーレスポンス】: 415 Unsupported Media Type
-   * 🟡 信頼性レベル: JSON API の一般的なバリデーション要件
+   * Content-Type検証実行
    *
-   * @param context - Honoコンテキスト
+   * @param context Honoコンテキスト
    * @returns バリデーション結果
    */
   validate(context: Context): ValidationResult {
     const contentType = context.req.header('content-type');
 
-    // Content-Typeヘッダーが存在しない場合は検証をスキップ
+    // Content-Typeヘッダーが存在しない場合はスキップ
     if (!contentType) {
       return { isValid: true };
     }
 
+    // ストリクトモードでは完全一致、非ストリクトでは部分一致を確認
     const isValid = this.strict
       ? contentType === this.requiredContentType
       : contentType.includes(this.requiredContentType);
@@ -104,17 +100,16 @@ export class UrlPathValidator implements IValidator<Context> {
   ) {}
 
   /**
-   * 【URLパス検証】: 指定されたパスパターンのみを許可
-   * 【エラーレスポンス】: 404 Not Found
-   * 🟡 信頼性レベル: REST APIの一般的なルーティング検証
+   * URLパス検証実行
    *
-   * @param context - Honoコンテキスト
+   * @param context Honoコンテキスト
    * @returns バリデーション結果
    */
   validate(context: Context): ValidationResult {
     const url = new URL(context.req.url);
     const pathname = url.pathname;
 
+    // マッチモードに応じてパスを検証
     const isValid = this.allowedPaths.some((allowedPath) => {
       switch (this.matchMode) {
         case 'exact':
@@ -141,9 +136,9 @@ export class UrlPathValidator implements IValidator<Context> {
 }
 
 /**
- * 【設定定数】: AuthController用のHTTPバリデーション設定
- * 【調整可能性】: 将来的に設定ファイル等から読み込み可能な構造
- * 🟢 信頼性レベル: 既存のAuthControllerの実装に基づく設定値
+ * AuthController用のHTTPバリデーション設定
+ *
+ * 既存のAuthControllerの実装に基づく設定値。
  */
 export const AUTH_HTTP_VALIDATION_CONFIG = {
   /** 許可するHTTPメソッド */

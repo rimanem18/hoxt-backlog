@@ -1,10 +1,8 @@
 /**
  * レスポンス統一サービス
  *
- * 【機能概要】: HTTPレスポンスの形式を統一し、共有スキーマに準拠したレスポンスを生成
- * 【設計方針】: 単一責任原則に基づき、レスポンス生成ロジックを一元管理
- * 【品質向上】: エラーメッセージの一貫性、ログ処理の標準化、型安全性の確保
- * 🟢 信頼性レベル: 共有スキーマに基づく標準的なレスポンス形式
+ * HTTPレスポンスの形式を統一し、共有スキーマに準拠したレスポンスを生成。
+ * エラーメッセージの一貫性、ログ処理の標準化、型安全性を確保。
  */
 
 import type { Context } from 'hono';
@@ -37,20 +35,15 @@ export interface ErrorDetail {
 /**
  * レスポンス統一サービスクラス
  *
- * 【責任範囲】: HTTPレスポンス形式の統一とエラーハンドリングの標準化
- * 【共有スキーマ準拠】: AuthResponse、ErrorResponseスキーマに完全準拠
- * 【ログ管理】: エラーログの適切な出力と管理
+ * HTTPレスポンス形式の統一とエラーハンドリングの標準化。
+ * AuthResponse、ErrorResponseスキーマに完全準拠。
  */
 export class ResponseService {
   /**
    * 認証成功レスポンスの生成
    *
-   * 【共有スキーマ準拠】: AuthResponseスキーマに完全準拠
-   * 【データ構造】: success + data 形式で統一
-   * 🟢 信頼性レベル: 共有スキーマの標準形式に基づく実装
-   *
-   * @param context - Honoコンテキスト
-   * @param data - 認証成功データ
+   * @param context Honoコンテキスト
+   * @param data 認証成功データ
    * @returns HTTPレスポンス
    */
   static createAuthSuccessResponse(
@@ -71,23 +64,17 @@ export class ResponseService {
   /**
    * エラーレスポンスの生成
    *
-   * 【共有スキーマ準拠】: ErrorResponseスキーマに完全準拠
-   * 【エラー分類】: エラー種別に応じた適切なステータスコードとメッセージ
-   * 【ログ出力】: エラーレベルに応じた適切なログ出力
-   * 🟢 信頼性レベル: 統一されたエラーレスポンス形式
-   *
-   * @param context - Honoコンテキスト
-   * @param errorDetail - エラー詳細情報
+   * @param context Honoコンテキスト
+   * @param errorDetail エラー詳細情報
    * @returns HTTPレスポンス
    */
   static createErrorResponse(
     context: Context,
     errorDetail: ErrorDetail,
   ): Response {
-    // 【ログ出力】: エラー情報を適切にログ出力
-    // 🟢 【ログ改善】: エラーレベルに応じた適切なログ出力
+    // エラーレベルに応じてログ出力
     if (errorDetail.statusCode >= 500) {
-      // サーバーエラーの場合は詳細ログを出力
+      // サーバーエラーは詳細ログを出力
       console.error('Server Error:', {
         message: errorDetail.message,
         code: errorDetail.code,
@@ -96,7 +83,7 @@ export class ResponseService {
         stack: errorDetail.originalError?.stack,
       });
     } else {
-      // クライアントエラーの場合は簡潔なログを出力
+      // クライアントエラーは簡潔なログを出力
       console.warn('Client Error:', {
         message: errorDetail.message,
         code: errorDetail.code,
@@ -119,16 +106,13 @@ export class ResponseService {
   }
 
   /**
-   * Errorオブジェクトから ErrorDetail を生成
+   * ErrorオブジェクトからErrorDetailを生成
    *
-   * 【エラー分類】: エラー種別に応じた適切なステータスコードとメッセージを自動生成
-   * 【統一処理】: 全てのエラーを統一的に処理
-   *
-   * @param error - エラーオブジェクト
+   * @param error エラーオブジェクト
    * @returns エラー詳細情報
    */
   static createErrorDetailFromError(error: unknown): ErrorDetail {
-    // 【認証エラー】: JWT検証失敗・期限切れなどの認証エラー
+    // 認証エラーは401ステータスで返却
     if (error instanceof AuthenticationError) {
       return {
         message: error.message,
@@ -138,7 +122,7 @@ export class ResponseService {
       };
     }
 
-    // 【バリデーションエラー】: 入力値検証エラー
+    // バリデーションエラーは400ステータスで返却
     if (error instanceof ValidationError) {
       return {
         message: error.message,
@@ -148,7 +132,7 @@ export class ResponseService {
       };
     }
 
-    // 【汎用エラー】: 外部サービスエラー・予期しないエラー
+    // Error型は500ステータスで返却
     if (error instanceof Error) {
       return {
         message: 'Internal server error',
@@ -158,7 +142,7 @@ export class ResponseService {
       };
     }
 
-    // 【不明エラー】: Error型でない例外オブジェクト
+    // Error型以外の例外は不明エラーとして処理
     return {
       message: 'Unknown error occurred',
       code: 'UNKNOWN_ERROR',
@@ -168,12 +152,9 @@ export class ResponseService {
   }
 
   /**
-   * JSON パースエラーレスポンス
+   * JSONパースエラーレスポンス
    *
-   * 【特化処理】: JSONパースエラーに特化したレスポンス生成
-   * 【標準化】: 一貫したJSONパースエラーメッセージ
-   *
-   * @param context - Honoコンテキスト
+   * @param context Honoコンテキスト
    * @returns HTTPレスポンス
    */
   static createJsonParseErrorResponse(context: Context): Response {
@@ -185,14 +166,11 @@ export class ResponseService {
   }
 
   /**
-   * バリデーションエラーレスポンス（統一用）
+   * バリデーションエラーレスポンス
    *
-   * 【バリデーター連携】: ValidationResultからエラーレスポンスを生成
-   * 【統一処理】: バリデーション結果を統一的にレスポンス化
-   *
-   * @param context - Honoコンテキスト
-   * @param validationError - バリデーションエラー情報
-   * @param defaultStatusCode - デフォルトステータスコード
+   * @param context Honoコンテキスト
+   * @param validationError バリデーションエラー情報
+   * @param defaultStatusCode デフォルトステータスコード
    * @returns HTTPレスポンス
    */
   static createValidationErrorResponse(
@@ -209,8 +187,9 @@ export class ResponseService {
 }
 
 /**
- * 【ヘルパー関数】: AuthController専用のレスポンスヘルパー
- * 【利便性】: AuthControllerから使いやすいインターフェースを提供
+ * AuthController専用のレスポンスヘルパー
+ *
+ * AuthControllerから使いやすいインターフェースを提供。
  */
 export class AuthResponseHelper {
   /**
@@ -279,12 +258,11 @@ export class AuthResponseHelper {
   }
 
   /**
-   * 【テスト互換性】: 既存テストケースとの互換性を維持するための従来形式レスポンス
-   * 【注意】: 将来的には共有スキーマ準拠の形式に移行予定
+   * テスト互換性維持用の従来形式認証成功レスポンス
    *
-   * @param context - Honoコンテキスト
-   * @param user - ユーザー情報
-   * @param isNewUser - 新規ユーザーフラグ
+   * @param context Honoコンテキスト
+   * @param user ユーザー情報
+   * @param isNewUser 新規ユーザーフラグ
    * @returns 従来形式の認証成功レスポンス
    */
   static legacySuccess(
@@ -310,12 +288,11 @@ export class AuthResponseHelper {
   }
 
   /**
-   * 【テスト互換性】: 既存テストケースとの互換性を維持するための従来形式エラーレスポンス
-   * 【注意】: 将来的には共有スキーマ準拠の形式に移行予定
+   * テスト互換性維持用の従来形式エラーレスポンス
    *
-   * @param context - Honoコンテキスト
-   * @param message - エラーメッセージ
-   * @param statusCode - HTTPステータスコード
+   * @param context Honoコンテキスト
+   * @param message エラーメッセージ
+   * @param statusCode HTTPステータスコード
    * @returns 従来形式のエラーレスポンス
    */
   static legacyError(

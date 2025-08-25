@@ -1,10 +1,9 @@
 /**
  * AuthController用バリデーターファクトリー
  *
- * 【機能概要】: AuthControllerで使用するバリデーション処理を構築するファクトリー
- * 【責任分離】: AuthControllerからバリデーション構築ロジックを分離
- * 【再利用性】: 統一されたバリデーション構築パターンを提供
- * 🟢 信頼性レベル: 既存のAuthController実装に基づく標準化
+ * AuthControllerで使用するバリデーション処理を構築するファクトリー。
+ * AuthControllerからバリデーション構築ロジックを分離。
+ * 統一されたバリデーション構築パターンを提供。
  */
 
 import type { Context } from 'hono';

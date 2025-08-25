@@ -1,10 +1,9 @@
 /**
  * JWTトークンバリデーター
  *
- * 【機能概要】: JWTトークンの形式・存在・長さ制限等の基本的なバリデーションを実行
- * 【分離理由】: AuthControllerからトークン検証処理を分離し、再利用性と保守性を向上
- * 【責任範囲】: JWT形式の基本検証のみ。実際のJWT署名検証はApplication層で実行
- * 🟢 信頼性レベル: JWT仕様とAPI仕様に基づく標準的なバリデーション
+ * JWTトークンの形式・存在・長さ制限等の基本的なバリデーションを実行。
+ * AuthControllerからトークン検証処理を分離し、再利用性と保守性を向上。
+ * JWT形式の基本検証のみ。実際のJWT署名検証はApplication層で実行。
  */
 
 import type { IValidator, ValidationResult } from './interfaces/IValidator';

@@ -2,7 +2,13 @@
  * HTTP認証コントローラー
  *
  * JWT検証とユーザー認証処理を提供するHTTPエンドポイント実装。
- * Hono Contextからのリクエスト処理とJSON応答を行う。
+ * Hono Contextからのリクエスト処理とレスポンス生成を行う。
+ *
+ * @example
+ * ```typescript
+ * const controller = new AuthController(authenticateUseCase);
+ * const response = await controller.verifyToken(context);
+ * ```
  */
 import type { Context } from 'hono';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
@@ -17,7 +23,7 @@ import {
 /**
  * HTTP認証コントローラークラス
  *
- * HTTPリクエストのバリデーションからApplication層への委譲、
+ * HTTPリクエストのバリデーション、Application層への委譲、
  * レスポンス生成までを管理する。
  */
 export class AuthController {
@@ -40,7 +46,7 @@ export class AuthController {
    */
   async verifyToken(c: Context): Promise<Response> {
     try {
-      // HTTPリクエストの基本バリデーション
+      // HTTPリクエストの基本バリデーション実行
       const httpValidationResult = this.validatorService.validateHttpRequest(c);
       if (!httpValidationResult.isValid) {
         return AuthResponseHelper.legacyError(
@@ -50,16 +56,16 @@ export class AuthController {
         );
       }
 
-      // リクエストボディをJSONとしてパース
+      // リクエストボディのJSONパース
       let requestBody: unknown;
       try {
         requestBody = await c.req.json();
       } catch {
-        // JSONパースエラーは400エラー
+        // JSONパース失敗時は400エラーを返却
         return AuthResponseHelper.legacyError(c, 'Invalid JSON format', 400);
       }
 
-      // JWTトークンのバリデーション
+      // JWTトークンの構造バリデーション
       const tokenValidationResult = this.validatorService.validateJwtToken(
         requestBody as { token?: string },
       );
@@ -71,32 +77,32 @@ export class AuthController {
         );
       }
 
-      // Application層への委譲
+      // Application層のUseCaseへ処理委譲
       const authResult = await this.authenticateUserUseCase.execute({
         jwt: (requestBody as { token: string }).token,
       });
 
-      // 認証成功レスポンス
+      // 認証成功時のレスポンス生成
       return AuthResponseHelper.legacySuccess(
         c,
         authResult.user,
         authResult.isNewUser,
       );
     } catch (error) {
-      // エラーハンドリング
+      // エラー種別に応じたレスポンス生成
 
       if (error instanceof AuthenticationError) {
-        // 認証エラーは401で返却
+        // 認証エラーは401ステータスで返却
         return AuthResponseHelper.legacyError(c, error.message, 401);
       }
 
       if (error instanceof ValidationError) {
-        // バリデーションエラーは400で返却
+        // バリデーションエラーは400ステータスで返却
         return AuthResponseHelper.legacyError(c, error.message, 400);
       }
 
-      // 予期しないエラーの処理
-      console.error('AuthController verifyToken error:', error);
+      // 予期しないエラーは500ステータスで返却
+      console.error('Unexpected error in AuthController:', error);
       return AuthResponseHelper.legacyError(c, 'Internal server error', 500);
     }
   }
