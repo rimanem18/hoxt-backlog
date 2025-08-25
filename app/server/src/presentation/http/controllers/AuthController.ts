@@ -1,7 +1,8 @@
 /**
  * HTTP認証コントローラー
  *
- * POST /api/auth/verify エンドポイントでJWT検証を実行する。
+ * JWT検証とユーザー認証処理を提供するHTTPエンドポイント実装。
+ * Hono Contextからのリクエスト処理とJSON応答を行う。
  */
 import type { Context } from 'hono';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
@@ -16,7 +17,7 @@ import {
 /**
  * HTTP認証コントローラークラス
  *
- * HTTPリクエストの受信・バリデーションからApplication層への委譲、
+ * HTTPリクエストのバリデーションからApplication層への委譲、
  * レスポンス生成までを管理する。
  */
 export class AuthController {
@@ -34,12 +35,12 @@ export class AuthController {
   /**
    * JWTトークン検証エンドポイント
    *
-   * @param c HonoのContext（リクエスト・レスポンス情報）
+   * @param c HonoのContext
    * @returns JSON形式のレスポンス
    */
   async verifyToken(c: Context): Promise<Response> {
     try {
-      // HTTPリクエストの基本バリデーション（メソッド、Content-Type、URLパス）
+      // HTTPリクエストの基本バリデーション
       const httpValidationResult = this.validatorService.validateHttpRequest(c);
       if (!httpValidationResult.isValid) {
         return AuthResponseHelper.legacyError(
@@ -54,11 +55,11 @@ export class AuthController {
       try {
         requestBody = await c.req.json();
       } catch {
-        // JSONパースエラーの場合は400エラーを返す
+        // JSONパースエラーは400エラー
         return AuthResponseHelper.legacyError(c, 'Invalid JSON format', 400);
       }
 
-      // JWTトークンのバリデーション（存在、型、長さ制限）
+      // JWTトークンのバリデーション
       const tokenValidationResult = this.validatorService.validateJwtToken(
         requestBody as any,
       );
@@ -70,31 +71,31 @@ export class AuthController {
         );
       }
 
-      // Application層の認証UseCaseを呼び出し
+      // Application層への委譲
       const authResult = await this.authenticateUserUseCase.execute({
         jwt: (requestBody as { token: string }).token,
       });
 
-      // 認証成功時のレスポンスを返却
+      // 認証成功レスポンス
       return AuthResponseHelper.legacySuccess(
         c,
         authResult.user,
         authResult.isNewUser,
       );
     } catch (error) {
-      // エラーハンドリング - 各種エラーを適切なHTTPステータスコードに変換
+      // エラーハンドリング
 
       if (error instanceof AuthenticationError) {
-        // JWT検証失敗・期限切れ等の認証エラーは401で返却
+        // 認証エラーは401で返却
         return AuthResponseHelper.legacyError(c, error.message, 401);
       }
 
       if (error instanceof ValidationError) {
-        // 入力値検証エラーは400で返却
+        // バリデーションエラーは400で返却
         return AuthResponseHelper.legacyError(c, error.message, 400);
       }
 
-      // 外部サービスエラー・予期しないエラーの処理
+      // 予期しないエラーの処理
       console.error('AuthController verifyToken error:', error);
       return AuthResponseHelper.legacyError(c, 'Internal server error', 500);
     }

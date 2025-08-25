@@ -75,7 +75,7 @@ describe('AuthController', () => {
   });
 
   test('有効なJWTトークンが提供された場合、認証に成功する', async () => {
-    // Given: 有効なJWTトークンと認証成功条件
+    // Given: 有効なJWTトークン
     const validJwtToken = 'valid.jwt.token';
     const requestBody = { token: validJwtToken };
     const createExpectedUser = () =>
