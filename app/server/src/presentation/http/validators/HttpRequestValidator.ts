@@ -1,8 +1,11 @@
 /**
- * HTTPリクエスト基本バリデーター
+ * HTTPリクエストの基本バリデーション（メソッド、Content-Type、URLパス）
  *
- * HTTPメソッド、Content-Type、URLパスの基本的なバリデーションを実行。
- * AuthControllerから共通的なHTTPバリデーション処理を分離し、再利用性を向上。
+ * @example
+ * ```typescript
+ * const validator = new HttpMethodValidator(['POST']);
+ * const result = validator.validate(context);
+ * ```
  */
 
 import type { Context } from 'hono';
@@ -10,16 +13,15 @@ import type { IValidator, ValidationResult } from './interfaces/IValidator';
 
 /**
  * HTTPメソッドバリデーター
- * 指定されたHTTPメソッドのみを許可
  */
 export class HttpMethodValidator implements IValidator<Context> {
   /**
-   * @param allowedMethods - 許可するHTTPメソッドの配列
+   * @param allowedMethods 許可するHTTPメソッドの配列
    */
   constructor(private readonly allowedMethods: string[]) {}
 
   /**
-   * HTTPメソッド検証実行
+   * HTTPメソッド検証
    *
    * @param context Honoコンテキスト
    * @returns バリデーション結果
@@ -42,12 +44,11 @@ export class HttpMethodValidator implements IValidator<Context> {
 
 /**
  * Content-Typeバリデーター
- * 指定されたContent-Typeのみを許可
  */
 export class ContentTypeValidator implements IValidator<Context> {
   /**
-   * @param requiredContentType - 必須のContent-Type
-   * @param strict - 厳密モード（部分一致を許可するかどうか）
+   * @param requiredContentType 必須のContent-Type
+   * @param strict 厳密モード（部分一致を許可するかどうか）
    */
   constructor(
     private readonly requiredContentType: string,
@@ -55,7 +56,7 @@ export class ContentTypeValidator implements IValidator<Context> {
   ) {}
 
   /**
-   * Content-Type検証実行
+   * Content-Type検証
    *
    * @param context Honoコンテキスト
    * @returns バリデーション結果
@@ -87,12 +88,11 @@ export class ContentTypeValidator implements IValidator<Context> {
 
 /**
  * URLパスバリデーター
- * 指定されたパスパターンのみを許可
  */
 export class UrlPathValidator implements IValidator<Context> {
   /**
-   * @param allowedPaths - 許可するパスの配列
-   * @param matchMode - マッチモード（'exact' | 'endsWith' | 'regex'）
+   * @param allowedPaths 許可するパスの配列
+   * @param matchMode マッチモード（'exact' | 'endsWith' | 'regex'）
    */
   constructor(
     private readonly allowedPaths: string[],
@@ -100,7 +100,7 @@ export class UrlPathValidator implements IValidator<Context> {
   ) {}
 
   /**
-   * URLパス検証実行
+   * URLパス検証
    *
    * @param context Honoコンテキスト
    * @returns バリデーション結果
@@ -136,9 +136,7 @@ export class UrlPathValidator implements IValidator<Context> {
 }
 
 /**
- * AuthController用のHTTPバリデーション設定
- *
- * 既存のAuthControllerの実装に基づく設定値。
+ * AuthController用HTTPバリデーション設定
  */
 export const AUTH_HTTP_VALIDATION_CONFIG = {
   /** 許可するHTTPメソッド */

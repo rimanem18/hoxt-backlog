@@ -1,9 +1,11 @@
 /**
- * AuthController用バリデーターファクトリー
+ * AuthController用バリデーションファクトリー
  *
- * AuthControllerで使用するバリデーション処理を構築するファクトリー。
- * AuthControllerからバリデーション構築ロジックを分離。
- * 統一されたバリデーション構築パターンを提供。
+ * @example
+ * ```typescript
+ * const validator = getDefaultAuthValidatorService();
+ * const result = validator.validateHttpRequest(context);
+ * ```
  */
 
 import type { Context } from 'hono';
@@ -26,12 +28,6 @@ import {
 
 /**
  * AuthController用HTTPバリデーター作成
- * HTTPメソッド、Content-Type、URLパスの検証を組み合わせ
- *
- * 【構成要素】:
- * - POST メソッドのみ許可
- * - application/json Content-Type必須
- * - /api/auth/verify パスのみ許可
  *
  * @returns HTTPバリデーター
  */
@@ -56,13 +52,6 @@ export function createAuthHttpValidator(): ICompositeValidator<Context> {
 
 /**
  * AuthController用JWTトークンバリデーター作成
- * トークンの存在、型、長さ制限の検証を組み合わせ
- *
- * 【構成要素】:
- * - トークンフィールド存在確認
- * - トークン型検証（string型）
- * - トークン空文字チェック
- * - トークン長制限チェック
  *
  * @returns JWTトークンバリデーター
  */
@@ -76,25 +65,18 @@ export function createAuthTokenValidator(): ICompositeValidator<JwtTokenRequest>
 }
 
 /**
- * AuthController用統合バリデーターファクトリー
- * HTTPバリデーターとトークンバリデーターの統合クラス
- *
- * 【責任範囲】: AuthControllerで必要な全バリデーション処理を統合
- * 【使用パターン】: AuthControllerから直接利用される単一のエントリーポイント
+ * AuthController用統合バリデーターサービス
  */
 export class AuthValidatorService {
-  /** HTTPレベルのバリデーター */
   private readonly httpValidator: ICompositeValidator<Context>;
 
-  /** JWTトークンレベルのバリデーター */
   private readonly tokenValidator: ICompositeValidator<JwtTokenRequest>;
 
   /**
    * コンストラクタ
-   * デフォルトでは標準的なAuthController用バリデーターを設定
    *
-   * @param httpValidator - HTTPバリデーター（省略時はデフォルト）
-   * @param tokenValidator - トークンバリデーター（省略時はデフォルト）
+   * @param httpValidator HTTPバリデーター（省略時はデフォルト）
+   * @param tokenValidator トークンバリデーター（省略時はデフォルト）
    */
   constructor(
     httpValidator?: ICompositeValidator<Context>,
@@ -105,10 +87,9 @@ export class AuthValidatorService {
   }
 
   /**
-   * 【HTTPバリデーション実行】: HTTPレベルの基本検証
-   * 【検証項目】: メソッド、Content-Type、URLパス
+   * HTTPリクエストの基本検証
    *
-   * @param context - Honoコンテキスト
+   * @param context Honoコンテキスト
    * @returns バリデーション結果
    */
   validateHttpRequest(context: Context) {
@@ -116,10 +97,9 @@ export class AuthValidatorService {
   }
 
   /**
-   * 【トークンバリデーション実行】: JWTトークンの基本検証
-   * 【検証項目】: 存在、型、長さ制限
+   * JWTトークンの基本検証
    *
-   * @param requestBody - リクエストボディ
+   * @param requestBody リクエストボディ
    * @returns バリデーション結果
    */
   validateJwtToken(requestBody: JwtTokenRequest) {
@@ -127,21 +107,20 @@ export class AuthValidatorService {
   }
 
   /**
-   * 【統合バリデーション実行】: HTTP + トークンの統合検証
-   * 【実行順序】: HTTP検証 → トークン検証（Fail-Fast）
+   * HTTPとトークンの統合検証（Fail-Fast）
    *
-   * @param context - Honoコンテキスト
-   * @param requestBody - リクエストボディ
-   * @returns 最初に失敗したバリデーション結果、または成功結果
+   * @param context Honoコンテキスト
+   * @param requestBody リクエストボディ
+   * @returns バリデーション結果
    */
   async validateRequest(context: Context, requestBody: JwtTokenRequest) {
-    // 【HTTP検証】: 基本的なHTTPリクエスト検証
+    // HTTPリクエストの基本検証
     const httpResult = this.validateHttpRequest(context);
     if (!httpResult.isValid) {
       return httpResult;
     }
 
-    // 【トークン検証】: JWTトークンの基本検証
+    // JWTトークンの基本検証
     const tokenResult = this.validateJwtToken(requestBody);
     if (!tokenResult.isValid) {
       return tokenResult;
@@ -152,15 +131,12 @@ export class AuthValidatorService {
 }
 
 /**
- * 【シングルトンファクトリー】: AuthValidatorServiceのデフォルトインスタンス
- * 【パフォーマンス】: バリデーターインスタンスの再利用によるメモリ効率向上
- * 🟢 信頼性レベル: 標準的なファクトリーパターンの実装
+ * デフォルトAuthValidatorServiceインスタンス（シングルトン）
  */
 let defaultAuthValidatorService: AuthValidatorService | null = null;
 
 /**
- * デフォルトのAuthValidatorServiceインスタンス取得
- * シングルトンパターンでインスタンスを再利用
+ * デフォルトAuthValidatorServiceインスタンスを取得
  *
  * @returns AuthValidatorServiceインスタンス
  */
@@ -172,8 +148,7 @@ export function getDefaultAuthValidatorService(): AuthValidatorService {
 }
 
 /**
- * 【テスト用】: シングルトンインスタンスのリセット
- * テスト時にクリーンな状態でバリデーターを初期化
+ * シングルトンインスタンスをリセット（テスト用）
  */
 export function resetDefaultAuthValidatorService(): void {
   defaultAuthValidatorService = null;

@@ -1,15 +1,18 @@
 /**
- * JWTトークンバリデーター
+ * JWTトークンの基本バリデーション（存在、形式、長さ制限）
+ * 署名検証はApplication層で実行。
  *
- * JWTトークンの形式・存在・長さ制限等の基本的なバリデーションを実行。
- * AuthControllerからトークン検証処理を分離し、再利用性と保守性を向上。
- * JWT形式の基本検証のみ。実際のJWT署名検証はApplication層で実行。
+ * @example
+ * ```typescript
+ * const validator = new TokenRequiredValidator();
+ * const result = validator.validate({ token: 'jwt.token.here' });
+ * ```
  */
 
 import type { IValidator, ValidationResult } from './interfaces/IValidator';
 
 /**
- * JWTトークンバリデーション用のリクエストボディ型
+ * JWTトークンリクエストボディ型
  */
 export interface JwtTokenRequest {
   token?: unknown;
@@ -18,15 +21,12 @@ export interface JwtTokenRequest {
 
 /**
  * JWTトークン存在バリデーター
- * トークンフィールドの存在を検証
  */
 export class TokenRequiredValidator implements IValidator<JwtTokenRequest> {
   /**
-   * 【トークン存在確認】: 必須フィールドの検証
-   * 【エラーレスポンス】: 400 Bad Request
-   * 🟢 信頼性レベル: API仕様として明確に定義された必須フィールドチェック
+   * トークンフィールドの存在確認
    *
-   * @param requestBody - リクエストボディ
+   * @param requestBody リクエストボディ
    * @returns バリデーション結果
    */
   validate(requestBody: JwtTokenRequest): ValidationResult {
@@ -44,15 +44,12 @@ export class TokenRequiredValidator implements IValidator<JwtTokenRequest> {
 
 /**
  * JWTトークン空文字バリデーター
- * トークンが空文字でないことを検証
  */
 export class TokenNotEmptyValidator implements IValidator<JwtTokenRequest> {
   /**
-   * 【空文字トークンチェック】: 空文字列トークンの拒否
-   * 【エラーレスポンス】: 400 Bad Request
-   * 🟡 信頼性レベル: 一般的なバリデーション要件として推測
+   * 空文字トークンの検証
    *
-   * @param requestBody - リクエストボディ
+   * @param requestBody リクエストボディ
    * @returns バリデーション結果
    */
   validate(requestBody: JwtTokenRequest): ValidationResult {
@@ -70,20 +67,17 @@ export class TokenNotEmptyValidator implements IValidator<JwtTokenRequest> {
 
 /**
  * JWTトークン長制限バリデーター
- * トークンの最大長を検証
  */
 export class TokenLengthValidator implements IValidator<JwtTokenRequest> {
   /**
-   * @param maxLength - トークンの最大許可長
+   * @param maxLength トークンの最大許可長
    */
   constructor(private readonly maxLength: number) {}
 
   /**
-   * 【トークン長制限チェック】: 異常に長いトークンの拒否
-   * 【エラーレスポンス】: 400 Bad Request
-   * 🔴 信頼性レベル: 具体的な制限値が要件定義にないため推測値を使用
+   * トークン長制限の検証
    *
-   * @param requestBody - リクエストボディ
+   * @param requestBody リクエストボディ
    * @returns バリデーション結果
    */
   validate(requestBody: JwtTokenRequest): ValidationResult {
@@ -103,15 +97,12 @@ export class TokenLengthValidator implements IValidator<JwtTokenRequest> {
 
 /**
  * JWTトークン型バリデーター
- * トークンが文字列型であることを検証
  */
 export class TokenTypeValidator implements IValidator<JwtTokenRequest> {
   /**
-   * 【トークン型検証】: トークンが文字列型であることを確認
-   * 【エラーレスポンス】: 400 Bad Request
-   * 🟢 信頼性レベル: JWT仕様に基づく基本的な型検証
+   * トークンの型検証（string型）
    *
-   * @param requestBody - リクエストボディ
+   * @param requestBody リクエストボディ
    * @returns バリデーション結果
    */
   validate(requestBody: JwtTokenRequest): ValidationResult {
@@ -130,12 +121,10 @@ export class TokenTypeValidator implements IValidator<JwtTokenRequest> {
 }
 
 /**
- * 【設定定数】: JWTトークンバリデーション設定
- * 【調整可能性】: 将来的に環境変数や設定ファイルから読み込み可能
- * 🔴 信頼性レベル: 現在の実装に基づく推測値（要件明確化が必要）
+ * JWTトークンバリデーション設定
  */
 export const JWT_TOKEN_VALIDATION_CONFIG = {
-  /** トークン最大長（文字数） */
+  /** 最大トークン長 */
   MAX_TOKEN_LENGTH: 5000,
 
   /** トークン最小長（空文字以外） */

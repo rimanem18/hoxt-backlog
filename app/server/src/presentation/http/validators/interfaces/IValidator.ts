@@ -1,8 +1,5 @@
 /**
  * バリデーター共通インターフェース
- *
- * HTTPリクエストのバリデーションを統一的に処理するためのインターフェース。
- * 各種バリデーションロジックを分離し、再利用可能性と保守性を向上。
  */
 
 import type { Context } from 'hono';
@@ -11,39 +8,35 @@ import type { Context } from 'hono';
  * バリデーション結果
  */
 export interface ValidationResult {
-  /** バリデーション成功フラグ */
   isValid: boolean;
-  /** エラーメッセージ（バリデーション失敗時） */
   error?: string;
-  /** HTTPステータスコード（エラー時） */
   statusCode?: number;
 }
 
 /**
- * バリデーター共通インターフェース
+ * バリデーターインターフェース
  *
- * @template T - バリデーション対象のデータ型
+ * @template T バリデーション対象データ型
  */
 export interface IValidator<T = unknown> {
   /**
    * バリデーション実行
    *
-   * @param data - バリデーション対象のデータ
-   * @param context - Honoコンテキスト（必要に応じて使用）
+   * @param data バリデーション対象データ
+   * @param context Honoコンテキスト（オプション）
    * @returns バリデーション結果
    */
   validate(data: T, context?: Context): ValidationResult;
 }
 
 /**
- * 複合バリデーター用インターフェース
- * 複数のバリデーションルールを組み合わせて実行
+ * 複合バリデーターインターフェース
  */
 export interface ICompositeValidator<T = unknown> extends IValidator<T> {
   /**
    * バリデーターを追加
    *
-   * @param validator - 追加するバリデーター
+   * @param validator 追加するバリデーター
    * @returns 自身のインスタンス（チェーン可能）
    */
   addValidator(validator: IValidator<T>): ICompositeValidator<T>;
