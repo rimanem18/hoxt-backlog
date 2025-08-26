@@ -52,8 +52,8 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
           await next();
           return;
         } else {
-          // 【認証必須】: トークン不足エラー
-          throw new AuthError('TOKEN_MISSING');
+          // 【認証必須】: トークン不足エラー（統一エラーコード使用）
+          throw new AuthError('AUTHENTICATION_REQUIRED');
         }
       }
 
@@ -63,7 +63,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       // 【ユーザーID抽出】: JWTのsub（subject）フィールドからuserIDを取得
       const userId = payload.sub;
       if (!userId) {
-        throw new AuthError('TOKEN_INVALID', 401, 'JWT にユーザーID が含まれていません');
+        throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'JWT にユーザーID が含まれていません');
       }
 
       // 【Context設定】: 認証成功時のユーザー情報をContextに保存
@@ -86,20 +86,19 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
         throw error;
       }
 
-      // 【JWT検証エラー】: joseライブラリからのエラーを分類
+      // 【JWT検証エラー】: すべて統一エラーコードに変換
       if (error instanceof Error) {
-        // 【エラー種別判定】: エラーメッセージから適切なAuthErrorに変換
-        if (error.message.includes('TOKEN_EXPIRED')) {
-          throw new AuthError('TOKEN_EXPIRED');
-        }
-        if (error.message.includes('TOKEN_INVALID')) {
-          throw new AuthError('TOKEN_INVALID');
-        }
+        // 【統一エラーハンドリング】: すべてのJWT関連エラーをAUTHENTICATION_REQUIREDに統一
+        console.warn('[AUTH] JWT検証エラー:', {
+          message: error.message,
+          timestamp: new Date().toISOString()
+        });
+        throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'ログインが必要です');
       }
 
-      // 【予期外エラー】: 未知のエラーは無効トークンとして処理
+      // 【予期外エラー】: 未知のエラーも統一エラーコードで処理
       console.error('[AUTH] Unexpected authentication error:', error);
-      throw new AuthError('TOKEN_INVALID', 401, 'トークン検証中に予期しないエラーが発生しました');
+      throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'ログインが必要です');
     }
   });
 };

@@ -16,7 +16,7 @@ import {
 } from 'bun:test';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { authMiddleware } from '../../middleware';
+import { authMiddleware, requireAuth, generateTestJWT } from '../../middleware';
 import userRoutes from '../userRoutes';
 
 describe('GET /api/user/profile 統合テスト', () => {

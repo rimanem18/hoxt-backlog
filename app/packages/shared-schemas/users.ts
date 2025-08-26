@@ -89,13 +89,15 @@ export const userResponseSchema = userBaseSchema.pick({
 export type UserResponse = z.infer<typeof userResponseSchema>;
 
 /**
- * API: ユーザープロフィール取得レスポンス
+ * API: ユーザープロフィール取得レスポンス（設計仕様準拠）
  * GET /api/user/profile エンドポイントのレスポンス形式
+ * api-endpoints.md準拠でupdatedAtフィールドを含む
  */
 export const getUserProfileResponseSchema = z.object({
   success: z.literal(true),
-  data: userBaseSchema.omit({ updatedAt: true }).extend({
+  data: userBaseSchema.extend({
     createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(), // 【設計仕様準拠】: api-endpoints.md必須フィールド
     lastLoginAt: z.string().datetime().nullable(),
   }),
 });

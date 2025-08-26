@@ -1,31 +1,26 @@
 /**
- * 【機能概要】: 認証関連のエラークラス定義
- * 【実装方針】: 統一されたエラーコードとHTTPステータスの管理
- * 【テスト対応】: 認証エラーの種別をテストで検証可能
- * 🟢 信頼性レベル: RFC準拠のエラーハンドリングパターン
+ * 【機能概要】: 認証関連のエラークラス定義（設計仕様準拠）
+ * 【実装方針】: api-endpoints.md準拠の統一エラーコード（AUTHENTICATION_REQUIRED）
+ * 【テスト対応】: 認証エラーの統一レスポンスをテストで検証可能
+ * 🟢 信頼性レベル: api-endpoints.md設計仕様準拠のエラーハンドリング
  */
 
 export class AuthError extends Error {
   /**
-   * 認証エラーのコンストラクタ
-   * @param code エラー種別コード
+   * 認証エラーのコンストラクタ（統一エラーコード仕様）
+   * @param code 統一エラーコード（AUTHENTICATION_REQUIRED）
    * @param status HTTPステータスコード（デフォルト: 401）
    * @param message カスタムエラーメッセージ（オプション）
    */
   constructor(
-    public readonly code: 'TOKEN_MISSING' | 'TOKEN_INVALID' | 'TOKEN_EXPIRED' | 'USER_BANNED',
+    public readonly code: 'AUTHENTICATION_REQUIRED',
     public readonly status: number = 401,
     message?: string
   ) {
-    // 【エラーメッセージ生成】: コードに基づいたデフォルトメッセージ
-    const defaultMessages = {
-      TOKEN_MISSING: '認証トークンが必要です',
-      TOKEN_INVALID: '認証トークンが無効です', 
-      TOKEN_EXPIRED: '認証トークンの有効期限が切れています',
-      USER_BANNED: 'アカウントが無効化されています'
-    };
+    // 【統一メッセージ】: api-endpoints.md準拠の統一エラーメッセージ
+    const defaultMessage = 'ログインが必要です';
 
-    super(message ?? defaultMessages[code]);
+    super(message ?? defaultMessage);
     this.name = 'AuthError';
   }
 

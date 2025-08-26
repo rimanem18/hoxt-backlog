@@ -17,4 +17,7 @@ export {
 export { AuthError } from './errors/AuthError';
 
 // 【JWT検証】: JWKS検証機能の提供
-export { verifyJWT } from './auth/jwks';
+export { verifyJWT, generateTestJWT } from './auth/jwks';
+
+// 【エラーハンドリング】: 統一エラーレスポンス変換
+export { errorHandlerMiddleware } from './errors/ErrorHandlerMiddleware';

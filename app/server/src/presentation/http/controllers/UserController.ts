@@ -64,7 +64,7 @@ export class UserController {
       const input: GetUserProfileUseCaseInput = { userId };
       const result = await this.getUserProfileUseCase.execute(input);
 
-      // ユーザー情報を統一レスポンス形式に変換
+      // ユーザー情報を統一レスポンス形式に変換（設計仕様準拠）
       const responseData: GetUserProfileResponse = {
         success: true,
         data: {
@@ -75,6 +75,7 @@ export class UserController {
           name: result.user.name,
           avatarUrl: result.user.avatarUrl,
           createdAt: result.user.createdAt.toISOString(),
+          updatedAt: result.user.updatedAt.toISOString(), // 【設計仕様準拠】: api-endpoints.md必須フィールド復活
           lastLoginAt: result.user.lastLoginAt?.toISOString() || null,
         },
       };
