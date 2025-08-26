@@ -89,6 +89,20 @@ export const userResponseSchema = userBaseSchema.pick({
 export type UserResponse = z.infer<typeof userResponseSchema>;
 
 /**
+ * API: ユーザープロフィール取得レスポンス
+ * GET /api/user/profile エンドポイントのレスポンス形式
+ */
+export const getUserProfileResponseSchema = z.object({
+  success: z.literal(true),
+  data: userBaseSchema.omit({ updatedAt: true }).extend({
+    createdAt: z.string().datetime(),
+    lastLoginAt: z.string().datetime().nullable(),
+  }),
+});
+
+export type GetUserProfileResponse = z.infer<typeof getUserProfileResponseSchema>;
+
+/**
  * API: 認証レスポンス
  * 認証成功時のレスポンス形式
  */
