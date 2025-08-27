@@ -1,9 +1,11 @@
 import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
 import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
+import { HealthCheckUseCase } from '@/application/usecases/HealthCheckUseCase';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { AuthenticationDomainService } from '@/domain/services/AuthenticationDomainService';
 import { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
 import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
+import { HealthCheckService } from '@/infrastructure/config/HealthCheckService';
 import type { Logger } from '@/shared/logging/Logger';
 
 /**
@@ -19,7 +21,10 @@ export class AuthDIContainer {
     null;
   private static getUserProfileUseCaseInstance: GetUserProfileUseCase | null =
     null;
+  private static healthCheckUseCaseInstance: HealthCheckUseCase | null = null;
   private static userRepositoryInstance: PostgreSQLUserRepository | null = null;
+  private static healthCheckServiceInstance: HealthCheckService | null = null;
+  private static authProviderInstance: SupabaseAuthProvider | null = null;
   private static loggerInstance: Logger | null = null;
 
   /**
@@ -36,7 +41,7 @@ export class AuthDIContainer {
       const userRepository = AuthDIContainer.getUserRepository();
 
       // 【JWT検証・外部認証サービス連携】: Supabaseとの通信処理
-      const authProvider = new SupabaseAuthProvider();
+      const authProvider = AuthDIContainer.getAuthProvider();
 
       // 【認証ドメインロジック実行】: ビジネスルール適用
       const authDomainService = new AuthenticationDomainService(userRepository);
@@ -84,6 +89,28 @@ export class AuthDIContainer {
   }
 
   /**
+   * 【機能概要】: HealthCheckUseCaseのインスタンスを返す
+   * 【改善内容】: システム監視機能のDI実装
+   * 【設計方針】: データベース・Supabase接続確認のヘルスチェック機能
+   * 【パフォーマンス】: シングルトン管理によりリクエストごとのインスタンス生成を回避
+   * 【保守性】: 依存関係をDIコンテナで一元管理
+   * 🟢 信頼性レベル: 既存のDIパターンを踏襲した安全な実装
+   */
+  static getHealthCheckUseCase(): HealthCheckUseCase {
+    if (!AuthDIContainer.healthCheckUseCaseInstance) {
+      // 【ヘルスチェックサービス】: インフラ層の依存関係確認機能
+      const healthCheckService = AuthDIContainer.getHealthCheckService();
+
+      // 【ヘルスチェック依存関係注入】: 必要なサービスを適切に注入
+      AuthDIContainer.healthCheckUseCaseInstance = new HealthCheckUseCase(
+        healthCheckService,
+      );
+    }
+
+    return AuthDIContainer.healthCheckUseCaseInstance;
+  }
+
+  /**
    * 【機能概要】: PostgreSQLUserRepositoryの共有インスタンスを返す
    * 【改善内容】: 複数UseCaseでの重複インスタンス生成を防止
    * 【設計方針】: データベース接続プールを効率的に活用
@@ -98,6 +125,45 @@ export class AuthDIContainer {
     }
 
     return AuthDIContainer.userRepositoryInstance;
+  }
+
+  /**
+   * 【機能概要】: HealthCheckServiceの共有インスタンスを返す
+   * 【改善内容】: ヘルスチェック機能の依存関係を一元管理
+   * 【設計方針】: データベース・Supabase接続確認サービス
+   * 【パフォーマンス】: シングルトン管理でリソース効率化
+   * 【保守性】: ヘルスチェック設定を一箇所で管理
+   * 🟢 信頼性レベル: 既存のDIパターンに基づく安定した実装
+   */
+  private static getHealthCheckService(): HealthCheckService {
+    if (!AuthDIContainer.healthCheckServiceInstance) {
+      // 【Supabase認証プロバイダー】: ヘルスチェック用の共有インスタンス
+      const authProvider = AuthDIContainer.getAuthProvider();
+
+      // 【ヘルスチェックサービス】: データベース・Supabase接続確認
+      AuthDIContainer.healthCheckServiceInstance = new HealthCheckService(
+        authProvider,
+      );
+    }
+
+    return AuthDIContainer.healthCheckServiceInstance;
+  }
+
+  /**
+   * 【機能概要】: SupabaseAuthProviderの共有インスタンスを返す
+   * 【改善内容】: 認証・ヘルスチェックで共有するAuthProvider
+   * 【設計方針】: JWT検証とSupabase接続確認の統一インスタンス
+   * 【パフォーマンス】: 重複インスタンス生成を防止
+   * 【保守性】: Supabase設定を一箇所で管理
+   * 🟢 信頼性レベル: 既存のSupabaseAuthProvider実装をそのまま活用
+   */
+  private static getAuthProvider(): SupabaseAuthProvider {
+    if (!AuthDIContainer.authProviderInstance) {
+      // 【外部認証サービス連携】: Supabase JWT検証・接続確認
+      AuthDIContainer.authProviderInstance = new SupabaseAuthProvider();
+    }
+
+    return AuthDIContainer.authProviderInstance;
   }
 
   /**
@@ -180,7 +246,10 @@ export class AuthDIContainer {
     // 【全インスタンスのリセット】: 新規追加分も含めて完全にクリア
     AuthDIContainer.authenticateUserUseCaseInstance = null;
     AuthDIContainer.getUserProfileUseCaseInstance = null;
+    AuthDIContainer.healthCheckUseCaseInstance = null;
     AuthDIContainer.userRepositoryInstance = null;
+    AuthDIContainer.healthCheckServiceInstance = null;
+    AuthDIContainer.authProviderInstance = null;
     AuthDIContainer.loggerInstance = null;
   }
 }
