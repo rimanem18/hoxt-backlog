@@ -1,8 +1,6 @@
-/**
- * 【機能概要】: JWT認証ミドルウェア - Bearer認証でのユーザー認証処理
- * 【実装方針】: Honoミドルウェアパターンでアプリケーション全体に適用
- * 【テスト対応】: 認証成功・失敗の各ケースを単体テストで検証可能
- * 🟢 信頼性レベル: Honoベストプラクティスとo3技術提案に基づく実装
+/*
+ * JWT認証ミドルウェア
+ * Bearer認証でのユーザー認証処理とContext設定を提供する。
  */
 
 import { createMiddleware } from 'hono/factory';
@@ -10,85 +8,71 @@ import type { Context } from 'hono';
 import { verifyJWT } from './jwks';
 import { AuthError } from '../errors/AuthError';
 
-/**
+/*
  * AuthMiddlewareオプション設定
  */
 export interface AuthMiddlewareOptions {
-  /**
-   * オプショナル認証モード
-   * true: 認証なしでも通す（匿名アクセス許可）
-   * false: 認証必須（デフォルト）
-   */
+  // オプショナル認証モード（true: 匿名アクセス許可）
   optional?: boolean;
   
-  /**
-   * カスタムトークン取得関数
-   * テスト時のモック認証で使用
-   */
+  // カスタムトークン取得関数（テスト時のモック認証で使用）
   getToken?: (c: Context) => string | null;
 }
 
-/**
- * 【認証ミドルウェア】: JWT Bearer認証の実装
- * Authorizationヘッダーからトークンを取得し、Supabase JWTを検証
- * 
- * @param options 認証オプション（optional認証、カスタムトークン取得など）
+/*
+ * JWT Bearer認証ミドルウェア
+ * @param options 認証オプション
  * @returns Honoミドルウェア関数
  */
 export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
   return createMiddleware(async (c, next) => {
     try {
-      // 【トークン取得】: AuthorizationヘッダーまたはカスタムgetToken関数
+      // トークン取得（Authorizationヘッダーまたはカスタム関数）
       const token = options.getToken 
         ? options.getToken(c)
         : extractBearerToken(c);
 
-      // 【認証チェック】: トークンが存在しない場合の処理
+      // トークン不存在時の処理
       if (!token) {
         if (options.optional) {
-          // 【オプション認証】: 匿名ユーザーとしてContext設定
+          // 匿名ユーザーとして処理続行
           c.set('userId', null);
           c.set('claims', null);
           await next();
           return;
         } else {
-          // 【認証必須】: トークン不足エラー（統一エラーコード使用）
           throw new AuthError('AUTHENTICATION_REQUIRED');
         }
       }
 
-      // 【JWT検証】: Supabase JWKS を使用したトークン検証
+      // JWT検証実行
       const payload = await verifyJWT(token);
       
-      // 【ユーザーID抽出】: JWTのsub（subject）フィールドからuserIDを取得
+      // ユーザーID抽出
       const userId = payload.sub;
       if (!userId) {
         throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'JWT にユーザーID が含まれていません');
       }
 
-      // 【Context設定】: 認証成功時のユーザー情報をContextに保存
+      // 認証情報をContextに設定
       c.set('userId', userId);
       c.set('claims', payload);
 
-      // 【セキュリティログ】: 認証成功の記録（プロダクション用）
+      // 認証成功ログ（本番環境）
       if (process.env.NODE_ENV === 'production') {
         console.log(`[AUTH] User authenticated: ${userId}`);
       }
 
-      // 【次の処理】: 認証成功後の後続ミドルウェア・ハンドラ実行
       await next();
 
     } catch (error) {
-      // 【エラーハンドリング】: 認証関連エラーの統一処理
-
+      // 既知の認証エラーはそのまま再スロー
       if (error instanceof AuthError) {
-        // 【既知の認証エラー】: AuthErrorはそのまま再スロー
         throw error;
       }
 
-      // 【JWT検証エラー】: すべて統一エラーコードに変換
+      // JWT検証エラーを統一エラーに変換
       if (error instanceof Error) {
-        // 【統一エラーハンドリング】: すべてのJWT関連エラーをAUTHENTICATION_REQUIREDに統一
         console.warn('[AUTH] JWT検証エラー:', {
           message: error.message,
           timestamp: new Date().toISOString()
@@ -96,47 +80,43 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
         throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'ログインが必要です');
       }
 
-      // 【予期外エラー】: 未知のエラーも統一エラーコードで処理
+      // 未知のエラーも統一エラーとして処理
       console.error('[AUTH] Unexpected authentication error:', error);
       throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'ログインが必要です');
     }
   });
 };
 
-/**
- * 【Bearer トークン抽出】: Authorizationヘッダーからトークン部分を取得
- * RFC 6750 Bearer Token Usage に準拠した実装
- * 
+/*
+ * Authorizationヘッダーからトークンを抽出
  * @param c Honoコンテキスト
  * @returns トークン文字列（見つからない場合はnull）
  */
 function extractBearerToken(c: Context): string | null {
-  // 【ヘッダー取得】: Authorizationヘッダーの取得
   const authHeader = c.req.header('authorization') || c.req.header('Authorization');
   
   if (!authHeader) {
     return null;
   }
 
-  // 【Bearer チェック】: "Bearer " プレフィックスの確認
+  // "Bearer " プレフィックス確認
   const bearerPrefix = 'Bearer ';
   if (!authHeader.startsWith(bearerPrefix)) {
     return null;
   }
 
-  // 【トークン抽出】: "Bearer " 以降の部分を取得
+  // "Bearer " 以降のトークン部分を取得
   const token = authHeader.slice(bearerPrefix.length).trim();
   
-  // 【空文字チェック】: 空のトークンは無効として扱う
   return token || null;
 }
 
-/**
- * 【便利関数】: 必須認証ミドルウェア（デフォルト設定）
+/*
+ * 必須認証ミドルウェア
  */
 export const requireAuth = () => authMiddleware({ optional: false });
 
-/**
- * 【便利関数】: オプション認証ミドルウェア（匿名アクセス許可）
+/*
+ * オプション認証ミドルウェア（匿名アクセス許可）
  */
 export const optionalAuth = () => authMiddleware({ optional: true });

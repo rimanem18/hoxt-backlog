@@ -1,5 +1,5 @@
-/**
- * UserController のテストケース集
+/*
+ * UserController テストケース集
  */
 
 import type { Mock } from 'bun:test';
@@ -78,11 +78,13 @@ describe('UserController', () => {
 
   describe('正常系テスト', () => {
     test('認証済みユーザーのプロフィール取得が成功する', async () => {
-      // AuthMiddlewareでuserIdが設定済みの前提
+      // Given: AuthMiddlewareでuserIdが設定済み
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
 
+      // When: プロフィール取得メソッドを実行
       const result = await userController.getProfile(mockContext as any);
 
+      // Then: UseCaseが正しく呼び出され、正常なレスポンスが返される
       expect(mockGetUserProfileUseCase.execute).toHaveBeenCalledWith({
         userId: '12345678-1234-1234-1234-123456789012',
       });
@@ -103,12 +105,15 @@ describe('UserController', () => {
     });
 
     test('プロフィール取得が500ms以内で完了する', async () => {
+      // Given: 認証済みユーザーのコンテキスト
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
       
+      // When: プロフィール取得を実行し実行時間を測定
       const startTime = performance.now();
       await userController.getProfile(mockContext as any);
       const endTime = performance.now();
       
+      // Then: 500ms以内で完了する
       expect(endTime - startTime).toBeLessThan(500);
     });
 
@@ -122,13 +127,16 @@ describe('UserController', () => {
     // });
 
     test('ユーザー未存在でUSER_NOT_FOUNDエラーが返される', async () => {
+      // Given: 存在しないユーザーIDとUserNotFoundErrorを投げるUseCase
       mockContext.get = mock(() => '00000000-0000-0000-0000-000000000000');
       mockGetUserProfileUseCase.execute = mock(() =>
         Promise.reject(new UserNotFoundError('指定されたユーザーが見つかりません')),
       );
 
+      // When: プロフィール取得を実行
       const result = await userController.getProfile(mockContext as any);
 
+      // Then: 404エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
         {
           success: false,
@@ -142,13 +150,16 @@ describe('UserController', () => {
     });
 
     test('サーバー内部エラーで500エラーが返される', async () => {
+      // Given: 有効なユーザーIDとInfrastructureErrorを投げるUseCase
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
       mockGetUserProfileUseCase.execute = mock(() =>
         Promise.reject(new InfrastructureError('データベース接続エラー')),
       );
 
+      // When: プロフィール取得を実行
       const result = await userController.getProfile(mockContext as any);
 
+      // Then: 500エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
         {
           success: false,
@@ -169,22 +180,22 @@ describe('UserController', () => {
     // });
 
     test('同時リクエスト処理でもユーザー情報が正しく取得される', async () => {
+      // Given: 有効なユーザーIDとコンテキスト
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
 
-      // 同時リクエストをシミュレート
+      // When: 10件の同時リクエストを実行
       const promises = Array(10)
         .fill(null)
         .map(() => userController.getProfile(mockContext as any));
 
       const results = await Promise.all(promises);
 
-      results.forEach((result) => {
-        });
+      // Then: すべてのリクエストが正しく処理される
       expect(mockGetUserProfileUseCase.execute).toHaveBeenCalledTimes(10);
     });
 
     test('大量のユーザーデータでもパフォーマンス要件を満たす', async () => {
-      // 大きなユーザーデータをシミュレート
+      // Given: 大量データを持つユーザーとUseCase
       const largeUser = UserEntity.create({
         externalId: 'large-user-data'.repeat(10),
         provider: AuthProviders.GOOGLE,
@@ -198,10 +209,12 @@ describe('UserController', () => {
       );
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
 
+      // When: プロフィール取得を実行し実行時間を測定
       const startTime = performance.now();
       await userController.getProfile(mockContext as any);
       const endTime = performance.now();
 
+      // Then: 500ms以内で完了する
       expect(endTime - startTime).toBeLessThan(500);
     });
 
