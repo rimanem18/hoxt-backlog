@@ -36,6 +36,8 @@
 
 ### 所感や感想
 
+Claude Code の output-style に Learning（学習モード）が実装されたタイミングが重なったのもあり、全体的に良い経験になった。
+
 #### よかったところ
 
 gemini MCP や o3 MCP で検索や思考を外部に投げたり、serena MCP で構造的に探索させることで、 Claude Code が消費するトークンを削減し、Max プランでなくとも安定した開発ができた。  
