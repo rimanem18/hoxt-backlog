@@ -54,7 +54,10 @@ export class CompositeValidator<T = unknown> implements ICompositeValidator<T> {
   validate(data: T, context?: unknown): ValidationResult {
     // 登録されたバリデーターを順次実行
     for (const validator of this.validators) {
-      const result = validator.validate(data, context as Parameters<typeof validator.validate>[1]);
+      const result = validator.validate(
+        data,
+        context as Parameters<typeof validator.validate>[1],
+      );
 
       // 最初のバリデーション失敗で即座に結果を返す
       if (!result.isValid) {

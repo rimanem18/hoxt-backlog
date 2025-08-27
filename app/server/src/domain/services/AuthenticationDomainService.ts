@@ -1,6 +1,6 @@
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { AuthProvider, CreateUserInput } from '@/domain/user';
-import { InvalidProviderError, UserEntity } from '@/domain/user';
+import { InvalidProviderError, UserEntity, isValidAuthProvider } from '@/domain/user';
 import type { IAuthenticationDomainService } from './IAuthenticationDomainService';
 import type { ExternalUserInfo } from './IAuthProvider';
 
@@ -17,15 +17,6 @@ import type { ExternalUserInfo } from './IAuthProvider';
 export class AuthenticationDomainService
   implements IAuthenticationDomainService
 {
-  private readonly VALID_PROVIDERS = new Set<AuthProvider>([
-    'google',
-    'apple',
-    'microsoft',
-    'github',
-    'facebook',
-    'line',
-  ]);
-
   constructor(private readonly userRepository: IUserRepository) {}
 
   /**
@@ -46,7 +37,7 @@ export class AuthenticationDomainService
     externalInfo: ExternalUserInfo,
   ): Promise<UserEntity> {
     // プロバイダー情報の検証
-    if (!this.isValidProvider(externalInfo.provider)) {
+    if (!isValidAuthProvider(externalInfo.provider)) {
       throw InvalidProviderError.forProvider(externalInfo.provider);
     }
 
@@ -97,7 +88,7 @@ export class AuthenticationDomainService
     isNewUser: boolean;
   }> {
     // プロバイダー情報の検証
-    if (!this.isValidProvider(externalInfo.provider)) {
+    if (!isValidAuthProvider(externalInfo.provider)) {
       throw InvalidProviderError.forProvider(externalInfo.provider);
     }
 
@@ -131,18 +122,4 @@ export class AuthenticationDomainService
     };
   }
 
-  /**
-   * プロバイダー種別の妥当性検証
-   *
-   * セキュリティ強化：
-   * - 許可されたプロバイダーのセットを事前定義
-   * - Set.has()によるO(1)の高速検索
-   * - 型安全性を保証
-   *
-   * @param provider - 検証対象のプロバイダー文字列
-   * @returns 有効なプロバイダーの場合true
-   */
-  private isValidProvider(provider: string): provider is AuthProvider {
-    return this.VALID_PROVIDERS.has(provider as AuthProvider);
-  }
 }
