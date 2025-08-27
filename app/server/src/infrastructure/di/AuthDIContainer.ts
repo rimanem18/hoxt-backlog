@@ -1,5 +1,6 @@
 import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
 import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
+import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { AuthenticationDomainService } from '@/domain/services/AuthenticationDomainService';
 import { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
 import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
@@ -16,7 +17,8 @@ import type { Logger } from '@/shared/logging/Logger';
 export class AuthDIContainer {
   private static authenticateUserUseCaseInstance: AuthenticateUserUseCase | null =
     null;
-  private static getUserProfileUseCaseInstance: GetUserProfileUseCase | null = null;
+  private static getUserProfileUseCaseInstance: GetUserProfileUseCase | null =
+    null;
   private static userRepositoryInstance: PostgreSQLUserRepository | null = null;
   private static loggerInstance: Logger | null = null;
 
@@ -67,13 +69,15 @@ export class AuthDIContainer {
     if (!AuthDIContainer.getUserProfileUseCaseInstance) {
       // 【共有リソース活用】: AuthenticateUserUseCaseと同じRepositoryインスタンスを使用
       const userRepository = AuthDIContainer.getUserRepository();
-      
+
       // 【ログ出力統一】: アプリケーション全体で一貫したログ出力を実現
       const logger = AuthDIContainer.getLogger();
 
       // 【UseCase依存関係注入】: 必要な依存関係を適切に注入
-      AuthDIContainer.getUserProfileUseCaseInstance = 
-        new GetUserProfileUseCase(userRepository, logger);
+      AuthDIContainer.getUserProfileUseCaseInstance = new GetUserProfileUseCase(
+        userRepository,
+        logger,
+      );
     }
 
     return AuthDIContainer.getUserProfileUseCaseInstance;
@@ -92,7 +96,7 @@ export class AuthDIContainer {
       // 【データベース永続化層】: PostgreSQL接続プールを利用した効率的なアクセス
       AuthDIContainer.userRepositoryInstance = new PostgreSQLUserRepository();
     }
-    
+
     return AuthDIContainer.userRepositoryInstance;
   }
 
@@ -151,11 +155,15 @@ export class AuthDIContainer {
    * 【保守性】: テスト設定の変更が本番コードに影響しない分離
    * 🟡 信頼性レベル: テスト専用機能として限定的な用途で使用
    */
-  static getTestUserProfileUseCase(mockRepository?: any, mockLogger?: any): GetUserProfileUseCase {
+  static getTestUserProfileUseCase(
+    mockRepository?: IUserRepository,
+    mockLogger?: Logger,
+  ): GetUserProfileUseCase {
     // 【テスト専用依存関係】: モック化されたRepository・Loggerを使用
-    const testRepository = mockRepository || AuthDIContainer.getUserRepository();
+    const testRepository =
+      mockRepository || AuthDIContainer.getUserRepository();
     const testLogger = mockLogger || AuthDIContainer.getLogger();
-    
+
     // 【テスト独立性】: 本番用シングルトンとは分離されたインスタンスを作成
     return new GetUserProfileUseCase(testRepository, testLogger);
   }

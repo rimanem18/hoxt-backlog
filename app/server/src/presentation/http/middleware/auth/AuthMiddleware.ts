@@ -3,10 +3,10 @@
  * Bearer認証でのユーザー認証処理とContext設定を提供する。
  */
 
-import { createMiddleware } from 'hono/factory';
 import type { Context } from 'hono';
-import { verifyJWT } from './jwks';
+import { createMiddleware } from 'hono/factory';
 import { AuthError } from '../errors/AuthError';
+import { verifyJWT } from './jwks';
 
 /*
  * AuthMiddlewareオプション設定
@@ -14,7 +14,7 @@ import { AuthError } from '../errors/AuthError';
 export interface AuthMiddlewareOptions {
   // オプショナル認証モード（true: 匿名アクセス許可）
   optional?: boolean;
-  
+
   // カスタムトークン取得関数（テスト時のモック認証で使用）
   getToken?: (c: Context) => string | null;
 }
@@ -28,7 +28,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
   return createMiddleware(async (c, next) => {
     try {
       // トークン取得（Authorizationヘッダーまたはカスタム関数）
-      const token = options.getToken 
+      const token = options.getToken
         ? options.getToken(c)
         : extractBearerToken(c);
 
@@ -47,11 +47,15 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
 
       // JWT検証実行
       const payload = await verifyJWT(token);
-      
+
       // ユーザーID抽出
       const userId = payload.sub;
       if (!userId) {
-        throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'JWT にユーザーID が含まれていません');
+        throw new AuthError(
+          'AUTHENTICATION_REQUIRED',
+          401,
+          'JWT にユーザーID が含まれていません',
+        );
       }
 
       // 認証情報をContextに設定
@@ -64,7 +68,6 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       }
 
       await next();
-
     } catch (error) {
       // 既知の認証エラーはそのまま再スロー
       if (error instanceof AuthError) {
@@ -75,9 +78,13 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       if (error instanceof Error) {
         console.warn('[AUTH] JWT検証エラー:', {
           message: error.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        throw new AuthError('AUTHENTICATION_REQUIRED', 401, 'ログインが必要です');
+        throw new AuthError(
+          'AUTHENTICATION_REQUIRED',
+          401,
+          'ログインが必要です',
+        );
       }
 
       // 未知のエラーも統一エラーとして処理
@@ -93,8 +100,9 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
  * @returns トークン文字列（見つからない場合はnull）
  */
 function extractBearerToken(c: Context): string | null {
-  const authHeader = c.req.header('authorization') || c.req.header('Authorization');
-  
+  const authHeader =
+    c.req.header('authorization') || c.req.header('Authorization');
+
   if (!authHeader) {
     return null;
   }
@@ -107,7 +115,7 @@ function extractBearerToken(c: Context): string | null {
 
   // "Bearer " 以降のトークン部分を取得
   const token = authHeader.slice(bearerPrefix.length).trim();
-  
+
   return token || null;
 }
 

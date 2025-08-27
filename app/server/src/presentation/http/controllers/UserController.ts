@@ -10,16 +10,16 @@
 
 import type { Context } from 'hono';
 import type {
-  IGetUserProfileUseCase,
-  GetUserProfileUseCaseInput,
-} from '@/application/usecases/GetUserProfileUseCase';
-import type {
-  GetUserProfileResponse,
   ErrorResponse,
+  GetUserProfileResponse,
 } from '@/../../packages/shared-schemas';
+import type {
+  GetUserProfileUseCaseInput,
+  IGetUserProfileUseCase,
+} from '@/application/usecases/GetUserProfileUseCase';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { ValidationError } from '@/shared/errors/ValidationError';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 
 /*
  * userID検証ガード関数
@@ -40,9 +40,7 @@ export class UserController {
    * @param getUserProfileUseCase ユーザープロフィール取得処理UseCase
    * @throws Error 必須依存関係がnull/undefinedの場合
    */
-  constructor(
-    private readonly getUserProfileUseCase: IGetUserProfileUseCase,
-  ) {
+  constructor(private readonly getUserProfileUseCase: IGetUserProfileUseCase) {
     // Fail Fast原則：初期化時にnull依存関係を検出
     if (!getUserProfileUseCase) {
       throw new Error('getUserProfileUseCase is required');
@@ -58,7 +56,7 @@ export class UserController {
     try {
       // 型安全な認証情報取得
       const rawUserId = c.get('userId');
-      
+
       if (!isValidUserId(rawUserId)) {
         // AuthMiddleware通過後にuserIDが無効な場合
         throw new ValidationError('認証状態が無効です');

@@ -6,18 +6,16 @@
  */
 
 // 【認証ミドルウェア】: JWT認証機能の提供
-export { 
-  authMiddleware, 
-  requireAuth, 
+export {
+  type AuthMiddlewareOptions,
+  authMiddleware,
   optionalAuth,
-  type AuthMiddlewareOptions 
+  requireAuth,
 } from './auth/AuthMiddleware';
-
+// 【JWT検証】: JWKS検証機能の提供
+export { generateTestJWT, verifyJWT } from './auth/jwks';
 // 【認証エラー】: 統一されたエラークラス
 export { AuthError } from './errors/AuthError';
-
-// 【JWT検証】: JWKS検証機能の提供
-export { verifyJWT, generateTestJWT } from './auth/jwks';
 
 // 【エラーハンドリング】: 統一エラーレスポンス変換
 export { errorHandlerMiddleware } from './errors/ErrorHandlerMiddleware';

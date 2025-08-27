@@ -14,7 +14,7 @@ declare module 'hono' {
      * AuthMiddleware経由で設定され、Controllerで`c.get('userId')`でアクセス
      */
     userId: string | null;
-    
+
     /**
      * JWT Payload の全体情報
      * 認可チェックやロール判定などで使用

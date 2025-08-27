@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import corsMiddleware from '../middleware/corsMiddleware';
 import { errorHandlerMiddleware } from '../middleware';
+import corsMiddleware from '../middleware/corsMiddleware';
 import { auth, greet, health, user } from '../routes';
 
 /**

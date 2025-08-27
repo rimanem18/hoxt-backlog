@@ -13,7 +13,7 @@ export class AuthError extends Error {
   constructor(
     public readonly code: 'AUTHENTICATION_REQUIRED',
     public readonly status: number = 401,
-    message?: string
+    message?: string,
   ) {
     // 統一エラーメッセージ
     const defaultMessage = 'ログインが必要です';
@@ -31,8 +31,8 @@ export class AuthError extends Error {
       error: {
         code: this.code,
         message: this.message,
-        status: this.status
-      }
+        status: this.status,
+      },
     };
   }
 }

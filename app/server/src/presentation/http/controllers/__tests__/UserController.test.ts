@@ -4,17 +4,15 @@
 
 import type { Mock } from 'bun:test';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { Context } from 'hono';
 import type {
-  GetUserProfileResponse,
   ErrorResponse,
+  GetUserProfileResponse,
 } from '@/../../packages/shared-schemas';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import { AuthProviders } from '@/domain/user/AuthProvider';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { ValidationError } from '@/shared/errors/ValidationError';
-import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { UserEntity } from '@/domain/user/UserEntity';
+import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { UserController } from '../UserController';
 
 type MockContext = {
@@ -31,7 +29,7 @@ type MockContext = {
   >;
   status: Mock<(code: number) => MockContext>;
   set: Mock<(key: string, value: string) => void>;
-  get: Mock<(key: string) => any>;
+  get: Mock<(key: string) => unknown>;
 };
 
 describe('UserController', () => {
@@ -66,7 +64,7 @@ describe('UserController', () => {
         url: '/api/user/profile',
       },
       json: mock((data, status = 200) => ({ data, status })),
-      status: mock((code) => mockContext),
+      status: mock((_code) => mockContext),
       set: mock(() => {}),
       get: mock(() => ({ userId: '12345678-1234-1234-1234-123456789012' })),
     } as MockContext;
@@ -82,7 +80,7 @@ describe('UserController', () => {
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
 
       // When: プロフィール取得メソッドを実行
-      const result = await userController.getProfile(mockContext as any);
+      await userController.getProfile(mockContext as any);
 
       // Then: UseCaseが正しく呼び出され、正常なレスポンスが返される
       expect(mockGetUserProfileUseCase.execute).toHaveBeenCalledWith({
@@ -107,12 +105,12 @@ describe('UserController', () => {
     test('プロフィール取得が500ms以内で完了する', async () => {
       // Given: 認証済みユーザーのコンテキスト
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
-      
+
       // When: プロフィール取得を実行し実行時間を測定
       const startTime = performance.now();
       await userController.getProfile(mockContext as any);
       const endTime = performance.now();
-      
+
       // Then: 500ms以内で完了する
       expect(endTime - startTime).toBeLessThan(500);
     });
@@ -130,11 +128,13 @@ describe('UserController', () => {
       // Given: 存在しないユーザーIDとUserNotFoundErrorを投げるUseCase
       mockContext.get = mock(() => '00000000-0000-0000-0000-000000000000');
       mockGetUserProfileUseCase.execute = mock(() =>
-        Promise.reject(new UserNotFoundError('指定されたユーザーが見つかりません')),
+        Promise.reject(
+          new UserNotFoundError('指定されたユーザーが見つかりません'),
+        ),
       );
 
       // When: プロフィール取得を実行
-      const result = await userController.getProfile(mockContext as any);
+      await userController.getProfile(mockContext as any);
 
       // Then: 404エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
@@ -157,7 +157,7 @@ describe('UserController', () => {
       );
 
       // When: プロフィール取得を実行
-      const result = await userController.getProfile(mockContext as any);
+      await userController.getProfile(mockContext as any);
 
       // Then: 500エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
@@ -188,7 +188,7 @@ describe('UserController', () => {
         .fill(null)
         .map(() => userController.getProfile(mockContext as any));
 
-      const results = await Promise.all(promises);
+      await Promise.all(promises);
 
       // Then: すべてのリクエストが正しく処理される
       expect(mockGetUserProfileUseCase.execute).toHaveBeenCalledTimes(10);

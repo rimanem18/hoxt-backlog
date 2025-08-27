@@ -8,24 +8,12 @@
  */
 
 import { Hono } from 'hono';
-import { UserController } from '../controllers/UserController';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
+import { UserController } from '../controllers/UserController';
 import { requireAuth } from '../middleware';
 
 // 【型定義】: AuthMiddleware統合後のContext型（middleware/types/auth.d.tsで拡張済み）
 const user = new Hono();
-
-/**
- * 【機能概要】: テスト環境判定機能
- * 【改善内容】: 統合テストでの動作切り替えを可能にする環境判定
- * 【設計方針】: 本番環境とテスト環境での依存関係を適切に分離
- * 【テスト効率】: CI/CD環境での安定したテスト実行を支援
- * 【保守性】: 環境ごとの設定変更を一箇所で管理
- * 🟡 信頼性レベル: 環境変数依存のため設定ミスに注意が必要
- */
-function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-}
 
 // 【認証ミドルウェア適用】: JWT認証必須のプロフィール取得エンドポイント
 user.get('/user/profile', requireAuth(), async (c) => {
@@ -47,7 +35,7 @@ user.get('/user/profile', requireAuth(), async (c) => {
     // 【構造化セキュリティログ】: DIコンテナ経由のLoggerで統一されたログ出力
     // 【パフォーマンス最適化】: 必要な情報のみ記録し、I/O負荷を最小化
     const logger = AuthDIContainer.getLogger();
-    
+
     // 【詳細エラー情報収集】: セキュリティ分析に必要な情報を構造化して記録
     const errorContext = {
       error: error instanceof Error ? error.message : 'Unknown error',

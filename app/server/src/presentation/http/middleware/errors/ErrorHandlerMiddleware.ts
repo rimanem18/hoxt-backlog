@@ -23,22 +23,22 @@ export const errorHandlerMiddleware = createMiddleware(async (c, next) => {
         success: false,
         error: {
           code: error.code, // AUTHENTICATION_REQUIRED
-          message: error.message // 'ログインが必要です'
-        }
+          message: error.message, // 'ログインが必要です'
+        },
       };
-      
+
       return c.json(errorResponse, error.status as 401);
     }
 
     // 【予期外エラー】: その他のエラーは内部サーバーエラーとして処理
     console.error('[ERROR] Unexpected error:', error);
-    
+
     const internalErrorResponse: ErrorResponse = {
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',
-        message: '一時的にサービスが利用できません'
-      }
+        message: '一時的にサービスが利用できません',
+      },
     };
 
     return c.json(internalErrorResponse, 500);

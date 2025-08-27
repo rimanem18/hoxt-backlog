@@ -12,10 +12,8 @@ import {
   expect,
   test,
 } from 'bun:test';
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { authMiddleware, requireAuth, generateTestJWT, errorHandlerMiddleware } from '../../middleware';
-import userRoutes from '../userRoutes';
+import type { Hono } from 'hono';
+import { generateTestJWT } from '../../middleware';
 import serverApp from '../../server';
 
 describe('GET /api/user/profile 統合テスト', () => {
@@ -23,9 +21,10 @@ describe('GET /api/user/profile 統合テスト', () => {
 
   beforeAll(async () => {
     // テスト環境変数を設定
-    process.env.SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || 'test-jwt-secret-key';
+    process.env.SUPABASE_JWT_SECRET =
+      process.env.SUPABASE_JWT_SECRET || 'test-jwt-secret-key';
     process.env.NODE_ENV = 'test';
-    
+
     // 本番サーバー実装を使用
     app = serverApp;
   });
@@ -46,15 +45,15 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('有効なJWTで認証成功してユーザー情報が取得される', async () => {
       // Given: 実際に検証可能なJWTトークンを生成
       const testUserId = '550e8400-e29b-41d4-a716-446655440000';
-      const validJWT = await generateTestJWT({ 
-        userId: testUserId, 
-        email: 'test@example.com' 
+      const validJWT = await generateTestJWT({
+        userId: testUserId,
+        email: 'test@example.com',
       });
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${validJWT}`,
+          Authorization: `Bearer ${validJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -64,14 +63,14 @@ describe('GET /api/user/profile 統合テスト', () => {
 
       // Then: ユーザーが存在しないため404エラーが返却される
       expect(response.status).toBe(404);
-      
+
       const responseBody = await response.json();
       expect(responseBody).toEqual({
         success: false,
         error: {
           code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません'
-        }
+          message: 'ユーザーが見つかりません',
+        },
       });
 
       // Content-Type確認
@@ -82,15 +81,15 @@ describe('GET /api/user/profile 統合テスト', () => {
       // Given: 実際に検証可能なJWTトークンを生成（Greenフェーズ：最小実装）
       // 🟢 信頼性レベル: generateTestJWT関数とUUID形式準拠による確実なJWT生成
       const testUserId = '550e8400-e29b-41d4-a716-446655440000'; // 【UUID形式】: UserId値オブジェクトのバリデーション通過
-      const validJWT = await generateTestJWT({ 
-        userId: testUserId, 
-        email: 'test@example.com' 
+      const validJWT = await generateTestJWT({
+        userId: testUserId,
+        email: 'test@example.com',
       });
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${validJWT}`,
+          Authorization: `Bearer ${validJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -109,14 +108,17 @@ describe('GET /api/user/profile 統合テスト', () => {
 
     test('CORS対応確認：プリフライトリクエスト処理', async () => {
       // Given: プリフライトリクエスト（OPTIONS メソッド）
-      const preflightRequest = new Request('http://localhost/api/user/profile', {
-        method: 'OPTIONS',
-        headers: {
-          'Origin': 'http://localhost:3000',
-          'Access-Control-Request-Method': 'GET',
-          'Access-Control-Request-Headers': 'Authorization, Content-Type',
+      const preflightRequest = new Request(
+        'http://localhost/api/user/profile',
+        {
+          method: 'OPTIONS',
+          headers: {
+            Origin: 'http://localhost:3000',
+            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Headers': 'Authorization, Content-Type',
+          },
         },
-      });
+      );
 
       // When: プリフライトリクエストを送信
       const response = await app.request(preflightRequest);
@@ -124,10 +126,18 @@ describe('GET /api/user/profile 統合テスト', () => {
       // Then: CORS ヘッダーが正しく設定される（Greenフェーズ：実装動作に合わせる）
       // 🟡 信頼性レベル: Hono CORSミドルウェアの実際の動作に合わせた期待値調整
       expect(response.status).toBe(204); // 【実装準拠】: Hono CORSは204を返す
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:3000');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toMatch(/GET/);
-      expect(response.headers.get('Access-Control-Allow-Headers')).toMatch(/Authorization/);
-      expect(response.headers.get('Access-Control-Allow-Headers')).toMatch(/Content-Type/);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
+        'http://localhost:3000',
+      );
+      expect(response.headers.get('Access-Control-Allow-Methods')).toMatch(
+        /GET/,
+      );
+      expect(response.headers.get('Access-Control-Allow-Headers')).toMatch(
+        /Authorization/,
+      );
+      expect(response.headers.get('Access-Control-Allow-Headers')).toMatch(
+        /Content-Type/,
+      );
     });
   });
 
@@ -147,7 +157,7 @@ describe('GET /api/user/profile 統合テスト', () => {
       // Then: 現在の実装では500エラーが返される（認証フロー統合課題）
       // 🟡 信頼性レベル: ErrorHandlerMiddlewareがAuthErrorを捕捉できていない実装課題
       expect(response.status).toBe(500);
-      
+
       const responseText = await response.text();
       expect(responseText).toBe('Internal Server Error');
     });
@@ -155,11 +165,11 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('無効なJWTで認証エラーが返される', async () => {
       // Given: 無効なJWTトークン
       const invalidJWT = 'invalid.jwt.token';
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${invalidJWT}`,
+          Authorization: `Bearer ${invalidJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -169,7 +179,7 @@ describe('GET /api/user/profile 統合テスト', () => {
 
       // Then: 現在の実装では500エラーが返される（認証フロー統合課題）
       expect(response.status).toBe(500);
-      
+
       const responseText = await response.text();
       expect(responseText).toBe('Internal Server Error');
     });
@@ -177,15 +187,15 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('ユーザーが存在しない場合404エラーが返される', async () => {
       // Given: 存在しないユーザーのJWTトークン（実際に検証可能なJWT）
       const nonExistentUserId = '123e4567-e89b-12d3-a456-426614174000'; // 【UUID形式】: 存在しないが形式上有効
-      const nonExistentUserJWT = await generateTestJWT({ 
-        userId: nonExistentUserId, 
-        email: 'nonexistent@example.com' 
+      const nonExistentUserJWT = await generateTestJWT({
+        userId: nonExistentUserId,
+        email: 'nonexistent@example.com',
       });
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${nonExistentUserJWT}`,
+          Authorization: `Bearer ${nonExistentUserJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -195,7 +205,7 @@ describe('GET /api/user/profile 統合テスト', () => {
 
       // Then: ステータス404でユーザー未存在エラーが返却される
       expect(response.status).toBe(404);
-      
+
       const responseBody = await response.json();
       expect(responseBody).toEqual({
         success: false,
@@ -209,11 +219,11 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('サーバー内部エラー時500エラーが返される', async () => {
       // Given: データベース障害などを引き起こすJWTトークン（無効な形式で認証後エラー想定）
       const errorCausingJWT = 'invalid.jwt.token';
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${errorCausingJWT}`,
+          Authorization: `Bearer ${errorCausingJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -223,7 +233,7 @@ describe('GET /api/user/profile 統合テスト', () => {
 
       // Then: 現在の実装では500エラーが返される（認証フロー統合課題）
       expect(response.status).toBe(500);
-      
+
       const responseText = await response.text();
       expect(responseText).toBe('Internal Server Error');
     });
@@ -233,21 +243,23 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('期限切れJWTで認証エラーが返される', async () => {
       // Given: 期限切れのJWTトークン（実際に期限切れを設定）
       const { SignJWT } = await import('jose');
-      const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET || 'test-jwt-secret-key');
-      const expiredJWT = await new SignJWT({ 
+      const secret = new TextEncoder().encode(
+        process.env.SUPABASE_JWT_SECRET || 'test-jwt-secret-key',
+      );
+      const expiredJWT = await new SignJWT({
         sub: '550e8400-e29b-41d4-a716-446655440000',
         email: 'expired@example.com',
-        aud: 'authenticated'
+        aud: 'authenticated',
       })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt(Math.floor(Date.now() / 1000) - 3600) // 1時間前に発行
-      .setExpirationTime(Math.floor(Date.now() / 1000) - 1800) // 30分前に期限切れ
-      .sign(secret);
-      
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt(Math.floor(Date.now() / 1000) - 3600) // 1時間前に発行
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 1800) // 30分前に期限切れ
+        .sign(secret);
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${expiredJWT}`,
+          Authorization: `Bearer ${expiredJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -257,7 +269,7 @@ describe('GET /api/user/profile 統合テスト', () => {
 
       // Then: 現在の実装では500エラーが返される（認証フロー統合課題）
       expect(response.status).toBe(500);
-      
+
       const responseText = await response.text();
       expect(responseText).toBe('Internal Server Error');
     });
@@ -265,32 +277,35 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('同時リクエスト処理：100リクエスト/分の負荷テスト', async () => {
       // Given: 有効なJWTトークンで100件のリクエストを準備（実際に検証可能なJWT）
       const testUserId = '550e8400-e29b-41d4-a716-446655440000'; // 【UUID形式】: 負荷テスト用ユーザー
-      const validJWT = await generateTestJWT({ 
-        userId: testUserId, 
-        email: 'loadtest@example.com' 
+      const validJWT = await generateTestJWT({
+        userId: testUserId,
+        email: 'loadtest@example.com',
       });
-      
-      const requests = Array(100).fill(null).map(() => 
-        new Request('http://localhost/api/user/profile', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${validJWT}`,
-            'Content-Type': 'application/json',
-          },
-        })
-      );
+
+      const requests = Array(100)
+        .fill(null)
+        .map(
+          () =>
+            new Request('http://localhost/api/user/profile', {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${validJWT}`,
+                'Content-Type': 'application/json',
+              },
+            }),
+        );
 
       // When: 同時に100件のリクエストを送信
       const startTime = performance.now();
       const responses = await Promise.all(
-        requests.map(request => app.request(request))
+        requests.map((request) => app.request(request)),
       );
       const endTime = performance.now();
       const totalTime = endTime - startTime;
 
       // Then: すべてのリクエストが404で応答し（ユーザー不存在）、60秒以内で完了する
       // 🟡 信頼性レベル: ユーザーデータがないため404応答だがパフォーマンス要件は満たす
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect(response.status).toBe(404);
       });
       expect(totalTime).toBeLessThan(60000); // 60秒以内
@@ -299,15 +314,15 @@ describe('GET /api/user/profile 統合テスト', () => {
     test('大量データレスポンス処理テスト', async () => {
       // Given: 大きなプロフィールデータを持つユーザーのJWTトークン（実際に検証可能なJWT）
       const largeDataUserId = '999e8400-e29b-41d4-a716-446655440000'; // 【UUID形式】: 大量データユーザー
-      const largeDataUserJWT = await generateTestJWT({ 
-        userId: largeDataUserId, 
-        email: 'largedata@example.com' 
+      const largeDataUserJWT = await generateTestJWT({
+        userId: largeDataUserId,
+        email: 'largedata@example.com',
       });
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${largeDataUserJWT}`,
+          Authorization: `Bearer ${largeDataUserJWT}`,
           'Content-Type': 'application/json',
         },
       });
@@ -318,29 +333,29 @@ describe('GET /api/user/profile 統合テスト', () => {
       // Then: ユーザーが存在しないため404エラーが返却される（実際の実装動作）
       // 🟡 信頼性レベル: テストデータが存在しないため404だが、システム動作自体は正常
       expect(response.status).toBe(404);
-      
+
       const responseBody = await response.json();
       expect(responseBody).toEqual({
         success: false,
         error: {
           code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません'
-        }
+          message: 'ユーザーが見つかりません',
+        },
       });
     });
 
     test('POSTメソッドでMethod Not Allowedエラーが返される', async () => {
       // Given: POSTメソッドでのリクエスト（実際に検証可能なJWT）
       const testUserId = '550e8400-e29b-41d4-a716-446655440000';
-      const validJWT = await generateTestJWT({ 
-        userId: testUserId, 
-        email: 'post-test@example.com' 
+      const validJWT = await generateTestJWT({
+        userId: testUserId,
+        email: 'post-test@example.com',
       });
-      
+
       const request = new Request('http://localhost/api/user/profile', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${validJWT}`,
+          Authorization: `Bearer ${validJWT}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ data: 'test' }),
