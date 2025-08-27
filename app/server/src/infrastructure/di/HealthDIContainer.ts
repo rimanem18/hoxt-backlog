@@ -4,11 +4,10 @@ import { HealthCheckService } from '@/infrastructure/config/HealthCheckService';
 import type { Logger } from '@/shared/logging/Logger';
 
 /**
- * 【機能概要】: システム監視・ヘルスチェック関連の依存性注入を管理するDIコンテナ
- * 【設計方針】: 認証ドメインから分離した独立したヘルスチェックドメインを管理
- * 【拡張性】: 将来のメトリクス監視・ログ集約・アラート機能の基盤
- * 【責任範囲】: システム監視・インフラ健全性確認・運用支援機能
- * 🟢 信頼性レベル: ドメイン分離による保守性向上を重視した設計
+ * システムヘルスチェック専用DIコンテナ実装
+ *
+ * システム監視・ヘルスチェック関連の依存性注入を管理し、
+ * 認証ドメインから分離された独立したヘルスチェックドメインを提供する。
  */
 export class HealthDIContainer {
   private static healthCheckUseCaseInstance: HealthCheckUseCase | null = null;
@@ -17,11 +16,9 @@ export class HealthDIContainer {
   private static loggerInstance: Logger | null = null;
 
   /**
-   * 【機能概要】: HealthCheckUseCaseのインスタンスを返す
-   * 【設計方針】: システム監視専用のユースケース管理
-   * 【パフォーマンス】: シングルトン管理によりリクエストごとのインスタンス生成を回避
-   * 【保守性】: ヘルスチェック関連の依存関係を一元管理
-   * 🟢 信頼性レベル: ドメイン分離による責任明確化
+   * HealthCheckUseCaseのシングルトンインスタンスを取得する
+   *
+   * @returns HealthCheckUseCaseインスタンス
    */
   static getHealthCheckUseCase(): HealthCheckUseCase {
     if (!HealthDIContainer.healthCheckUseCaseInstance) {
@@ -36,14 +33,13 @@ export class HealthDIContainer {
   }
 
   /**
-   * 【機能概要】: HealthCheckServiceの共有インスタンスを返す
-   * 【設計方針】: インフラ層のヘルスチェック機能を管理
-   * 【拡張予定】: メトリクス収集・パフォーマンス監視機能の統合基盤
-   * 🟢 信頼性レベル: 既存実装を基にした安定した設計
+   * HealthCheckServiceのシングルトンインスタンスを取得する
+   *
+   * @returns HealthCheckServiceインスタンス
    */
   private static getHealthCheckService(): HealthCheckService {
     if (!HealthDIContainer.healthCheckServiceInstance) {
-      // AuthProviderは共有リソースとして利用（認証ドメインとの連携）
+      // ヘルスチェック用AuthProviderを注入
       const authProvider = HealthDIContainer.getAuthProvider();
 
       HealthDIContainer.healthCheckServiceInstance = new HealthCheckService(
@@ -55,10 +51,9 @@ export class HealthDIContainer {
   }
 
   /**
-   * 【機能概要】: ヘルスチェック用のSupabaseAuthProviderインスタンス
-   * 【設計方針】: 認証プロバイダーの接続確認専用インスタンス
-   * 【注意】: 認証処理とは分離されたヘルスチェック専用用途
-   * 🟡 将来改善: 認証とヘルスチェックでインスタンス分離の検討
+   * ヘルスチェック用SupabaseAuthProviderのシングルトンインスタンスを取得する
+   *
+   * @returns SupabaseAuthProviderインスタンス
    */
   private static getAuthProvider(): SupabaseAuthProvider {
     if (!HealthDIContainer.authProviderInstance) {
@@ -69,10 +64,9 @@ export class HealthDIContainer {
   }
 
   /**
-   * 【機能概要】: ヘルスチェック専用のLoggerインスタンス
-   * 【設計方針】: システム監視ログの統一管理
-   * 【拡張予定】: メトリクス出力・アラート連携機能
-   * 🟡 信頼性レベル: Console基盤の暫定実装
+   * ヘルスチェック専用Loggerのシングルトンインスタンスを取得する
+   *
+   * @returns Loggerインスタンス
    */
   static getLogger(): Logger {
     if (!HealthDIContainer.loggerInstance) {
@@ -109,8 +103,11 @@ export class HealthDIContainer {
   }
 
   /**
-   * 【機能概要】: テスト専用のヘルスチェック機能
-   * 【設計方針】: テスト時のモック注入を支援
+   * テスト用HealthCheckUseCaseを生成する
+   *
+   * @param mockHealthCheckService モック用HealthCheckService
+   * @param mockLogger モック用Logger  
+   * @returns テスト用HealthCheckUseCaseインスタンス
    */
   static getTestHealthCheckUseCase(
     mockHealthCheckService?: HealthCheckService,
@@ -122,8 +119,7 @@ export class HealthDIContainer {
   }
 
   /**
-   * 【機能概要】: テスト時のインスタンスリセット
-   * 【設計方針】: テスト独立性確保のための全インスタンス初期化
+   * テスト時の全インスタンスをリセットする
    */
   static resetInstances(): void {
     HealthDIContainer.healthCheckUseCaseInstance = null;
@@ -132,10 +128,9 @@ export class HealthDIContainer {
     HealthDIContainer.loggerInstance = null;
   }
 
-  // 【将来拡張予定】: 以下の機能を段階的に追加予定
-  
-  // static getMetricsService(): MetricsService
-  // static getAlertService(): AlertService  
-  // static getPerformanceMonitorUseCase(): PerformanceMonitorUseCase
-  // static getLogAggregatorService(): LogAggregatorService
+  // TODO: 将来拡張予定のメソッド
+  // - getMetricsService(): MetricsService
+  // - getAlertService(): AlertService  
+  // - getPerformanceMonitorUseCase(): PerformanceMonitorUseCase
+  // - getLogAggregatorService(): LogAggregatorService
 }

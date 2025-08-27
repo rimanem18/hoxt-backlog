@@ -1,11 +1,10 @@
 import type { HealthCheckService } from '@/infrastructure/config/HealthCheckService';
 
 /**
- * ヘルスチェック UseCase
+ * システムヘルスチェック UseCase実装
  *
- * システムの稼働状態確認のユースケース。
- * アプリケーション層としてInfrastructure層のHealthCheckServiceを調整し、
- * ビジネスロジックに基づいたヘルスチェックを実行する。
+ * データベース・Supabase接続確認からHTTPステータス決定までの
+ * システム監視ビジネスフローを管理するApplication層のUseCase実装。
  */
 export class HealthCheckUseCase {
   private healthCheckService: HealthCheckService;
@@ -15,11 +14,7 @@ export class HealthCheckUseCase {
   }
 
   /**
-   * システムヘルスチェック実行
-   *
-   * データベースとSupabaseの健全性を確認し、
-   * システム全体の稼働状態を判定する。
-   * エラーが発生した場合も適切にハンドリングして結果を返却する。
+   * システム全体のヘルスチェックを実行する
    *
    * @returns ヘルスチェック結果とHTTPステータスコード
    */
@@ -38,7 +33,7 @@ export class HealthCheckUseCase {
     try {
       const result = await this.healthCheckService.checkOverallHealth();
 
-      // すべての依存関係が健全な場合は200、そうでなければ503
+      // システム健全性に基づいてHTTPステータスを決定
       const httpStatus = result.status === 'healthy' ? 200 : 503;
 
       return {
@@ -46,7 +41,7 @@ export class HealthCheckUseCase {
         httpStatus,
       };
     } catch (error) {
-      // 予期しないエラーが発生した場合は全て unhealthy として扱う
+      // 例外発生時は全依存関係をunhealthyとして扱う
       console.error('Health check use case failed:', error);
 
       return {

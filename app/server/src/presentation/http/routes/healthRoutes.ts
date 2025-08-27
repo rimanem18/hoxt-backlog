@@ -2,20 +2,20 @@ import { Hono } from 'hono';
 import { HealthDIContainer } from '@/infrastructure/di/HealthDIContainer';
 
 /**
- * Health API のルート定義
- * プレゼンテーション層として、HTTPリクエストをユースケースに委譲する
+ * ヘルスチェックAPIルート実装
+ *
+ * システム監視エンドポイントを提供し、
+ * HTTPリクエストをUseCaseに委譲するPresentation層の実装。
  */
 const health = new Hono();
 
-// ヘルスチェックエンドポイント
-// ステータスコードを 200 or 503 で明示
+// GET /api/health - システムヘルスチェック
 health.get('/health', async (c) => {
   try {
-    // ヘルスチェック専用DIコンテナから適切に構築されたUseCaseを取得
     const healthCheckUseCase = HealthDIContainer.getHealthCheckUseCase();
     const { result, httpStatus } = await healthCheckUseCase.execute();
 
-    // API仕様に準拠したレスポンス形式
+    // HTTPステータスに基づいてレスポンス形式を決定
     if (httpStatus === 200) {
       return c.json(
         {
@@ -38,13 +38,13 @@ health.get('/health', async (c) => {
       );
     }
   } catch (error) {
-    console.error('[Health] サーバーがなんか変です:', {
+    console.error('[Health] Unexpected server error:', {
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error',
       endpoint: '/api/health',
     });
 
-    // 内部実装を隠蔽したエラーレスポンス
+    // 例外発生時は汎用エラーレスポンスを返却
     return c.json(
       {
         success: false,
