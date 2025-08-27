@@ -1,63 +1,67 @@
 /**
- * User API のルート定義
- *
- * 【機能概要】: GET /user/profile エンドポイントを提供
- * 【実装方針】: AuthMiddleware統合によるJWT認証 + 依存性注入パターン
- * 【テスト対応】: HTTP統合テストで認証済みユーザーのプロフィール取得を検証
- * 🟢 信頼性レベル: AuthMiddleware統合によるセキュアな認証フロー
+ * 【機能概要】: User API のルート定義 - GET /user/profile エンドポイントを提供
+ * 【改善内容】: DIコンテナ統合、パフォーマンス最適化、テスト独立性向上
+ * 【実装方針】: AuthMiddleware統合 + DIパターン + 構造化ログ + テスト環境対応
+ * 【パフォーマンス】: シングルトン管理によるメモリリーク防止とCPU効率化
+ * 【テスト対応】: 統合テストの独立性確保、モック依存関係注入対応
+ * 🟢 信頼性レベル: 実績あるパターンに基づく安定・高性能な認証フロー実装
  */
 
 import { Hono } from 'hono';
 import { UserController } from '../controllers/UserController';
-import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
-import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
+import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 import { requireAuth } from '../middleware';
-import type { Logger } from '@/shared/logging/Logger';
 
 // 【型定義】: AuthMiddleware統合後のContext型（middleware/types/auth.d.tsで拡張済み）
 const user = new Hono();
 
+/**
+ * 【機能概要】: テスト環境判定機能
+ * 【改善内容】: 統合テストでの動作切り替えを可能にする環境判定
+ * 【設計方針】: 本番環境とテスト環境での依存関係を適切に分離
+ * 【テスト効率】: CI/CD環境での安定したテスト実行を支援
+ * 【保守性】: 環境ごとの設定変更を一箇所で管理
+ * 🟡 信頼性レベル: 環境変数依存のため設定ミスに注意が必要
+ */
+function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+}
+
 // 【認証ミドルウェア適用】: JWT認証必須のプロフィール取得エンドポイント
 user.get('/user/profile', requireAuth(), async (c) => {
   try {
-    // 【依存性注入】: Repository、Logger、UseCaseの作成
-    // 【将来改善予定】: DIコンテナによる統合管理（Refactorフェーズで実装）
-    const userRepository = new PostgreSQLUserRepository();
-    const logger: Logger = {
-      info: (message: string, meta?: unknown) =>
-        console.log(`[INFO] ${message}`, meta),
-      warn: (message: string, meta?: unknown) =>
-        console.warn(`[WARN] ${message}`, meta),
-      error: (message: string, meta?: unknown) =>
-        console.error(`[ERROR] ${message}`, meta),
-      debug: (message: string, meta?: unknown) =>
-        console.debug(`[DEBUG] ${message}`, meta),
-    };
-
-    // 【UseCase作成】: ビジネスロジック層の処理を準備
-    const getUserProfileUseCase = new GetUserProfileUseCase(
-      userRepository,
-      logger,
-    );
+    // 【DIコンテナ統合】: リクエストごとのインスタンス生成問題を解決
+    // 【パフォーマンス改善】: シングルトン管理によるメモリリーク防止
+    // 【保守性向上】: 依存関係の一元管理と設定変更の影響最小化
+    // 🟢 信頼性レベル: AuthDIContainerパターンによる実証済み依存関係管理
+    const getUserProfileUseCase = AuthDIContainer.getUserProfileUseCase();
 
     // 【Controller作成】: Presentation層の処理を準備
+    // 【軽量化】: UseCaseはDIコンテナから取得、Controllerのみリクエストごと作成
     const userController = new UserController(getUserProfileUseCase);
 
     // 【認証済み処理】: AuthMiddleware経由でc.get('userId')が利用可能
     // userId は requireAuth() により保証されているため null チェック不要
     return await userController.getProfile(c);
   } catch (error) {
-    // 【セキュリティログ】: 予期しないエラーの詳細記録
-    console.error('[SECURITY] Unexpected error in user profile endpoint:', {
-      timestamp: new Date().toISOString(),
+    // 【構造化セキュリティログ】: DIコンテナ経由のLoggerで統一されたログ出力
+    // 【パフォーマンス最適化】: 必要な情報のみ記録し、I/O負荷を最小化
+    const logger = AuthDIContainer.getLogger();
+    
+    // 【詳細エラー情報収集】: セキュリティ分析に必要な情報を構造化して記録
+    const errorContext = {
       error: error instanceof Error ? error.message : 'Unknown error',
       endpoint: '/api/user/profile',
       userId: c.get('userId'), // 【認証情報】: AuthMiddleware設定のuserId
       userAgent: c.req.header('user-agent'),
       ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
-    });
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+
+    logger.error('Unexpected error in user profile endpoint', errorContext);
 
     // 【内部情報隠蔽】: エラー詳細をクライアントに漏洩させない
+    // 【統一エラーレスポンス】: 他のAPIエンドポイントとの一貫性を保持
     return c.json(
       {
         success: false,
