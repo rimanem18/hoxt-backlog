@@ -1,9 +1,9 @@
-import { db } from '@/infrastructure/database/drizzle-client';
 import type { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
+import { db } from '@/infrastructure/database/drizzle-client';
 
 /**
  * ヘルスチェックサービス
- * 
+ *
  * システムの稼働状態とdependenciesの健全性を確認する。
  * データベース接続とSupabase接続の確認機能を提供する。
  */
@@ -16,10 +16,10 @@ export class HealthCheckService {
 
   /**
    * データベース接続確認
-   * 
+   *
    * データベースに対してシンプルなクエリを実行し、
    * 接続が正常に動作しているかを確認する。
-   * 
+   *
    * @returns データベースの健全性状態
    */
   async checkDatabaseHealth(): Promise<'healthy' | 'unhealthy'> {
@@ -36,10 +36,10 @@ export class HealthCheckService {
 
   /**
    * Supabase接続確認
-   * 
+   *
    * Supabase認証サービスが正常に動作しているかを確認する。
    * テスト用のJWT検証を試行して接続状態を判定する。
-   * 
+   *
    * @returns Supabaseの健全性状態
    */
   async checkSupabaseHealth(): Promise<'healthy' | 'unhealthy'> {
@@ -56,10 +56,10 @@ export class HealthCheckService {
 
   /**
    * 全体的なヘルスチェック実行
-   * 
+   *
    * データベースとSupabaseの両方の健全性を確認し、
    * API仕様に準拠したレスポンスデータを生成する。
-   * 
+   *
    * @returns ヘルスチェック結果
    */
   async checkOverallHealth() {
@@ -68,10 +68,11 @@ export class HealthCheckService {
       this.checkSupabaseHealth(),
     ]);
 
-    const isHealthy = databaseStatus === 'healthy' && supabaseStatus === 'healthy';
+    const isHealthy =
+      databaseStatus === 'healthy' && supabaseStatus === 'healthy';
 
     return {
-      status: isHealthy ? 'healthy' : 'unhealthy',
+      status: (isHealthy ? 'healthy' : 'unhealthy') as 'healthy' | 'unhealthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       dependencies: {

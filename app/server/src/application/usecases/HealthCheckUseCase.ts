@@ -51,12 +51,12 @@ export class HealthCheckUseCase {
 
       return {
         result: {
-          status: 'unhealthy',
+          status: 'unhealthy' as const,
           timestamp: new Date().toISOString(),
           version: '1.0.0',
           dependencies: {
-            database: 'unhealthy',
-            supabase: 'unhealthy',
+            database: 'unhealthy' as const,
+            supabase: 'unhealthy' as const,
           },
         },
         httpStatus: 503,
