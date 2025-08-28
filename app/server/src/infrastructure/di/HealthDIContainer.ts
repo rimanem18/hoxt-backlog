@@ -73,23 +73,47 @@ export class HealthDIContainer {
       HealthDIContainer.loggerInstance = {
         info: (message: string, meta?: unknown) => {
           const timestamp = new Date().toISOString();
-          const logData = { timestamp, level: 'INFO', service: 'HEALTH', message, meta };
+          const logData = {
+            timestamp,
+            level: 'INFO',
+            service: 'HEALTH',
+            message,
+            meta,
+          };
           console.log(JSON.stringify(logData));
         },
         warn: (message: string, meta?: unknown) => {
           const timestamp = new Date().toISOString();
-          const logData = { timestamp, level: 'WARN', service: 'HEALTH', message, meta };
+          const logData = {
+            timestamp,
+            level: 'WARN',
+            service: 'HEALTH',
+            message,
+            meta,
+          };
           console.warn(JSON.stringify(logData));
         },
         error: (message: string, meta?: unknown) => {
           const timestamp = new Date().toISOString();
-          const logData = { timestamp, level: 'ERROR', service: 'HEALTH', message, meta };
+          const logData = {
+            timestamp,
+            level: 'ERROR',
+            service: 'HEALTH',
+            message,
+            meta,
+          };
           console.error(JSON.stringify(logData));
         },
         debug: (message: string, meta?: unknown) => {
           if (process.env.NODE_ENV !== 'production') {
             const timestamp = new Date().toISOString();
-            const logData = { timestamp, level: 'DEBUG', service: 'HEALTH', message, meta };
+            const logData = {
+              timestamp,
+              level: 'DEBUG',
+              service: 'HEALTH',
+              message,
+              meta,
+            };
             console.debug(JSON.stringify(logData));
           }
         },
@@ -106,14 +130,13 @@ export class HealthDIContainer {
    * テスト用HealthCheckUseCaseを生成する
    *
    * @param mockHealthCheckService モック用HealthCheckService
-   * @param mockLogger モック用Logger  
    * @returns テスト用HealthCheckUseCaseインスタンス
    */
   static getTestHealthCheckUseCase(
     mockHealthCheckService?: HealthCheckService,
-    mockLogger?: Logger,
   ): HealthCheckUseCase {
-    const testHealthCheckService = mockHealthCheckService || HealthDIContainer.getHealthCheckService();
+    const testHealthCheckService =
+      mockHealthCheckService || HealthDIContainer.getHealthCheckService();
 
     return new HealthCheckUseCase(testHealthCheckService);
   }
@@ -130,7 +153,7 @@ export class HealthDIContainer {
 
   // TODO: 将来拡張予定のメソッド
   // - getMetricsService(): MetricsService
-  // - getAlertService(): AlertService  
+  // - getAlertService(): AlertService
   // - getPerformanceMonitorUseCase(): PerformanceMonitorUseCase
   // - getLogAggregatorService(): LogAggregatorService
 }
