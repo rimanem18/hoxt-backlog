@@ -12,7 +12,7 @@ import type { Context } from 'hono';
 import type {
   ErrorResponse,
   GetUserProfileResponse,
-} from '@/../../packages/shared-schemas';
+} from '@/packages/shared-schemas';
 import type {
   GetUserProfileUseCaseInput,
   IGetUserProfileUseCase,
