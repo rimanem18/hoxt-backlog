@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# Abort on error, unset, or pipefail
+set -euo pipefail
+
+# ---- config ----
+MIN_SECRET_LEN=4          # 短すぎる値は誤検出が多いので除外
+ENV_BASENAME=".env"       # ここを ".env.local" 等に変えてもOK
+LC_ALL=C                  # grep の挙動安定化
+export LC_ALL
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+env_file="$repo_root/$ENV_BASENAME"
+
+# staged ファイル一覧（追加/コピー/修正のみ）
+staged_files_tmp="$(mktemp)"
+patterns_tmp="$(mktemp)"
+content_tmp="$(mktemp)"
+to_clean=("$staged_files_tmp" "$patterns_tmp" "$content_tmp")
+cleanup() { rm -f "${to_clean[@]}" 2>/dev/null || true; }
+trap cleanup EXIT
+
+git diff --cached --name-only --diff-filter=ACM >"$staged_files_tmp"
+
+# 何もステージされていなければ終了
+if ! [ -s "$staged_files_tmp" ]; then
+  exit 0
+fi
+
+# .env/.env.* が直接ステージされていれば即ブロック
+while IFS= read -r f; do
+  case "$f" in
+    "$ENV_BASENAME"|"$ENV_BASENAME".*)
+      printf '%s\n' "ERROR: '$f' をコミットしようとしています。中止します。"
+      printf '%s\n' "-> $ENV_BASENAME 系はリポジトリに含めないでください（.gitignore 推奨）"
+      exit 1
+      ;;
+  esac
+done < "$staged_files_tmp"
+
+# .env が無ければ中身スキャンはしない（運用次第でここを exit 1 にしても可）
+if ! [ -f "$env_file" ]; then
+  exit 0
+fi
+
+# .env から KEY=VALUE を抽出（コメント/空行除外、export 許容、両端の '"/空白 を剥がす）
+# 値の長さが MIN_SECRET_LEN 未満は除外してパターンに入れない。
+# パターンは grep -F の -f 用ファイルにまとめる（引数に値を渡さない=プロセスリストに漏れない）
+: > "$patterns_tmp"
+
+while IFS= read -r raw || [ -n "${raw-}" ]; do
+  # 前後空白を削る
+  line="${raw#"${raw%%[! 	]*}"}"
+  line="${line%"${line##*[! 	]}"}"
+
+  # 空行/コメント
+  [ -z "$line" ] && continue
+  case "$line" in \#*) continue ;; esac
+
+  # 先頭 export を許容
+  case "$line" in
+    export\ *) line="${line#export }"
+  esac
+
+  # KEY=VALUE 形式のみ対象
+  case "$line" in
+    *=*)
+      key="${line%%=*}"
+      val="${line#*=}"
+
+      # key の前後空白除去
+      key="${key#"${key%%[! 	]*}"}"
+      key="${key%"${key##*[! 	]}"}"
+
+      # 値の前後空白除去
+      val="${val#"${val%%[! 	]*}"}"
+      val="${val%"${val##*[! 	]}"}"
+
+      # 値が "..." または '...' で囲まれていれば剥がす（両端が対応している場合のみ）
+      if [ "${#val}" -ge 2 ]; then
+        first="${val%${val#?}}"
+        last="${val##*${val%?}}"
+        if [ "$first" = '"' ] && [ "$last" = '"' ]; then
+          val="${val:1:${#val}-2}"
+        elif [ "$first" = "'" ] && [ "$last" = "'" ]; then
+          val="${val:1:${#val}-2}"
+        fi
+      fi
+
+      # 値が短すぎる場合はスキップ
+      if [ -n "$val" ] && [ "${#val}" -ge "$MIN_SECRET_LEN" ]; then
+        # grep -F のパターンファイルに 1 行 1 値で追記
+        # printf 経由でリテラルに書き出し（オプション解釈回避）
+        printf '%s\n' "$val" >>"$patterns_tmp"
+      fi
+      ;;
+  esac
+done < "$env_file"
+
+# パターンが無ければ終了
+if ! [ -s "$patterns_tmp" ]; then
+  exit 0
+fi
+
+violations=0
+
+# 各ステージ済みファイルの「インデックス内容」をチェック（作業ツリーではない）
+while IFS= read -r file; do
+  # バイナリ（staged blob）ならスキップ
+  if ! git show ":$file" | grep -Iq . ; then
+    continue
+  fi
+
+  # 内容を一時ファイルへ（1 回の grep -F -f でマッチ確認）
+  git show ":$file" >"$content_tmp"
+
+  if grep -F -f "$patterns_tmp" -n -H "$content_tmp" >/dev/null 2>&1; then
+    printf '%s\n' "ERROR: $ENV_BASENAME の値に一致する文字列がステージ済みファイルに含まれています。コミットを中止します。"
+    printf '%s\n' "対象ファイル: $file"
+
+    # どの KEY が当たったか（秘密の実値は表示しない）
+    # patterns_tmp を 1 行ずつ読み、マッチしたら「キー名」を出す
+    # ※ .env を再走査してキー対応を引く
+    while IFS= read -r raw || [ -n "${raw-}" ]; do
+      # 同じ抽出ロジック
+      line="${raw#"${raw%%[! 	]*}"}"; line="${line%"${line##*[! 	]}"}"
+      [ -z "$line" ] && continue
+      case "$line" in \#*) continue ;; esac
+      case "$line" in export\ *) line="${line#export }" ;; esac
+      case "$line" in
+        *=*)
+          key="${line%%=*}"
+          val="${line#*=}"
+          key="${key#"${key%%[! 	]*}"}"; key="${key%"${key##*[! 	]}"}"
+          val="${val#"${val%%[! 	]*}"}"; val="${val%"${val##*[! 	]}"}"
+          if [ "${#val}" -ge 2 ]; then
+            first="${val%${val#?}}"; last="${val##*${val%?}}"
+            if [ "$first" = '"' ] && [ "$last" = '"' ]; then
+              val="${val:1:${#val}-2}"
+            elif [ "$first" = "'" ] && [ "$last" = "'" ]; then
+              val="${val:1:${#val}-2}"
+            fi
+          fi
+          if [ -n "$val" ] && [ "${#val}" -ge "$MIN_SECRET_LEN" ]; then
+            if grep -F -q -- "$val" "$content_tmp"; then
+              printf '  - %s の値が検出されました\n' "$key"
+            fi
+          fi
+          ;;
+      esac
+    done < "$env_file"
+
+    printf '\n対処案:\n'
+    printf '  1) 秘密値を除去し、再度ステージ（git add）してください。\n'
+    printf '  2) 秘密はコードに埋め込まず、環境変数/Secret Manager 等を利用してください。\n'
+    violations=1
+  fi
+done < "$staged_files_tmp"
+
+if [ "$violations" -ne 0 ]; then
+  exit 1
+fi
+
+
+exit 0
