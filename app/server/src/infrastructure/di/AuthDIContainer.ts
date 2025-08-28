@@ -20,6 +20,7 @@ export class AuthDIContainer {
   private static getUserProfileUseCaseInstance: GetUserProfileUseCase | null =
     null;
   private static userRepositoryInstance: PostgreSQLUserRepository | null = null;
+  private static authProviderInstance: SupabaseAuthProvider | null = null;
   private static loggerInstance: Logger | null = null;
 
   /**
@@ -36,7 +37,7 @@ export class AuthDIContainer {
       const userRepository = AuthDIContainer.getUserRepository();
 
       // 【JWT検証・外部認証サービス連携】: Supabaseとの通信処理
-      const authProvider = new SupabaseAuthProvider();
+      const authProvider = AuthDIContainer.getAuthProvider();
 
       // 【認証ドメインロジック実行】: ビジネスルール適用
       const authDomainService = new AuthenticationDomainService(userRepository);
@@ -98,6 +99,23 @@ export class AuthDIContainer {
     }
 
     return AuthDIContainer.userRepositoryInstance;
+  }
+
+  /**
+   * 【機能概要】: SupabaseAuthProviderの共有インスタンスを返す
+   * 【改善内容】: 認証専用のAuthProvider管理
+   * 【設計方針】: JWT検証・ユーザー認証専用インスタンス
+   * 【パフォーマンス】: 重複インスタンス生成を防止
+   * 【保守性】: 認証関連設定を一箇所で管理
+   * 🟢 信頼性レベル: 既存のSupabaseAuthProvider実装をそのまま活用
+   */
+  private static getAuthProvider(): SupabaseAuthProvider {
+    if (!AuthDIContainer.authProviderInstance) {
+      // 【認証サービス連携】: Supabase JWT検証・ユーザー情報取得
+      AuthDIContainer.authProviderInstance = new SupabaseAuthProvider();
+    }
+
+    return AuthDIContainer.authProviderInstance;
   }
 
   /**
@@ -177,10 +195,11 @@ export class AuthDIContainer {
    * 🟢 信頼性レベル: 既存のテストリセット機能を拡張した確実な実装
    */
   static resetInstances(): void {
-    // 【全インスタンスのリセット】: 新規追加分も含めて完全にクリア
+    // 【認証関連インスタンスのリセット】: テスト時の独立性確保
     AuthDIContainer.authenticateUserUseCaseInstance = null;
     AuthDIContainer.getUserProfileUseCaseInstance = null;
     AuthDIContainer.userRepositoryInstance = null;
+    AuthDIContainer.authProviderInstance = null;
     AuthDIContainer.loggerInstance = null;
   }
 }

@@ -80,7 +80,8 @@ describe('UserController', () => {
       mockContext.get = mock(() => '12345678-1234-1234-1234-123456789012');
 
       // When: プロフィール取得メソッドを実行
-      await userController.getProfile(mockContext as any);
+      // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+      await userController.getProfile(mockContext);
 
       // Then: UseCaseが正しく呼び出され、正常なレスポンスが返される
       expect(mockGetUserProfileUseCase.execute).toHaveBeenCalledWith({
@@ -108,7 +109,8 @@ describe('UserController', () => {
 
       // When: プロフィール取得を実行し実行時間を測定
       const startTime = performance.now();
-      await userController.getProfile(mockContext as any);
+      // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+      await userController.getProfile(mockContext);
       const endTime = performance.now();
 
       // Then: 500ms以内で完了する
@@ -134,7 +136,8 @@ describe('UserController', () => {
       );
 
       // When: プロフィール取得を実行
-      await userController.getProfile(mockContext as any);
+      // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+      await userController.getProfile(mockContext);
 
       // Then: 404エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
@@ -157,7 +160,8 @@ describe('UserController', () => {
       );
 
       // When: プロフィール取得を実行
-      await userController.getProfile(mockContext as any);
+      // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+      await userController.getProfile(mockContext);
 
       // Then: 500エラーが返される
       expect(mockContext.json).toHaveBeenCalledWith(
@@ -186,7 +190,8 @@ describe('UserController', () => {
       // When: 10件の同時リクエストを実行
       const promises = Array(10)
         .fill(null)
-        .map(() => userController.getProfile(mockContext as any));
+        // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+        .map(() => userController.getProfile(mockContext));
 
       await Promise.all(promises);
 
@@ -211,7 +216,8 @@ describe('UserController', () => {
 
       // When: プロフィール取得を実行し実行時間を測定
       const startTime = performance.now();
-      await userController.getProfile(mockContext as any);
+      // @ts-expect-error MockContext型はテスト用の部分的な実装のため
+      await userController.getProfile(mockContext);
       const endTime = performance.now();
 
       // Then: 500ms以内で完了する

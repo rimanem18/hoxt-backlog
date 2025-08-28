@@ -1,6 +1,10 @@
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { AuthProvider, CreateUserInput } from '@/domain/user';
-import { InvalidProviderError, UserEntity, isValidAuthProvider } from '@/domain/user';
+import {
+  InvalidProviderError,
+  isValidAuthProvider,
+  UserEntity,
+} from '@/domain/user';
 import type { IAuthenticationDomainService } from './IAuthenticationDomainService';
 import type { ExternalUserInfo } from './IAuthProvider';
 
@@ -121,5 +125,4 @@ export class AuthenticationDomainService
       isNewUser,
     };
   }
-
 }
