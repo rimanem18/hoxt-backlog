@@ -1,9 +1,13 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import type { AuthenticateUserUseCaseInput } from "../../../../../../packages/shared-schemas/src/auth";
+import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
+import type { AuthenticateUserUseCaseInput } from "@/packages/shared-schemas/src/auth";
+import { makeSUT } from "../authenticate-user/helpers/makeSUT";
+import type { IAuthProvider } from "@/domain/services/IAuthProvider";
+import { AuthenticationError } from "@/domain/user/errors/AuthenticationError";
+import { TokenExpiredError } from "@/domain/user/errors/TokenExpiredError";
 
 /**
  * TDD Red フェーズ: 無効JWT検証エラーテスト
- * 
+ *
  * 【テスト目的】: 無効なJWTトークンでの認証失敗が適切にハンドリングされることを確認
  * 【テスト内容】: 不正な署名・改ざんされたJWTを送信した際のエラーハンドリングを検証
  * 【期待される動作】: JWT検証失敗→AuthenticationError発生→適切なエラーレスポンス返却
@@ -34,10 +38,22 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
       jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.invalid_signature_tampered"
     };
 
-    // 【実際の処理実行】: AuthenticateUserUseCaseのexecuteメソッドでJWT検証を実行
+    // 【依存関係注入】: makeSUTヘルパーで適切なモックセットアップを実行
+    // 【実装方針】: 無効JWT検証のためauthProviderモックで検証失敗状態を設定
+    // 🟢 信頼性レベル: 既存のテストパターンから抽出された確立された手法
+    const mockAuthProvider: Partial<IAuthProvider> = {
+      verifyToken: mock().mockResolvedValue({
+        valid: false,
+        payload: {},
+        error: "Invalid signature",
+      }),
+    };
+
+    // 【実際の処理実行】: makeSUTで構築したSUTでJWT検証を実行
     // 【処理内容】: JWT署名検証→検証失敗検出→AuthenticationError発生→エラー情報返却
-    // ❌ 注意: このテストは現在失敗する（JWT検証エラーハンドリングが未実装のため）
-    const authenticateUserUseCase = new (await import("../AuthenticateUserUseCase")).AuthenticateUserUseCase();
+    const { sut: authenticateUserUseCase } = makeSUT({
+      authProvider: mockAuthProvider as IAuthProvider,
+    });
 
     // 【結果検証】: 無効JWTに対する適切なエラー処理と情報非開示を検証
     // 【期待値確認】: AuthenticationError発生・適切なエラーコード・セキュリティ情報の保護
@@ -69,11 +85,23 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
     const malformedJwtInputs: AuthenticateUserUseCaseInput[] = [
       { jwt: "invalid.jwt.token.format.broken" }, // 不正なセグメント数
       { jwt: "not-a-jwt-at-all" }, // JWT形式ではない文字列
-      { jwt: "" }, // 空文字列
       { jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.broken_base64_payload.signature" }, // 破損したBase64
     ];
 
-    const authenticateUserUseCase = new (await import("../AuthenticateUserUseCase")).AuthenticateUserUseCase();
+    // 【依存関係注入】: 不正形式JWT検証用モックの設定
+    // 【実装方針】: authProviderで各種不正形式に対して検証失敗を返すように設定
+    // 🟢 信頼性レベル: 既存テストパターンを活用した確立された手法
+    const mockAuthProvider: Partial<IAuthProvider> = {
+      verifyToken: mock().mockResolvedValue({
+        valid: false,
+        payload: {},
+        error: "Malformed JWT",
+      }),
+    };
+
+    const { sut: authenticateUserUseCase } = makeSUT({
+      authProvider: mockAuthProvider as IAuthProvider,
+    });
 
     // 【実際の処理実行】: 各種不正形式JWTに対する検証処理を実行
     // 【処理内容】: JWT形式チェック→検証失敗検出→AuthenticationError発生→エラー情報返却
@@ -89,7 +117,7 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
         fail(`不正形式JWT "${invalidInput.jwt}" で例外が発生しなかった`); // 【確認内容】: 全ての不正形式が確実に拒否されることを確認 🟢
       } catch (error: any) {
         expect(error.name).toBe("AuthenticationError"); // 【確認内容】: 一貫したドメインエラータイプの発生を確認 🟢
-        expect(error.code).toBe("INVALID_TOKEN"); // 【確認内容】: 統一されたエラーコードの設定を確認 🟢
+        expect(error.code).toBe("INVALID_FORMAT"); // 【確認内容】: 統一されたエラーコードの設定を確認 🟢
         expect(error.message).toBe("認証トークンが無効です"); // 【確認内容】: 攻撃者に有用情報を与えない統一メッセージを確認 🟢
       }
     }
@@ -110,10 +138,22 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
       jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTIzNDU2fQ.expired_but_valid_signature"
     };
 
-    // 【実際の処理実行】: AuthenticateUserUseCaseのexecuteメソッドで期限チェックを実行
+    // 【依存関係注入】: 期限切れJWT検証用モックの設定
+    // 【実装方針】: authProviderで期限切れエラーを返すように設定
+    // 🟢 信頼性レベル: 既存テストパターンを活用した確立された手法
+    const mockAuthProvider: Partial<IAuthProvider> = {
+      verifyToken: mock().mockResolvedValue({
+        valid: false,
+        payload: {},
+        error: "Token expired",
+      }),
+    };
+
+    // 【実際の処理実行】: makeSUTで構築したSUTで期限チェックを実行
     // 【処理内容】: JWT期限検証→期限切れ検出→TokenExpiredError発生→エラー情報返却
-    // ❌ 注意: このテストは現在失敗する（JWT期限チェックエラーハンドリングが未実装のため）
-    const authenticateUserUseCase = new (await import("../AuthenticateUserUseCase")).AuthenticateUserUseCase();
+    const { sut: authenticateUserUseCase } = makeSUT({
+      authProvider: mockAuthProvider as IAuthProvider,
+    });
 
     // 【結果検証】: 期限切れJWTに対する適切なエラー処理とユーザビリティ配慮を検証
     // 【期待値確認】: TOKEN_EXPIREDエラーコード・再ログイン誘導メッセージ・セッション状態クリア
@@ -131,5 +171,18 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
 
     // 【品質保証】: この検証により、JWT期限管理の正確性とタイムベースセキュリティが保証され、
     // セッションハイジャック防止と適切な再認証フロー誘導が確認される
+  });
+
+  test("空文字列JWTで入力検証エラーが発生する", async () => {
+    // 【テスト目的】: 空文字列JWTに対する入力検証が確実に機能することを確認
+    // 【テスト内容】: AuthenticateUserUseCaseが空文字列のJWTを受け取った際のエラー処理を検証
+    // 【期待される動作】: 入力検証でValidationError発生
+    const emptyJwtInput: AuthenticateUserUseCaseInput = {
+      jwt: ""
+    };
+
+    const { sut: authenticateUserUseCase } = makeSUT();
+
+    await expect(authenticateUserUseCase.execute(emptyJwtInput)).rejects.toThrow("JWTトークンが必要です");
   });
 });

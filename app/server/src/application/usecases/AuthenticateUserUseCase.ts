@@ -9,6 +9,7 @@ import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import { TokenExpiredError } from '@/domain/user/errors/TokenExpiredError';
 import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
@@ -152,9 +153,10 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: jwtValidationResult.errorMessage,
         });
 
-        throw new ValidationError(
-          jwtValidationResult.errorMessage || 'JWT検証に失敗しました',
-        );
+        // 【エラー分類実装】: JWT形式エラーの場合はAuthenticationError.invalidFormat()を使用
+        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
+        // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
+        throw AuthenticationError.invalidFormat();
       }
 
       this.logger.info('Starting user authentication', {
@@ -172,7 +174,18 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           reason: 'Invalid JWT',
           errorMessage: verificationResult.error,
         });
-        throw new AuthenticationError('認証トークンが無効です');
+
+        // 【エラー分類実装】: JWT検証エラーの詳細に基づいて適切なエラータイプを返す
+        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
+        // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
+        const errorMessage = verificationResult.error?.toLowerCase() || '';
+        if (errorMessage.includes('expired') || errorMessage.includes('token expired')) {
+          throw new TokenExpiredError();
+        } else if (errorMessage.includes('signature') || errorMessage.includes('invalid signature')) {
+          throw AuthenticationError.invalidToken();
+        } else {
+          throw AuthenticationError.invalidToken();
+        }
       }
 
       // JWTペイロードから外部ユーザー情報を抽出
@@ -217,6 +230,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
       if (
         error instanceof ValidationError ||
         error instanceof AuthenticationError ||
+        error instanceof TokenExpiredError ||
         error instanceof InfrastructureError ||
         error instanceof ExternalServiceError
       ) {

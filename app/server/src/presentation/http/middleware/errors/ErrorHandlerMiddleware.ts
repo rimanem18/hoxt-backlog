@@ -6,7 +6,7 @@
  */
 
 import { createMiddleware } from 'hono/factory';
-import type { ErrorResponse } from '@/../../packages/shared-schemas';
+import type { ErrorResponse } from '@/@/packages/shared-schemas';
 import { AuthError } from './AuthError';
 
 /**

@@ -1,10 +1,14 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { Hono } from "hono";
-import type { GetUserProfileResponse } from "../../../../../../../packages/shared-schemas/src/api";
+import type { GetUserProfileResponse } from "@/packages/shared-schemas/src/api";
+import { UserController } from "../UserController";
+import { authMiddleware } from "../../middleware/auth/AuthMiddleware";
+import type { IGetUserProfileUseCase } from "@/application/usecases/GetUserProfileUseCase";
+import type { User } from "@/packages/shared-schemas/src/user";
 
 /**
  * TDD Red フェーズ: ユーザープロフィール取得成功テスト
- * 
+ *
  * 【テスト目的】: GET /api/user/profile エンドポイントが認証済みユーザーのプロフィール情報を正常に返却することを確認
  * 【テスト内容】: Authorization ヘッダー検証→ユーザー情報取得→プロフィール返却の一連のHTTPフローを検証
  * 【期待される動作】: UserControllerが認証ミドルウェアを通過したリクエストを処理し、GetUserProfileUseCaseと連携してプロフィール情報を返却
@@ -12,16 +16,48 @@ import type { GetUserProfileResponse } from "../../../../../../../packages/share
  */
 describe("UserController - プロフィール取得成功テスト", () => {
   let app: Hono;
+  let userController: UserController;
+  let mockGetUserProfileUseCase: IGetUserProfileUseCase;
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にHonoアプリケーションとミドルウェアを初期化
     // 【環境初期化】: 認証ミドルウェア・UserController・ルーティング設定を含む統合環境を構築
+    // 🟢 信頼性レベル: 既存の実装パターンから抽出された確立された手法
     console.log("UserController統合テスト環境の初期化を開始");
-    
-    // ❌ 注意: 現在未実装のため、このセットアップは失敗する
+
+    // 【依存関係注入】: テスト用のモックUseCaseを作成
+    // 【実装方針】: プロフィール取得成功パターンのモック設定
+    const mockUser: User = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      externalId: "google_123456789",
+      email: "user@example.com",
+      name: "山田太郎",
+      avatarUrl: "https://lh3.googleusercontent.com/a/avatar.jpg",
+      createdAt: new Date("2025-08-12T10:30:00.000Z"),
+      updatedAt: new Date("2025-08-12T10:30:00.000Z"),
+      lastLoginAt: new Date("2025-08-12T13:45:00.000Z"),
+    };
+
+    mockGetUserProfileUseCase = {
+      execute: mock().mockResolvedValue(mockUser),
+    };
+
+    // 【HTTPアプリケーションセットアップ】: 実際のミドルウェアとコントローラーを統合
+    // 【実装方針】: 認証ミドルウェアでテスト用ユーザーIDを設定し、UserControllerで処理
+    userController = new UserController(mockGetUserProfileUseCase);
     app = new Hono();
-    // app.use("/api/user/*", authMiddleware); // 認証ミドルウェア（未実装）
-    // app.get("/api/user/profile", userController.getProfile); // UserController（未実装）
+    
+    // 【認証ミドルウェア統合】: テスト用のトークン取得関数でモック認証を実現
+    app.use("/api/user/*", authMiddleware({
+      getToken: () => "valid-test-token", // テスト用固定トークン
+    }));
+    
+    // 【ルーティング設定】: UserControllerのgetProfileメソッドをエンドポイントに接続
+    app.get("/api/user/profile", async (c) => {
+      // 【コンテキスト設定】: テスト用ユーザーIDを設定（認証ミドルウェアが設定する想定）
+      c.set('userId', '550e8400-e29b-41d4-a716-446655440000');
+      return await userController.getProfile(c);
+    });
   });
 
   afterEach(() => {

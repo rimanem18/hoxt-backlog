@@ -8,7 +8,7 @@ import type { Context } from 'hono';
 import type {
   AuthResponse,
   ErrorResponse,
-} from '@/../../packages/shared-schemas';
+} from '@/@/packages/shared-schemas';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { AuthProviders } from '@/domain/user/AuthProvider';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
