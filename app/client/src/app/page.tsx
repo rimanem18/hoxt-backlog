@@ -1,3 +1,4 @@
+import { GoogleLoginButton } from '@/features/google-auth/components/GoogleLoginButton';
 import { HelloWorld } from '@/features/hello-world';
 
 /**
@@ -10,6 +11,7 @@ export default function Home(): React.ReactNode {
       <main className="max-w-4xl mx-auto">
         {/* Hello World コンポーネントを中央に配置 */}
         <HelloWorld />
+        <GoogleLoginButton />
       </main>
     </div>
   );

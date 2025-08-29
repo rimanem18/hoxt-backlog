@@ -38,6 +38,8 @@ services:
       - ./app/packages:/home/bun/app/packages
     environment:
       - CLIENT_PORT=${CLIENT_PORT}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
     tty: true
 

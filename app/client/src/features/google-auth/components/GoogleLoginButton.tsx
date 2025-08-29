@@ -4,8 +4,9 @@
  * 【テスト対応】: GoogleLoginButton.test.tsx のボタン表示・クリック処理テストを通すための実装
  * 🟢 信頼性レベル: 要件REQ-102（Google認証フロー）・テストケース仕様から直接抽出
  */
-
+'use client'
 import React from 'react';
+import { createClient } from '@supabase/supabase-js'
 
 /**
  * 【Googleログインボタンコンポーネント】: 未認証ユーザー向けの認証開始UI
@@ -15,6 +16,13 @@ import React from 'react';
  * @returns {React.ReactNode} - Googleログインボタン要素
  */
 export const GoogleLoginButton: React.FC = () => {
+
+  // Project URL と ANON Key から Client を生成
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
   /**
    * 【クリックイベントハンドラー】: Googleログインボタンクリック時の処理
    * 【実装方針】: 現段階では最小限のイベント処理（後のGreenフェーズで詳細実装）
@@ -24,7 +32,11 @@ export const GoogleLoginButton: React.FC = () => {
   const handleClick = async (): Promise<void> => {
     // 【最小限実装】: テストを通すためのプレースホルダー処理
     // 【将来実装予定】: supabase.auth.signInWithOAuth({ provider: 'google' }) を実装
-    console.log('Google認証フローを開始します');
+    await supabase.auth.signInWithOAuth({provider:'google'}).then(()=>{
+      console.log('認証成功！')
+    }).catch((error)=>{
+      console.error('認証失敗！',error)
+    })
   };
 
   // 【JSX返却】: テストで期待されるボタン要素を返却
