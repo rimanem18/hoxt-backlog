@@ -95,6 +95,8 @@ docker compose exec client bun run dev
   - 意図的な未実装は TODO コメントで
 - **禁止**: `JSX.Element` 型の返却
   - `React.ReactNode` 型で代用
+- **禁止**: `fireEvent` の使用
+  - `userEvent` で代用
 
 # バックエンド開発ガイドライン
 

@@ -1,0 +1,4 @@
+# Bun configuration for client app
+
+[test]
+preload = ["./src/test-setup.ts"]

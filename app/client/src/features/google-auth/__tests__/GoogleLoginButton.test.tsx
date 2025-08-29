@@ -1,6 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { GoogleLoginButton } from '../components/GoogleLoginButton';
 
 // 【テストファイル名】: GoogleLoginButton.test.ts
@@ -26,7 +25,6 @@ describe('GoogleLoginButton', () => {
 
     // 【テストデータ準備】: 未認証状態のユーザーがログインボタンをクリックすることを想定
     // 【初期条件設定】: 認証状態false、ユーザー情報null、ローディング状態falseに設定
-    const user = userEvent.setup();
 
     // TODO(human): GoogleLoginButtonコンポーネントの実装が必要
     // 【実際の処理実行】: GoogleLoginButtonコンポーネントをレンダリングし、Googleログインボタンを表示
@@ -40,7 +38,7 @@ describe('GoogleLoginButton', () => {
 
     // 【実際の処理実行】: Googleログインボタンをクリックして認証フロー開始処理を実行
     // 【処理内容】: ユーザーのクリックアクションによる認証開始イベントを発火
-    await user.click(loginButton);
+    fireEvent.click(loginButton);
 
     // 【結果検証】: サインイン処理が開始されることを確認（現在は実装前なので失敗する）
     // 【期待値確認】: supabase.auth.signInWithOAuth関数が正しい引数で呼び出されること

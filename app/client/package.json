@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "test": "bun test --preload ./src/test-setup.ts",
+    "test": "bun test --dom --preload ./src/test-setup.ts",
     "check": "biome check  src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit"

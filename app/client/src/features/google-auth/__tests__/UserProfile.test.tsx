@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { UserProfile } from '../components/UserProfile';
 
 // 【テストファイル名】: UserProfile.test.ts
@@ -15,6 +15,7 @@ describe('UserProfile', () => {
   afterEach(() => {
     // 【テスト後処理】: テスト実行後に画像要素のイベントリスナーをクリアし、メモリリークを防止
     // 【状態復元】: 次のテストに影響しないよう、コンポーネント状態をリセット
+    cleanup(); // DOMをクリーンアップして次のテストへの影響を防ぐ
   });
 
   test('認証済みユーザー情報の表示', () => {
