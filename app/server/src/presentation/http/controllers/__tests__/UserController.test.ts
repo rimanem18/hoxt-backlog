@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type {
   ErrorResponse,
   GetUserProfileResponse,
-} from '@/@/packages/shared-schemas';
+} from '@/packages/shared-schemas/src';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import { AuthProviders } from '@/domain/user/AuthProvider';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';

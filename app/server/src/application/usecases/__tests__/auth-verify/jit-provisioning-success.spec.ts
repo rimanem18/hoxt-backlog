@@ -48,9 +48,9 @@ describe("AuthenticateUserUseCase - JITプロビジョニング成功テスト",
       email: "newuser@example.com",
       name: "新規ユーザーサン",
       avatarUrl: "https://example.com/new-avatar.jpg",
-      createdAt: new Date("2024-01-01T00:00:00Z"),
-      updatedAt: new Date("2024-01-01T00:00:00Z"),
-      lastLoginAt: new Date(),
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      lastLoginAt: new Date().toISOString(),
     };
 
     const mockAuthProvider: Partial<IAuthProvider> = {
@@ -85,6 +85,7 @@ describe("AuthenticateUserUseCase - JITプロビジョニング成功テスト",
         user: mockNewUser,
         isNewUser: true, // JITプロビジョニングのためtrue
       }),
+      createUserFromExternalInfo: mock().mockResolvedValue(mockNewUser),
     };
 
     // 【実際の処理実行】: makeSUTで構築したSUTでJITプロビジョニングを実行

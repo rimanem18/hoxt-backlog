@@ -48,9 +48,9 @@ describe("AuthenticateUserUseCase - JWT認証成功テスト", () => {
       email: "user@example.com",
       name: "山田太郎",
       avatarUrl: "https://lh3.googleusercontent.com/a/avatar.jpg",
-      createdAt: new Date("2024-01-01T00:00:00Z"),
-      updatedAt: new Date("2024-01-01T00:00:00Z"),
-      lastLoginAt: new Date(),
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z", 
+      lastLoginAt: new Date().toISOString(),
     };
 
     const mockAuthProvider: Partial<IAuthProvider> = {
@@ -85,6 +85,7 @@ describe("AuthenticateUserUseCase - JWT認証成功テスト", () => {
         user: mockUser,
         isNewUser: false,
       }),
+      createUserFromExternalInfo: mock().mockResolvedValue(mockUser),
     };
 
     // 【実際の処理実行】: makeSUTで構築したSUTでJWT認証を実行

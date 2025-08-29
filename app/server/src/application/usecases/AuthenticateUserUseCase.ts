@@ -163,11 +163,11 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         jwtLength: input.jwt.length,
       });
 
-      // JWT検証と外部ユーザー情報取得の並列処理
-      const [verificationResult] = await Promise.all([
-        this.authProvider.verifyToken(input.jwt),
-        Promise.resolve(), // 将来の拡張用
-      ]);
+      // 【パフォーマンス最適化】: 無駄な並列処理を除去し、直接実行に変更
+      // 【改善内容】: Promise.allの無意味な利用を削除、実行効率を向上
+      // 【設計方針】: 将来の拡張は必要な時点で適切な並列処理として実装
+      // 🟢 信頼性レベル: パフォーマンスレビューに基づく実証された改善
+      const verificationResult = await this.authProvider.verifyToken(input.jwt);
 
       if (!verificationResult.valid || !verificationResult.payload) {
         this.logger.warn('User authentication failed', {
@@ -175,17 +175,13 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: verificationResult.error,
         });
 
-        // 【エラー分類実装】: JWT検証エラーの詳細に基づいて適切なエラータイプを返す
-        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
-        // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
-        const errorMessage = verificationResult.error?.toLowerCase() || '';
-        if (errorMessage.includes('expired') || errorMessage.includes('token expired')) {
-          throw new TokenExpiredError();
-        } else if (errorMessage.includes('signature') || errorMessage.includes('invalid signature')) {
-          throw AuthenticationError.invalidToken();
-        } else {
-          throw AuthenticationError.invalidToken();
-        }
+        // 【セキュリティ強化】: エラーメッセージ統一化による情報漏洩防止
+        // 【改善内容】: JWT検証エラーの詳細分類を廃止し、統一エラーで攻撃者情報収集を阻止
+        // 【設計方針】: 期限切れ・署名不正の区別を不可能にし、セキュリティ脆弱性を根本的に解決
+        // 🟢 信頼性レベル: セキュリティレビューに基づく実証された強化策
+        
+        // 全てのJWT検証失敗を統一エラーとして処理（セキュリティベストプラクティス）
+        throw AuthenticationError.invalidToken();
       }
 
       // JWTペイロードから外部ユーザー情報を抽出

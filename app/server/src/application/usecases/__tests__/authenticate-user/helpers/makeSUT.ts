@@ -18,6 +18,8 @@ import type { User } from '@/domain/user/UserEntity';
 import type { CreateUserInput } from '@/domain/user/valueobjects/CreateUserInput';
 import type { UpdateUserInput } from '@/domain/user/valueobjects/UpdateUserInput';
 import type { Logger } from '@/shared/logging/Logger';
+import type { IJwtValidationService } from '@/shared/services/JwtValidationService';
+import type { IErrorClassificationService } from '@/shared/services/ErrorClassificationService';
 import { createFakeClock } from './fakeClock';
 
 /**
@@ -33,6 +35,8 @@ export interface SUTDependencies {
     EXISTING_USER_TIME_LIMIT_MS: number;
     NEW_USER_TIME_LIMIT_MS: number;
   }>;
+  readonly jwtValidationService?: IJwtValidationService;
+  readonly errorClassificationService?: IErrorClassificationService;
 }
 
 /**
@@ -125,6 +129,8 @@ export function makeSUT(overrides: Partial<SUTDependencies> = {}): SUTResult {
     dependencies.authDomainService,
     dependencies.logger,
     dependencies.config,
+    dependencies.jwtValidationService,
+    dependencies.errorClassificationService,
   );
 
   return {

@@ -33,9 +33,9 @@ describe("UserController - プロフィール取得成功テスト", () => {
       email: "user@example.com",
       name: "山田太郎",
       avatarUrl: "https://lh3.googleusercontent.com/a/avatar.jpg",
-      createdAt: new Date("2025-08-12T10:30:00.000Z"),
-      updatedAt: new Date("2025-08-12T10:30:00.000Z"),
-      lastLoginAt: new Date("2025-08-12T13:45:00.000Z"),
+      createdAt: "2025-08-12T10:30:00.000Z",
+      updatedAt: "2025-08-12T10:30:00.000Z",
+      lastLoginAt: "2025-08-12T13:45:00.000Z",
     };
 
     mockGetUserProfileUseCase = {

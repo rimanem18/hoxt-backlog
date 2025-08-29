@@ -9,7 +9,7 @@ import type { Context } from 'hono';
 import type {
   AuthResponse,
   ErrorResponse,
-} from '@/@/packages/shared-schemas';
+} from '@/packages/shared-schemas/src';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import type { User } from '@/domain/user/UserEntity';
 import { ValidationError } from '@/shared/errors/ValidationError';

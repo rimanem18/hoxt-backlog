@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import type { AuthenticateUserUseCaseInput } from "@/packages/shared-schemas/src/auth";
 import { makeSUT } from "../authenticate-user/helpers/makeSUT";
 import type { IAuthProvider } from "@/domain/services/IAuthProvider";
+import type { IJwtValidationService } from "@/shared/services/JwtValidationService";
 import { AuthenticationError } from "@/domain/user/errors/AuthenticationError";
 import { TokenExpiredError } from "@/domain/user/errors/TokenExpiredError";
 
@@ -60,11 +61,18 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
 
     await expect(authenticateUserUseCase.execute(invalidSignatureJwtInput)).rejects.toThrow("認証トークンが無効です"); // 【確認内容】: JWT署名検証失敗時に適切な例外が発生することを確認 🟢
 
+    // TODO(human): fail関数の型エラーを修正
+    // 【型安全性向上】: Bunテストフレームワークでの適切なエラー検証手法への変更
+    // 【実装方針】: fail関数の代わりに適切なアサーション手法を使用
+
     // 追加のエラー詳細検証
     try {
       await authenticateUserUseCase.execute(invalidSignatureJwtInput);
-      fail("無効JWTで例外が発生しなかった"); // 【確認内容】: セキュリティ上、無効JWTは必ず拒否されるべき 🟢
+      throw new Error("無効JWTで例外が発生しなかった"); // 【確認内容】: セキュリティ上、無効JWTは必ず拒否されるべき 🟢
     } catch (error: any) {
+      if (error.message === "無効JWTで例外が発生しなかった") {
+        throw error; // テスト失敗として再スロー
+      }
       expect(error.name).toBe("AuthenticationError"); // 【確認内容】: 正しいドメインエラータイプが発生することを確認 🟢
       expect(error.code).toBe("INVALID_TOKEN"); // 【確認内容】: 適切なエラーコードが設定されることを確認 🟢
       expect(error.message).toBe("認証トークンが無効です"); // 【確認内容】: ユーザーフレンドリーなエラーメッセージが提供されることを確認 🟢
@@ -88,19 +96,19 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
       { jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.broken_base64_payload.signature" }, // 破損したBase64
     ];
 
-    // 【依存関係注入】: 不正形式JWT検証用モックの設定
-    // 【実装方針】: authProviderで各種不正形式に対して検証失敗を返すように設定
-    // 🟢 信頼性レベル: 既存テストパターンを活用した確立された手法
-    const mockAuthProvider: Partial<IAuthProvider> = {
-      verifyToken: mock().mockResolvedValue({
-        valid: false,
-        payload: {},
-        error: "Malformed JWT",
+    // 【依存関係注入】: JWT形式検証サービスをモックして不正形式を検出するように設定
+    // 【実装方針】: jwtValidationServiceで形式チェック失敗を返し、AuthenticationError.invalidFormat()をテスト
+    // 🟢 信頼性レベル: 実際のJWT形式検証ロジックを活用した確実な手法
+    const mockJwtValidationService: Partial<IJwtValidationService> = {
+      validateStructure: mock().mockReturnValue({
+        isValid: false,
+        failureReason: 'MALFORMED_FORMAT',
+        errorMessage: 'Invalid JWT format detected'
       }),
     };
 
     const { sut: authenticateUserUseCase } = makeSUT({
-      authProvider: mockAuthProvider as IAuthProvider,
+      jwtValidationService: mockJwtValidationService as IJwtValidationService,
     });
 
     // 【実際の処理実行】: 各種不正形式JWTに対する検証処理を実行
@@ -114,8 +122,11 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
 
       try {
         await authenticateUserUseCase.execute(invalidInput);
-        fail(`不正形式JWT "${invalidInput.jwt}" で例外が発生しなかった`); // 【確認内容】: 全ての不正形式が確実に拒否されることを確認 🟢
+        throw new Error(`不正形式JWT "${invalidInput.jwt}" で例外が発生しなかった`); // 【確認内容】: 全ての不正形式が確実に拒否されることを確認 🟢
       } catch (error: any) {
+        if (error.message === `不正形式JWT "${invalidInput.jwt}" で例外が発生しなかった`) {
+          throw error; // テスト失敗として再スロー
+        }
         expect(error.name).toBe("AuthenticationError"); // 【確認内容】: 一貫したドメインエラータイプの発生を確認 🟢
         expect(error.code).toBe("INVALID_FORMAT"); // 【確認内容】: 統一されたエラーコードの設定を確認 🟢
         expect(error.message).toBe("認証トークンが無効です"); // 【確認内容】: 攻撃者に有用情報を与えない統一メッセージを確認 🟢
@@ -162,8 +173,12 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
 
     try {
       await authenticateUserUseCase.execute(expiredJwtInput);
-      fail("期限切れJWTで例外が発生しなかった"); // 【確認内容】: 期限管理の確実性を確認 🟢
+      throw new Error("期限切れJWTで例外が発生しなかった"); // 【確認内容】: 期限管理の確実性を確認 🟢
     } catch (error: any) {
+     if (error.message === "期限切れJWTで例外が発生しなかった") {
+       throw error; // テスト失敗として再スロー
+     }
+
       expect(error.name).toBe("TokenExpiredError"); // 【確認内容】: 期限切れ専用のエラータイプが発生することを確認 🟢
       expect(error.code).toBe("TOKEN_EXPIRED"); // 【確認内容】: 期限切れ固有のエラーコードが設定されることを確認 🟢
       expect(error.message).toBe("認証トークンの有効期限が切れています"); // 【確認内容】: 再ログインを促すユーザーフレンドリーなメッセージを確認 🟢
