@@ -1,5 +1,7 @@
 # TDD開発メモ: mvp-google-auth
 
+- **フロントエンド未実装**
+
 ## 概要
 
 - 機能名: mvp-google-auth（Google認証のMVP実装）
