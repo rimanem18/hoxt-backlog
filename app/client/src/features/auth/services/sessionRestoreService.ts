@@ -1,8 +1,10 @@
 /**
  * 【機能概要】: セッション復元機能を提供するサービスクラス
- * 【実装方針】: sessionRestore.test.ts のテストケースを通すために必要な機能を実装
- * 【テスト対応】: ページリロード時の自動認証状態復元・期限切れセッション自動クリア・Redux連携
- * 🟡 信頼性レベル: テストケース仕様とdataflow.md設計から妥当な実装推測
+ * 【重要な注意】: 現在の実装はテスト用のモック実装です
+ * 【本番使用前の必須作業】: 実際のlocalStorage/sessionStorage連携処理の実装が必要
+ * 【テスト対応】: sessionRestore.test.tsの全テストケースに対応
+ * 【リファクタリング状況】: セキュリティ・パフォーマンスレビュー完了、コメント品質向上
+ * 🟡 信頼性レベル: テストケース仕様から妥当な推測実装（本番実装は別途必要）
  */
 
 import { User } from '@/packages/shared-schemas/src/auth';
@@ -19,8 +21,14 @@ interface SessionData {
   /** ユーザー情報 */
   user: {
     id: string;
+    externalId: string;
+    provider: 'google' | 'apple' | 'github';
     email: string;
     name: string;
+    avatarUrl: string | null;
+    createdAt: string;
+    updatedAt: string;
+    lastLoginAt: string | null;
   };
   /** セッション有効期限（Unix時刻） */
   expiresAt: number;
@@ -112,9 +120,14 @@ export class SessionRestoreService {
           success: true,
           userData: {
             id: sessionData.user.id,
+            externalId: sessionData.user.externalId || sessionData.user.id,
+            provider: sessionData.user.provider || 'google',
             email: sessionData.user.email,
             name: sessionData.user.name,
-            avatarUrl: null // テスト用のデフォルト値
+            avatarUrl: sessionData.user.avatarUrl || null,
+            createdAt: sessionData.user.createdAt || new Date().toISOString(),
+            updatedAt: sessionData.user.updatedAt || new Date().toISOString(),
+            lastLoginAt: sessionData.user.lastLoginAt || null
           }
         };
       }

@@ -5,14 +5,22 @@
 export interface AuthUser {
   /** ユーザー固有ID */
   id: string;
+  /** 外部プロバイダーID */
+  externalId: string;
+  /** 認証プロバイダー名 */
+  provider: 'google' | 'apple' | 'github';
   /** メールアドレス */
   email: string;
   /** 表示名 */
-  name?: string;
+  name: string;
   /** プロフィール画像URL */
-  avatarUrl?: string;
-  /** 認証プロバイダー名 */
-  provider: 'google' | 'apple' | 'github';
+  avatarUrl: string | null;
+  /** 作成日時 */
+  createdAt: string;
+  /** 更新日時 */
+  updatedAt: string;
+  /** 最終ログイン日時 */
+  lastLoginAt: string | null;
 }
 
 /**

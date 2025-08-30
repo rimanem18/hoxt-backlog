@@ -21,8 +21,8 @@
 
 理由を記載してください:
 
-OK: feat: ○○なため、hoge を追加。
-NG: feat: hoge を追加。
+- OK: feat: ○○なため、hoge を追加。
+- NG: feat: hoge を追加。
 
 ## ディレクトリ構成
 

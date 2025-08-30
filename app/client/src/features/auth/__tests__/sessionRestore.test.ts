@@ -1,7 +1,19 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect, mock, beforeEach, afterAll } from 'bun:test';
 
 // テストファイル: sessionRestore.test.ts
 describe('セッション復元機能', () => {
+  // 【テストの安定化】: Date.now()を固定値にモックして非決定的動作を回避
+  const FIXED_TIME = 1756562945000; // 固定されたタイムスタンプ
+  
+  beforeEach(() => {
+    // 【Bunテストモック】: Date.nowを固定値で上書き
+    global.Date.now = mock(() => FIXED_TIME);
+  });
+  
+  afterAll(() => {
+    // 【モック復元】: テスト終了後に元のDate.nowを復元
+    global.Date.now = Date.now;
+  });
   test('ページリロード時の自動認証状態復元', () => {
     // 【テスト目的】: ユーザーがページをリロードした際に、保存されている認証セッションから自動的に認証状態を復元できるかを確認
     // 【テスト内容】: localStorage/sessionStorageに保存されている認証トークンを読み取り、有効な場合に認証済み状態を復元することを検証
@@ -18,7 +30,7 @@ describe('セッション復元機能', () => {
         email: 'test@example.com',
         name: 'Test User'
       },
-      expiresAt: Date.now() + 3600000 // 1時間後の有効期限
+      expiresAt: FIXED_TIME + 3600000 // 1時間後の有効期限
     };
 
     // 【実際の処理実行】: セッション復元サービスのインスタンス化と復元処理の実行
@@ -48,7 +60,7 @@ describe('セッション復元機能', () => {
         email: 'expired@example.com',
         name: 'Expired User'
       },
-      expiresAt: Date.now() - 3600000 // 1時間前（期限切れ）
+      expiresAt: FIXED_TIME - 3600000 // 1時間前（期限切れ）
     };
 
     // 【実際の処理実行】: 期限切れセッションの検証と自動クリア処理
@@ -93,7 +105,7 @@ describe('セッション復元機能', () => {
         email: 'restored@example.com',
         name: 'Restored User'
       },
-      expiresAt: Date.now() + 3600000 // 1時間後の有効期限
+      expiresAt: FIXED_TIME + 3600000 // 1時間後の有効期限
     };
 
     // 【実際の処理実行】: セッション復元とRedux状態同期処理
@@ -133,7 +145,7 @@ describe('セッション復元機能', () => {
     const sessionNearExpiry = {
       accessToken: 'expiring-jwt-token',
       refreshToken: 'valid-refresh-token',
-      expiresAt: Date.now() + 300000, // 5分後（更新が必要な状態）
+      expiresAt: FIXED_TIME + 300000, // 5分後（更新が必要な状態）
       user: {
         id: '999',
         email: 'refresh@example.com',
@@ -144,7 +156,7 @@ describe('セッション復元機能', () => {
     const newTokenData = {
       accessToken: 'new-jwt-token',
       refreshToken: 'new-refresh-token',
-      expiresAt: Date.now() + 3600000 // 新しい有効期限
+      expiresAt: FIXED_TIME + 3600000 // 新しい有効期限
     };
 
     // 【実際の処理実行】: リフレッシュトークンによるセッション自動更新処理
