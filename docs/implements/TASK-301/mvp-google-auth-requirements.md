@@ -1,387 +1,330 @@
-# TDD要件定義・機能仕様の整理
+# TDD要件定義・機能仕様：TASK-301 フロントエンド認証フロー
 
-**【機能名】**: mvp-google-auth (Google認証のMVP実装)
-**【タスクID】**: TASK-301
-**【作成日】**: 2025-08-28
-**【更新日】**: 2025-08-29
+**作成日**: 2025-08-30  
+**更新日**: 2025-08-30
+**機能名**: mvp-google-auth (フロントエンド認証フロー)  
+**タスクID**: TASK-301  
+**ブランチ**: issue#21_frontend-auth-flow  
+**タスクタイプ**: TDD  
 
-- **フロントエンド未実装** → **要件定義完了・フロントエンド実装推奨段階**
-
-- **実装詳細**:
-  - Supabase Auth の設定
-  - Google OAuth フローの実装
-  - JWT取得・保存
-  - 認証状態管理（Redux）
-- **ファイル構成**:
+- **ファイル構成**（プロバイダー非依存設計）:
   ```
   app/client/src/
   ├── features/auth/
   │   ├── components/
-  │   │   ├── LoginButton.tsx
-  │   │   └── LogoutButton.tsx
+  │   │   ├── LoginButton.tsx          // 汎用ログインボタン（プロバイダー選択可能）
+  │   │   ├── LogoutButton.tsx         // 汎用ログアウトボタン
+  │   │   └── UserProfile.tsx          // ユーザープロフィール表示
   │   ├── hooks/
-  │   │   └── useAuth.tsx
+  │   │   ├── useAuth.tsx              // 認証状態管理カスタムフック
+  │   │   └── useAuthActions.tsx       // 認証アクションカスタムフック
   │   ├── store/
-  │   │   ├── authSlice.ts
-  │   │   └── authActions.ts
-  │   └── services/
-  │       └── authService.ts
+  │   │   ├── authSlice.ts             // 認証状態管理
+  │   │   └── authActions.ts           // 認証アクション群
+  │   ├── services/
+  │   │   ├── authService.ts           // 認証サービス抽象化層
+  │   │   └── providers/
+  │   │       ├── googleAuthProvider.ts    // Google認証実装
+  │   │       ├── appleAuthProvider.ts     // 将来拡張用
+  │   │       └── authProviderInterface.ts // プロバイダーインターフェース
+  │   └── types/
+  │       └── auth.ts                  // 認証関連型定義
   └── lib/
-      └── supabase.ts
+      └── supabase.ts                  // Supabase設定
   ```
-- **機能実装**:
-  - Google OAuth によるログイン
-  - JWT の自動取得・保存
-  - ログアウト機能
-  - 認証状態の永続化
-- **UI/UX要件**:
-  - [ ] ローディング状態: ログインボタン無効化 + スピナー
-  - [ ] エラー表示: トースト通知またはインラインエラー
-  - [ ] モバイル対応: レスポンシブデザインでの適切表示
-  - [ ] アクセシビリティ: キーボード操作・ARIA属性対応
-- **テスト要件**:
-  - [ ] コンポーネントテスト: LoginButton・LogoutButton
-  - [ ] ストアテスト: authSlice の状態変更
-  - [ ] 統合テスト: 認証フロー全体のE2E
 
+
+**【信頼性レベル指示】**:
+- 🟢 **青信号**: EARS要件定義書・設計文書を参考にしてほぼ推測していない場合
+- 🟡 **黄信号**: EARS要件定義書・設計文書から妥当な推測の場合  
+- 🔴 **赤信号**: EARS要件定義書・設計文書にない推測の場合
+
+## 事前準備完了
+
+✅ **TDD関連ファイルの読み込み**・コンテキスト準備完了  
+✅ **フロントエンド実装状況分析完了**  
+- GoogleLoginButton.tsx - 基本的なGoogle OAuth実装済み
+- UserProfile.tsx - ユーザー情報表示・ログアウト機能実装済み  
+- authSlice.ts - Redux認証状態管理の基礎実装済み
 
 ---
 
 ## 1. 機能の概要（EARS要件定義書・設計文書ベース）
 
-### 🟢 何をする機能か（ユーザストーリーから抽出）
-- **Googleアカウントでのワンクリックログイン**: ユーザーがGoogleアカウントを使用してアプリケーションに簡単にログインできる機能
-- **バックエンドAPIでのユーザー情報取得**: ログイン済みユーザーがバックエンドAPIから自分のプロフィール情報を取得し、画面に表示される機能  
-- **ログアウト機能**: ログイン済みユーザーがセッションを終了できる機能
+🟢 **青信号**: EARS要件定義書・設計文書から詳細仕様を参照して推測なしで抽出
 
-### 🟢 どのような問題を解決するか（So that から抽出）
-- **面倒な会員登録の排除**: Google認証により、ユーザーは新規会員登録なしにアプリをすぐに使い始められる
-- **フロントエンド・バックエンド連携の確認**: 認証情報がフロントエンドとバックエンド間で正常に連携されることを確認できる
-- **セッション管理の安全性**: ユーザーが安心してログアウトし、セッションを確実に終了できる
+- **何をする機能か**: Next.js + Supabase Auth + Redux を使用したプロバイダー非依存認証フローの完全実装。現在はGoogle OAuthを主体とし、将来的な複数認証プロバイダー対応を見据えた拡張可能な統合フロントエンド認証システム
+- **どのような問題を解決するか**: フロントエンドアプリケーションにおけるユーザー認証の課題（ログイン・認証状態管理・セッション維持・画面遷移・エラーハンドリング）を解決し、バックエンドAPIとの連携でセキュアなユーザー体験を提供
+- **想定されるユーザー**: Webブラウザを通じてアプリケーションを利用するエンドユーザー（Googleアカウント保有者）
+- **システム内での位置づけ**: フロントエンド（Next.js）層の認証システムとして、Supabase Authを通じてバックエンドAPI（Hono）と連携し、全体認証フローのユーザーインターフェース部分を担当
 
-### 🟢 想定されるユーザー（As a から抽出）
-- **アプリケーション利用者**: Googleアカウントを持ち、面倒な会員登録を避けたい一般ユーザー
-- **ログイン済みユーザー**: 認証状態でアプリケーションを利用し、フロントエンドとバックエンドの連携を確認したいユーザー
-
-### 🟢 システム内での位置づけ（アーキテクチャ設計から抽出）
-- **フロントエンド・バックエンド分離型アーキテクチャ**: Next.js（フロントエンド）とHono API（バックエンド）の完全分離構成
-- **DDD + クリーンアーキテクチャ**: バックエンドにドメイン駆動設計と4層アーキテクチャを適用
-- **認証・ユーザー管理ドメイン**: 境界づけられたコンテキスト（Authentication Context & User Management Context）として実装
-- **外部サービス連携**: Supabase Auth・Google OAuth 2.0を活用した認証基盤
-
-### 🟢 参照したEARS要件
-- **ユーザストーリー1-3**: Googleアカウントログイン・バックエンドAPI連携・ログアウト
-- **REQ-001〜006**: 通常要件（フロントエンドJWT取得・バックエンドJWT検証・DDDアーキテクチャ・JITプロビジョニング・プロフィール返却・ログアウト）
-
-### 🟢 参照した設計文書
-- **architecture.md**: Section "DDD層構造" - 4層アーキテクチャ詳細、"プロバイダー拡張戦略" - プロバイダー非依存設計
+**参照したEARS要件**: REQ-101（フロントエンド実装要件）、REQ-102（Google認証フロー）、REQ-104（認証済みUI表示）  
+**参照した設計文書**: README.md フロントエンド技術スタック、architecture.md フロントエンド認証システム設計（33-43行目）、dataflow.md 初回ログインフロー・2回目以降ログインフロー
 
 ---
 
 ## 2. 入力・出力の仕様（EARS機能要件・TypeScript型定義ベース）
 
-### 🟢 入力パラメータ（interfaces.ts から抽出）
+🟢 **青信号**: interfaces.ts、dataflow.mdから型定義と認証フローを完全抽出
 
-#### JWT検証・ユーザー認証 (POST /api/auth/verify)
+### 認証フロー入力・出力
+
+**Google認証開始**:
+- **入力**: ユーザーのボタンクリック（GoogleLoginButton）
+- **処理**: `supabase.auth.signInWithOAuth({ provider: 'google' })`
+- **出力**: Googleページへのリダイレクト
+
+**認証完了後**:
+- **入力**: Google認証成功後のリダイレクトとSupabase Session
+- **出力**: JWTトークン・ユーザー情報取得（AuthState更新）
+
+**バックエンドAPI連携**:
 ```typescript
-// リクエスト型（VerifyTokenRequest）
-{
-  token: string; // Supabase Auth発行のJWT（必須）
-}
-
-// JWT内部構造（JwtPayload）
-{
-  sub: string;           // Subject（外部プロバイダーでのユーザーID）
-  email: string;         // メールアドレス
-  app_metadata: {
-    provider: string;    // プロバイダー種別
-    providers: string[]; // 利用可能プロバイダー配列
-  };
-  user_metadata: {
-    name: string;        // 表示名
-    avatar_url?: string; // プロフィール画像URL（オプション）
-    email: string;       // メールアドレス（再掲）
-    full_name: string;   // フルネーム
-  };
-  iss: string;           // 発行者
-  iat: number;           // 発行日時（Unix時間）
-  exp: number;           // 有効期限（Unix時間）
-}
-```
-
-#### ユーザープロフィール取得 (GET /api/user/profile)
-```typescript
-// リクエストヘッダー（AuthenticatedRequest）
-{
+// API通信仕様
+const response = await fetch('/api/user/profile', {
+  method: 'GET',
   headers: {
-    authorization: `Bearer ${string}`; // JWT Bearer トークン（必須）
+    'Authorization': `Bearer ${jwtToken}`,
+    'Content-Type': 'application/json'
   }
-}
+});
 ```
 
-### 🟢 出力値（interfaces.ts・api-endpoints.md から抽出）
-
-#### JWT検証・ユーザー認証レスポンス
+**Redux State管理**:
 ```typescript
-// 成功時（VerifyTokenResponse）
-{
-  success: true;
-  data: {
-    user: {
-      id: string;           // UUID v4（例: "550e8400-e29b-41d4-a716-446655440000"）
-      externalId: string;   // 外部プロバイダーID（例: "google_123456789"）
-      provider: AuthProvider; // 'google' | 'apple' | 'microsoft' | 'github' | 'facebook' | 'line'
-      email: string;        // RFC 5321準拠（最大320文字）
-      name: string;         // 表示名（最大255文字）
-      avatarUrl?: string;   // プロフィール画像URL（オプション）
-      createdAt: Date;      // アカウント作成日時（ISO 8601）
-      updatedAt: Date;      // 最終更新日時（ISO 8601）
-      lastLoginAt?: Date;   // 最終ログイン日時（ISO 8601、オプション）
-    };
-    isNewUser: boolean;     // JITプロビジョニング実行フラグ
-  }
+// 認証状態の型定義（interfaces.ts準拠）
+interface AuthState {
+  isAuthenticated: boolean;  // 認証済みフラグ
+  user: User | null;         // ユーザー情報（未認証時はnull）
+  isLoading: boolean;        // 処理中フラグ
+  error: string | null;      // エラー情報
 }
 
-// エラー時（ApiError）
-{
-  success: false;
-  error: {
-    code: string;     // "INVALID_TOKEN" | "TOKEN_EXPIRED" | "PROVIDER_ERROR"
-    message: string;  // ユーザー向けメッセージ
-    details?: string; // 開発者向け詳細情報（オプション）
-  }
+// 認証成功時のペイロード
+interface AuthSuccessPayload {
+  user: User;         // バックエンドから取得したユーザー情報
+  isNewUser: boolean; // JITプロビジョニング実行フラグ
 }
 ```
 
-#### ユーザープロフィール取得レスポンス
-```typescript
-// 成功時（GetUserProfileResponse）
-{
-  success: true;
-  data: {
-    id: string;
-    externalId: string;
-    provider: AuthProvider;
-    email: string;
-    name: string;
-    avatarUrl?: string;
-    createdAt: Date;
-    updatedAt: Date;
-    lastLoginAt?: Date;
-  }
-}
-```
+### コンポーネント仕様
 
-### 🟢 入出力の関係性・データフロー（dataflow.md から抽出）
-1. **フロントエンド**: Google OAuth実行 → Supabase JWT取得
-2. **バックエンド**: JWT検証 → ユーザー検索/作成 → プロフィール返却
-3. **JITプロビジョニング**: 初回ログイン時に `external_id` + `provider` で未存在確認 → 自動ユーザー作成
+**GoogleLoginButton**:
+- **Props**: なし
+- **出力**: 認証フロー開始、Redux state更新（isLoading: true）
 
-### 🟢 参照したEARS要件
-- **REQ-002**: バックエンドJWT検証・ユーザー認証
-- **REQ-004**: JITプロビジョニングによるユーザー作成
-- **REQ-005**: 認証済みユーザープロフィール情報返却
+**UserProfile**:
+- **Props**: `{ user: User }` 
+- **出力**: ユーザー情報表示（名前・メール・アバター）・ログアウト機能
 
-### 🟢 参照した設計文書
-- **interfaces.ts**: 全Domain・Application・Infrastructure・Presentation層の型定義
-- **api-endpoints.md**: "認証関連エンドポイント"・"ユーザー関連エンドポイント"
-- **dataflow.md**: "認証フローシーケンス"・"DDD層間のデータフロー"
+**参照したEARS要件**: REQ-102（認証フロー仕様）、REQ-104（認証済みUI）  
+**参照した設計文書**: interfaces.ts AuthState・User型定義、dataflow.md 認証シーケンス図
 
 ---
 
 ## 3. 制約条件（EARS非機能要件・アーキテクチャ設計ベース）
 
-### 🟢 パフォーマンス要件（NFR-001〜003から抽出）
-- **認証フロー完了時間**: 10秒以内（Google OAuth + JWT検証 + JIT処理含む）
-- **JWT検証処理時間**: 1秒以内（バックエンドでの単体認証チェック）
-- **JITプロビジョニング時間**: 2秒以内（新規ユーザー作成・DB保存完了まで）
-- **個別APIレスポンス時間**: GET /api/user/profile 500ms以内、POST /api/auth/verify 1000ms以内
+🟢 **青信号**: EARS非機能要件、アーキテクチャ設計から明確な制約を抽出
 
-### 🟢 セキュリティ要件（NFR-101〜103から抽出）
-- **HTTPS通信必須**: すべての認証通信でHTTPS使用（Supabaseが自動対応）
-- **JWT保存方式**: Supabase管理のSecure Cookieに保存（HttpOnly・Secure・SameSite設定）
-- **行レベルセキュリティ**: RLSでユーザーが自分自身の情報のみ取得可能
-- **データ最小化**: 必要最小限のユーザー情報のみ保存・送信
+### パフォーマンス要件
+- **認証フロー全体**: 10秒以内（README.mdパフォーマンス目標）
+- **画面遷移**: 認証完了後2秒以内にUserProfile表示
+- **セッション復元**: ページリロード時1秒以内で認証状態復元
 
-### 🟢 互換性要件（REQ-401〜406 MUSTから抽出）
-- **フロントエンド技術**: Supabase Auth JavaScript SDK必須使用
-- **バックエンド技術**: Hono フレームワーク必須使用
-- **認証仕様準拠**: Google OAuth 2.0仕様完全準拠
-- **データベース**: PostgreSQL + Drizzle ORM + Transaction Pooler（サーバーレス最適化）
+### セキュリティ要件
+- **HTTPS通信必須**: 本番環境でのHTTPS通信のみ許可
+- **JWT管理**: セッションストレージ・ローカルストレージでの安全なトークン管理
+- **リダイレクト制御**: 認証後のリダイレクト先URL制限（CSRF対策）
+- **環境変数管理**: `NEXT_PUBLIC_*` 環境変数による設定外部化
 
-### 🟢 アーキテクチャ制約（REQ-407〜413から抽出）
-- **DDD + クリーンアーキテクチャ**: 4層構造（Presentation・Application・Domain・Infrastructure）必須実装
-- **プロバイダー非依存設計**: Domain層が特定認証プロバイダーに依存禁止
-- **開放閉鎖の原則**: 新規プロバイダー追加時の既存コード変更最小化
-- **ユーザーエンティティ制約**: プロバイダー固有情報の直接保持禁止
-- **抽象化インターフェース**: 認証フロー抽象化の必須定義
+### 互換性要件
+- **ブラウザ対応**: モダンブラウザ（Chrome・Firefox・Safari・Edge）
+- **レスポンシブ対応**: デスクトップ・タブレット・モバイルデバイス対応
+- **Next.js 15**: App Routerおよび'use client'ディレクティブ対応
 
-### 🟢 データベース制約（database-schema.sql から抽出）
-- **プライマリキー**: UUID v4使用
-- **一意制約**: `(external_id, provider)` 複合一意制約
-- **バリデーション制約**: email形式チェック・name空文字禁止・avatarUrl形式チェック
-- **インデックス戦略**: `(external_id, provider)` 複合インデックス・email検索用インデックス
-- **環境変数対応**: `DB_TABLE_PREFIX` による動的テーブル名接頭辞
+### アーキテクチャ制約
+- **Redux状態管理**: Redux Toolkit使用必須
+- **コンポーネント設計**: 関数コンポーネント + TypeScript厳格モード
+- **プロバイダー抽象化**: AuthProviderInterface実装による統一認証処理
+- **依存性逆転の原則**: 上位モジュールが下位の認証プロバイダー実装に依存しない
+- **開放閉鎖の原則**: 新規プロバイダー追加時に既存コードを変更しない
+- **Supabase Auth統合**: createClient経由のSupabaseクライアント使用
+- **環境変数依存**: `NEXT_PUBLIC_SUPABASE_URL`・`NEXT_PUBLIC_SUPABASE_ANON_KEY`必須
 
-### 🟢 API制約（api-endpoints.md から抽出）
-- **認証ヘッダー**: `Authorization: Bearer {jwt_token}` 形式必須
-- **レスポンス形式**: 統一JSON構造（`{success, data?, error?}`）
-- **エラーコード**: 標準化されたコード体系（AUTHENTICATION_REQUIRED・INVALID_TOKEN等）
-- **CORS設定**: Development localhost:3000・Production domain制限
+### 実装制約
+🔴 **赤信号**: 現在の実装で不完全な部分（要実装）
 
-### 🟢 参照したEARS要件
-- **NFR-001〜003**: パフォーマンス非機能要件
-- **NFR-101〜103**: セキュリティ非機能要件  
-- **REQ-401〜413**: 技術・アーキテクチャ制約要件
+**未実装要件**:
+- **セッション復元機能**: ページリロード時の認証状態自動復元
+- **エラーハンドリング**: 認証失敗・ネットワークエラーの適切な処理
+- **ローディング状態管理**: 認証処理中のUI表示制御
+- **リダイレクト処理**: 認証完了後の適切な画面遷移
 
-### 🟢 参照した設計文書
-- **architecture.md**: "DDD層構造"・"プロバイダー拡張戦略"・"パフォーマンス設計"
-- **database-schema.sql**: "制約定義"・"インデックス戦略"・"RLS設定"
-- **api-endpoints.md**: "API設計原則"・"セキュリティ考慮事項"
+**参照したEARS要件**: NFR-002（パフォーマンス要件）、NFR-101（HTTPS必須）、REQ-101（フロントエンド技術制約）  
+**参照した設計文書**: architecture.md セキュリティ・パフォーマンス設計、README.md パフォーマンス目標
 
 ---
 
 ## 4. 想定される使用例（EARSEdgeケース・データフローベース）
 
-### 🟢 基本的な使用パターン（通常要件REQ-001〜006から抽出）
+🟢 **青信号**: dataflow.md認証フロー、現在の実装状況から具体例を抽出
 
-#### パターン1: 初回ログイン（JITプロビジョニング）
-```
-1. ユーザーがGoogleログインボタンをクリック
-2. Supabase Auth経由でGoogle OAuth実行
-3. Google認証成功後、JWT取得
-4. バックエンドAPI（POST /api/auth/verify）でJWT送信
-5. JWT検証→ユーザー不存在確認→JIT新規作成→レスポンス返却
-6. フロントエンドでユーザー情報表示・ログアウトボタン表示
-```
+### 基本的な使用パターン
 
-#### パターン2: 2回目以降ログイン（既存ユーザー）
-```
-1. ページアクセス時にSupabase自動セッション復元
-2. 既存JWTでバックエンドAPI（GET /api/user/profile）呼び出し
-3. JWT検証→既存ユーザー取得→lastLoginAt更新→レスポンス返却
-4. JIT処理スキップで高速ログイン完了
+**初回ログインフロー**:
+```javascript
+// 1. ユーザーがGoogleログインボタンをクリック
+// 2. GoogleLoginButtonコンポーネント → handleClick実行
+// 3. supabase.auth.signInWithOAuth() → Googleページリダイレクト
+// 4. Google認証完了 → アプリケーションにリダイレクト
+// 5. Supabaseセッション確立 → JWTトークン取得
+// 6. バックエンドAPI（/api/user/profile）呼び出し
+// 7. ユーザー情報取得・JITプロビジョニング実行
+// 8. Redux state更新（authSuccess action）
+// 9. UserProfileコンポーネント表示
 ```
 
-#### パターン3: ログアウト
-```
-1. ユーザーがログアウトボタンをクリック
-2. Supabase Auth signOut()実行
-3. ローカルセッション・Cookie削除
-4. 未認証状態に戻り、Googleログインボタン再表示
-```
-
-### 🟢 データフロー（dataflow.md から抽出）
-- **認証データ経路**: Google OAuth → Supabase Auth → フロントエンド → バックエンドAPI → PostgreSQL
-- **JWT ライフサイクル**: 発行（Supabase）→ 検証（バックエンド）→ 期限管理（自動無効化）
-- **ユーザーエンティティ管理**: Domain層UserAggregate → Infrastructure層UserRepository → PostgreSQL永続化
-
-### 🟢 エッジケース（EDGE-001〜202から抽出）
-
-#### 認証エラーケース
-- **EDGE-001**: Googleアカウントアクセス拒否 → "認証がキャンセルされました"表示
-- **EDGE-002**: JWT検証失敗 → 401エラー・"認証トークンが無効です"
-- **EDGE-003**: バックエンド通信エラー → "APIサーバーとの通信に失敗しました"
-- **EDGE-004**: Supabaseサービス障害 → "認証サービスが一時的に利用できません"
-
-#### 境界値ケース  
-- **EDGE-101**: 長いユーザー名（50文字以上）→ 適切な省略表示・DBは255文字制限
-- **EDGE-102**: アバター画像取得失敗 → デフォルト画像表示
-
-#### 特殊状況ケース
-- **EDGE-201**: ページリロード → Supabaseセッション復元で認証状態維持
-- **EDGE-202**: 複数タブ同期 → MVPでは対象外（将来拡張予定）
-
-### 🟢 エラーケース（dataflow.md エラーフロー から抽出）
-
-#### JWT関連エラー
-```
-無効JWT → 401 Unauthorized → フロントエンドでログインページリダイレクト
-期限切れJWT → TOKEN_EXPIRED → 自動再認証フロー
+**2回目以降のログイン**:
+```javascript
+// 1. ページアクセス・リロード
+// 2. useEffectでSupabaseセッション確認
+// 3. 既存セッション発見 → 自動ログイン
+// 4. JWTトークンでバックエンドAPI呼び出し
+// 5. ユーザー情報取得（JITスキップ）
+// 6. UserProfile表示
 ```
 
-#### データベースエラー
-```
-JIT作成失敗 → 500 Internal Server Error → "システムエラー"表示
-ユーザー不存在（通常発生しない）→ 404 Not Found → USER_NOT_FOUND
+### エッジケース
+
+🟡 **黄信号**: 設計文書から推測可能なエラーケース
+
+- **EDGE-101**: Google認証キャンセル → ログイン画面に戻る・エラー表示なし
+- **EDGE-102**: ネットワークエラー → 「インターネット接続を確認してください」表示
+- **EDGE-103**: バックエンドAPI接続失敗 → 「サーバーとの通信に失敗しました」表示
+- **EDGE-104**: JWT期限切れ → 自動ログアウト・再認証要求
+- **EDGE-105**: アバター画像取得失敗 → デフォルト画像表示（実装済み）
+
+### エラーケースの処理
+
+```javascript
+// 認証エラー処理例
+try {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google'
+  });
+  if (error) throw error;
+} catch (error) {
+  dispatch(authFailure({ error: 'Google認証に失敗しました' }));
+}
+
+// APIエラー処理例  
+try {
+  const response = await fetch('/api/user/profile', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    throw new Error('ユーザー情報の取得に失敗しました');
+  }
+} catch (error) {
+  dispatch(authFailure({ error: error.message }));
+}
 ```
 
-#### プロバイダーエラー
-```
-Supabase接続エラー → 502 Bad Gateway → PROVIDER_ERROR
-Google OAuth障害 → 認証フロー中断 → エラーメッセージ表示
-```
-
-### 🟢 参照したEARS要件
-- **EDGE-001〜004**: エラー処理Edgeケース
-- **EDGE-101〜102**: 境界値Edgeケース  
-- **EDGE-201〜202**: 特殊状況Edgeケース
-
-### 🟢 参照した設計文書
-- **dataflow.md**: "認証フローシーケンス"・"エラーフロー"・"DDD層間のデータフロー"
+**参照したEARS要件**: EDGE-101（認証キャンセル）、EDGE-102（ネットワークエラー）  
+**参照した設計文書**: dataflow.md 初回・2回目ログインフロー、エラーフロー処理
 
 ---
 
 ## 5. EARS要件・設計文書との対応関係
 
 ### 参照したユーザストーリー
-- **ストーリー1**: Googleアカウントでログイン
-- **ストーリー2**: バックエンドAPIでのユーザー情報取得  
-- **ストーリー3**: ログアウト
+- **ストーリー1**: 「未認証ユーザーとして、私はGoogleアカウントでログインして認証状態になりたい」
+- **ストーリー2**: 「認証済みユーザーとして、私は自分の情報を確認してログアウトできるようにしたい」
 
 ### 参照した機能要件
-- **通常要件**: REQ-001〜006（JWT取得・検証・DDD・JIT・プロフィール返却・ログアウト）
-- **条件付き要件**: REQ-101〜105（認証状態別UI表示・フロー制御）
-- **状態要件**: REQ-201〜202（ローディング・エラー表示）
-- **制約要件**: REQ-401〜413（技術スタック・アーキテクチャ・プロバイダー非依存設計）
+- **REQ-101**: フロントエンドはNext.js 15 + TypeScript + Redux + Tailwind CSSを使用しなければならない
+- **REQ-102**: フロントエンドはSupabase Authを使用してGoogle認証フローを実装しなければならない  
+- **REQ-103**: フロントエンドは認証処理中のローディング状態を表示しなければならない
+- **REQ-104**: ユーザーが認証済みの場合、システムはユーザー情報とログアウトボタンを表示しなければならない
 
 ### 参照した非機能要件
-- **パフォーマンス**: NFR-001〜003（認証フロー10秒・JWT検証1秒・JIT2秒）
-- **セキュリティ**: NFR-101〜103（HTTPS・Secure Cookie・RLS）
-- **ユーザビリティ**: NFR-201〜203（UI配置・日本語エラー・モバイル対応）  
-- **開発効率・学習効果**: NFR-301〜304（4時間実装・層分離・外部依存最小化・ドメイン純粋性）
+- **NFR-002**: フロントエンドの認証フロー全体は10秒以内に完了しなければならない
+- **NFR-101**: すべての認証通信はHTTPS経由で行われなければならない
+- **NFR-201**: フロントエンドはモバイルデバイスでの使用に対応しなければならない
 
 ### 参照したEdgeケース
-- **エラー処理**: EDGE-001〜004
-- **境界値**: EDGE-101〜102
-- **特殊状況**: EDGE-201〜202
-
-### 参照した受け入れ基準
-- **機能テスト**: Google認証フロー・JWT検証・プロフィール表示・ログアウト・状態維持
-- **セキュリティテスト**: HTTPS通信・トークン保存
-- **ユーザビリティテスト**: モバイル対応・エラーメッセージ・ローディング表示
-- **DDD学習効果テスト**: 4時間実装・層分離・集約管理・依存性逆転
+- **EDGE-101**: Google認証をキャンセルした場合、適切にログイン画面に戻る
+- **EDGE-102**: ネットワークエラー時は分かりやすいエラーメッセージを表示する
+- **EDGE-105**: アバター画像が取得できない場合はデフォルト画像を表示する
 
 ### 参照した設計文書
-- **アーキテクチャ**: architecture.md（DDD層構造・プロバイダー拡張戦略・セキュリティアーキテクチャ・パフォーマンス設計）
-- **データフロー**: dataflow.md（認証フローシーケンス・DDD層間データフロー・エラーフロー・並列処理フロー）  
-- **型定義**: interfaces.ts（全4層の型定義・Use Case入出力・エラー型・リポジトリインターフェース）
-- **データベース**: database-schema.sql（プロバイダー非依存設計・インデックス戦略・RLS設定・制約定義）
-- **API仕様**: api-endpoints.md（RESTful設計・エンドポイント詳細・セキュリティ考慮事項・エラーハンドリング）
+- **アーキテクチャ**: architecture.md
+  - フロントエンド技術スタック（33-43行目）
+  - 認証フローの全体設計
+- **データフロー**: dataflow.md 
+  - 初回ログインフロー（32-76行目）
+  - 2回目以降のログインフロー（78-104行目）
+  - ログアウトフロー（106-119行目）
+- **型定義**: interfaces.ts
+  - AuthState、User、AuthSuccessPayload型定義（232-256行目）
+  - API通信インターフェース（172-183行目）
 
 ---
 
-## 品質判定
+## 実装完了状況（2025-08-30現在）
 
-### ✅ 高品質判定結果
-- **要件の曖昧さ**: なし（EARS要件定義書で明確に定義済み）
-- **入出力定義**: 完全（TypeScript型定義・API仕様で詳細化済み）  
-- **制約条件**: 明確（非機能要件・アーキテクチャ制約・DB制約すべて定義済み）
-- **実装可能性**: 確実（設計文書・データフロー・型定義すべて整備済み）
+### ✅ 部分実装済み（抽象化要対応）
+1. **GoogleLoginButton（→LoginButton に抽象化予定）** - 基本的な認証開始機能
+   - Supabase OAuth実行: `signInWithOAuth({ provider: 'google' })`
+   - リダイレクト設定: options.redirectTo設定済み
+   - 基本的なエラーハンドリング: console.log/console.error
+   - **抽象化要件**: プロバイダー選択可能なLoginButtonコンポーネントへの変更
+2. **UserProfile** - ユーザー情報表示・ログアウト機能（プロバイダー非依存実装済み）
+   - ユーザー情報表示: name・email・avatarUrl表示
+   - ログアウト実装: `supabase.auth.signOut()`実行
+   - アバターフォールバック: デフォルト画像対応済み
+3. **authSlice** - Redux認証状態管理の基礎（プロバイダー非依存実装済み）
+   - AuthState型定義: isAuthenticated・user・isLoading・error
+   - authSuccessアクション: 認証完了時の状態更新
 
-### 信頼性レベル評価
-- **🟢 青信号**: 100% - すべての項目でEARS要件定義書・設計文書からの直接抽出
-- **🟡 黄信号**: 0% - 妥当な推測項目なし
-- **🔴 赤信号**: 0% - 未定義推測項目なし
+### 🔴 未実装・要修正項目
+1. **プロバイダー抽象化アーキテクチャ** - AuthProviderInterface・authService実装
+2. **GoogleLoginButton→LoginButton抽象化** - プロバイダー選択可能な汎用コンポーネント化
+3. **セッション復元機能** - ページリロード時の自動ログイン
+4. **エラーハンドリング強化** - 認証失敗・API通信エラーの適切な処理
+5. **ローディング状態管理** - isLoadingフラグの適切な制御
+6. **認証フロー統合** - コンポーネント間の状態連携
+7. **リダイレクト処理** - 認証後の画面遷移制御
+8. **Redux追加アクション** - authStart・authFailure・logoutアクションの実装
+
+---
+
+## 品質判定結果
+
+🔴 **実装未完了（要実装作業）**:
+- **要件の明確性**: 設計文書・要件は明確、実装が部分的
+- **入出力定義**: 型定義は完全、実際の処理フローが未完成
+- **制約条件**: 制約は明確、セキュリティ・パフォーマンス要件の実装が未完了
+- **実装適合性**: 基礎実装完了、統合・エラーハンドリング・セッション管理が未実装
+
+### 必須実装項目（プロバイダー非依存設計適用）
+1. **プロバイダー抽象化アーキテクチャ** - 依存性逆転による拡張可能設計
+2. **LoginButton抽象化** - プロバイダー選択可能な汎用認証コンポーネント
+3. **認証フロー統合** - ログイン→状態管理→UI更新の完全な流れ
+4. **セッション復元** - アプリケーション起動時の自動認証状態復元
+5. **エラーハンドリング** - 各段階での適切なエラー処理とユーザーフィードバック
+6. **Redux アクション追加** - authStart・authFailure・logout の実装
+7. **統合テスト** - 認証フロー全体の動作確認
 
 ---
 
 ## 次のステップ
 
-**次のお勧めステップ**: `/tdd-testcases` でテストケースの洗い出しを行います。
+**推奨ステップ**: `/tdd-testcases` でフロントエンド認証フロー全体のテストケース整備
 
----
-
-## 更新履歴
-- 2025-08-28: 初回作成（TASK-301）- EARS要件定義書・設計文書群からの要件整理完了
-- 2025-08-29: 要件定義更新・完了 - TDD要件定義フォーマット適用、フロントエンド実装推奨段階へ
+**実装予定順序**:
+1. **セッション復元機能** - useEffect + getSession()による自動ログイン
+2. **Redux追加アクション** - authStart・authFailure・logoutアクションの実装  
+3. **エラーハンドリング強化** - try-catch・エラーメッセージ表示
+4. **認証フロー統合** - コンポーネント間の適切な状態連携
+5. **統合テスト** - 認証フロー全体のE2Eテスト実装
