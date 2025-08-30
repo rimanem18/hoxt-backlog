@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { render, screen, cleanup } from '@testing-library/react';
 import { UserProfile } from '../components/UserProfile';
+import { User } from '@/packages/shared-schemas/src/auth';
 
 // 【テストファイル名】: UserProfile.test.ts
 // 【テストスコープ】: 認証済みユーザープロフィール表示コンポーネント
@@ -26,10 +27,10 @@ describe('UserProfile', () => {
 
     // 【テストデータ準備】: バックエンドAPIから取得したユーザープロフィール情報を模擬
     // 【初期条件設定】: 認証済み状態で完全なユーザー情報が設定された状態を想定
-    const mockUser = {
+    const mockUser: User = {
       id: "550e8400-e29b-41d4-a716-446655440000",
       externalId: "google_123456789",
-      provider: "google",
+      provider: "google" as const,
       email: "user@example.com",
       name: "山田太郎",
       avatarUrl: "https://lh3.googleusercontent.com/a/avatar.jpg",
@@ -69,10 +70,10 @@ describe('UserProfile', () => {
 
     // 【テストデータ準備】: Google OAuthでアバター画像が提供されないケースを模擬
     // 【初期条件設定】: avatarUrlがnullのユーザー情報を設定
-    const mockUserWithoutAvatar = {
+    const mockUserWithoutAvatar: User = {
       id: "550e8400-e29b-41d4-a716-446655440000",
       externalId: "google_123456789", 
-      provider: "google",
+      provider: "google" as const,
       email: "user@example.com",
       name: "テストユーザー",
       avatarUrl: null,

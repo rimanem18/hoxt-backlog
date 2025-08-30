@@ -2,6 +2,43 @@
 
 - **フロントエンド未実装**
 
+- **実装詳細**:
+  - Supabase Auth の設定
+  - Google OAuth フローの実装
+  - JWT取得・保存
+  - 認証状態管理（Redux）
+- **ファイル構成**:
+  ```
+  app/client/src/
+  ├── features/auth/
+  │   ├── components/
+  │   │   ├── LoginButton.tsx
+  │   │   └── LogoutButton.tsx
+  │   ├── hooks/
+  │   │   └── useAuth.tsx
+  │   ├── store/
+  │   │   ├── authSlice.ts
+  │   │   └── authActions.ts
+  │   └── services/
+  │       └── authService.ts
+  └── lib/
+      └── supabase.ts
+  ```
+- **機能実装**:
+  - Google OAuth によるログイン
+  - JWT の自動取得・保存
+  - ログアウト機能
+  - 認証状態の永続化
+- **UI/UX要件**:
+  - [ ] ローディング状態: ログインボタン無効化 + スピナー
+  - [ ] エラー表示: トースト通知またはインラインエラー
+  - [ ] モバイル対応: レスポンシブデザインでの適切表示
+  - [ ] アクセシビリティ: キーボード操作・ARIA属性対応
+- **テスト要件**:
+  - [ ] コンポーネントテスト: LoginButton・LogoutButton
+  - [ ] ストアテスト: authSlice の状態変更
+  - [ ] 統合テスト: 認証フロー全体のE2E
+
 ## 実施日時
 2025-08-29
 

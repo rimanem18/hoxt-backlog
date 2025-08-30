@@ -25,18 +25,34 @@ export const GoogleLoginButton: React.FC = () => {
 
   /**
    * 【クリックイベントハンドラー】: Googleログインボタンクリック時の処理
-   * 【実装方針】: 現段階では最小限のイベント処理（後のGreenフェーズで詳細実装）
-   * 【テスト要件対応】: user.click(loginButton)が正常に実行できるよう実装
-   * 🟡 信頼性レベル: 最小実装のため詳細なSupabase連携は後で実装予定
+   * 【改善内容】: テスト要件に合わせてoptions.redirectToパラメータを追加
+   * 【設計方針】: Supabase OAuth仕様に準拠した認証フロー実装
+   * 【パフォーマンス】: async/awaitによる適切な非同期処理
+   * 【保守性】: エラーハンドリングと成功時処理を分離
+   * 🟢 信頼性レベル: Supabase公式ドキュメントとテスト要件から直接実装
+   * @returns {Promise<void>} - 認証処理の完了を保証
    */
   const handleClick = async (): Promise<void> => {
-    // 【最小限実装】: テストを通すためのプレースホルダー処理
-    // 【将来実装予定】: supabase.auth.signInWithOAuth({ provider: 'google' }) を実装
-    await supabase.auth.signInWithOAuth({provider:'google'}).then(()=>{
-      console.log('認証成功！')
-    }).catch((error)=>{
-      console.error('認証失敗！',error)
-    })
+    try {
+      // 【メイン処理】: Google OAuth認証フローを開始
+      // 【テスト要件対応】: options.redirectToパラメータを含む呼び出し
+      // 【セキュリティ】: 認証後のリダイレクト先を明示的に指定
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // 【リダイレクト設定】: 認証成功後の遷移先URL
+          // 【開発環境対応】: 環境変数または現在のオリジンを使用
+          redirectTo: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+        }
+      });
+      
+      // 【成功時処理】: 認証フロー開始の確認ログ
+      console.log('認証成功！');
+    } catch (error) {
+      // 【エラーハンドリング】: 認証失敗時の適切な処理
+      // 【ユーザビリティ】: エラー内容を分かりやすく出力
+      console.error('認証失敗！', error);
+    }
   };
 
   // 【JSX返却】: テストで期待されるボタン要素を返却

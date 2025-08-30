@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
 
+// 【テスト環境変数設定】: Supabase接続用のテスト環境変数を設定
+// 【設定方針】: 実際のSupabaseには接続せず、テスト用の値を使用
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test-supabase-url.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-for-testing';
+
 // JSDOM環境のセットアップ
 const { JSDOM } = require('jsdom');
 

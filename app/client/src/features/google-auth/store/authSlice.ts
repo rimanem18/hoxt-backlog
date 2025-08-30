@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User } from '../../../../packages/shared-schemas/src/auth';
+import { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 【機能概要】: 認証状態を管理するRedux Toolkit slice

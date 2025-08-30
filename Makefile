@@ -10,7 +10,8 @@ down:
 build:
 	docker compose build
 restart:
-	docker compose restart
+	@make down
+	@make up
 server:
 	docker compose exec server ash
 client:

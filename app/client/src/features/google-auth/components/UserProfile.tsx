@@ -5,8 +5,10 @@
  * 🟢 信頼性レベル: 要件REQ-104（認証済みUI表示）・User型定義から直接抽出
  */
 
+'use client'
 import React from 'react';
-import { User } from '../../../../packages/shared-schemas/src/auth';
+import { createClient } from '@supabase/supabase-js';
+import { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * UserProfileコンポーネントのProps型定義
@@ -26,16 +28,26 @@ interface UserProfileProps {
  * @returns {React.ReactNode} - ユーザープロフィール表示要素
  */
 export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
+  // Project URL と ANON Key から Client を生成
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   /**
    * 【ログアウトイベントハンドラー】: ログアウトボタンクリック時の処理
-   * 【実装方針】: 現段階では最小限のイベント処理（後のGreenフェーズで詳細実装）
+   * 【実装方針】: Supabase Auth の signOut を呼び出し、実際のログアウト処理を実行
    * 【テスト要件対応】: role="button"とname="ログアウト"の属性を提供
-   * 🟡 信頼性レベル: 最小実装のため詳細なログアウト処理は後で実装予定
+   * 🟢 信頼性レベル: Supabase公式ドキュメントから実装
    */
-  const handleLogout = (): void => {
-    // 【最小限実装】: テストを通すためのプレースホルダー処理
-    // 【将来実装予定】: Redux stateクリア・Supabase signOut処理を実装
-    console.log('ログアウト処理を開始します');
+  const handleLogout = async (): Promise<void> => {
+    // 【ログアウト処理実行】: Supabase Auth でセッション終了
+    await supabase.auth.signOut().then(() => {
+      console.log('ログアウト成功！');
+      // 【将来実装予定】: Redux stateクリア・ページリダイレクト処理
+    }).catch((error) => {
+      console.error('ログアウト失敗！', error);
+    });
   };
 
   /**
@@ -58,19 +70,19 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
         role="img"
         className="w-16 h-16 rounded-full mx-auto mb-4"
       />
-      
+
       {/* 【ユーザー名表示】: 認証済みユーザーの名前 */}
       {/* 【テスト要件対応】: screen.getByText("山田太郎") が成功するよう実装 */}
       <h2 className="text-xl font-bold text-center mb-2">
         {user.name}
       </h2>
-      
+
       {/* 【メールアドレス表示】: 認証済みユーザーのメールアドレス */}
       {/* 【テスト要件対応】: screen.getByText("user@example.com") が成功するよう実装 */}
       <p className="text-gray-600 text-center mb-4">
         {user.email}
       </p>
-      
+
       {/* 【ログアウトボタン】: 認証解除機能へのアクセス */}
       {/* 【テスト要件対応】: role="button"とname="ログアウト"の属性を提供 */}
       <button

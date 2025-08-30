@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { authSlice, AuthState } from '../store/authSlice';
+import { User } from '@/packages/shared-schemas/src/auth';
 
 // 【テストファイル名】: authSlice.test.ts
 // 【テストスコープ】: Redux Toolkit認証状態管理slice
@@ -41,10 +42,10 @@ describe('authSlice', () => {
 
     // 【テストデータ準備】: 認証成功レスポンスを模擬するモックユーザーデータを作成
     // 【初期条件設定】: 認証状態を未認証・ローディング中に設定
-    const mockUser = {
+    const mockUser: User = {
       id: "550e8400-e29b-41d4-a716-446655440000",
       externalId: "google_123456789",
-      provider: "google",
+      provider: "google" as const,
       email: "user@example.com",
       name: "山田太郎",
       avatarUrl: "https://lh3.googleusercontent.com/avatar.jpg",
