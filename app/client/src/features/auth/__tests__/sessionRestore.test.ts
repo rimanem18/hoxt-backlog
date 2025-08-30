@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
 
 // テストファイル: sessionRestore.test.ts
 describe('セッション復元機能', () => {
@@ -74,7 +74,7 @@ describe('セッション復元機能', () => {
     // 【テストデータ準備】: セッション復元時のRedux状態更新をテストするためのモックストア設定
     // 【初期条件設定】: 未認証状態のReduxストアと復元可能なセッションデータを準備
     const mockStore = {
-      dispatch: jest.fn(),
+      dispatch: mock(() => {}),
       getState: () => ({
         auth: {
           isAuthenticated: false,
@@ -87,11 +87,13 @@ describe('セッション復元機能', () => {
 
     const validSessionData = {
       accessToken: 'valid-jwt-token',
+      refreshToken: 'valid-refresh-token',
       user: {
         id: '789',
         email: 'restored@example.com',
         name: 'Restored User'
-      }
+      },
+      expiresAt: Date.now() + 3600000 // 1時間後の有効期限
     };
 
     // 【実際の処理実行】: セッション復元とRedux状態同期処理
@@ -108,8 +110,13 @@ describe('セッション復元機能', () => {
       expect.objectContaining({
         type: 'auth/authSuccess',
         payload: expect.objectContaining({
-          user: validSessionData.user,
-          isAuthenticated: true
+          user: expect.objectContaining({
+            id: validSessionData.user.id,
+            email: validSessionData.user.email,
+            name: validSessionData.user.name,
+            avatarUrl: null
+          }),
+          isNewUser: false
         })
       })
     );

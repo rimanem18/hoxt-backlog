@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
 
 // テストファイル: authProviderInterface.test.ts
 describe('認証プロバイダーインターフェース', () => {
@@ -44,9 +44,9 @@ describe('認証プロバイダーインターフェース', () => {
     // 【初期条件設定】: Supabaseクライアントのモックを含むGoogleAuthProvider用の設定を準備
     const mockSupabaseClient = {
       auth: {
-        signInWithOAuth: jest.fn(),
-        signOut: jest.fn(),
-        getUser: jest.fn()
+        signInWithOAuth: mock(() => Promise.resolve({ data: null, error: null })),
+        signOut: mock(() => Promise.resolve({ error: null })),
+        getUser: mock(() => Promise.resolve({ data: { user: null }, error: null }))
       }
     };
 
@@ -56,9 +56,9 @@ describe('認証プロバイダーインターフェース', () => {
     const provider = new GoogleAuthProvider(mockSupabaseClient);
 
     // 【結果検証】: 必須メソッドが実装されていることを確認
-    // 【期待値確認】: login, logout, getUserメソッドがすべて関数として実装されていること
-    expect(typeof provider.login).toBe('function'); // 【確認内容】: loginメソッドが関数として実装されていることを確認 🔴
-    expect(typeof provider.logout).toBe('function'); // 【確認内容】: logoutメソッドが関数として実装されていることを確認 🔴
+    // 【期待値確認】: signIn, signOut, getUserメソッドがすべて関数として実装されていること
+    expect(typeof provider.signIn).toBe('function'); // 【確認内容】: signInメソッドが関数として実装されていることを確認 🔴
+    expect(typeof provider.signOut).toBe('function'); // 【確認内容】: signOutメソッドが関数として実装されていることを確認 🔴
     expect(typeof provider.getUser).toBe('function'); // 【確認内容】: getUserメソッドが関数として実装されていることを確認 🔴
   });
 
@@ -71,9 +71,11 @@ describe('認証プロバイダーインターフェース', () => {
     // 【テストデータ準備】: AuthServiceのテストに使用するモックプロバイダーを作成
     // 【初期条件設定】: AuthProviderInterfaceに準拠したモックプロバイダーを設定
     const mockProvider = {
-      login: async () => ({ success: true }),
-      logout: async () => ({ success: true }),
-      getUser: async () => ({ user: { id: '123', email: 'test@example.com' } })
+      signIn: async () => ({ success: true }),
+      signOut: async () => ({ success: true }),
+      getUser: async () => ({ user: { id: '123', email: 'test@example.com' } }),
+      getSession: async () => null,
+      getProviderName: () => 'test'
     };
 
     // 【実際の処理実行】: AuthServiceのインスタンス化とプロバイダー設定
@@ -83,8 +85,8 @@ describe('認証プロバイダーインターフェース', () => {
 
     // 【結果検証】: AuthServiceがプロバイダーの抽象化を提供することを確認
     // 【期待値確認】: AuthServiceが統一されたAPIを通じてプロバイダーの機能にアクセスできること
-    expect(typeof authService.login).toBe('function'); // 【確認内容】: AuthServiceがloginメソッドを提供することを確認 🟡
-    expect(typeof authService.logout).toBe('function'); // 【確認内容】: AuthServiceがlogoutメソッドを提供することを確認 🟡
+    expect(typeof authService.signIn).toBe('function'); // 【確認内容】: AuthServiceがsignInメソッドを提供することを確認 🟡
+    expect(typeof authService.signOut).toBe('function'); // 【確認内容】: AuthServiceがsignOutメソッドを提供することを確認 🟡
     expect(typeof authService.getUser).toBe('function'); // 【確認内容】: AuthServiceがgetUserメソッドを提供することを確認 🟡
   });
 });

@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
 
 // テストファイル: errorHandling.test.ts
 describe('認証エラーハンドリング', () => {
@@ -74,8 +74,16 @@ describe('認証エラーハンドリング', () => {
 
     // 【テストデータ準備】: 期限切れJWTトークンとログアウト処理の設定
     // 【初期条件設定】: 有効期限が過ぎたJWTトークンを持つ認証済み状態
+    // 【期限切れJWT作成】: 正しい形式のJWTトークンで期限切れを設定
+    const expiredTime = Math.floor(Date.now() / 1000) - 1; // 1秒前に期限切れ
+    const jwtPayload = {
+      sub: '111',
+      email: 'expired@test.com',
+      exp: expiredTime // Unix時刻での期限切れ
+    };
+    const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString('base64');
     const expiredJWT = {
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.expired.signature',
+      token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${encodedPayload}.signature`,
       expiresAt: Date.now() - 1000, // 1秒前に期限切れ
       user: {
         id: '111',
@@ -84,7 +92,7 @@ describe('認証エラーハンドリング', () => {
     };
 
     const mockReduxStore = {
-      dispatch: jest.fn(),
+      dispatch: mock(() => {}),
       getState: () => ({
         auth: {
           isAuthenticated: true,
