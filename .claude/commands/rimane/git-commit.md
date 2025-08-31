@@ -25,6 +25,7 @@ description: git add & git commit をします。
 - feat: 新しい機能
 - fix: バグの修正
 - docs: ドキュメントのみの変更
+  - `.claude/commands/` 配下の Markdown はドキュメントとしては扱わず、「カスタムスラッシュコマンド」という機能ととらえてください。（つまり、docs プレフィックスではなく、feat, fix などが該当します）
 - style: 空白、フォーマット、セミコロン追加など
 - refactor: 仕様に影響がないコード改善(リファクタ)
 - perf: パフォーマンス向上関連
