@@ -6,21 +6,20 @@
  * 【テスト目的】: プロダクション品質のユーザビリティとアクセシビリティ確保
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LoginButton } from '@/features/auth/components/LoginButton';
 
 // 【モック設定】: 認証処理の遅延をシミュレートするためのモック
-const mockAuthService = {
-  signIn: jest.fn(),
-};
+const mockSignInWithOAuth = mock(() => Promise.resolve({ data: {}, error: null }) as Promise<{ data: {}; error: null }>);
 
-// Supabaseクライアントのモック化
-jest.mock('@/lib/supabase', () => ({
+// Supabaseクライアントのモック化 - Bun標準テスト環境対応
+mock.module('@/lib/supabase', () => ({
   supabase: {
     auth: {
-      signInWithOAuth: mockAuthService.signIn,
+      signInWithOAuth: mockSignInWithOAuth,
     },
   },
 }));
@@ -29,13 +28,13 @@ describe('LoginButton ローディング状態管理', () => {
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にモックをリセットし、一貫したテスト条件を保証
     // 【環境初期化】: 前のテストの認証状態やモックの影響を受けないよう初期化
-    jest.clearAllMocks();
+    mockSignInWithOAuth.mockClear();
   });
 
   afterEach(() => {
     // 【テスト後処理】: タイマーやPending状態をクリーンアップ
     // 【状態復元】: 次のテストに影響しないよう非同期処理を適切に終了
-    jest.useRealTimers();
+    // Bunではタイマー管理は自動的に処理されるため、明示的なクリーンアップは不要
   });
 
   test('認証処理中のローディングUI表示と操作制御確認', async () => {
@@ -46,16 +45,16 @@ describe('LoginButton ローディング状態管理', () => {
 
     // 【テストデータ準備】: 3秒間の遅延をシミュレートして実際のGoogle OAuth処理時間を模擬
     // 【初期条件設定】: 認証処理が開始されるがまだ完了していない状態を作成
-    const delayedPromise = new Promise((resolve) => {
+    const delayedPromise = new Promise<{ data: {}; error: null }>((resolve) => {
       setTimeout(() => resolve({ data: {}, error: null }), 3000);
     });
-    mockAuthService.signIn.mockReturnValue(delayedPromise);
+    mockSignInWithOAuth.mockImplementation(() => delayedPromise);
 
     // 【実際の処理実行】: LoginButtonコンポーネントをレンダリングし、Google認証を開始
     // 【処理内容】: プロバイダー選択（Google）でログインボタンを表示
     render(<LoginButton provider="google" />);
     
-    const loginButton = screen.getByRole('button');
+    const loginButton = screen.getByRole('button', { name: 'Googleでログイン' });
     const user = userEvent.setup();
 
     // 【初期状態の検証】: ローディング開始前のボタン状態を確認
@@ -71,18 +70,21 @@ describe('LoginButton ローディング状態管理', () => {
     // 【ローディング状態の検証】: 認証処理開始直後のUI状態確認
     // 【結果検証】: REQ-UI-001で定義された全ての要素が適切に設定されているか
     
+    // ローディング状態のボタンを取得（名前が変わるため再取得）
+    const loadingButton = screen.getByRole('button', { name: '認証中...' });
+    
     // ボタン無効化の確認
-    expect(loginButton).toBeDisabled(); // 【確認内容】: 処理中はボタンが無効化されることを確認（重複操作防止） 🟢
+    expect(loadingButton).toBeDisabled(); // 【確認内容】: 処理中はボタンが無効化されることを確認（重複操作防止） 🟢
     
     // ラベル変更の確認
-    expect(loginButton).toHaveTextContent('認証中...'); // 【確認内容】: 処理中に適切な日本語ラベルが表示されることを確認 🟢
+    expect(loadingButton).toHaveTextContent('認証中...'); // 【確認内容】: 処理中に適切な日本語ラベルが表示されることを確認 🟢
     
     // ARIA属性の確認（アクセシビリティ対応）
-    expect(loginButton).toHaveAttribute('aria-busy', 'true'); // 【確認内容】: スクリーンリーダー向けの処理中状態通知を確認 🟢
-    expect(loginButton).toHaveAttribute('aria-label', '認証中...'); // 【確認内容】: 支援技術向けの適切なラベル設定を確認 🟢
+    expect(loadingButton).toHaveAttribute('aria-busy', 'true'); // 【確認内容】: スクリーンリーダー向けの処理中状態通知を確認 🟢
+    expect(loadingButton).toHaveAttribute('aria-label', '認証中...'); // 【確認内容】: 支援技術向けの適切なラベル設定を確認 🟢
     
     // スピナーコンポーネントの表示確認
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument(); // 【確認内容】: 視覚的なローディングインディケーターの表示を確認 🟢
+    expect(screen.getByRole('progressbar', { name: '認証処理中' })).toBeInTheDocument(); // 【確認内容】: 視覚的なローディングインディケーターの表示を確認 🟢
 
     // 【品質保証】: このテストにより、ユーザーが処理状況を理解し、誤操作を防止できることを保証
     // 【品質保証】: WCAG 2.1 AA準拠のアクセシビリティ要件も同時に検証
@@ -96,16 +98,16 @@ describe('LoginButton ローディング状態管理', () => {
 
     // 【テストデータ準備】: 処理完了まで十分な時間を確保（重複実行検証のため）
     // 【初期条件設定】: 認証処理中の状態を継続してダブルクリックをテスト
-    const delayedPromise = new Promise((resolve) => {
+    const delayedPromise = new Promise<{ data: {}; error: null }>((resolve) => {
       setTimeout(() => resolve({ data: {}, error: null }), 1000);
     });
-    mockAuthService.signIn.mockReturnValue(delayedPromise);
+    mockSignInWithOAuth.mockImplementation(() => delayedPromise);
 
     // 【実際の処理実行】: コンポーネントレンダリングと連続クリック実行
     // 【処理内容】: 短時間内（0.3秒）で2回クリックして重複実行を試行
     render(<LoginButton provider="google" />);
     
-    const loginButton = screen.getByRole('button');
+    const loginButton = screen.getByRole('button', { name: 'Googleでログイン' });
     const user = userEvent.setup();
 
     // 【連続クリック実行】: 0.3秒間隔での2回クリック（意図的な重複操作）
@@ -118,7 +120,7 @@ describe('LoginButton ローディング状態管理', () => {
 
     // 【結果検証】: 認証処理が1回のみ実行されることを確認
     // 【期待値確認】: システム負荷軽減とユーザー混乱防止の効果を検証
-    expect(mockAuthService.signIn).toHaveBeenCalledTimes(1); // 【確認内容】: 認証処理が重複実行されていないことを確認 🟡
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1); // 【確認内容】: 認証処理が重複実行されていないことを確認 🟡
 
     // 【品質保証】: 処理重複による不正な認証状態やシステム負荷を防止
   });
@@ -131,25 +133,26 @@ describe('LoginButton ローディング状態管理', () => {
 
     // 【テストデータ準備】: 10秒以上の長時間処理をシミュレート
     // 【初期条件設定】: タイマー制御により正確な時間経過をテスト
-    jest.useFakeTimers();
+    // Bunテスト環境ではfakeTimersは不要、実際のsetTimeoutを使用
     
-    const longDelayPromise = new Promise((resolve) => {
+    const longDelayPromise = new Promise<{ data: {}; error: null }>((resolve) => {
       setTimeout(() => resolve({ data: {}, error: null }), 15000);
     });
-    mockAuthService.signIn.mockReturnValue(longDelayPromise);
+    mockSignInWithOAuth.mockImplementation(() => longDelayPromise);
 
     // 【実際の処理実行】: 長時間処理開始とタイマー進行
     // 【処理内容】: 認証開始から10秒経過までの状態変化を追跡
     render(<LoginButton provider="google" />);
     
-    const loginButton = screen.getByRole('button');
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const loginButton = screen.getByRole('button', { name: 'Googleでログイン' });
+    const user = userEvent.setup();
 
     await user.click(loginButton);
 
     // 【時間経過シミュレート】: 10秒経過時点での状態確認
     // 【実行タイミング】: 長時間処理検出のタイミングで追加メッセージ表示
-    jest.advanceTimersByTime(10000);
+    // 実際の時間経過を待つ（Bunテスト環境では実時間で処理）
+    await new Promise(resolve => setTimeout(resolve, 10500));
 
     // 【結果検証】: 長時間処理メッセージの表示確認
     // 【期待値確認】: ユーザーの不安解消と処理継続の説明

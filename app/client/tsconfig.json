@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "types": ["@testing-library/jest-dom", "bun-types"],
     "plugins": [
       {
         "name": "next"
@@ -23,6 +24,6 @@
       "@/packages/*":["./../packages/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/test-types.d.ts"],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }
