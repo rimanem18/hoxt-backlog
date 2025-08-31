@@ -32,11 +32,6 @@ description: git add & git commit をします。
 - test: テスト関連
 - chore: ビルド、補助ツール、ライブラリ関連
 
-理由を記載してください:
-
-- OK: feat: ○○なため、hoge を追加。
-- NG: feat: hoge を追加。
-
 ## コミットメッセージフォーマット例
 ```
 refactor: セキュリティ・パフォーマンス・品質向上のためにリファクタリング #{issue 番号}
