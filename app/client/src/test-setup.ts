@@ -12,7 +12,7 @@ const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
   url: 'http://localhost:3000',
   pretendToBeVisual: true,
-  resources: 'usable'
+  resources: 'usable',
 });
 
 const { window } = dom;
@@ -20,82 +20,79 @@ const { window } = dom;
 // すべての必要なオブジェクトをglobalに設定
 Object.defineProperty(globalThis, 'window', {
   value: window,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'document', {
   value: window.document,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'navigator', {
   value: window.navigator,
-  writable: true
+  writable: true,
 });
 
 // HTML要素を設定
 Object.defineProperty(globalThis, 'HTMLElement', {
   value: window.HTMLElement,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'HTMLButtonElement', {
   value: window.HTMLButtonElement,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'HTMLImageElement', {
   value: window.HTMLImageElement,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'Element', {
   value: window.Element,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'Node', {
   value: window.Node,
-  writable: true
+  writable: true,
 });
 
 // DOM イベント関連を設定
 // DOM 環境に存在しない Web API を明示的に設定
 Object.defineProperty(globalThis, 'MouseEvent', {
   value: window.MouseEvent,
-  writable: true
+  writable: true,
 });
 
 // RangeとSelectionはテキスト選択操作のテストで必要になるWeb API
 Object.defineProperty(globalThis, 'Range', {
   value: window.Range,
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'Selection', {
   value: window.Selection,
-  writable: true
+  writable: true,
 });
 
 // アニメーションのテストに必要なrequestAnimationFrameを設定
 Object.defineProperty(globalThis, 'requestAnimationFrame', {
   value: (callback: FrameRequestCallback) => setTimeout(callback, 0),
-  writable: true
+  writable: true,
 });
 
 Object.defineProperty(globalThis, 'cancelAnimationFrame', {
   value: (id: number) => clearTimeout(id),
-  writable: true
+  writable: true,
 });
 
 // グローバルの型宣言
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      [elemName: string]: any;
+      [elemName: string]: Record<string, unknown>;
     }
   }
-  var document: Document;
-  var window: Window & typeof globalThis;
-  var navigator: Navigator;
 }

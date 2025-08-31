@@ -3,7 +3,7 @@
  * キャッシュデータの利用と自動接続回復を提供する。
  */
 
-import { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * API接続エラーの型定義
@@ -74,32 +74,37 @@ export class APIFallbackHandler {
    * @param cachedData - 利用可能なキャッシュデータ
    * @returns フォールバック処理結果
    */
-  handleAPIFailure(error: APIConnectionError, cachedData?: CachedUserData): APIFallbackResult {
-    // 一時的エラーか永続的エラーかを判定
-    const isTemporaryError = this.isTemporaryError(error);
-    
-    if (cachedData && cachedData.isValid) {
+  handleAPIFailure(
+    error: APIConnectionError,
+    cachedData?: CachedUserData,
+  ): APIFallbackResult {
+    // 一時的エラーか永続的エラーかを判定（現在未使用だが将来的にリトライ機能で活用予定）
+    // const isTemporaryError = this.isTemporaryError(error);
+
+    if (cachedData?.isValid) {
       // 有効なキャッシュを使用してオフラインモードで動作
       this.enableOfflineMode();
-      
+
       return {
         useCache: true,
         userData: cachedData.user,
         offlineMode: true,
-        userMessage: 'オフラインモードで動作中です。接続が回復すると自動的に同期されます。',
-        reliability: this.getCacheReliability(cachedData.cachedAt)
+        userMessage:
+          'オフラインモードで動作中です。接続が回復すると自動的に同期されます。',
+        reliability: this.getCacheReliability(cachedData.cachedAt),
       };
     }
-    
+
     // 利用可能なキャッシュがない場合
     this.enableOfflineMode();
-    
+
     return {
       useCache: false,
       userData: null,
       offlineMode: true,
-      userMessage: 'サーバーに接続できません。インターネット接続を確認してください。',
-      reliability: 'unavailable'
+      userMessage:
+        'サーバーに接続できません。インターネット接続を確認してください。',
+      reliability: 'unavailable',
     };
   }
 
@@ -111,14 +116,14 @@ export class APIFallbackHandler {
   private isTemporaryError(error: APIConnectionError): boolean {
     // HTTPステータスコードによる判定
     if (error.statusCode >= 500) return true; // サーバーエラーは一時的
-    if (error.statusCode === 0) return true;  // ネットワークエラーは一時的
+    if (error.statusCode === 0) return true; // ネットワークエラーは一時的
     if (error.statusCode === 408) return true; // タイムアウトは一時的
     if (error.statusCode === 429) return true; // レート制限は一時的
-    
+
     // エラーコードによる判定
     if (error.code === 'api_connection_failed') return true;
     if (error.code === 'network_timeout') return true;
-    
+
     return false; // その他は永続的エラーとして扱う
   }
 
@@ -127,7 +132,7 @@ export class APIFallbackHandler {
    */
   private enableOfflineMode(): void {
     this.isOfflineMode = true;
-    
+
     // 定期的な接続確認でオンライン復帰を検出
     if (!this.connectionCheckInterval) {
       this.startConnectionMonitoring();
@@ -141,10 +146,10 @@ export class APIFallbackHandler {
    */
   private getCacheReliability(cachedAt: number): 'fresh' | 'cached' | 'stale' {
     const ageInMinutes = (Date.now() - cachedAt) / (1000 * 60);
-    
-    if (ageInMinutes <= 5) return 'fresh';      // 5分以内は新鮮
-    if (ageInMinutes <= 30) return 'cached';    // 30分以内はキャッシュ
-    return 'stale';                             // それ以上は古いデータ
+
+    if (ageInMinutes <= 5) return 'fresh'; // 5分以内は新鮮
+    if (ageInMinutes <= 30) return 'cached'; // 30分以内はキャッシュ
+    return 'stale'; // それ以上は古いデータ
   }
 
   /**
@@ -153,47 +158,51 @@ export class APIFallbackHandler {
    * @param retryCallback - リトライ時のコールバック関数
    */
   scheduleRetryConnection(
-    config: RetryConnectionConfig = { interval: 30000, maxAttempts: 10, useBackoff: true },
-    retryCallback?: () => Promise<boolean>
+    config: RetryConnectionConfig = {
+      interval: 30000,
+      maxAttempts: 10,
+      useBackoff: true,
+    },
+    retryCallback?: () => Promise<boolean>,
   ): void {
     let attemptCount = 0;
-    
+
     const attemptReconnection = () => {
       if (attemptCount >= config.maxAttempts) {
         console.log('最大リトライ回数に達しました');
         return;
       }
-      
+
       attemptCount++;
-      
+
       // 簡易的な接続確認でテスト
       this.testConnection()
-        .then(isConnected => {
+        .then((isConnected) => {
           if (isConnected) {
             // 接続回復時のオフラインモード解除
             this.disableOfflineMode();
             if (retryCallback) retryCallback();
           } else {
             // 接続失敗時は次回リトライをスケジュール
-            const delay = config.useBackoff ? 
-              config.interval * Math.pow(2, attemptCount - 1) : 
-              config.interval;
-              
+            const delay = config.useBackoff
+              ? config.interval * 2 ** (attemptCount - 1)
+              : config.interval;
+
             const timerId = setTimeout(attemptReconnection, delay);
             this.retryTimers.add(timerId);
           }
         })
         .catch(() => {
           // エラーが発生した場合もリトライ継続
-          const delay = config.useBackoff ? 
-            config.interval * Math.pow(2, attemptCount - 1) : 
-            config.interval;
-            
+          const delay = config.useBackoff
+            ? config.interval * 2 ** (attemptCount - 1)
+            : config.interval;
+
           const timerId = setTimeout(attemptReconnection, delay);
           this.retryTimers.add(timerId);
         });
     };
-    
+
     // 初回リトライを開始
     const timerId = setTimeout(attemptReconnection, config.interval);
     this.retryTimers.add(timerId);
@@ -208,12 +217,12 @@ export class APIFallbackHandler {
       // 簡単なフェッチリクエストで接続確認
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒タイムアウト
-      
+
       const response = await fetch('/api/health', {
         method: 'HEAD',
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
@@ -240,17 +249,17 @@ export class APIFallbackHandler {
    */
   private disableOfflineMode(): void {
     this.isOfflineMode = false;
-    
+
     // 接続監視タイマーを停止
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = undefined;
     }
-    
+
     // 保留中のリトライタイマーを全て停止
-    this.retryTimers.forEach(timerId => clearTimeout(timerId));
+    this.retryTimers.forEach((timerId) => clearTimeout(timerId));
     this.retryTimers.clear();
-    
+
     console.log('オンラインモードに復帰しました');
   }
 

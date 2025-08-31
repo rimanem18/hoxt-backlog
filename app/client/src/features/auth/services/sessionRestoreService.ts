@@ -1,11 +1,11 @@
 /**
  * セッション復元機能を提供するサービス。
  * localStorage/sessionStorage連携とRedux状態同期を担う。
- * 
+ *
  * @note 現在の実装はテスト用モック。本番では実際のストレージ連携が必要。
  */
 
-import { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * セッションデータの型定義
@@ -84,13 +84,13 @@ interface ReduxRestoreResult {
  * ローカルストレージベースのセッション管理とRedux連携、トークンリフレッシュを行う。
  */
 export class SessionRestoreService {
-  private store?: any; // Redux store（オプション）
+  private store?: unknown; // Redux store（オプション、未設定のためunknown型）
 
   /**
    * SessionRestoreServiceを初期化する
    * @param store - Redux store（オプション）
    */
-  constructor(store?: any) {
+  constructor(store?: unknown) {
     this.store = store;
   }
 
@@ -114,19 +114,19 @@ export class SessionRestoreService {
             avatarUrl: sessionData.user.avatarUrl || null,
             createdAt: sessionData.user.createdAt || new Date().toISOString(),
             updatedAt: sessionData.user.updatedAt || new Date().toISOString(),
-            lastLoginAt: sessionData.user.lastLoginAt || null
-          }
+            lastLoginAt: sessionData.user.lastLoginAt || null,
+          },
         };
       }
 
       return {
         success: false,
-        error: 'Invalid or missing session data'
+        error: 'Invalid or missing session data',
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -139,12 +139,12 @@ export class SessionRestoreService {
     try {
       // テスト用の実装で常に成功を返す
       return {
-        success: true
+        success: true,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -171,12 +171,12 @@ export class SessionRestoreService {
     try {
       // テスト用の実装で期限切れセッションクリアの成功を返す
       return {
-        success: true
+        success: true,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -191,38 +191,47 @@ export class SessionRestoreService {
       if (!this.store) {
         return {
           success: false,
-          error: 'Redux store not provided'
+          error: 'Redux store not provided',
         };
       }
 
       if (this.isSessionValid(sessionData)) {
-        // Redux状態にauthSuccessアクションをdispatch
-        this.store.dispatch({
-          type: 'auth/authSuccess',
-          payload: {
-            user: {
-              id: sessionData.user.id,
-              email: sessionData.user.email,
-              name: sessionData.user.name,
-              avatarUrl: null
+        // Redux状態にauthSuccessアクションをdispatch（型安全なアクセス）
+        if (
+          this.store &&
+          typeof this.store === 'object' &&
+          'dispatch' in this.store
+        ) {
+          const store = this.store as {
+            dispatch: (action: { type: string; payload?: unknown }) => void;
+          };
+          store.dispatch({
+            type: 'auth/authSuccess',
+            payload: {
+              user: {
+                id: sessionData.user.id,
+                email: sessionData.user.email,
+                name: sessionData.user.name,
+                avatarUrl: null,
+              },
+              isNewUser: false,
             },
-            isNewUser: false
-          }
-        });
+          });
+        }
 
         return {
-          success: true
+          success: true,
         };
       }
 
       return {
         success: false,
-        error: 'Invalid session data'
+        error: 'Invalid session data',
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -232,23 +241,23 @@ export class SessionRestoreService {
    * @param refreshToken - リフレッシュトークン
    * @returns リフレッシュ処理結果
    */
-  refreshSession(refreshToken: string): RefreshResult {
+  refreshSession(): RefreshResult {
     try {
       // テスト用の実装で新しいトークンデータを生成して返す
       const newTokenData = {
         accessToken: 'new-jwt-token',
         refreshToken: 'new-refresh-token',
-        expiresAt: Date.now() + 3600000
+        expiresAt: Date.now() + 3600000,
       };
 
       return {
         success: true,
-        newTokens: newTokenData
+        newTokens: newTokenData,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -261,7 +270,7 @@ export class SessionRestoreService {
   scheduleTokenRefresh(expiresAt: number, refreshCallback: () => void): void {
     // 指定時刻の5分前に更新コールバックを実行
     const refreshTime = expiresAt - Date.now() - 300000;
-    
+
     if (refreshTime > 0) {
       setTimeout(refreshCallback, refreshTime);
     }

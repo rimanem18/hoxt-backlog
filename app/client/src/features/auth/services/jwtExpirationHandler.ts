@@ -36,14 +36,14 @@ interface JWTValidationResult {
  * JWTの期限切れ検出、Redux連携ログアウト、セキュアな状態クリアを行う。
  */
 export class JWTExpirationHandler {
-  private store?: any; // Redux store（オプション）
+  private store?: unknown; // Redux store（オプション、未設定のためunknown型）
   private expirationWarningCallback?: (remainingTime: number) => void;
 
   /**
    * JWTExpirationHandlerを初期化する
    * @param store - Redux store（オプション）
    */
-  constructor(store?: any) {
+  constructor(store?: unknown) {
     this.store = store;
   }
 
@@ -56,34 +56,40 @@ export class JWTExpirationHandler {
     try {
       // JWTトークンの有効性と期限を検証
       const validation = this.validateJWT(token);
-      
+
       if (validation.isExpired) {
         // 期限切れ時の自動ログアウトを実行
         const logoutResult = this.executeLogout();
-        
+
         return {
           isExpired: true,
           logoutExecuted: logoutResult,
-          userNotification: 'セッションの有効期限が切れました。再度ログインしてください。',
-          remainingTime: 0
+          userNotification:
+            'セッションの有効期限が切れました。再度ログインしてください。',
+          remainingTime: 0,
         };
       }
-      
+
       // 正常なトークン状態（期限内）
       return {
         isExpired: false,
         logoutExecuted: false,
         userNotification: '',
-        remainingTime: validation.expiresAt ? 
-          Math.max(0, Math.floor((validation.expiresAt * 1000 - Date.now()) / 1000)) : undefined
+        remainingTime: validation.expiresAt
+          ? Math.max(
+              0,
+              Math.floor((validation.expiresAt * 1000 - Date.now()) / 1000),
+            )
+          : undefined,
       };
     } catch (error) {
       // JWT解析エラー時は不正トークンとして強制ログアウト
       return {
         isExpired: true,
         logoutExecuted: this.executeLogout(),
-        userNotification: '認証情報に問題があります。再度ログインしてください。',
-        remainingTime: 0
+        userNotification:
+          '認証情報に問題があります。再度ログインしてください。',
+        remainingTime: 0,
       };
     }
   }
@@ -101,7 +107,7 @@ export class JWTExpirationHandler {
         return {
           isValid: false,
           isExpired: false,
-          error: 'Invalid JWT format'
+          error: 'Invalid JWT format',
         };
       }
 
@@ -109,11 +115,11 @@ export class JWTExpirationHandler {
       // base64urlをbase64に変換
       const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
       // Base64パディングを追加
-      const paddedBase64 = base64 + '='.repeat((4 - base64.length % 4) % 4);
+      const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
       const payload = JSON.parse(
-        typeof Buffer !== 'undefined' 
+        typeof Buffer !== 'undefined'
           ? Buffer.from(paddedBase64, 'base64').toString()
-          : atob(paddedBase64)
+          : atob(paddedBase64),
       );
 
       // expクレームの存在確認と期限切れ判定
@@ -121,7 +127,7 @@ export class JWTExpirationHandler {
         return {
           isValid: false,
           isExpired: false,
-          error: 'JWT missing exp claim'
+          error: 'JWT missing exp claim',
         };
       }
 
@@ -131,13 +137,13 @@ export class JWTExpirationHandler {
       return {
         isValid: !isExpired,
         isExpired: isExpired,
-        expiresAt: payload.exp
+        expiresAt: payload.exp,
       };
     } catch (error) {
       return {
         isValid: false,
         isExpired: false,
-        error: error instanceof Error ? error.message : 'JWT parsing error'
+        error: error instanceof Error ? error.message : 'JWT parsing error',
       };
     }
   }
@@ -148,16 +154,23 @@ export class JWTExpirationHandler {
    */
   private executeLogout(): boolean {
     try {
-      if (this.store) {
-        // Reduxにauth/logoutアクションをdispatch
-        this.store.dispatch({
-          type: 'auth/logout'
+      if (
+        this.store &&
+        typeof this.store === 'object' &&
+        'dispatch' in this.store
+      ) {
+        // Reduxにauth/logoutアクションをdispatch（型安全なアクセス）
+        const store = this.store as {
+          dispatch: (action: { type: string }) => void;
+        };
+        store.dispatch({
+          type: 'auth/logout',
         });
       }
 
       // 保存済み認証情報をローカルストレージから削除
       this.clearStoredTokens();
-      
+
       return true;
     } catch (error) {
       console.error('ログアウト処理エラー:', error);
@@ -175,10 +188,10 @@ export class JWTExpirationHandler {
         'supabase.auth.token',
         'sb-access-token',
         'sb-refresh-token',
-        'auth-session'
+        'auth-session',
       ];
 
-      authKeys.forEach(key => {
+      authKeys.forEach((key) => {
         // ブラウザ環境でのみストレージにアクセス
         if (typeof localStorage !== 'undefined') {
           localStorage.removeItem(key);
@@ -196,7 +209,9 @@ export class JWTExpirationHandler {
    * 期限切れ前の警告コールバックを設定する
    * @param callback - 警告時に実行するコールバック関数
    */
-  setExpirationWarningCallback(callback: (remainingTime: number) => void): void {
+  setExpirationWarningCallback(
+    callback: (remainingTime: number) => void,
+  ): void {
     this.expirationWarningCallback = callback;
   }
 
@@ -206,13 +221,19 @@ export class JWTExpirationHandler {
    * @param warningThreshold - 警告を出すまでの残り時間（秒）
    * @returns 監視タイマーID
    */
-  startExpirationMonitoring(token: string, warningThreshold: number = 300): NodeJS.Timeout {
+  startExpirationMonitoring(
+    token: string,
+    warningThreshold: number = 300,
+  ): NodeJS.Timeout {
     const monitoringInterval = setInterval(() => {
       const result = this.handleTokenExpiration(token);
-      
+
       if (result.isExpired) {
         clearInterval(monitoringInterval);
-      } else if (result.remainingTime && result.remainingTime <= warningThreshold) {
+      } else if (
+        result.remainingTime &&
+        result.remainingTime <= warningThreshold
+      ) {
         // 閾値を下回った場合の警告実行
         if (this.expirationWarningCallback) {
           this.expirationWarningCallback(result.remainingTime);
@@ -231,11 +252,11 @@ export class JWTExpirationHandler {
   getExpirationTime(token: string): string | null {
     try {
       const validation = this.validateJWT(token);
-      
+
       if (validation.expiresAt) {
         return new Date(validation.expiresAt * 1000).toLocaleString('ja-JP');
       }
-      
+
       return null;
     } catch (error) {
       return null;

@@ -1,15 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GoogleLoginButton } from '../components/GoogleLoginButton';
 
-const mockSignInWithOAuth = mock(() => Promise.resolve({ data: null, error: null }));
+const mockSignInWithOAuth = mock(() =>
+  Promise.resolve({ data: null, error: null }),
+);
 
-mock.module('@supabase/supabase-js', () => ({
-  createClient: () => ({
+mock.module('@/lib/supabase', () => ({
+  supabase: {
     auth: {
-      signInWithOAuth: mockSignInWithOAuth
-    }
-  })
+      signInWithOAuth: mockSignInWithOAuth,
+    },
+  },
 }));
 
 describe('GoogleLoginButton', () => {
@@ -26,17 +28,19 @@ describe('GoogleLoginButton', () => {
     render(<GoogleLoginButton />);
 
     // When: Googleログインボタンをクリック
-    const loginButton = screen.getByRole('button', { name: 'Googleでログイン' });
+    const loginButton = screen.getByRole('button', {
+      name: 'Googleでログイン',
+    });
     expect(loginButton).toBeTruthy();
-    
+
     fireEvent.click(loginButton);
 
     // Then: Supabase AuthのsignInWithOAuth関数が正しい引数で呼び出される
     expect(mockSignInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
       options: {
-        redirectTo: expect.any(String)
-      }
+        redirectTo: expect.any(String),
+      },
     });
   });
 });

@@ -3,10 +3,14 @@
  * Supabase AuthとGoogle OAuthを使用したセキュアなJWT認証を提供する。
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { BaseAuthProvider, AuthResult, SessionInfo } from './authProviderInterface';
-import { AuthProvider, User } from '@/packages/shared-schemas/src/auth';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { AuthProvider, User } from '@/packages/shared-schemas/src/auth';
 import { parseCommaSeparated } from '@/shared/array';
+import {
+  type AuthResult,
+  BaseAuthProvider,
+  type SessionInfo,
+} from './authProviderInterface';
 
 /**
  * Google OAuth認証プロバイダー。
@@ -33,14 +37,26 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     super('google');
 
     // 注入されたクライアントまたは環境変数からSupabaseクライアントを初期化
-    this.supabase = supabaseClient || createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    this.supabase =
+      supabaseClient ||
+      (() => {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!url || !key) {
+          throw new Error('Supabase環境変数が設定されていません');
+        }
+
+        return createClient(url, key);
+      })();
 
     // 信頼ドメインリストを事前処理してURL検証時のパフォーマンスを向上
-    const trusted_domains_raw = parseCommaSeparated(process.env.NEXT_PUBLIC_TRUSTED_DOMAINS);
-    this.trustedDomains = new Set(trusted_domains_raw.map(domain => domain.toLowerCase()));
+    const trusted_domains_raw = parseCommaSeparated(
+      process.env.NEXT_PUBLIC_TRUSTED_DOMAINS,
+    );
+    this.trustedDomains = new Set(
+      trusted_domains_raw.map((domain) => domain.toLowerCase()),
+    );
   }
 
   /**
@@ -57,20 +73,25 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     } catch (error) {
       // 詳細なエラーはログに記録、ユーザーには安全なメッセージを返却
       console.error('Invalid URL format detected:', redirectTo, error);
-      throw new Error("不正な URL 形式です");
+      throw new Error('不正な URL 形式です');
     }
 
     // http/https以外のプロトコルを拒否
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-      console.error('Invalid protocol detected:', parsedUrl.protocol, 'for URL:', redirectTo);
-      throw new Error("許可されていないプロトコルです");
+      console.error(
+        'Invalid protocol detected:',
+        parsedUrl.protocol,
+        'for URL:',
+        redirectTo,
+      );
+      throw new Error('許可されていないプロトコルです');
     }
 
     // ホスト名を小文字に正規化してケースインセンシティブ攻撃を防ぐ
     const redirectHostname = parsedUrl.hostname.toLowerCase();
 
     // 信頼ドメインリストとの厳密な照合でオープンリダイレクト攻撃を防止
-    const isTrusted = Array.from(this.trustedDomains).some(trustedDomain => {
+    const isTrusted = Array.from(this.trustedDomains).some((trustedDomain) => {
       // 完全一致チェック
       if (redirectHostname === trustedDomain) {
         return true;
@@ -85,7 +106,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     if (!isTrusted) {
       // セキュリティログとして記録
       console.error(`Untrusted redirect URL detected: ${redirectTo}`);
-      throw new Error("不正なリダイレクト先です");
+      throw new Error('不正なリダイレクト先です');
     }
   }
   /**
@@ -94,20 +115,21 @@ export class GoogleAuthProvider extends BaseAuthProvider {
    * @returns 認証結果
    */
   async signIn(options?: { redirectTo?: string }): Promise<AuthResult> {
-    const redirectTo = options?.redirectTo ||
-                      process.env.NEXT_PUBLIC_SITE_URL ||
-                      window.location.origin
+    const redirectTo =
+      options?.redirectTo ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      window.location.origin;
 
     try {
       // オープンリダイレクト脆弱性対策の厳密なリダイレクト検証
-      this.validateRedirectUrl(redirectTo)
+      this.validateRedirectUrl(redirectTo);
 
       // Supabase Auth経由でGoogle認証を開始
-      const { data, error } = await this.supabase.auth.signInWithOAuth({
+      const { error } = await this.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectTo
-        }
+          redirectTo: redirectTo,
+        },
       });
 
       if (error) {
@@ -117,12 +139,15 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       // リダイレクトが開始されるため処理中状態を返す
       return {
         success: true,
-        provider: this.providerName
+        provider: this.providerName,
       };
     } catch (error) {
       // 詳細なエラーはログに記録、ユーザーには安全なメッセージを返却
       console.error('Google sign in validation error:', error);
-      return this.handleError(new Error('認証要求の処理中にエラーが発生しました'), 'Google sign in');
+      return this.handleError(
+        new Error('認証要求の処理中にエラーが発生しました'),
+        'Google sign in',
+      );
     }
   }
 
@@ -152,7 +177,10 @@ export class GoogleAuthProvider extends BaseAuthProvider {
   async getUser(): Promise<{ user: User | null }> {
     try {
       // Supabase Auth経由で現在のユーザーを取得
-      const { data: { user }, error } = await this.supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await this.supabase.auth.getUser();
 
       if (error) {
         console.error('Google get user error:', error.message);
@@ -171,8 +199,12 @@ export class GoogleAuthProvider extends BaseAuthProvider {
         externalId: user.id,
         provider: 'google' as AuthProvider,
         email: user.email || '',
-        name: user.user_metadata?.name || user.user_metadata?.full_name || 'Google User',
-        avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+        name:
+          user.user_metadata?.name ||
+          user.user_metadata?.full_name ||
+          'Google User',
+        avatarUrl:
+          user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
         createdAt: user.created_at || now,
         updatedAt: user.updated_at || now,
         lastLoginAt: null, // Google認証では最終ログイン時刻を追跡しない
@@ -193,7 +225,10 @@ export class GoogleAuthProvider extends BaseAuthProvider {
   async getSession(): Promise<SessionInfo | null> {
     try {
       // Supabase Auth経由で現在のセッションを取得
-      const { data: { session }, error } = await this.supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await this.supabase.auth.getSession();
 
       if (error) {
         console.error('Google get session error:', error.message);
@@ -211,8 +246,14 @@ export class GoogleAuthProvider extends BaseAuthProvider {
         externalId: session.user.id,
         provider: 'google' as AuthProvider,
         email: session.user.email || '',
-        name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || 'Google User',
-        avatarUrl: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
+        name:
+          session.user.user_metadata?.name ||
+          session.user.user_metadata?.full_name ||
+          'Google User',
+        avatarUrl:
+          session.user.user_metadata?.avatar_url ||
+          session.user.user_metadata?.picture ||
+          null,
         createdAt: session.user.created_at || now,
         updatedAt: session.user.updated_at || now,
         lastLoginAt: null, // Google認証では最終ログイン時刻を追跡しない
@@ -222,7 +263,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
         expiresAt: session.expires_at ? session.expires_at * 1000 : undefined, // 秒をミリ秒に変換
-        user: appUser
+        user: appUser,
       };
     } catch (error) {
       console.error('Google get session error:', error);
@@ -237,14 +278,18 @@ export class GoogleAuthProvider extends BaseAuthProvider {
    * @returns リスナー解除関数
    */
   onAuthStateChange(callback: (user: User | null) => void): () => void {
-    const { data: { subscription } } = this.supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          const { user } = await this.getUser();
-          callback(user);
-        }
+    const {
+      data: { subscription },
+    } = this.supabase.auth.onAuthStateChange(async (event) => {
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'SIGNED_OUT' ||
+        event === 'TOKEN_REFRESHED'
+      ) {
+        const { user } = await this.getUser();
+        callback(user);
       }
-    );
+    });
 
     // メモリリーク防止のためのクリーンアップ関数を返却
     return () => {

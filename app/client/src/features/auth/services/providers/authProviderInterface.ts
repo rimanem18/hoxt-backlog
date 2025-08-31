@@ -3,7 +3,7 @@
  * 複数認証プロバイダー（Google、Apple等）を統一的に扱う。
  */
 
-import { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 認証結果の型定義
@@ -36,7 +36,7 @@ export interface SessionInfo {
 /**
  * 認証プロバイダーの統一インターフェース。
  * 依存性逆転の原則に基づき、複数認証プロバイダーを抽象化する。
- * 
+ *
  * @example
  * ```typescript
  * const provider: AuthProviderInterface = new GoogleAuthProvider();
@@ -107,16 +107,18 @@ export abstract class BaseAuthProvider implements AuthProviderInterface {
    * @param operation - 実行中の操作名
    * @returns エラー結果
    */
-  protected handleError(error: any, operation: string): AuthResult {
-    const errorMessage = error?.message || `${operation} failed`;
-    
+  protected handleError(error: unknown, operation: string): AuthResult {
+    // エラーオブジェクトの安全な型チェック
+    const errorMessage =
+      error instanceof Error ? error.message : `${operation} failed`;
+
     // デバッグと監視のためのエラーログを出力
     console.error(`[${this.providerName}] ${operation} error:`, errorMessage);
 
     return {
       success: false,
       error: errorMessage,
-      provider: this.providerName
+      provider: this.providerName,
     };
   }
 
@@ -129,7 +131,7 @@ export abstract class BaseAuthProvider implements AuthProviderInterface {
     return {
       success: true,
       user,
-      provider: this.providerName
+      provider: this.providerName,
     };
   }
 }

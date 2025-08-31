@@ -1,4 +1,5 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
+import type { ValidationResult } from '../services/environmentValidator';
 
 // テストファイル: errorHandling.test.ts
 describe('認証エラーハンドリング', () => {
@@ -7,14 +8,15 @@ describe('認証エラーハンドリング', () => {
     const cancelledAuthError = {
       code: 'auth_cancelled',
       message: 'User cancelled the authentication process',
-      provider: 'google'
+      provider: 'google',
     };
 
     // When: AuthErrorHandlerで認証キャンセルエラーを処理
     const { AuthErrorHandler } = require('../services/authErrorHandler');
     const errorHandler = new AuthErrorHandler();
-    
-    const handleResult = errorHandler.handleAuthCancellation(cancelledAuthError);
+
+    const handleResult =
+      errorHandler.handleAuthCancellation(cancelledAuthError);
 
     // Then: キャンセルは正常な操作として扱い、エラー状態にしない
     expect(handleResult.shouldShowError).toBe(false); // キャンセル時にエラーメッセージを表示しない
@@ -28,19 +30,19 @@ describe('認証エラーハンドリング', () => {
       code: 'network_error',
       message: 'Failed to fetch',
       type: 'temporary',
-      retryable: true
+      retryable: true,
     };
 
     const retryConfig = {
       maxRetries: 3,
       backoffMultiplier: 1.5,
-      initialDelay: 1000
+      initialDelay: 1000,
     };
 
     // When: NetworkErrorHandlerでネットワークエラーを処理
     const { NetworkErrorHandler } = require('../services/networkErrorHandler');
     const networkHandler = new NetworkErrorHandler(retryConfig);
-    
+
     const retryResult = networkHandler.handleNetworkError(networkError);
 
     // Then: リトライ可能なエラーの場合に適切な遅延でリトライが実行される
@@ -56,16 +58,18 @@ describe('認証エラーハンドリング', () => {
     const jwtPayload = {
       sub: '111',
       email: 'expired@test.com',
-      exp: expiredTime // Unix時刻での期限切れ
+      exp: expiredTime, // Unix時刻での期限切れ
     };
-    const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString('base64');
+    const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString(
+      'base64',
+    );
     const expiredJWT = {
       token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${encodedPayload}.signature`,
       expiresAt: Date.now() - 1000, // 1秒前に期限切れ
       user: {
         id: '111',
-        email: 'expired@test.com'
-      }
+        email: 'expired@test.com',
+      },
     };
 
     const mockReduxStore = {
@@ -74,26 +78,31 @@ describe('認証エラーハンドリング', () => {
         auth: {
           isAuthenticated: true,
           user: expiredJWT.user,
-          accessToken: expiredJWT.token
-        }
-      })
+          accessToken: expiredJWT.token,
+        },
+      }),
     };
 
     // When: JWTExpirationHandlerで期限切れトークンを処理
-    const { JWTExpirationHandler } = require('../services/jwtExpirationHandler');
+    const {
+      JWTExpirationHandler,
+    } = require('../services/jwtExpirationHandler');
     const jwtHandler = new JWTExpirationHandler(mockReduxStore);
-    
+
     const expirationResult = jwtHandler.handleTokenExpiration(expiredJWT.token);
 
     // Then: 期限切れ検出時にログアウト処理と適切なユーザー通知が行われる
     expect(expirationResult.isExpired).toBe(true); // JWTトークンが期限切れとして検出される
     expect(expirationResult.logoutExecuted).toBe(true); // 自動ログアウト処理が実行される
-    expect(mockReduxStore.dispatch).toHaveBeenCalledWith( // ログアウトアクションが適切にdispatchされる
+    expect(mockReduxStore.dispatch).toHaveBeenCalledWith(
+      // ログアウトアクションが適切にdispatchされる
       expect.objectContaining({
-        type: 'auth/logout'
-      })
+        type: 'auth/logout',
+      }),
     );
-    expect(expirationResult.userNotification).toBe('セッションの有効期限が切れました。再度ログインしてください。'); // 適切なユーザー通知メッセージが表示される
+    expect(expirationResult.userNotification).toBe(
+      'セッションの有効期限が切れました。再度ログインしてください。',
+    ); // 適切なユーザー通知メッセージが表示される
   });
 
   test('バックエンドAPI接続失敗時のフォールバック処理', () => {
@@ -102,24 +111,27 @@ describe('認証エラーハンドリング', () => {
       code: 'api_connection_failed',
       message: 'Cannot connect to backend API',
       statusCode: 0, // ネットワークレベルのエラー
-      endpoint: '/api/auth/user'
+      endpoint: '/api/auth/user',
     };
 
     const cachedUserData = {
       user: {
         id: '222',
         email: 'cached@test.com',
-        name: 'Cached User'
+        name: 'Cached User',
       },
       cachedAt: Date.now() - 300000, // 5分前にキャッシュ
-      isValid: true
+      isValid: true,
     };
 
     // When: APIFallbackHandlerでAPI接続失敗を処理
     const { APIFallbackHandler } = require('../services/apiFallbackHandler');
     const fallbackHandler = new APIFallbackHandler();
-    
-    const fallbackResult = fallbackHandler.handleAPIFailure(apiConnectionError, cachedUserData);
+
+    const fallbackResult = fallbackHandler.handleAPIFailure(
+      apiConnectionError,
+      cachedUserData,
+    );
 
     // Then: キャッシュデータを使用してアプリケーション機能を継続提供できる
     expect(fallbackResult.useCache).toBe(true); // API失敗時にキャッシュデータが使用される
@@ -133,31 +145,42 @@ describe('認証エラーハンドリング', () => {
     const missingEnvVars = {
       NEXT_PUBLIC_SUPABASE_URL: undefined,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
-      NEXT_PUBLIC_SITE_URL: null
+      NEXT_PUBLIC_SITE_URL: null,
     };
 
     const requiredEnvVars = [
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'NEXT_PUBLIC_SITE_URL'
+      'NEXT_PUBLIC_SITE_URL',
     ];
 
     // When: 環境変数検証を実行
-    let validationResult;
-    let importError = null;
-    
+    let validationResult: ValidationResult = {
+      isValid: false,
+      missingVars: [''],
+      emptyVars: [''],
+      setupGuide: '',
+      errors: [''],
+    };
+    let importError: unknown = null;
+
     try {
-      const { EnvironmentValidator } = require('../services/environmentValidator');
+      const {
+        EnvironmentValidator,
+      } = require('../services/environmentValidator');
       const envValidator = new EnvironmentValidator(requiredEnvVars);
       validationResult = envValidator.validateEnvironment(missingEnvVars);
     } catch (error) {
       importError = error;
     }
 
+    // TODO(human): validationResultの型安全なプロパティアクセス
     // Then: 環境変数不備が検出され、適切なガイダンスが提供されることを確認
     if (validationResult) {
       expect(validationResult.isValid).toBe(false);
-      expect(validationResult.missingVars).toContain('NEXT_PUBLIC_SUPABASE_URL');
+      expect(validationResult.missingVars).toContain(
+        'NEXT_PUBLIC_SUPABASE_URL',
+      );
       expect(validationResult.setupGuide).toContain('.env.local');
     } else {
       // EnvironmentValidatorが未実装の場合はimportエラーを確認

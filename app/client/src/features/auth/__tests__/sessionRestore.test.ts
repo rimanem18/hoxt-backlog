@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeEach, afterAll } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 describe('セッション復元機能', () => {
   const FIXED_TIME = 1756562945000;
@@ -14,19 +14,21 @@ describe('セッション復元機能', () => {
   });
   test('ページリロード時の自動認証状態復元', () => {
     // Given: 有効なセッションデータの準備
-    const mockSessionData = {
+    const _mockSessionData = {
       accessToken: 'mock-jwt-token',
       refreshToken: 'mock-refresh-token',
       user: {
         id: '123',
         email: 'test@example.com',
-        name: 'Test User'
+        name: 'Test User',
       },
-      expiresAt: FIXED_TIME + 3600000 // 1時間後の有効期限
+      expiresAt: FIXED_TIME + 3600000, // 1時間後の有効期限
     };
 
     // When: SessionRestoreServiceのインスタンス化
-    const { SessionRestoreService } = require('../services/sessionRestoreService');
+    const {
+      SessionRestoreService,
+    } = require('../services/sessionRestoreService');
     const sessionService = new SessionRestoreService();
 
     // Then: 必要メソッドの存在確認
@@ -48,13 +50,15 @@ describe('セッション復元機能', () => {
         avatarUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        lastLoginAt: null
+        lastLoginAt: null,
       },
-      expiresAt: FIXED_TIME - 3600000 // 1時間前（期限切れ）
+      expiresAt: FIXED_TIME - 3600000, // 1時間前（期限切れ）
     };
 
     // When: セッション有効性確認と期限切れセッションのクリア
-    const { SessionRestoreService } = require('../services/sessionRestoreService');
+    const {
+      SessionRestoreService,
+    } = require('../services/sessionRestoreService');
     const sessionService = new SessionRestoreService();
 
     const isValid = sessionService.isSessionValid(expiredSessionData);
@@ -74,9 +78,9 @@ describe('セッション復元機能', () => {
           isAuthenticated: false,
           user: null,
           isLoading: true,
-          error: null
-        }
-      })
+          error: null,
+        },
+      }),
     };
 
     const validSessionData = {
@@ -91,15 +95,18 @@ describe('セッション復元機能', () => {
         avatarUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        lastLoginAt: null
+        lastLoginAt: null,
       },
-      expiresAt: FIXED_TIME + 3600000 // 1時間後の有効期限
+      expiresAt: FIXED_TIME + 3600000, // 1時間後の有効期限
     };
 
     // When: Reduxストア連携でセッション復元を実行
-    const { SessionRestoreService } = require('../services/sessionRestoreService');
+    const {
+      SessionRestoreService,
+    } = require('../services/sessionRestoreService');
     const sessionService = new SessionRestoreService(mockStore);
-    const restoreResult = sessionService.restoreSessionWithRedux(validSessionData);
+    const restoreResult =
+      sessionService.restoreSessionWithRedux(validSessionData);
 
     // Then: セッション復元が成功し、適切なReduxアクションがdispatchされることを確認
     expect(restoreResult.success).toBe(true);
@@ -111,11 +118,11 @@ describe('セッション復元機能', () => {
             id: validSessionData.user.id,
             email: validSessionData.user.email,
             name: validSessionData.user.name,
-            avatarUrl: null
+            avatarUrl: null,
           }),
-          isNewUser: false
-        })
-      })
+          isNewUser: false,
+        }),
+      }),
     );
   });
 
@@ -134,20 +141,24 @@ describe('セッション復元機能', () => {
         avatarUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        lastLoginAt: null
-      }
+        lastLoginAt: null,
+      },
     };
 
     const expectedNewTokens = {
       accessToken: 'new-jwt-token',
       refreshToken: 'new-refresh-token',
-      expiresAt: FIXED_TIME + 3600000 // 新しい有効期限
+      expiresAt: FIXED_TIME + 3600000, // 新しい有効期限
     };
 
     // When: リフレッシュトークンを使用してセッション更新を実行
-    const { SessionRestoreService } = require('../services/sessionRestoreService');
+    const {
+      SessionRestoreService,
+    } = require('../services/sessionRestoreService');
     const sessionService = new SessionRestoreService();
-    const refreshResult = sessionService.refreshSession(sessionNearExpiry.refreshToken);
+    const refreshResult = sessionService.refreshSession(
+      sessionNearExpiry.refreshToken,
+    );
 
     // Then: セッションリフレッシュが成功し、新しいトークンが取得されることを確認
     expect(refreshResult.success).toBe(true);

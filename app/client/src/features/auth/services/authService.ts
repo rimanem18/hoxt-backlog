@@ -3,9 +3,13 @@
  * Factory PatternとStrategy Patternで複数の認証プロバイダーを統一管理する。
  */
 
-import { AuthProviderInterface, AuthResult, SessionInfo } from './providers/authProviderInterface';
+import type { User } from '@/packages/shared-schemas/src/auth';
+import type {
+  AuthProviderInterface,
+  AuthResult,
+  SessionInfo,
+} from './providers/authProviderInterface';
 import { GoogleAuthProvider } from './providers/googleAuthProvider';
-import { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 認証サービス設定の型定義
@@ -60,7 +64,7 @@ export class AuthService {
       this.config = {
         defaultProvider: 'test',
         availableProviders: ['test'],
-        redirectTo: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+        redirectTo: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       };
       this.providers.set('test', provider);
       this.currentProvider = provider;
@@ -71,8 +75,12 @@ export class AuthService {
     this.config = {
       defaultProvider: 'google',
       availableProviders: ['google'],
-      redirectTo: process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'),
-      ...(config as Partial<AuthServiceConfig>)
+      redirectTo:
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (typeof window !== 'undefined'
+          ? window.location.origin
+          : 'http://localhost:3000'),
+      ...(config as Partial<AuthServiceConfig>),
     };
 
     // 利用可能なプロバイダーを登録
@@ -81,7 +89,9 @@ export class AuthService {
     // 初期プロバイダーを設定
     const defaultProvider = this.providers.get(this.config.defaultProvider);
     if (!defaultProvider) {
-      throw new Error(`Default provider '${this.config.defaultProvider}' not found`);
+      throw new Error(
+        `Default provider '${this.config.defaultProvider}' not found`,
+      );
     }
     this.currentProvider = defaultProvider;
   }
@@ -100,7 +110,7 @@ export class AuthService {
     // if (this.config.availableProviders.includes('apple')) {
     //   this.providers.set('apple', new AppleAuthProvider());
     // }
-    
+
     // if (this.config.availableProviders.includes('microsoft')) {
     //   this.providers.set('microsoft', new MicrosoftAuthProvider());
     // }
@@ -112,30 +122,33 @@ export class AuthService {
    * @param options - 認証オプション
    * @returns 認証結果
    */
-  async signIn(provider?: string, options?: { redirectTo?: string }): Promise<AuthResult> {
+  async signIn(
+    provider?: string,
+    options?: { redirectTo?: string },
+  ): Promise<AuthResult> {
     try {
       // 指定があれば一時的にプロバイダーを切り替え
-      const targetProvider = provider ? 
-        this.providers.get(provider) || this.currentProvider : 
-        this.currentProvider;
+      const targetProvider = provider
+        ? this.providers.get(provider) || this.currentProvider
+        : this.currentProvider;
 
       if (!targetProvider) {
         return {
           success: false,
           error: `Provider '${provider}' not found`,
-          provider: provider || 'unknown'
+          provider: provider || 'unknown',
         };
       }
 
       // プロバイダー非依存の認証を開始
       return await targetProvider.signIn({
-        redirectTo: options?.redirectTo || this.config.redirectTo
+        redirectTo: options?.redirectTo || this.config.redirectTo,
       });
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Authentication failed',
-        provider: provider || this.currentProvider.getProviderName()
+        provider: provider || this.currentProvider.getProviderName(),
       };
     }
   }
@@ -151,7 +164,7 @@ export class AuthService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Sign out failed',
-        provider: this.currentProvider.getProviderName()
+        provider: this.currentProvider.getProviderName(),
       };
     }
   }
@@ -204,7 +217,7 @@ export class AuthService {
         success: false,
         previousProvider,
         currentProvider: previousProvider,
-        error: `Provider '${providerName}' not found`
+        error: `Provider '${providerName}' not found`,
       };
     }
 
@@ -213,7 +226,7 @@ export class AuthService {
     return {
       success: true,
       previousProvider,
-      currentProvider: providerName
+      currentProvider: providerName,
     };
   }
 
@@ -243,7 +256,7 @@ export class AuthService {
   registerProvider(name: string, provider: AuthProviderInterface): boolean {
     try {
       this.providers.set(name, provider);
-      
+
       // 利用可能プロバイダーリストに追加
       if (!this.config.availableProviders.includes(name)) {
         this.config.availableProviders.push(name);
@@ -272,15 +285,17 @@ export class AuthService {
   updateConfig(newConfig: Partial<AuthServiceConfig>): boolean {
     try {
       this.config = { ...this.config, ...newConfig };
-      
+
       // 設定変更に応じて利用可能プロバイダーを更新
       if (newConfig.availableProviders) {
         this.initializeProviders();
       }
-      
+
       // 必要に応じてプロバイダーを切り替え
-      if (newConfig.defaultProvider && 
-          this.providers.has(newConfig.defaultProvider)) {
+      if (
+        newConfig.defaultProvider &&
+        this.providers.has(newConfig.defaultProvider)
+      ) {
         this.switchProvider(newConfig.defaultProvider);
       }
 

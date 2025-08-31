@@ -1,10 +1,10 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User } from '@/packages/shared-schemas/src/auth';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 認証状態を管理するRedux Toolkit slice。
  * Google認証の成功時にユーザー情報と認証状態を更新する。
- * 
+ *
  * @example
  * ```typescript
  * const store = configureStore({
@@ -43,7 +43,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   isLoading: false,
-  error: null
+  error: null,
 };
 
 /**
@@ -55,7 +55,7 @@ export const authSlice = createSlice({
   reducers: {
     /**
      * 認証成功時の状態更新
-     * 
+     *
      * @param state - 現在の認証状態
      * @param action - 認証成功時のユーザー情報を含むアクション
      */
@@ -64,8 +64,8 @@ export const authSlice = createSlice({
       state.user = action.payload.user;
       state.isLoading = false;
       state.error = null;
-    }
-  }
+    },
+  },
 });
 
 export const { authSuccess } = authSlice.actions;

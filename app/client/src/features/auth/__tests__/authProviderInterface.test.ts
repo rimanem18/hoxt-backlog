@@ -1,31 +1,30 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
+import type { User } from '@/packages/shared-schemas/src/auth';
+import type { SessionInfo } from '../services/providers/authProviderInterface';
 
 describe('認証プロバイダーインターフェース', () => {
   test('AuthProviderInterface型定義の検証', () => {
-    // Given: 期待される認証プロバイダーインターフェースの型構造
-    type ExpectedAuthProvider = {
-      signIn: (options?: { redirectTo?: string }) => Promise<{ success: boolean; error?: string }>;
-      signOut: () => Promise<{ success: boolean; error?: string }>;
-      getUser: () => Promise<{ user: any | null }>;
-      getSession: () => Promise<any | null>;
-      getProviderName: () => string;
-    };
-
-    // When: AuthProviderInterfaceの型定義をimportする
-    let importError = null;
+    // When: AuthProviderInterfaceモジュールをimportする
     try {
       const authProviderModule = require('../services/providers/authProviderInterface');
-      const { AuthProviderInterface } = authProviderModule;
-      
-      // Then: インターフェースが正しく定義されていることを確認
-      expect(AuthProviderInterface).toBeDefined();
+
+      // Then: モジュールが正常にimportできることを確認（インターフェースはランタイムで存在しないため、モジュール自体の存在を確認）
+      expect(authProviderModule).toBeDefined();
+
+      // 実装クラスBaseAuthProviderが存在することを確認
+      const { BaseAuthProvider } = authProviderModule;
+      expect(BaseAuthProvider).toBeDefined();
+      expect(typeof BaseAuthProvider).toBe('function');
     } catch (error) {
-      importError = error;
+      // importエラーがある場合はテスト失敗
+      throw error;
     }
 
     // Then: インターフェースがインスタンス化できないことを確認（抽象インターフェース）
     expect(() => {
-      const { AuthProviderInterface } = require('../services/providers/authProviderInterface');
+      const {
+        AuthProviderInterface,
+      } = require('../services/providers/authProviderInterface');
       return new AuthProviderInterface();
     }).toThrow();
   });
@@ -34,16 +33,26 @@ describe('認証プロバイダーインターフェース', () => {
     // Given: Supabaseクライアントのモック
     const mockSupabaseClient = {
       auth: {
-        signInWithOAuth: mock(() => Promise.resolve({ data: null, error: null })),
+        signInWithOAuth: mock(() =>
+          Promise.resolve({ data: null, error: null }),
+        ),
         signOut: mock(() => Promise.resolve({ error: null })),
-        getUser: mock(() => Promise.resolve({ data: { user: null }, error: null })),
-        getSession: mock(() => Promise.resolve({ data: { session: null }, error: null })),
-        onAuthStateChange: mock(() => ({ data: { subscription: { unsubscribe: mock() } } }))
-      }
+        getUser: mock(() =>
+          Promise.resolve({ data: { user: null }, error: null }),
+        ),
+        getSession: mock(() =>
+          Promise.resolve({ data: { session: null }, error: null }),
+        ),
+        onAuthStateChange: mock(() => ({
+          data: { subscription: { unsubscribe: mock() } },
+        })),
+      },
     };
 
     // When: GoogleAuthProviderをインスタンス化
-    const { GoogleAuthProvider } = require('../services/providers/googleAuthProvider');
+    const {
+      GoogleAuthProvider,
+    } = require('../services/providers/googleAuthProvider');
     const provider = new GoogleAuthProvider(mockSupabaseClient);
 
     // Then: 必須メソッドがすべて実装されていることを確認
@@ -61,13 +70,13 @@ describe('認証プロバイダーインターフェース', () => {
       signOut: async () => ({ success: true }),
       getUser: async () => ({ user: { id: '123', email: 'test@example.com' } }),
       getSession: async () => null,
-      getProviderName: () => 'test'
+      getProviderName: () => 'test',
     };
 
     // When: AuthServiceを初期化してプロバイダーを設定
-    let authService;
-    let importError = null;
-    
+    let authService: unknown = null;
+    let importError: unknown = null;
+
     try {
       const { AuthService } = require('../services/authService');
       authService = new AuthService(mockProvider);

@@ -6,7 +6,7 @@
 /**
  * 環境変数バリデーション結果の型定義
  */
-interface ValidationResult {
+export interface ValidationResult {
   /** 検証結果の成功フラグ */
   isValid: boolean;
   /** 不足している環境変数のリスト */
@@ -73,14 +73,14 @@ export class EnvironmentValidator {
       name: 'NEXT_PUBLIC_SUPABASE_URL',
       required: true,
       description: 'SupabaseプロジェクトのAPI URL',
-      example: 'https://your-project.supabase.co'
+      example: 'https://your-project.supabase.co',
     });
 
     this.envConfigs.set('NEXT_PUBLIC_SUPABASE_ANON_KEY', {
       name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       required: true,
       description: 'Supabaseの匿名認証キー（公開キー）',
-      example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+      example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     });
 
     this.envConfigs.set('NEXT_PUBLIC_SITE_URL', {
@@ -88,7 +88,7 @@ export class EnvironmentValidator {
       required: true,
       description: 'アプリケーションのベースURL（OAuth リダイレクト用）',
       example: 'http://localhost:3000',
-      defaultValue: 'http://localhost:3000'
+      defaultValue: 'http://localhost:3000',
     });
 
     // オプション環境変数設定
@@ -97,7 +97,7 @@ export class EnvironmentValidator {
       required: false,
       description: '実行環境（development/production/test）',
       example: 'development',
-      defaultValue: 'development'
+      defaultValue: 'development',
     });
   }
 
@@ -106,7 +106,9 @@ export class EnvironmentValidator {
    * @param envVars - 検証対象の環境変数オブジェクト
    * @returns バリデーション結果
    */
-  validateEnvironment(envVars: Record<string, string | undefined | null>): ValidationResult {
+  validateEnvironment(
+    envVars: Record<string, string | undefined | null>,
+  ): ValidationResult {
     const missingVars: string[] = [];
     const emptyVars: string[] = [];
     const errors: string[] = [];
@@ -114,7 +116,7 @@ export class EnvironmentValidator {
     // 各必須環境変数の存在と値をチェック
     for (const varName of this.requiredVars) {
       const value = envVars[varName];
-      
+
       if (value === undefined || value === null) {
         missingVars.push(varName);
         errors.push(`環境変数 ${varName} が設定されていません`);
@@ -133,7 +135,7 @@ export class EnvironmentValidator {
       missingVars,
       emptyVars,
       setupGuide,
-      errors
+      errors,
     };
   }
 
@@ -143,9 +145,12 @@ export class EnvironmentValidator {
    * @param emptyVars - 空文字列の環境変数
    * @returns セットアップガイドの文字列
    */
-  private generateSetupGuide(missingVars: string[], emptyVars: string[]): string {
+  private generateSetupGuide(
+    missingVars: string[],
+    emptyVars: string[],
+  ): string {
     const problemVars = [...missingVars, ...emptyVars];
-    
+
     if (problemVars.length === 0) {
       return '環境変数の設定に問題ありません。';
     }
@@ -160,14 +165,14 @@ export class EnvironmentValidator {
     // 設定例
     guide += '2. 以下の内容を .env.local に追加してください：\n';
     guide += '   ```\n';
-    
+
     for (const varName of problemVars) {
       const config = this.envConfigs.get(varName);
       if (config) {
         guide += `   ${varName}=${config.example || 'YOUR_VALUE_HERE'}\n`;
       }
     }
-    
+
     guide += '   ```\n\n';
 
     // 各環境変数の説明
@@ -208,7 +213,7 @@ export class EnvironmentValidator {
       'プロジェクトルートディレクトリに移動',
       '.env.local ファイルを作成',
       '必要な環境変数を追加',
-      '開発サーバーを再起動'
+      '開発サーバーを再起動',
     ];
 
     const configExamples: Record<string, string> = {};
@@ -221,13 +226,13 @@ export class EnvironmentValidator {
     const verificationSteps = [
       'ブラウザでアプリケーションを開く',
       'コンソールエラーがないことを確認',
-      '認証機能が正常に動作することを確認'
+      '認証機能が正常に動作することを確認',
     ];
 
     return {
       fileCreation,
       configExamples,
-      verificationSteps
+      verificationSteps,
     };
   }
 
@@ -276,7 +281,7 @@ export class EnvironmentValidator {
     for (const varName of this.requiredVars) {
       const value = process.env[varName];
       const config = this.envConfigs.get(varName);
-      
+
       if (value) {
         console.log(`✅ ${varName}: 設定済み`);
       } else {
@@ -286,7 +291,7 @@ export class EnvironmentValidator {
         }
       }
     }
-    
+
     console.log('');
   }
 }

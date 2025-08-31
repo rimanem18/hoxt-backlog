@@ -63,7 +63,7 @@ export class NetworkErrorHandler {
     this.retryConfig = config || {
       maxRetries: 3,
       backoffMultiplier: 1.5,
-      initialDelay: 1000
+      initialDelay: 1000,
     };
   }
 
@@ -74,13 +74,14 @@ export class NetworkErrorHandler {
    */
   handleNetworkError(error: NetworkError): NetworkErrorHandleResult {
     // エラータイプとリトライ回数によるリトライ判定
-    const shouldRetry = error.retryable && 
-                       error.type === 'temporary' && 
-                       this.currentRetryCount < this.retryConfig.maxRetries;
+    const shouldRetry =
+      error.retryable &&
+      error.type === 'temporary' &&
+      this.currentRetryCount < this.retryConfig.maxRetries;
 
     if (shouldRetry) {
       this.currentRetryCount++;
-      
+
       // 指数バックオフによる遅延時間計算
       const delay = this.calculateBackoffDelay(this.currentRetryCount);
 
@@ -89,7 +90,7 @@ export class NetworkErrorHandler {
         retryCount: this.currentRetryCount,
         nextRetryDelay: delay,
         userMessage: `接続中です... (${this.currentRetryCount}/${this.retryConfig.maxRetries})`,
-        severity: 'info'
+        severity: 'info',
       };
     } else {
       // 最大回数到達または永続的エラーのためリトライ不可
@@ -98,7 +99,7 @@ export class NetworkErrorHandler {
         retryCount: this.currentRetryCount,
         nextRetryDelay: 0,
         userMessage: 'インターネット接続を確認してください。',
-        severity: 'error'
+        severity: 'error',
       };
     }
   }
@@ -110,8 +111,8 @@ export class NetworkErrorHandler {
    */
   private calculateBackoffDelay(retryCount: number): number {
     return Math.floor(
-      this.retryConfig.initialDelay * 
-      Math.pow(this.retryConfig.backoffMultiplier, retryCount - 1)
+      this.retryConfig.initialDelay *
+        this.retryConfig.backoffMultiplier ** (retryCount - 1),
     );
   }
 
@@ -136,9 +137,9 @@ export class NetworkErrorHandler {
    */
   resetRetryCount(): void {
     this.currentRetryCount = 0;
-    
+
     // スケジュール済みリトライを全てキャンセル
-    this.retryTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    this.retryTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
     this.retryTimeouts.clear();
   }
 
@@ -147,35 +148,45 @@ export class NetworkErrorHandler {
    * @param error - エラー情報
    * @returns 分類済みネットワークエラー
    */
-  classifyNetworkError(error: any): NetworkError {
+  classifyNetworkError(error: unknown): NetworkError {
+    // エラーオブジェクトの型安全なチェック
+    const errorObj = error as {
+      status?: number;
+      message?: string;
+      code?: string;
+    };
+
     // HTTPステータスコードに基づくエラー分類
-    if (error.status >= 500) {
+    if (typeof errorObj.status === 'number' && errorObj.status >= 500) {
       return {
         code: 'server_error',
-        message: error.message,
+        message: errorObj.message || 'Server error occurred',
         type: 'temporary',
-        retryable: true
+        retryable: true,
       };
-    } else if (error.status >= 400) {
+    } else if (typeof errorObj.status === 'number' && errorObj.status >= 400) {
       return {
         code: 'client_error',
-        message: error.message,
+        message: errorObj.message || 'Client error occurred',
         type: 'permanent',
-        retryable: false
+        retryable: false,
       };
-    } else if (error.code === 'NETWORK_ERROR' || error.name === 'NetworkError') {
+    } else if (
+      error.code === 'NETWORK_ERROR' ||
+      error.name === 'NetworkError'
+    ) {
       return {
         code: 'network_error',
         message: 'Network connection failed',
         type: 'temporary',
-        retryable: true
+        retryable: true,
       };
     } else {
       return {
         code: 'unknown_error',
         message: error.message || 'Unknown network error',
         type: 'temporary',
-        retryable: true
+        retryable: true,
       };
     }
   }
@@ -189,7 +200,7 @@ export class NetworkErrorHandler {
       currentRetryCount: this.currentRetryCount,
       maxRetries: this.retryConfig.maxRetries,
       pendingRetries: this.retryTimeouts.size,
-      config: { ...this.retryConfig }
+      config: { ...this.retryConfig },
     };
   }
 }
