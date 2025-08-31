@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 
-// 【テスト環境変数設定】: Supabase接続用のテスト環境変数を設定
-// 【設定方針】: 実際のSupabaseには接続せず、テスト用の値を使用
+// テスト環境用のSupabase環境変数を設定
+// 実際のSupabaseには接続せず、テスト専用の値を使用
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test-supabase-url.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-for-testing';
 
@@ -60,12 +60,13 @@ Object.defineProperty(globalThis, 'Node', {
 });
 
 // DOM イベント関連を設定
+// DOM 環境に存在しない Web API を明示的に設定
 Object.defineProperty(globalThis, 'MouseEvent', {
   value: window.MouseEvent,
   writable: true
 });
 
-// Range とか Selection もセット
+// RangeとSelectionはテキスト選択操作のテストで必要になるWeb API
 Object.defineProperty(globalThis, 'Range', {
   value: window.Range,
   writable: true
@@ -76,7 +77,7 @@ Object.defineProperty(globalThis, 'Selection', {
   writable: true
 });
 
-// requestAnimationFrame とか追加
+// アニメーションのテストに必要なrequestAnimationFrameを設定
 Object.defineProperty(globalThis, 'requestAnimationFrame', {
   value: (callback: FrameRequestCallback) => setTimeout(callback, 0),
   writable: true

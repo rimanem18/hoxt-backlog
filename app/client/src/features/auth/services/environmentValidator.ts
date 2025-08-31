@@ -1,13 +1,10 @@
 /**
- * 【機能概要】: 環境変数バリデーションと開発者向けセットアップガイド機能を提供するサービスクラス
- * 【実装方針】: errorHandling.test.ts のテストケースを通すために必要な機能を実装
- * 【テスト対応】: 必須環境変数チェック・不足項目検出・設定ガイド生成
- * 🟡 信頼性レベル: 環境変数未設定境界値テストケースと開発体験向上の観点から妥当に推測
+ * 環境変数バリデーションと開発者向けセットアップガイド機能。
+ * 必須環境変数のチェックと詳細な設定手順を提供する。
  */
 
 /**
  * 環境変数バリデーション結果の型定義
- * 【型定義】: 環境変数検証の結果情報
  */
 interface ValidationResult {
   /** 検証結果の成功フラグ */
@@ -24,7 +21,6 @@ interface ValidationResult {
 
 /**
  * 環境変数設定項目の型定義
- * 【型定義】: 個別環境変数の設定情報
  */
 interface EnvVarConfig {
   /** 環境変数名 */
@@ -41,7 +37,6 @@ interface EnvVarConfig {
 
 /**
  * セットアップ手順の型定義
- * 【型定義】: 環境変数セットアップの手順情報
  */
 interface SetupInstructions {
   /** ファイル作成手順 */
@@ -53,18 +48,15 @@ interface SetupInstructions {
 }
 
 /**
- * 【EnvironmentValidatorクラス】: 環境変数検証・セットアップガイド・開発者支援機能の実装
- * 【実装内容】: 必須環境変数チェック・不足項目検出・詳細セットアップガイド生成
- * 【テスト要件対応】: errorHandling.test.ts の環境変数未設定関連テストケースに対応
- * 🟡 信頼性レベル: テストケースと開発体験向上の観点から妥当に推測した実装
+ * 環境変数の検証とセットアップガイド生成を担う。
+ * 必須環境変数のチェックと詳細な設定手順を提供する。
  */
 export class EnvironmentValidator {
   private requiredVars: string[];
   private envConfigs: Map<string, EnvVarConfig> = new Map();
 
   /**
-   * EnvironmentValidatorのコンストラクタ
-   * 【初期化】: 必須環境変数リストと設定情報の初期化
+   * EnvironmentValidatorを初期化する
    * @param requiredVars - 必須環境変数のリスト
    */
   constructor(requiredVars: string[]) {
@@ -73,12 +65,10 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【環境変数設定初期化】: 各環境変数の設定情報を定義
-   * 【実装内容】: 環境変数ごとの説明・サンプル・デフォルト値の設定
-   * 🟡 信頼性レベル: Supabase環境変数の標準的な設定から推測
+   * 各環境変数の設定情報を定義する
    */
   private initializeEnvConfigs(): void {
-    // 【Supabase関連環境変数】
+    // Supabase関連の環境変数設定
     this.envConfigs.set('NEXT_PUBLIC_SUPABASE_URL', {
       name: 'NEXT_PUBLIC_SUPABASE_URL',
       required: true,
@@ -101,7 +91,7 @@ export class EnvironmentValidator {
       defaultValue: 'http://localhost:3000'
     });
 
-    // 【オプション環境変数】
+    // オプション環境変数設定
     this.envConfigs.set('NODE_ENV', {
       name: 'NODE_ENV',
       required: false,
@@ -112,19 +102,16 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【環境変数バリデーション】: 必須環境変数の存在と有効性を確認
-   * 【実装内容】: 環境変数存在確認・空文字列チェック・セットアップガイド生成
-   * 【テスト要件対応】: "環境変数未設定時のエラー処理" テストケース
-   * 🟡 信頼性レベル: テストケースから妥当に推測した実装
+   * 必須環境変数の存在と有効性を検証する
    * @param envVars - 検証対象の環境変数オブジェクト
-   * @returns {ValidationResult} - バリデーション結果
+   * @returns バリデーション結果
    */
   validateEnvironment(envVars: Record<string, string | undefined | null>): ValidationResult {
     const missingVars: string[] = [];
     const emptyVars: string[] = [];
     const errors: string[] = [];
 
-    // 【必須環境変数チェック】: 各必須変数の存在確認
+    // 各必須環境変数の存在と値をチェック
     for (const varName of this.requiredVars) {
       const value = envVars[varName];
       
@@ -137,7 +124,7 @@ export class EnvironmentValidator {
       }
     }
 
-    // 【バリデーション結果生成】
+    // バリデーション結果の生成
     const isValid = missingVars.length === 0 && emptyVars.length === 0;
     const setupGuide = this.generateSetupGuide(missingVars, emptyVars);
 
@@ -151,13 +138,10 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【セットアップガイド生成】: 不足環境変数に対する詳細な設定手順を生成
-   * 【実装内容】: .env.local ファイル作成手順・設定例・確認方法の提供
-   * 【開発者体験】: コピー&ペーストで使える具体的な設定例を提供
-   * 🟡 信頼性レベル: Next.js環境変数設定の標準的な手順から推測
+   * 不足環境変数に対する詳細な設定手順を生成する
    * @param missingVars - 不足している環境変数
    * @param emptyVars - 空文字列の環境変数
-   * @returns {string} - セットアップガイドの文字列
+   * @returns セットアップガイドの文字列
    */
   private generateSetupGuide(missingVars: string[], emptyVars: string[]): string {
     const problemVars = [...missingVars, ...emptyVars];
@@ -216,11 +200,8 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【セットアップ手順生成】: 構造化されたセットアップ手順情報を生成
-   * 【実装内容】: ファイル作成・設定例・確認手順を構造化データで提供
-   * 【テスト要件対応】: generateSetupInstructions機能の存在確認テスト
-   * 🟡 信頼性レベル: テストケースから機能存在を確認
-   * @returns {SetupInstructions} - 構造化されたセットアップ手順
+   * 構造化されたセットアップ手順情報を生成する
+   * @returns 構造化されたセットアップ手順
    */
   generateSetupInstructions(): SetupInstructions {
     const fileCreation = [
@@ -251,11 +232,8 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【環境変数テンプレート生成】: .env.local ファイルのテンプレート文字列を生成
-   * 【実装内容】: コメント付きの環境変数テンプレートファイル内容生成
-   * 【開発者支援】: コピー&ペーストで使える完全なテンプレート提供
-   * 🟡 信頼性レベル: 環境変数管理の一般的なベストプラクティス
-   * @returns {string} - .env.local ファイルのテンプレート内容
+   * .env.local ファイルのテンプレート文字列を生成する
+   * @returns .env.local ファイルのテンプレート内容
    */
   generateEnvTemplate(): string {
     let template = '# Next.js 認証アプリケーション環境変数設定\n';
@@ -289,10 +267,7 @@ export class EnvironmentValidator {
   }
 
   /**
-   * 【環境変数設定状況表示】: 現在の環境変数設定状況をコンソールに表示
-   * 【実装内容】: 設定済み・未設定の環境変数を分かりやすく表示
-   * 【デバッグ支援】: 開発者が現在の設定状況を把握するための表示
-   * 🟡 信頼性レベル: デバッグ支援の一般的なパターン
+   * 現在の環境変数設定状況をコンソールに表示する
    */
   displayCurrentStatus(): void {
     console.log('\n🔍 環境変数設定状況');
