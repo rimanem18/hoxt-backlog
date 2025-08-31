@@ -244,10 +244,91 @@ ResolveMessage: Cannot find module '../services/authErrorHandler'
 - **パフォーマンス**: 最適化済み (I/O効率化・計算量改善)
 - **保守性**: 高水準 (詳細ドキュメント・明確な設計)
 
-## プロジェクト完了
+---
 
-**mvp-google-auth機能は、TDDアプローチによりエンタープライズレベルの品質基準を満たす実装として完成しました。**
+## 【2025-08-31 追加】UI/UX要件対応 - 新規Redフェーズ開始
+
+### 背景
+
+既存実装はバックエンド連携とプロバイダー抽象化を完了していますが、プロダクション品質のUI/UX要件（REQ-UI-001～004）が未実装でした。フロントエンドユーザー体験の向上のため、UI/UXテストケースの TDD 実装を開始します。
+
+## Redフェーズ（UI/UX要件対応）
+
+### 作成日時
+
+2025-08-31
+
+### 対象テストケース
+
+**4-1. ローディング状態管理テスト（REQ-UI-001対応）**
+
+- **優先度**: 🟥 優先度1（プロダクション品質必須・緊急）
+- **対象コンポーネント**: LoginButton（新規・抽象化版）
+- **信頼性レベル**: 🟢 REQ-UI-001要件から直接抽出
+
+### 新規テストファイル
+
+**ファイルパス**: `app/client/src/features/auth/__tests__/ui-ux/LoadingState.test.tsx`
+
+**テスト項目**:
+1. **認証処理中のローディングUI表示と操作制御確認**
+   - ボタン無効化（`disabled={true}`）
+   - スピナー表示（`testId="loading-spinner"`）
+   - ARIA属性設定（`aria-busy="true"`・`aria-label="認証中..."`）
+   - ラベル動的変更（「認証中...」）
+
+2. **ダブルクリック防止機能の確認**
+   - 0.5秒以内連続クリックの制御
+   - 処理重複実行防止
+
+3. **長時間処理対応メッセージの表示確認**
+   - 10秒経過時の追加メッセージ（「認証に時間がかかっています...」）
+
+### 期待される失敗（実行済み）
+
+**実行コマンド**: 
+```bash
+docker compose exec client bun test src/features/auth/__tests__/ui-ux/LoadingState.test.tsx
+```
+
+**失敗結果**:
+```
+error: Cannot find module '@/features/auth/components/LoginButton'
+0 pass / 1 fail / 1 error
+```
+
+**失敗理由**: LoginButtonコンポーネントが未実装（期待通りの失敗）
+
+### 次のフェーズへの要求事項
+
+**新規Greenフェーズで実装すべき内容**:
+
+1. **LoginButtonコンポーネント新規作成**
+   - ファイル: `app/client/src/features/auth/components/LoginButton.tsx`
+   - Props: `{ provider: 'google' | 'apple' }` プロバイダー非依存設計
+
+2. **UI/UX機能実装**
+   - ローディング状態管理（`useState<boolean>`）
+   - ボタン無効化・スピナー表示
+   - ARIA属性対応（WCAG 2.1 AA準拠）
+   - 動的ラベル変更
+
+3. **エッジケース対応**
+   - ダブルクリック防止（debounce機能）
+   - 長時間処理検出（10秒タイマー）
+
+### プロジェクト状況更新
+
+- **既存実装**: ✅ 完了（バックエンド連携・プロバイダー抽象化）
+- **UI/UX要件**: 🔄 新規実装中（REQ-UI-001～004対応）
+- **現在のフェーズ**: Red（UI/UXテスト作成完了）
+
+---
+
+## プロジェクト完了（既存機能）
+
+**mvp-google-auth機能のバックエンド連携とプロバイダー抽象化は、TDDアプローチによりエンタープライズレベルの品質基準を満たす実装として完成しました。**
 
 ### 次のお勧めステップ
 
-`/tdd-verify-complete`で完全性検証を実行します。
+**`/tdd-green`** でUI/UX要件のGreenフェーズ（最小実装）を開始します。
