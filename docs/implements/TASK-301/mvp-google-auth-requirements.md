@@ -318,13 +318,149 @@ try {
 
 ---
 
+---
+
+## 【2025-08-31 更新】プロダクション品質UI/UX要件追加
+
+### 現在の実装課題（要件チェック結果）
+
+**実装完了度**: 25% / 100% （基本認証機能のみ実装済み）
+
+**🔴 未実装・緊急対応必要項目**:
+1. **ローディング状態管理** - 認証処理中のUIフィードバック不足
+   - ボタン無効化・スピナー表示・進行状況の視覚表示
+2. **エラーハンドリング・表示** - ユーザーへの適切なエラーフィードバック不足
+   - 日本語エラーメッセージ・自動エラークリア・リトライ機能
+3. **レスポンシブ対応** - モバイル環境での使いにくさ
+   - ブレークポイント対応・タッチ最適化・画面サイズ別UI調整
+4. **アクセシビリティ対応** - 支援技術・キーボードナビゲーション未対応
+   - ARIA属性・フォーカス管理・スクリーンリーダー対応
+5. **LogoutButtonコンポーネント** - テスト可能な独立コンポーネント化
+6. **統合E2Eテスト** - 認証フロー全体の動作確認テスト
+
+### 追加されたUI/UX要件
+
+#### REQ-UI-001: ローディング状態表示要件
+- **必須**: 認証処理中（0.5秒以上）はボタンを無効化し、スピナーを表示しなければならない
+- **必須**: `aria-busy`属性でスクリーンリーダーに処理中状態を通知しなければならない
+- **必須**: ローディング中は「認証中...」などの適切なラベルを表示しなければならない
+
+#### REQ-UI-002: エラー表示・ハンドリング要件  
+- **必須**: 認証エラーは理解しやすい日本語メッセージで表示しなければならない
+- **必須**: エラーメッセージは`role="alert"`属性で緊急性を示さなければならない
+- **推奨**: エラーメッセージは3秒後に自動で消去されてもよい
+- **必須**: ネットワークエラー時は「インターネット接続を確認してください」と表示し、再試行ボタンを提供しなければならない
+
+#### REQ-UI-003: レスポンシブ対応要件
+- **必須**: モバイル（767px以下）では最小44px×44pxのタッチエリアを確保しなければならない
+- **必須**: タブレット（768-1023px）・デスクトップ（1024px以上）で適切なレイアウト調整を行わなければならない  
+- **必須**: 画面向き変更（縦横回転）時に適切にレイアウトが調整されなければならない
+
+#### REQ-UI-004: アクセシビリティ要件（WCAG 2.1 AA準拠）
+- **必須**: ログイン・ログアウトボタンはキーボード（Tab・Enter・Space）で操作可能でなければならない
+- **必須**: `aria-label`・`aria-describedby`属性で適切な説明を提供しなければならない
+- **必須**: フォーカス時に視覚的インディケーターを表示しなければならない（`focus:ring-2`等）
+- **必須**: カラーコントラスト比4.5:1以上を維持しなければならない
+
+### 追加されたEdgeケース
+
+#### EDGE-UI-001: ダブルクリック防止
+- 0.5秒以内の連続クリックは無視し、処理の重複実行を防ぐ
+
+#### EDGE-UI-002: 長時間処理対応  
+- 10秒経過時「認証に時間がかかっています...」メッセージを表示
+
+#### EDGE-A11Y-001: スクリーンリーダー対応
+- 認証状態の変更を`aria-live="polite"`で適切に読み上げ
+
+### 実装仕様例
+
+```typescript
+// 改善されたLoginButton実装例
+interface LoginButtonProps {
+  provider?: 'google';
+  disabled?: boolean;
+  onAuthStart?: () => void;
+  onAuthSuccess?: (user: User) => void;
+  onAuthError?: (error: string) => void;
+}
+
+const LoginButton: React.FC<LoginButtonProps> = ({
+  provider = 'google', disabled, onAuthStart, onAuthSuccess, onAuthError
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  
+  const handleClick = async () => {
+    if (isLoading) return; // ダブルクリック防止
+    
+    setIsLoading(true);
+    dispatch(authStart());
+    onAuthStart?.();
+    
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      // 認証成功処理は別のuseEffectで監視
+    } catch (error) {
+      const errorMessage = error instanceof Error ? 
+        error.message : '認証に失敗しました。しばらくしてからお試しください。';
+      dispatch(authFailure({ error: errorMessage }));
+      onAuthError?.(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled || isLoading}
+      aria-label={isLoading ? '認証中...' : `${provider}でログイン`}
+      aria-busy={isLoading}
+      className={
+        "px-4 py-2 bg-blue-500 text-white rounded " +
+        "hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 " +
+        "disabled:opacity-50 disabled:cursor-not-allowed " +
+        "sm:px-6 sm:py-3 lg:px-8 lg:py-4 " + // レスポンシブ
+        "min-h-[44px] transition-all duration-200" // タッチ最適化
+      }
+    >
+      {isLoading ? (
+        <div className="flex items-center justify-center">
+          <Spinner className="mr-2" />
+          <span>認証中...</span>
+        </div>
+      ) : (
+        `${provider}でログイン`
+      )}
+    </button>
+  );
+};
+```
+
+### 品質判定更新結果
+
+🟡 **要実装（要件明確・実装準備完了）**:
+- **要件明確性**: ✅ 完全 - UI/UX・アクセシビリティ要件が具体的
+- **入出力定義**: ✅ 完全 - コンポーネントProps・State・イベント仕様が明確
+- **制約条件**: ✅ 明確 - WCAG 2.1・レスポンシブ・パフォーマンス基準が具体的
+- **実装可能性**: ✅ 確実 - React標準機能・Tailwind CSS・既存実装の拡張
+
+---
+
 ## 次のステップ
 
-**推奨ステップ**: `/tdd-testcases` でフロントエンド認証フロー全体のテストケース整備
+**推奨ステップ**: `/tdd-testcases` でUI/UX要件を含む完全なテストケース整備
 
-**実装予定順序**:
-1. **セッション復元機能** - useEffect + getSession()による自動ログイン
-2. **Redux追加アクション** - authStart・authFailure・logoutアクションの実装  
-3. **エラーハンドリング強化** - try-catch・エラーメッセージ表示
-4. **認証フロー統合** - コンポーネント間の適切な状態連携
-5. **統合テスト** - 認証フロー全体のE2Eテスト実装
+**実装優先順序（更新版）**:
+1. **🔥 最優先**: ローディング状態管理・エラーハンドリング・表示
+2. **🔄 高優先**: レスポンシブ対応・基本アクセシビリティ（ARIA・キーボード）
+3. **⭐ 中優先**: 高度なアクセシビリティ・エラー自動クリア・リトライ機能
+4. **💎 低優先**: UX詳細改善・アニメーション・細かなインタラクション
+5. **🧪 並行作業**: コンポーネントテスト・統合E2Eテスト実装
