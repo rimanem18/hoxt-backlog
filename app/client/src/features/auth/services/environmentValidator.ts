@@ -169,11 +169,11 @@ export class EnvironmentValidator {
     let guide = '\n📋 環境変数設定ガイド\n';
     guide += '========================\n\n';
 
-    // 【手順1: ファイル作成】
+    // ファイル作成手順
     guide += '1. 環境変数ファイルを作成してください：\n';
     guide += '   プロジェクトルートに .env.local ファイルを作成\n\n';
 
-    // 【手順2: 設定例】
+    // 設定例
     guide += '2. 以下の内容を .env.local に追加してください：\n';
     guide += '   ```\n';
     
@@ -186,7 +186,7 @@ export class EnvironmentValidator {
     
     guide += '   ```\n\n';
 
-    // 【手順3: 各環境変数の説明】
+    // 各環境変数の説明
     guide += '3. 各環境変数の取得方法：\n';
     for (const varName of problemVars) {
       const config = this.envConfigs.get(varName);
@@ -199,13 +199,13 @@ export class EnvironmentValidator {
       }
     }
 
-    // 【手順4: 確認方法】
+    // 設定確認方法
     guide += '4. 設定確認方法：\n';
     guide += '   • 開発サーバーを再起動してください\n';
     guide += '   • ブラウザでアプリケーションを開いてください\n';
     guide += '   • このエラーメッセージが消えれば設定完了です\n\n';
 
-    // 【トラブルシューティング】
+    // トラブルシューティング
     guide += '🔧 トラブルシューティング：\n';
     guide += '   • .env.local ファイルがプロジェクトルートにあることを確認\n';
     guide += '   • 環境変数名のスペルミスがないことを確認\n';

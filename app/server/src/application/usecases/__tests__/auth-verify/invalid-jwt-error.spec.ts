@@ -7,12 +7,9 @@ import { AuthenticationError } from "@/domain/user/errors/AuthenticationError";
 import { TokenExpiredError } from "@/domain/user/errors/TokenExpiredError";
 
 /**
- * TDD Red フェーズ: 無効JWT検証エラーテスト
- *
- * 【テスト目的】: 無効なJWTトークンでの認証失敗が適切にハンドリングされることを確認
- * 【テスト内容】: 不正な署名・改ざんされたJWTを送信した際のエラーハンドリングを検証
- * 【期待される動作】: JWT検証失敗→AuthenticationError発生→適切なエラーレスポンス返却
- * 🟢 信頼性レベル: EARS要件EDGE-002・api-endpoints.md・JWTセキュリティ仕様から直接抽出
+ * 無効JWT検証エラーのテスト
+ * 
+ * 不正な署名や期限切れJWTトークンに対する適切なエラーハンドリングを検証する。
  */
 describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
   beforeEach(() => {
@@ -61,9 +58,7 @@ describe("AuthenticateUserUseCase - 無効JWT検証エラーテスト", () => {
 
     await expect(authenticateUserUseCase.execute(invalidSignatureJwtInput)).rejects.toThrow("認証トークンが無効です"); // 【確認内容】: JWT署名検証失敗時に適切な例外が発生することを確認 🟢
 
-    // TODO(human): fail関数の型エラーを修正
-    // 【型安全性向上】: Bunテストフレームワークでの適切なエラー検証手法への変更
-    // 【実装方針】: fail関数の代わりに適切なアサーション手法を使用
+    // fail関数の代わりにtry-catch文でエラー検証
 
     // 追加のエラー詳細検証
     try {

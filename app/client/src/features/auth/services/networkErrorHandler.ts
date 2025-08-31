@@ -1,13 +1,10 @@
 /**
- * 【機能概要】: ネットワークエラーハンドリングと自動リトライ機能を提供するサービスクラス
- * 【実装方針】: errorHandling.test.ts のテストケースを通すために必要な機能を実装
- * 【テスト対応】: ネットワークエラー分類・指数バックオフリトライ・スケジュール管理
- * 🟢 信頼性レベル: EDGE-102（ネットワークエラー処理）要件とNFR-002（10秒以内完了）要件に基づく実装
+ * ネットワークエラーハンドリングと自動リトライ機能。
+ * 指数バックオフによる自動リトライとエラー分類を提供する。
  */
 
 /**
  * ネットワークエラーの型定義
- * 【型定義】: ネットワーク通信エラーの詳細情報
  */
 interface NetworkError {
   /** エラーコード */
@@ -22,7 +19,6 @@ interface NetworkError {
 
 /**
  * リトライ設定の型定義
- * 【型定義】: 自動リトライの設定パラメータ
  */
 interface RetryConfig {
   /** 最大リトライ回数 */
@@ -35,7 +31,6 @@ interface RetryConfig {
 
 /**
  * ネットワークエラーハンドリング結果の型定義
- * 【型定義】: ネットワークエラー処理の結果情報
  */
 interface NetworkErrorHandleResult {
   /** リトライ実行フラグ */
@@ -51,10 +46,8 @@ interface NetworkErrorHandleResult {
 }
 
 /**
- * 【NetworkErrorHandlerクラス】: ネットワークエラー分類・自動リトライ・遅延管理機能の実装
- * 【実装内容】: 指数バックオフによる自動リトライ・エラー分類・スケジュール管理
- * 【テスト要件対応】: errorHandling.test.ts のネットワークエラー関連テストケースに対応
- * 🟢 信頼性レベル: EDGE-102要件とNFR-002要件から直接実装
+ * ネットワークエラー分類・自動リトライ・遅延管理を担う。
+ * 指数バックオフによる自動リトライとスケジュール管理を行う。
  */
 export class NetworkErrorHandler {
   private retryConfig: RetryConfig;
@@ -62,12 +55,11 @@ export class NetworkErrorHandler {
   private retryTimeouts: Set<NodeJS.Timeout> = new Set();
 
   /**
-   * NetworkErrorHandlerのコンストラクタ
-   * 【初期化】: リトライ設定とカウンターの初期化
+   * NetworkErrorHandlerを初期化する
    * @param config - リトライ設定（オプション）
    */
   constructor(config?: RetryConfig) {
-    // 【デフォルトリトライ設定】: 合理的なデフォルト値を設定
+    // 合理的なデフォルト値を設定
     this.retryConfig = config || {
       maxRetries: 3,
       backoffMultiplier: 1.5,
@@ -76,15 +68,12 @@ export class NetworkErrorHandler {
   }
 
   /**
-   * 【ネットワークエラー処理】: エラー分類とリトライ判定
-   * 【実装内容】: エラータイプに応じたリトライ戦略とユーザー通知
-   * 【テスト要件対応】: "ネットワークエラー時の自動リトライ機能" テストケース
-   * 🟢 信頼性レベル: テストケースから直接実装
+   * ネットワークエラーを処理してリトライ判定を行う
    * @param error - ネットワークエラー情報
-   * @returns {NetworkErrorHandleResult} - エラーハンドリング結果
+   * @returns エラーハンドリング結果
    */
   handleNetworkError(error: NetworkError): NetworkErrorHandleResult {
-    // 【リトライ判定】: エラータイプとリトライ回数で判定
+    // エラータイプとリトライ回数によるリトライ判定
     const shouldRetry = error.retryable && 
                        error.type === 'temporary' && 
                        this.currentRetryCount < this.retryConfig.maxRetries;
@@ -92,7 +81,7 @@ export class NetworkErrorHandler {
     if (shouldRetry) {
       this.currentRetryCount++;
       
-      // 【指数バックオフ遅延計算】: リトライ回数に応じた遅延時間計算
+      // 指数バックオフによる遅延時間計算
       const delay = this.calculateBackoffDelay(this.currentRetryCount);
 
       return {
@@ -103,7 +92,7 @@ export class NetworkErrorHandler {
         severity: 'info'
       };
     } else {
-      // 【リトライ不可】: 最大回数到達または永続的エラー
+      // 最大回数到達または永続的エラーのためリトライ不可
       return {
         willRetry: false,
         retryCount: this.currentRetryCount,
@@ -115,12 +104,9 @@ export class NetworkErrorHandler {
   }
 
   /**
-   * 【指数バックオフ遅延計算】: リトライ回数に応じた遅延時間の計算
-   * 【実装内容】: バックオフ倍率を使用した指数的遅延時間計算
-   * 【アルゴリズム】: delay = initialDelay * (backoffMultiplier ^ retryCount)
-   * 🟢 信頼性レベル: 指数バックオフの標準アルゴリズム
+   * 指数バックオフによる遅延時間を計算する
    * @param retryCount - 現在のリトライ回数
-   * @returns {number} - 次回リトライまでの遅延時間（ミリ秒）
+   * @returns 次回リトライまでの遅延時間（ミリ秒）
    */
   private calculateBackoffDelay(retryCount: number): number {
     return Math.floor(
@@ -130,48 +116,39 @@ export class NetworkErrorHandler {
   }
 
   /**
-   * 【リトライスケジューリング】: 指定遅延後のリトライ処理を予約
-   * 【実装内容】: setTimeout使用のリトライコールバック実行管理
-   * 【テスト要件対応】: scheduleRetry機能の存在確認テスト
-   * 🟢 信頼性レベル: テストケースから機能存在を確認
+   * 指定遅延後のリトライ処理をスケジュールする
    * @param delay - リトライまでの遅延時間（ミリ秒）
    * @param retryCallback - リトライ時に実行するコールバック関数
    */
   scheduleRetry(delay: number, retryCallback: () => void): void {
     const timeoutId = setTimeout(() => {
-      // 【タイムアウト管理】: 完了したタイムアウトをセットから除去
+      // 完了したタイムアウトをセットから除去
       this.retryTimeouts.delete(timeoutId);
       retryCallback();
     }, delay);
 
-    // 【タイムアウト追跡】: キャンセル可能にするためタイムアウトIDを保存
+    // キャンセル可能にするためタイムアウトIDを保存
     this.retryTimeouts.add(timeoutId);
   }
 
   /**
-   * 【リトライカウンターリセット】: 成功時にリトライ状態をリセット
-   * 【実装内容】: リトライ回数とタイムアウトのクリア
-   * 【使用場面】: 通信成功時の状態リセット
-   * 🟡 信頼性レベル: リトライパターンの一般的なベストプラクティス
+   * 成功時にリトライ状態をリセットする
    */
   resetRetryCount(): void {
     this.currentRetryCount = 0;
     
-    // 【保留中リトライキャンセル】: スケジュール済みリトライを全てキャンセル
+    // スケジュール済みリトライを全てキャンセル
     this.retryTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
     this.retryTimeouts.clear();
   }
 
   /**
-   * 【エラータイプ判定】: ネットワークエラーの種別判定
-   * 【実装内容】: HTTPステータスコードやエラーメッセージに基づく分類
-   * 【分類基準】: 一時的エラー（500系）vs 永続的エラー（400系）
-   * 🟡 信頼性レベル: HTTP標準とネットワークエラー分類の一般的パターン
+   * ネットワークエラーを種別判定する
    * @param error - エラー情報
-   * @returns {NetworkError} - 分類済みネットワークエラー
+   * @returns 分類済みネットワークエラー
    */
   classifyNetworkError(error: any): NetworkError {
-    // 【HTTPステータスコード判定】: ステータスに基づくエラー分類
+    // HTTPステータスコードに基づくエラー分類
     if (error.status >= 500) {
       return {
         code: 'server_error',
@@ -204,9 +181,7 @@ export class NetworkErrorHandler {
   }
 
   /**
-   * 【リトライ統計情報取得】: 現在のリトライ状態情報を取得
-   * 【実装内容】: デバッグ・監視用のリトライ統計データ
-   * 🟡 信頼性レベル: 監視・デバッグ用途の一般的なパターン
+   * 現在のリトライ状態情報を取得する
    * @returns リトライ統計情報
    */
   getRetryStats() {

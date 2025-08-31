@@ -5,9 +5,7 @@
 import type { Mock } from 'bun:test';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { Context } from 'hono';
-// TODO(human): 不正なモジュール参照を修正
-// 【型安全性向上】: shared-schemasの正しいインポートパス設定
-// 【実装方針】: プロジェクト構造に基づいた適切なパス指定
+// shared-schemasからの型インポート
 import type {
   AuthResponse,
   ErrorResponse,

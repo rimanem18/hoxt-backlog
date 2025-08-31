@@ -238,7 +238,7 @@ export class JWTExpirationHandler {
       if (result.isExpired) {
         clearInterval(monitoringInterval);
       } else if (result.remainingTime && result.remainingTime <= warningThreshold) {
-        // 【期限切れ警告】: 閾値を下回った場合の警告実行
+        // 閾値を下回った場合の警告実行
         if (this.expirationWarningCallback) {
           this.expirationWarningCallback(result.remainingTime);
         }

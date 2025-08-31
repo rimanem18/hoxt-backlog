@@ -1,15 +1,12 @@
 /**
- * 【機能概要】: API接続失敗時のフォールバック・オフライン対応機能を提供するサービスクラス
- * 【実装方針】: errorHandling.test.ts のテストケースを通すために必要な機能を実装
- * 【テスト対応】: バックエンドAPI接続失敗・ローカルキャッシュ利用・オフラインモード・接続リトライ
- * 🔴 信頼性レベル: 元資料にないオフライン対応・フォールバック機能を推測実装
+ * API接続失敗時のフォールバック・オフライン対応機能。
+ * キャッシュデータの利用と自動接続回復を提供する。
  */
 
 import { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * API接続エラーの型定義
- * 【型定義】: バックエンドAPI接続失敗時のエラー情報
  */
 interface APIConnectionError {
   /** エラーコード */
@@ -24,7 +21,6 @@ interface APIConnectionError {
 
 /**
  * キャッシュされたユーザーデータの型定義
- * 【型定義】: ローカルキャッシュに保存されたユーザー情報
  */
 interface CachedUserData {
   /** ユーザー情報 */
@@ -37,7 +33,6 @@ interface CachedUserData {
 
 /**
  * APIフォールバック処理結果の型定義
- * 【型定義】: API失敗時のフォールバック処理結果情報
  */
 interface APIFallbackResult {
   /** キャッシュ使用フラグ */
@@ -54,7 +49,6 @@ interface APIFallbackResult {
 
 /**
  * 接続リトライ設定の型定義
- * 【型定義】: API接続リトライの設定パラメータ
  */
 interface RetryConnectionConfig {
   /** リトライ間隔（ミリ秒） */
@@ -66,10 +60,8 @@ interface RetryConnectionConfig {
 }
 
 /**
- * 【APIFallbackHandlerクラス】: API失敗時のフォールバック・キャッシュ利用・オフライン対応機能の実装
- * 【実装内容】: ローカルキャッシュ管理・オフラインモード・接続リトライスケジューリング
- * 【テスト要件対応】: errorHandling.test.ts のAPI接続失敗関連テストケースに対応
- * 🔴 信頼性レベル: テストケースから推測したオフライン対応機能
+ * API失敗時のフォールバック・キャッシュ利用・オフライン対応を担う。
+ * ローカルキャッシュ管理と接続リトライスケジューリングを行う。
  */
 export class APIFallbackHandler {
   private retryTimers: Set<NodeJS.Timeout> = new Set();
@@ -77,20 +69,17 @@ export class APIFallbackHandler {
   private connectionCheckInterval?: NodeJS.Timeout;
 
   /**
-   * 【API失敗フォールバック処理】: API接続失敗時のキャッシュ利用とオフラインモード切り替え
-   * 【実装内容】: エラー分析・キャッシュ有効性確認・オフラインモード有効化
-   * 【テスト要件対応】: "バックエンドAPI接続失敗時のフォールバック処理" テストケース
-   * 🔴 信頼性レベル: テストケースから推測したフォールバック実装
+   * API接続失敗時のフォールバック処理を実行する
    * @param error - API接続エラー情報
    * @param cachedData - 利用可能なキャッシュデータ
-   * @returns {APIFallbackResult} - フォールバック処理結果
+   * @returns フォールバック処理結果
    */
   handleAPIFailure(error: APIConnectionError, cachedData?: CachedUserData): APIFallbackResult {
-    // 【エラー分析】: 一時的 vs 永続的エラーの判定
+    // 一時的エラーか永続的エラーかを判定
     const isTemporaryError = this.isTemporaryError(error);
     
     if (cachedData && cachedData.isValid) {
-      // 【キャッシュ利用】: 有効なキャッシュがある場合の処理
+      // 有効なキャッシュを使用してオフラインモードで動作
       this.enableOfflineMode();
       
       return {
@@ -102,7 +91,7 @@ export class APIFallbackHandler {
       };
     }
     
-    // 【キャッシュなし】: 利用可能なキャッシュがない場合
+    // 利用可能なキャッシュがない場合
     this.enableOfflineMode();
     
     return {
@@ -115,21 +104,18 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【エラータイプ判定】: API接続エラーの一時性判定
-   * 【実装内容】: HTTPステータスコードとエラーコードに基づくエラー分類
-   * 【判定基準】: 5xx系は一時的、4xx系は永続的、ネットワークエラーは一時的
-   * 🔴 信頼性レベル: HTTP標準とネットワークエラーパターンから推測
+   * API接続エラーが一時的かどうかを判定する
    * @param error - API接続エラー
-   * @returns {boolean} - 一時的エラーかどうか
+   * @returns 一時的エラーかどうか
    */
   private isTemporaryError(error: APIConnectionError): boolean {
-    // 【HTTPステータス判定】
+    // HTTPステータスコードによる判定
     if (error.statusCode >= 500) return true; // サーバーエラーは一時的
     if (error.statusCode === 0) return true;  // ネットワークエラーは一時的
     if (error.statusCode === 408) return true; // タイムアウトは一時的
     if (error.statusCode === 429) return true; // レート制限は一時的
     
-    // 【エラーコード判定】
+    // エラーコードによる判定
     if (error.code === 'api_connection_failed') return true;
     if (error.code === 'network_timeout') return true;
     
@@ -137,27 +123,21 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【オフラインモード有効化】: オフラインモードの状態管理と接続監視開始
-   * 【実装内容】: オフラインフラグ設定・接続回復監視開始
-   * 【自動回復】: 定期的な接続確認による自動オンライン復帰
-   * 🔴 信頼性レベル: オフライン対応の一般的なパターンから推測
+   * オフラインモードを有効化して接続監視を開始する
    */
   private enableOfflineMode(): void {
     this.isOfflineMode = true;
     
-    // 【接続監視開始】: 定期的な接続確認でオンライン復帰を検出
+    // 定期的な接続確認でオンライン復帰を検出
     if (!this.connectionCheckInterval) {
       this.startConnectionMonitoring();
     }
   }
 
   /**
-   * 【キャッシュ信頼性判定】: キャッシュデータの新しさに基づく信頼性レベル判定
-   * 【実装内容】: キャッシュ作成時刻から信頼性レベルを算出
-   * 【判定基準】: 5分以内→fresh、30分以内→cached、それ以上→stale
-   * 🔴 信頼性レベル: キャッシュ管理の一般的なパターンから推測
+   * キャッシュデータの信頼性レベルを判定する
    * @param cachedAt - キャッシュ作成時刻
-   * @returns {string} - 信頼性レベル
+   * @returns 信頼性レベル
    */
   private getCacheReliability(cachedAt: number): 'fresh' | 'cached' | 'stale' {
     const ageInMinutes = (Date.now() - cachedAt) / (1000 * 60);
@@ -168,10 +148,7 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【接続リトライスケジューリング】: API接続回復の定期的な試行
-   * 【実装内容】: 指数バックオフによる接続リトライスケジューリング
-   * 【テスト要件対応】: scheduleRetryConnection機能の存在確認テスト
-   * 🔴 信頼性レベル: テストケースから機能存在を確認
+   * API接続回復のリトライをスケジュールする
    * @param config - リトライ設定
    * @param retryCallback - リトライ時のコールバック関数
    */
@@ -189,15 +166,15 @@ export class APIFallbackHandler {
       
       attemptCount++;
       
-      // 【接続テスト】: 簡易的な接続確認
+      // 簡易的な接続確認でテスト
       this.testConnection()
         .then(isConnected => {
           if (isConnected) {
-            // 【接続回復】: オフラインモード解除
+            // 接続回復時のオフラインモード解除
             this.disableOfflineMode();
             if (retryCallback) retryCallback();
           } else {
-            // 【接続失敗】: 次回リトライをスケジュール
+            // 接続失敗時は次回リトライをスケジュール
             const delay = config.useBackoff ? 
               config.interval * Math.pow(2, attemptCount - 1) : 
               config.interval;
@@ -207,7 +184,7 @@ export class APIFallbackHandler {
           }
         })
         .catch(() => {
-          // 【リトライ継続】: エラーが発生した場合も継続
+          // エラーが発生した場合もリトライ継続
           const delay = config.useBackoff ? 
             config.interval * Math.pow(2, attemptCount - 1) : 
             config.interval;
@@ -217,21 +194,18 @@ export class APIFallbackHandler {
         });
     };
     
-    // 【初回リトライ開始】
+    // 初回リトライを開始
     const timerId = setTimeout(attemptReconnection, config.interval);
     this.retryTimers.add(timerId);
   }
 
   /**
-   * 【接続テスト】: API接続の可用性確認
-   * 【実装内容】: 軽量なヘルスチェックエンドポイントへのリクエスト
-   * 【パフォーマンス配慮】: 短いタイムアウトでの接続確認
-   * 🔴 信頼性レベル: 接続監視の一般的なパターンから推測
-   * @returns {Promise<boolean>} - 接続可能性
+   * API接続の可用性をテストする
+   * @returns 接続可能性
    */
   private async testConnection(): Promise<boolean> {
     try {
-      // 【軽量接続テスト】: 簡単なフェッチリクエストで接続確認
+      // 簡単なフェッチリクエストで接続確認
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒タイムアウト
       
@@ -248,10 +222,7 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【接続監視開始】: 定期的な接続状態確認の開始
-   * 【実装内容】: setIntervalによる定期的な接続確認
-   * 【監視間隔】: 30秒間隔での接続確認
-   * 🔴 信頼性レベル: 定期監視の一般的なパターンから推測
+   * 定期的な接続状態監視を開始する
    */
   private startConnectionMonitoring(): void {
     this.connectionCheckInterval = setInterval(async () => {
@@ -265,20 +236,18 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【オフラインモード解除】: オンライン復帰時の状態クリア
-   * 【実装内容】: オフラインフラグクリア・監視タイマー停止
-   * 🔴 信頼性レベル: オフライン対応の一般的なパターンから推測
+   * オンライン復帰時にオフラインモードを解除する
    */
   private disableOfflineMode(): void {
     this.isOfflineMode = false;
     
-    // 【監視停止】: 接続監視タイマーの停止
+    // 接続監視タイマーを停止
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = undefined;
     }
     
-    // 【リトライタイマークリア】: 保留中のリトライタイマーを全て停止
+    // 保留中のリトライタイマーを全て停止
     this.retryTimers.forEach(timerId => clearTimeout(timerId));
     this.retryTimers.clear();
     
@@ -286,18 +255,15 @@ export class APIFallbackHandler {
   }
 
   /**
-   * 【オフライン状態取得】: 現在のオフラインモード状態を取得
-   * 【実装内容】: 現在のモード状態の返却
-   * @returns {boolean} - オフラインモード状態
+   * 現在のオフラインモード状態を取得する
+   * @returns オフラインモード状態
    */
   isInOfflineMode(): boolean {
     return this.isOfflineMode;
   }
 
   /**
-   * 【フォールバックハンドラー停止】: 全てのタイマーと監視を停止
-   * 【実装内容】: リソースクリーンアップ・メモリリーク防止
-   * 🔴 信頼性レベル: リソース管理の一般的なパターン
+   * 全てのタイマーと監視を停止してリソースを解放する
    */
   dispose(): void {
     this.disableOfflineMode();
