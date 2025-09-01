@@ -4,14 +4,14 @@
 
 import type { Mock } from 'bun:test';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import type {
-  ErrorResponse,
-  GetUserProfileResponse,
-} from '@/../../packages/shared-schemas';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import { AuthProviders } from '@/domain/user/AuthProvider';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
 import { UserEntity } from '@/domain/user/UserEntity';
+import type {
+  ErrorResponse,
+  GetUserProfileResponse,
+} from '@/packages/shared-schemas/src/api';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { UserController } from '../UserController';
 

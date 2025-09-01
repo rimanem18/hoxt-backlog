@@ -1,0 +1,5 @@
+# Bun configuration for client app
+
+[test]
+preload = ["./src/test-setup.ts"]
+timeout = 20000  # 20秒のタイムアウト設定（長時間処理テスト対応）

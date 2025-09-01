@@ -19,11 +19,6 @@
 - test: テスト関連
 - chore: ビルド、補助ツール、ライブラリ関連
 
-理由を記載してください:
-
-OK: feat: ○○なため、hoge を追加。
-NG: feat: hoge を追加。
-
 ## ディレクトリ構成
 
 - **`app/client/`**: client コンテナにバインド（Next.js アプリケーション）
@@ -95,6 +90,8 @@ docker compose exec client bun run dev
   - 意図的な未実装は TODO コメントで
 - **禁止**: `JSX.Element` 型の返却
   - `React.ReactNode` 型で代用
+- **禁止**: `fireEvent` の使用
+  - `userEvent` で代用
 
 # バックエンド開発ガイドライン
 

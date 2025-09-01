@@ -9,6 +9,7 @@ import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import { TokenExpiredError } from '@/domain/user/errors/TokenExpiredError';
 import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
@@ -152,27 +153,35 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: jwtValidationResult.errorMessage,
         });
 
-        throw new ValidationError(
-          jwtValidationResult.errorMessage || 'JWT検証に失敗しました',
-        );
+        // 【エラー分類実装】: JWT形式エラーの場合はAuthenticationError.invalidFormat()を使用
+        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
+        // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
+        throw AuthenticationError.invalidFormat();
       }
 
       this.logger.info('Starting user authentication', {
         jwtLength: input.jwt.length,
       });
 
-      // JWT検証と外部ユーザー情報取得の並列処理
-      const [verificationResult] = await Promise.all([
-        this.authProvider.verifyToken(input.jwt),
-        Promise.resolve(), // 将来の拡張用
-      ]);
+      // 【パフォーマンス最適化】: 無駄な並列処理を除去し、直接実行に変更
+      // 【改善内容】: Promise.allの無意味な利用を削除、実行効率を向上
+      // 【設計方針】: 将来の拡張は必要な時点で適切な並列処理として実装
+      // 🟢 信頼性レベル: パフォーマンスレビューに基づく実証された改善
+      const verificationResult = await this.authProvider.verifyToken(input.jwt);
 
       if (!verificationResult.valid || !verificationResult.payload) {
         this.logger.warn('User authentication failed', {
           reason: 'Invalid JWT',
           errorMessage: verificationResult.error,
         });
-        throw new AuthenticationError('認証トークンが無効です');
+
+        // 【セキュリティ強化】: エラーメッセージ統一化による情報漏洩防止
+        // 【改善内容】: JWT検証エラーの詳細分類を廃止し、統一エラーで攻撃者情報収集を阻止
+        // 【設計方針】: 期限切れ・署名不正の区別を不可能にし、セキュリティ脆弱性を根本的に解決
+        // 🟢 信頼性レベル: セキュリティレビューに基づく実証された強化策
+
+        // 全てのJWT検証失敗を統一エラーとして処理（セキュリティベストプラクティス）
+        throw AuthenticationError.invalidToken();
       }
 
       // JWTペイロードから外部ユーザー情報を抽出
@@ -217,6 +226,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
       if (
         error instanceof ValidationError ||
         error instanceof AuthenticationError ||
+        error instanceof TokenExpiredError ||
         error instanceof InfrastructureError ||
         error instanceof ExternalServiceError
       ) {

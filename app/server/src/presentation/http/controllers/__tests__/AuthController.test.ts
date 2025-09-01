@@ -5,14 +5,15 @@
 import type { Mock } from 'bun:test';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { Context } from 'hono';
-import type {
-  AuthResponse,
-  ErrorResponse,
-} from '@/../../packages/shared-schemas';
 import type { IAuthenticateUserUseCase } from '@/application/interfaces/IAuthenticateUserUseCase';
 import { AuthProviders } from '@/domain/user/AuthProvider';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import { UserEntity } from '@/domain/user/UserEntity';
+// shared-schemasからの型インポート
+import type {
+  AuthResponse,
+  ErrorResponse,
+} from '@/packages/shared-schemas/src/auth';
 import { AuthController } from '../AuthController';
 
 type MockContext = {

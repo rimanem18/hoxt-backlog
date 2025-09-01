@@ -10,7 +10,8 @@ down:
 build:
 	docker compose build
 restart:
-	docker compose restart
+	@make down
+	@make up
 server:
 	docker compose exec server ash
 client:
@@ -28,3 +29,6 @@ fmt:
 	docker compose exec server bun run fix
 amend:
 	git commit --amend --no-edit
+init:
+	test -f .git/hooks/pre-commit || cp scripts/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
