@@ -1,15 +1,99 @@
 /**
  * TASK-302: ユーザープロフィール取得カスタムフック
- * 【まだ実装されていない機能】: TDD Red フェーズのため意図的に未実装
- * 
- * TODO: 以下の機能を実装する必要があります
- * - userServiceを使用したAPI通信
- * - loading/error/user状態の管理
- * - refetch機能
- * - エラーハンドリング
+ * 【機能概要】: userServiceを使用してプロフィール情報を取得し、状態管理を行うReactフック
+ * 【実装方針】: useState/useEffectを使用した最もシンプルな状態管理実装
+ * 【テスト対応】: useUserProfile.test.tsで作成された4つのテストケースを通すための実装
+ * 🟢 信頼性レベル: 一般的なReact Hooksパターンからの高信頼性
  */
 
-export const useUserProfile = () => {
-  // TODO: 実装が必要 - TDD Greenフェーズで実装予定
-  throw new Error('useUserProfile hook not implemented yet');
+import { useState, useEffect, useCallback } from 'react';
+import type { User } from '@/packages/shared-schemas/src/auth';
+import { userService } from '../services/userService';
+
+/**
+ * 【機能概要】: ユーザープロフィール取得と状態管理を行うカスタムフック
+ * 【実装方針】: React標準フックを使用したシンプルな非同期状態管理
+ * 【テスト対応】: 初期状態・API成功・API失敗・refetch機能の4つのテストケース対応
+ * 🟢 信頼性レベル: 既存React Hooksパターンに基づく
+ */
+interface UseUserProfileReturn {
+  /** 取得したユーザー情報（初期値・エラー時はnull） */
+  user: User | null;
+  /** API通信中かどうかのローディング状態 */
+  loading: boolean;
+  /** API通信エラー情報（正常時・ローディング中はnull） */
+  error: Error | null;
+  /** 手動でのプロフィール情報再取得関数 */
+  refetch: () => Promise<void>;
+}
+
+/**
+ * 【機能概要】: ユーザープロフィール情報の取得と状態管理を行うカスタムフック
+ * 【実装方針】: useEffect([]）での初期取得 + refetch関数での手動再取得
+ * 【テスト対応】: 全テストケースを通すための最小限の状態管理実装
+ * 🟢 信頼性レベル: 標準的なReact非同期パターンから実装
+ * @returns {UseUserProfileReturn} プロフィール情報・状態・再取得関数
+ */
+export const useUserProfile = (): UseUserProfileReturn => {
+  // 【状態定義】: フック内で管理する3つの状態を定義
+  // 【初期値設定】: テストで期待される初期状態に合わせた設定
+  const [user, setUser] = useState<User | null>(null); // 【ユーザーデータ】: 取得したプロフィール情報（初期値null） 🟢
+  const [loading, setLoading] = useState<boolean>(true); // 【ローディング状態】: API通信中フラグ（初期値true） 🟢
+  const [error, setError] = useState<Error | null>(null); // 【エラー情報】: API通信エラー（初期値null） 🟢
+
+  /**
+   * 【機能概要】: プロフィール情報を取得してステート更新を行う内部関数
+   * 【実装方針】: userServiceを呼び出してレスポンスに応じた状態更新を実行
+   * 【エラーハンドリング】: try-catch構文による適切な例外処理
+   * 🟡 信頼性レベル: 一般的な非同期処理パターンから実装
+   */
+  const fetchUserProfile = useCallback(async (): Promise<void> => {
+    try {
+      // 【API通信開始】: ローディング状態を開始しエラーをクリア
+      setLoading(true);
+      setError(null); // 【エラークリア】: 前回のエラー状態をリセット
+
+      // 【API実行】: userServiceを使用してプロフィール情報を取得
+      // 【サービス連携】: 下位レイヤー（API連携）との分離を保った実装
+      const userData = await userService.getUserProfile();
+
+      // 【成功時処理】: 取得データを状態に反映してローディング終了
+      setUser(userData); // 【データ設定】: 正常取得時のUser情報をステートに保存
+      setError(null); // 【エラークリア】: 成功時はエラー状態を確実にnull化
+    } catch (err) {
+      // 【失敗時処理】: エラー情報を状態に反映してユーザーデータをクリア
+      setUser(null); // 【データクリア】: エラー時はユーザーデータをnullにリセット
+      setError(err instanceof Error ? err : new Error('不明なエラーが発生しました')); // 【エラー設定】: Error型以外も適切にError型に変換
+    } finally {
+      // 【後処理】: 成功・失敗に関わらずローディング状態を終了
+      setLoading(false); // 【ローディング終了】: API通信完了をUIに通知
+    }
+  }, []); // 【依存配列】: userServiceは固定のため空配列で最適化
+
+  /**
+   * 【機能概要】: 手動でプロフィール情報を再取得するためのrefetch関数
+   * 【実装方針】: fetchUserProfileをそのまま呼び出すシンプルな実装
+   * 【テスト対応】: refetch機能テストケースで期待される再実行機能
+   * 🟢 信頼性レベル: テストケースの期待動作に直接対応
+   */
+  const refetch = useCallback(async (): Promise<void> => {
+    // 【再取得実行】: 内部のfetchUserProfile関数を再実行してデータ更新
+    await fetchUserProfile(); // 【処理委譲】: 既存の取得ロジックを再利用して重複を回避
+  }, [fetchUserProfile]);
+
+  // 【初期データ取得】: コンポーネントマウント時に自動でプロフィール情報を取得
+  // 【useEffect活用】: 副作用フックを使用した適切なライフサイクル管理
+  useEffect(() => {
+    // 【自動取得開始】: フック使用開始時に即座にAPI通信を開始
+    fetchUserProfile(); // 【初期化処理】: マウント時の自動プロフィール取得実行
+  }, [fetchUserProfile]); // 【依存配列】: fetchUserProfile関数の変更時にのみ再実行
+
+  // 【戻り値】: フック使用側で必要な状態と操作関数を提供
+  // 【インターフェース準拠】: UseUserProfileReturn型に合致したオブジェクトを返却
+  return {
+    user, // 【ユーザーデータ】: 現在取得済みのプロフィール情報
+    loading, // 【ローディング状態】: API通信中かどうかのフラグ
+    error, // 【エラー情報】: 最新のAPI通信エラー（正常時はnull）
+    refetch, // 【再取得関数】: 手動でプロフィール情報を更新するための関数
+  };
 };

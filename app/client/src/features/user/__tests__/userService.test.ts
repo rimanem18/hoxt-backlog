@@ -6,21 +6,42 @@ import { userService } from '../services/userService';
 const mockFetch = mock();
 global.fetch = mockFetch;
 
+// localStorageのステートフルモック作成
+const createLocalStorageMock = () => {
+  let store: { [key: string]: string } = {};
+
+  return {
+    getItem(key: string) {
+      return store[key] || null;
+    },
+    setItem(key: string, value: string) {
+      store[key] = value.toString();
+    },
+    removeItem(key: string) {
+      delete store[key];
+    },
+    clear() {
+      store = {};
+    },
+  };
+};
+
+// globalオブジェクトにlocalStorageを定義
+const localStorageMock = createLocalStorageMock();
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
 describe('userService API連携レイヤー', () => {
   beforeEach(() => {
     // 【テスト前準備】: fetchモックの初期化とJWT設定
     // 【環境初期化】: 各テストで独立したHTTPリクエスト環境を構築
     mockFetch.mockReset();
+    localStorage.clear();
     
     // JWTトークンをlocal storageに設定（認証前提）
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: mock().mockReturnValue('mock-jwt-token'),
-        setItem: mock(),
-        removeItem: mock(),
-      },
-      writable: true,
-    });
+    localStorage.setItem('authToken', 'mock-jwt-token');
   });
 
   afterEach(() => {
@@ -158,8 +179,8 @@ describe('userService API連携レイヤー', () => {
     // 🟢 既存認証実装パターン（TASK-301）からの高信頼性
 
     // 【テストデータ準備】: JWTトークン未存在状態をシミュレート
-    // 【初期条件設定】: localStorage.getItemがnullを返す状態
-    window.localStorage.getItem = mock().mockReturnValue(null);
+    // 【初期条件設定】: localStorage からトークンを削除してnull状態にする
+    localStorage.removeItem('authToken');
 
     // 【実際の処理実行】: userService.getUserProfile トークン未存在実行
     // 【処理内容】: 認証トークン検証処理の確認
