@@ -18,8 +18,8 @@ import type { User } from '@/domain/user/UserEntity';
 import type { CreateUserInput } from '@/domain/user/valueobjects/CreateUserInput';
 import type { UpdateUserInput } from '@/domain/user/valueobjects/UpdateUserInput';
 import type { Logger } from '@/shared/logging/Logger';
-import type { IJwtValidationService } from '@/shared/services/JwtValidationService';
 import type { IErrorClassificationService } from '@/shared/services/ErrorClassificationService';
+import type { IJwtValidationService } from '@/shared/services/JwtValidationService';
 import { createFakeClock } from './fakeClock';
 
 /**

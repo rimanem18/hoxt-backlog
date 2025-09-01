@@ -10,14 +10,14 @@
 
 import type { Context } from 'hono';
 import type {
-  ErrorResponse,
-  GetUserProfileResponse,
-} from '@/packages/shared-schemas';
-import type {
   GetUserProfileUseCaseInput,
   IGetUserProfileUseCase,
 } from '@/application/usecases/GetUserProfileUseCase';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
+import type {
+  ErrorResponse,
+  GetUserProfileResponse,
+} from '@/packages/shared-schemas';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
 

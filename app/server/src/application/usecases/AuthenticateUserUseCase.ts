@@ -179,7 +179,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
         // 【改善内容】: JWT検証エラーの詳細分類を廃止し、統一エラーで攻撃者情報収集を阻止
         // 【設計方針】: 期限切れ・署名不正の区別を不可能にし、セキュリティ脆弱性を根本的に解決
         // 🟢 信頼性レベル: セキュリティレビューに基づく実証された強化策
-        
+
         // 全てのJWT検証失敗を統一エラーとして処理（セキュリティベストプラクティス）
         throw AuthenticationError.invalidToken();
       }

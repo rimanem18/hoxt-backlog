@@ -6,12 +6,12 @@
  */
 
 import type { Context } from 'hono';
+import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
+import type { User } from '@/domain/user/UserEntity';
 import type {
   AuthResponse,
   ErrorResponse,
-} from '@/packages/shared-schemas/src';
-import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
-import type { User } from '@/domain/user/UserEntity';
+} from '@/packages/shared-schemas/src/auth';
 import { ValidationError } from '@/shared/errors/ValidationError';
 
 /**

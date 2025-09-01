@@ -6,7 +6,10 @@
 import { UserDomainError } from './UserDomainError';
 
 export class AuthenticationError extends UserDomainError {
-  constructor(public readonly code :string, message: string) {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
     super(message);
   }
 
@@ -15,7 +18,7 @@ export class AuthenticationError extends UserDomainError {
    * @return AuthenticationError インスタンス
    */
   static invalidToken(): AuthenticationError {
-    return new AuthenticationError('INVALID_TOKEN', '認証トークンが無効です')
+    return new AuthenticationError('INVALID_TOKEN', '認証トークンが無効です');
   }
 
   /**
@@ -23,7 +26,10 @@ export class AuthenticationError extends UserDomainError {
    * @return AuthenticationError インスタンス
    */
   static tokenExpired(): AuthenticationError {
-    return new AuthenticationError('TOKEN_EXPIRED','認証トークンの有効期限が切れています')
+    return new AuthenticationError(
+      'TOKEN_EXPIRED',
+      '認証トークンの有効期限が切れています',
+    );
   }
 
   /**
@@ -31,8 +37,6 @@ export class AuthenticationError extends UserDomainError {
    * @return AuthenticationError インスタンス
    */
   static invalidFormat(): AuthenticationError {
-    return new AuthenticationError('INVALID_FORMAT', '認証トークンが無効です')
+    return new AuthenticationError('INVALID_FORMAT', '認証トークンが無効です');
   }
-
 }
-

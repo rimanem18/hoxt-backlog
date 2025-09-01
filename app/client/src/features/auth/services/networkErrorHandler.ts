@@ -172,8 +172,10 @@ export class NetworkErrorHandler {
         retryable: false,
       };
     } else if (
-      (error as any)?.code === 'NETWORK_ERROR' ||
-      (error as any)?.name === 'NetworkError'
+      (error as unknown as { code?: string; name?: string })?.code ===
+        'NETWORK_ERROR' ||
+      (error as unknown as { code?: string; name?: string })?.name ===
+        'NetworkError'
     ) {
       return {
         code: 'network_error',
@@ -184,7 +186,9 @@ export class NetworkErrorHandler {
     } else {
       return {
         code: 'unknown_error',
-        message: (error as any)?.message || 'Unknown network error',
+        message:
+          (error as unknown as { message?: string })?.message ||
+          'Unknown network error',
         type: 'temporary',
         retryable: true,
       };

@@ -5,8 +5,12 @@
  * 🟢 信頼性レベル: Redux Toolkit公式推奨パターンによる確実な実装
  */
 
-import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
-import type { RootState, AppDispatch } from './index';
+import {
+  type TypedUseSelectorHook,
+  useDispatch,
+  useSelector,
+} from 'react-redux';
+import type { AppDispatch, RootState } from './index';
 
 /**
  * 【型安全useDispatch】: AppDispatch型を適用したuseDispatch
@@ -26,4 +30,4 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
  * 【型定義エクスポート】: 外部モジュールでの型参照用
  * 【拡張性】: カスタムフックや高階コンポーネントでの活用
  */
-export type { RootState, AppDispatch } from './index';
+export type { AppDispatch, RootState } from './index';

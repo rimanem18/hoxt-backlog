@@ -1,33 +1,31 @@
 /**
- * 【再利用可能コンポーネント】: ローディング中の視覚的フィードバック表示
- * 【設計方針】: 単一責任の原則に従い、ローディング表示のみを担当
- * 【アクセシビリティ】: WCAG 2.1 AA準拠のARIA属性を適切に設定
- * 🟢 信頼性レベル: 既存実装から抽出した確実なコンポーネント設計
+ * ローディングスピナーコンポーネント
+ *
+ * WCAG 2.1 AA準拠のARIA属性でアクセシビリティを確保。
+ * サイズと色をカスタマイズ可能な再利用可能なコンポーネント。
  */
 
-import React from 'react';
+import type React from 'react';
 
 /**
- * 【Propsインターフェース】: LoadingSpinnerコンポーネントの受け取る属性定義
- * 【アクセシビリティ重視】: ARIA属性による支援技術対応を必須化
- * 🟢 信頼性レベル: アクセシビリティ要件から直接抽出
+ * LoadingSpinnerコンポーネントのProps定義
  */
 interface LoadingSpinnerProps {
-  /** 【ARIA対応】: スクリーンリーダー向けの説明テキスト（必須） */
+  /** スクリーンリーダー向けの説明テキスト */
   'aria-label': string;
-  
-  /** 【サイズ調整】: スピナーのサイズ指定（オプション、デフォルト: 'medium'） */
+
+  /** スピナーのサイズ */
   size?: 'small' | 'medium' | 'large';
-  
-  /** 【色設定】: スピナーの色指定（オプション、デフォルト: 'white'） */
+
+  /** スピナーの色 */
   color?: 'white' | 'blue' | 'gray';
-  
-  /** 【カスタムクラス】: 追加のTailwindクラス（オプション） */
+
+  /** 追加スタイルクラス */
   className?: string;
 }
 
 /**
- * 【サイズマッピング】: size propに対応するTailwindクラスの定義
+ * サイズ別のTailwindクラスマッピング
  * 【保守性】: サイズ設定の変更時に一箇所で修正完了
  * 🟡 信頼性レベル: デザインシステムからの妥当な推測値
  */
@@ -43,9 +41,9 @@ const SIZE_CLASSES = {
  * 🟡 信頼性レベル: 既存のカラーパレットから推測した設定
  */
 const COLOR_CLASSES = {
-  white: 'border-white border-t-transparent',     // 【既存使用】: 現在の実装で使用
-  blue: 'border-blue-600 border-t-transparent',   // 【ブランド色】: プライマリカラー対応
-  gray: 'border-gray-400 border-t-transparent',   // 【無効化時】: ローディング無効時の色
+  white: 'border-white border-t-transparent', // 【既存使用】: 現在の実装で使用
+  blue: 'border-blue-600 border-t-transparent', // 【ブランド色】: プライマリカラー対応
+  gray: 'border-gray-400 border-t-transparent', // 【無効化時】: ローディング無効時の色
 } as const;
 
 /**
@@ -57,29 +55,31 @@ const COLOR_CLASSES = {
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   'aria-label': ariaLabel,
   size = 'medium',
-  color = 'white', 
+  color = 'white',
   className = '',
 }) => {
   // 【クラス名生成】: props に基づく動的クラス構築
   // 【保守性】: 設定変更時の影響範囲を限定
   const sizeClass = SIZE_CLASSES[size];
   const colorClass = COLOR_CLASSES[color];
-  
+
   // 【結合クラス】: 基本クラス + 動的クラス + カスタムクラス
   const combinedClasses = [
     'border-2 rounded-full animate-spin', // 【基本スタイル】: スピナーの基本見た目
-    sizeClass,    // 【サイズ】: プロップス指定サイズ
-    colorClass,   // 【色】: プロップス指定カラー
-    className,    // 【カスタム】: 外部指定の追加クラス
-  ].filter(Boolean).join(' '); // 【クリーンアップ】: 空文字列を除外して結合
+    sizeClass, // 【サイズ】: プロップス指定サイズ
+    colorClass, // 【色】: プロップス指定カラー
+    className, // 【カスタム】: 外部指定の追加クラス
+  ]
+    .filter(Boolean)
+    .join(' '); // 【クリーンアップ】: 空文字列を除外して結合
 
   return (
     <div
       className={combinedClasses}
-      role="progressbar"           // 【ARIA役割】: プログレスバーとして認識させる
-      aria-label={ariaLabel}       // 【アクセシビリティ】: スクリーンリーダー向け説明
-      aria-live="polite"          // 【ライブリージョン】: 状態変更時の適切な通知
-      data-loading-spinner="true"  // 【識別子】: テスト時の要素特定（data-testid代替）
+      role="progressbar" // 【ARIA役割】: プログレスバーとして認識させる
+      aria-label={ariaLabel} // 【アクセシビリティ】: スクリーンリーダー向け説明
+      aria-live="polite" // 【ライブリージョン】: 状態変更時の適切な通知
+      data-loading-spinner="true" // 【識別子】: テスト時の要素特定（data-testid代替）
     />
   );
 };
@@ -95,10 +95,10 @@ export const AuthLoadingSpinner: React.FC<{
   className?: string;
 }> = ({ className }) => (
   <LoadingSpinner
-    aria-label="認証処理中"    // 【固定ラベル】: 認証処理専用の適切な説明
-    size="medium"             // 【標準サイズ】: 認証ボタンに適したサイズ
-    color="white"             // 【標準色】: ボタン内で視認しやすい色
-    className={className}     // 【拡張可能】: 外部からのスタイル追加を許可
+    aria-label="認証処理中" // 【固定ラベル】: 認証処理専用の適切な説明
+    size="medium" // 【標準サイズ】: 認証ボタンに適したサイズ
+    color="white" // 【標準色】: ボタン内で視認しやすい色
+    className={className} // 【拡張可能】: 外部からのスタイル追加を許可
   />
 );
 

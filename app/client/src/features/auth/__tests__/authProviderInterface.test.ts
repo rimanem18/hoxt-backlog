@@ -1,24 +1,17 @@
 import { describe, expect, mock, test } from 'bun:test';
-import type { User } from '@/packages/shared-schemas/src/auth';
-import type { SessionInfo } from '../services/providers/authProviderInterface';
 
 describe('認証プロバイダーインターフェース', () => {
   test('AuthProviderInterface型定義の検証', () => {
     // When: AuthProviderInterfaceモジュールをimportする
-    try {
-      const authProviderModule = require('../services/providers/authProviderInterface');
+    const authProviderModule = require('../services/providers/authProviderInterface');
 
-      // Then: モジュールが正常にimportできることを確認（インターフェースはランタイムで存在しないため、モジュール自体の存在を確認）
-      expect(authProviderModule).toBeDefined();
+    // Then: モジュールが正常にimportできることを確認（インターフェースはランタイムで存在しないため、モジュール自体の存在を確認）
+    expect(authProviderModule).toBeDefined();
 
-      // 実装クラスBaseAuthProviderが存在することを確認
-      const { BaseAuthProvider } = authProviderModule;
-      expect(BaseAuthProvider).toBeDefined();
-      expect(typeof BaseAuthProvider).toBe('function');
-    } catch (error) {
-      // importエラーがある場合はテスト失敗
-      throw error;
-    }
+    // 実装クラスBaseAuthProviderが存在することを確認
+    const { BaseAuthProvider } = authProviderModule;
+    expect(BaseAuthProvider).toBeDefined();
+    expect(typeof BaseAuthProvider).toBe('function');
 
     // Then: インターフェースがインスタンス化できないことを確認（抽象インターフェース）
     expect(() => {

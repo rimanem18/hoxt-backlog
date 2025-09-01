@@ -75,7 +75,7 @@ export class APIFallbackHandler {
    * @returns フォールバック処理結果
    */
   handleAPIFailure(
-    error: APIConnectionError,
+    _error: APIConnectionError,
     cachedData?: CachedUserData,
   ): APIFallbackResult {
     // 一時的エラーか永続的エラーかを判定（現在未使用だが将来的にリトライ機能で活用予定）
@@ -106,25 +106,6 @@ export class APIFallbackHandler {
         'サーバーに接続できません。インターネット接続を確認してください。',
       reliability: 'unavailable',
     };
-  }
-
-  /**
-   * API接続エラーが一時的かどうかを判定する
-   * @param error - API接続エラー
-   * @returns 一時的エラーかどうか
-   */
-  private isTemporaryError(error: APIConnectionError): boolean {
-    // HTTPステータスコードによる判定
-    if (error.statusCode >= 500) return true; // サーバーエラーは一時的
-    if (error.statusCode === 0) return true; // ネットワークエラーは一時的
-    if (error.statusCode === 408) return true; // タイムアウトは一時的
-    if (error.statusCode === 429) return true; // レート制限は一時的
-
-    // エラーコードによる判定
-    if (error.code === 'api_connection_failed') return true;
-    if (error.code === 'network_timeout') return true;
-
-    return false; // その他は永続的エラーとして扱う
   }
 
   /**
@@ -225,7 +206,7 @@ export class APIFallbackHandler {
 
       clearTimeout(timeoutId);
       return response.ok;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

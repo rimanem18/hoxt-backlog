@@ -82,7 +82,7 @@ export class JWTExpirationHandler {
             )
           : undefined,
       };
-    } catch (error) {
+    } catch {
       // JWT解析エラー時は不正トークンとして強制ログアウト
       return {
         isExpired: true,
@@ -258,7 +258,7 @@ export class JWTExpirationHandler {
       }
 
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

@@ -243,7 +243,7 @@ export class EnvironmentValidator {
   generateEnvTemplate(): string {
     let template = '# Next.js 認証アプリケーション環境変数設定\n';
     template += '# ファイル名: .env.local\n';
-    template += '# 作成日: ' + new Date().toISOString().split('T')[0] + '\n\n';
+    template += `# 作成日: ${new Date().toISOString().split('T')[0]}\n\n`;
 
     template += '# ====================================\n';
     template += '# Supabase設定\n';

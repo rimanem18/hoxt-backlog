@@ -19,10 +19,10 @@ export const store = configureStore({
     auth: authSlice.reducer,
     // 【将来拡張予定】: user・ui・settingsなどのsliceを追加予定
   },
-  
+
   // 【開発環境支援】: Redux DevTools拡張機能の有効化
   devTools: process.env.NODE_ENV !== 'production',
-  
+
   // 【ミドルウェア設定】: デフォルトミドルウェアの使用
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

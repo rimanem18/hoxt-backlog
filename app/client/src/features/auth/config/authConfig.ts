@@ -1,8 +1,8 @@
 /**
- * 【認証設定】: 認証関連の設定値とプロバイダー情報を一元管理
- * 【設計方針】: 設定値の変更時に複数ファイルを修正する必要性を排除
- * 【保守性】: 設定変更の影響範囲を限定し、メンテナンス性を向上
- * 🟢 信頼性レベル: 既存実装から抽出した確実な設定値
+ * 認証関連設定の一元管理
+ *
+ * プロバイダー情報、タイミング設定、メッセージを一箴所で管理し、
+ * 設定変更の影響範囲を最小化する。
  */
 
 /**
@@ -11,7 +11,7 @@
  * 🟢 信頼性レベル: 現在の要件から直接抽出
  */
 export const SUPPORTED_AUTH_PROVIDERS = ['google', 'apple'] as const;
-export type AuthProvider = typeof SUPPORTED_AUTH_PROVIDERS[number];
+export type AuthProvider = (typeof SUPPORTED_AUTH_PROVIDERS)[number];
 
 /**
  * 【プロバイダー別設定】: 各認証プロバイダーの表示・設定情報
@@ -26,7 +26,7 @@ export const AUTH_PROVIDER_CONFIG = {
     supabaseProvider: 'google' as const,
   },
   apple: {
-    displayName: 'Apple', 
+    displayName: 'Apple',
     buttonLabel: 'Appleでログイン',
     loadingLabel: '認証中...',
     supabaseProvider: 'apple' as const,
@@ -41,10 +41,10 @@ export const AUTH_PROVIDER_CONFIG = {
 export const AUTH_TIMING_CONFIG = {
   /** 【ダブルクリック防止】: 連続クリック防止の最小間隔（ミリ秒） */
   DOUBLE_CLICK_THRESHOLD: 500,
-  
+
   /** 【長時間処理検出】: 長時間処理メッセージ表示までの時間（ミリ秒） */
   LONG_PROCESS_THRESHOLD: 10000,
-  
+
   /** 【OAuth処理】: 通常の認証処理の想定時間（ミリ秒） */
   TYPICAL_AUTH_DURATION: 3000,
 } as const;
@@ -56,10 +56,11 @@ export const AUTH_TIMING_CONFIG = {
  */
 export const AUTH_REDIRECT_CONFIG = {
   /** 【本番環境】: 許可されたリダイレクト先ドメイン */
-  ALLOWED_ORIGINS: process.env.NODE_ENV === 'production'
-    ? [process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000']
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
-    
+  ALLOWED_ORIGINS:
+    process.env.NODE_ENV === 'production'
+      ? [process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000']
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+
   /** 【コールバックパス】: OAuth認証完了後のリダイレクトパス */
   CALLBACK_PATH: '/auth/callback',
 } as const;
@@ -72,14 +73,15 @@ export const AUTH_REDIRECT_CONFIG = {
  */
 export const createSecureRedirectUrl = (): string => {
   // 【Origin検証】: 現在のOriginが許可リストに含まれるかを確認
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentOrigin =
+    typeof window !== 'undefined' ? window.location.origin : '';
   const allowedOrigins = AUTH_REDIRECT_CONFIG.ALLOWED_ORIGINS;
-  
+
   // 【安全なOrigin選択】: 許可されたOriginのみを使用
-  const safeOrigin = allowedOrigins.includes(currentOrigin) 
-    ? currentOrigin 
+  const safeOrigin = allowedOrigins.includes(currentOrigin)
+    ? currentOrigin
     : allowedOrigins[0];
-  
+
   // 【URL構築】: セキュアなリダイレクトURLを生成
   return `${safeOrigin}${AUTH_REDIRECT_CONFIG.CALLBACK_PATH}`;
 };
@@ -92,10 +94,10 @@ export const createSecureRedirectUrl = (): string => {
 export const AUTH_MESSAGES = {
   /** 【長時間処理】: 10秒経過時のユーザー向けメッセージ */
   LONG_PROCESS_MESSAGE: '認証に時間がかかっています...',
-  
+
   /** 【エラーメッセージ】: 一般的な認証失敗時のメッセージ */
   DEFAULT_ERROR_MESSAGE: '認証に失敗しました',
-  
+
   /** 【ARIA対応】: スクリーンリーダー向けの処理中表示 */
   LOADING_ARIA_LABEL: '認証処理中',
 } as const;
