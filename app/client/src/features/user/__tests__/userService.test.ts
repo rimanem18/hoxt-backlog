@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, mock } from 'bun:test';
 import type { User } from '@/packages/shared-schemas/src/auth';
 import { userService } from '../services/userService';
 
-// fetch APIのモック
-const mockFetch = mock();
+// fetch APIの固有モック（テスト分離のため）
+const mockFetch = mock().mockName('userService-fetch');
 global.fetch = mockFetch;
 
 // localStorageのステートフルモック作成
@@ -35,8 +35,10 @@ Object.defineProperty(global, 'localStorage', {
 
 describe('userService API連携レイヤー', () => {
   beforeEach(() => {
-    // 【テスト前準備】: fetchモックの初期化とJWT設定
+    // 【テスト前準備】: fetchモックの完全な初期化とJWT設定
     // 【環境初期化】: 各テストで独立したHTTPリクエスト環境を構築
+    // 【改善点】: mockClearとmockResetの両方を実行してモック状態を完全に初期化
+    mockFetch.mockClear();
     mockFetch.mockReset();
     localStorage.clear();
     
@@ -47,6 +49,9 @@ describe('userService API連携レイヤー', () => {
   afterEach(() => {
     // 【テスト後処理】: グローバルモックのクリーンアップ
     // 【状態復元】: 次テストへのHTTP状態汚染を防止
+    // 【完全クリーンアップ】: モック実装の復元
+    mockFetch.mockRestore();
+    localStorage.clear();
   });
 
   test('getUserProfile API正常実行時のユーザー情報取得', async () => {
