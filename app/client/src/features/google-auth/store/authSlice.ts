@@ -54,6 +54,16 @@ export const authSlice = createSlice({
   initialState,
   reducers: {
     /**
+     * 認証開始時の状態更新
+     *
+     * @param state - 現在の認証状態
+     */
+    authStart: (state) => {
+      state.isLoading = true;
+      state.error = null;
+    },
+
+    /**
      * 認証成功時の状態更新
      *
      * @param state - 現在の認証状態
@@ -65,8 +75,33 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
     },
+
+    /**
+     * 認証失敗時の状態更新
+     *
+     * @param state - 現在の認証状態
+     * @param action - 認証失敗時のエラー情報を含むアクション
+     */
+    authFailure: (state, action: PayloadAction<{ error: string }>) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.isLoading = false;
+      state.error = action.payload.error;
+    },
+
+    /**
+     * ログアウト時の状態更新
+     *
+     * @param state - 現在の認証状態
+     */
+    logout: (state) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.isLoading = false;
+      state.error = null;
+    },
   },
 });
 
-export const { authSuccess } = authSlice.actions;
+export const { authStart, authSuccess, authFailure, logout } = authSlice.actions;
 export default authSlice.reducer;
