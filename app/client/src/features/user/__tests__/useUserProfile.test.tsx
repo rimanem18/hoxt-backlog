@@ -1,38 +1,59 @@
-import { afterEach, beforeEach, describe, expect, test, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test, type Mock } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import type { User } from '@/packages/shared-schemas/src/auth';
 
-// 【改善内容】: テスト分離のため固有のモックスコープを作成
-// 【テスト対応】: useUserProfileフック専用のモック環境を構築
-// 🟢 信頼性レベル: テスト分析結果に基づく確実な修正
-const mockGetUserProfile = mock().mockName('useUserProfile-getUserProfile');
+/**
+ * 【テスト分離戦略】: 完全独立モック環境による確実な分離実装
+ *
+ * 問題分析:
+ * - 他のテストファイルとのモック共有による干渉
+ * - mock.module()の実行タイミングでの不整合
+ * - グローバル状態での予期しない情報漏洩
+ *
+ * 解決策:
+ * - テスト実行時間での動的モック制御
+ * - 独立したUserServiceモック実装
+ * - 完全な状態分離によるクリーンテスト
+ */
 
-// 【モジュールモック改善】: 固有のモジュールモックIDで分離
-// 【安定性確保】: 他のテストファイルとの干渉を完全に排除
-mock.module('../services/userService', () => ({
-  userService: {
-    getUserProfile: mockGetUserProfile,
-  }
-}));
 
-// 【動的インポート】: モック設定後にフックをインポートしてモック適用を確実にする
-// 【テスト環境最適化】: モック競合を避けるための遅延インポート
-const { useUserProfile } = await import('../hooks/useUserProfile');
+/**
+ * 【DI完全解決】: 依存性注入による確実なテスト分離実装
+ *
+ * 解決策:
+ * - mock.module()を使用せず、DIパラメーターで直接モックを注入
+ * - グローバル状態に依存しない完全独立テスト環境
+ * - 他のテストファイルとの干渉を根本的に排除
+ */
+
+// 【Context DI実装】: グローバル依存を完全排除したモジュールインポート
+import { useUserProfile } from '../hooks/useUserProfile';
+import { UserServiceProvider } from '../contexts/UserServiceContext';
+import type { UserServiceInterface } from '../services/userService';
+
+// 【テストスコープ変数】: describe内で共有するtestUserService変数
+let testUserService: UserServiceInterface;
 
 describe('useUserProfile フック', () => {
   beforeEach(() => {
-    // 【テスト前準備】: フックの状態をクリーンにリセット
-    // 【環境初期化】: モック関数の完全なリセット
-    // 【改善点】: mockClearとmockResetの両方を実行してモック状態を完全に初期化
-    mockGetUserProfile.mockClear();
-    mockGetUserProfile.mockReset();
+    // 【DI専用モック】: 依存性注入用の型安全なモックサービス
+    // Bun の Mock 型を使った "型付きモックサービス"
+
+    // 【DI環境構築】: 各テスト用の独立モックサービス作成
+    // 【完全分離保証】: グローバル状態に一切依存しない独立環境
+    const mockGetUserProfile = mock().mockName(
+      `test-getUserProfile-${Date.now()}`,
+    );
+
+    testUserService = {
+      getUserProfile: mockGetUserProfile,
+    };
   });
 
   afterEach(() => {
-    // 【テスト後処理】: 非同期処理のクリーンアップ
-    // 【状態復元】: 次テストへの副作用を防止
-    // 【完全クリーンアップ】: モック実装の復元
-    mockGetUserProfile.mockRestore();
+    // 【DI環境クリア】: 次テストへの影響排除（DI環境では自動分離）
+    // 【状態独立保証】: DIパターンによる自然な分離でクリーンアップ不要
   });
 
   test('初期状態でローディング中になる', async () => {
@@ -42,21 +63,29 @@ describe('useUserProfile フック', () => {
     // 【改善内容】: 非同期初期化処理を考慮したテスト設計
     // 🟢 テスト分析結果に基づく確実な修正
 
-    // 【テストデータ準備】: APIコール前の初期状態をシミュレート
-    // 【初期条件設定】: 永続的にpending状態を維持してローディング状態を確認
-    // 【改善点】: より確実なPending Promise作成
-    mockGetUserProfile.mockImplementation(() => new Promise(() => {})); // 永続的にpending
+    // 【DI分離データ】: 注入するモックサービスでの初期状態シミュレート
+    // 【DI初期条件】: DIモックでのpending状態維持
+    // 【DI完全制御】: 他テスト完全独立の確実なPending制御
+    testUserService.getUserProfile.mockImplementation(
+      () => new Promise(() => {}),
+    ); // 永続的にpending
 
-    // 【実際の処理実行】: useUserProfileフックの初期化
-    // 【処理内容】: フック呼び出しとAPI通信開始
-    const { result } = renderHook(() => useUserProfile());
+    // 【Context DI実行】: Context Provider経由でモックサービスを注入
+    // 【完全分離実行】: グローバル依存ゼロでのフック呼び出し
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <UserServiceProvider value={testUserService}>
+        {children}
+      </UserServiceProvider>
+    );
+
+    const { result } = renderHook(() => useUserProfile(), { wrapper });
 
     // 【非同期処理待機】: useEffect内での初期化処理が開始されるまで待機
     // 【改善内容】: 初期状態の確認タイミングを最適化
     await waitFor(() => {
       expect(result.current.loading).toBe(true); // 【確認内容】: 初期状態でローディング中であること 🟢
     });
-    
+
     expect(result.current.user).toBe(null); // 【確認内容】: 初期状態でユーザーデータがnullであること 🟢
     expect(result.current.error).toBe(null); // 【確認内容】: 初期状態でエラーがnullであること 🟢
     expect(typeof result.current.refetch).toBe('function'); // 【確認内容】: refetch関数が提供されていること 🟢
@@ -79,15 +108,21 @@ describe('useUserProfile フック', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    // 【改善点】: モック名を統一し、確実なレスポンス設定
-    mockGetUserProfile.mockResolvedValue(mockUser);
+    // 【DI改善実装】: DIモックでの確実なレスポンス設定
+    testUserService.getUserProfile.mockResolvedValue(mockUser);
 
-    // 【実際の処理実行】: useUserProfileフックの成功シナリオ実行
-    // 【処理内容】: API成功レスポンス処理の確認
-    const { result } = renderHook(() => useUserProfile());
+    // 【Context DI実行】: Context Provider経由でモックサービスを注入（成功ケース）
+    // 【完全分離処理】: グローバル依存ゼロでのAPI成功レスポンス処理確認
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <UserServiceProvider value={testUserService}>
+        {children}
+      </UserServiceProvider>
+    );
+
+    const { result } = renderHook(() => useUserProfile(), { wrapper });
 
     // 【結果検証】: API成功時の状態遷移確認
     // 【期待値確認】: 正常なデータ取得と状態更新
@@ -95,9 +130,11 @@ describe('useUserProfile フック', () => {
       expect(result.current.loading).toBe(false); // 【確認内容】: ローディング状態の終了確認 🟢
     });
 
+    // console.log('実際の取得値:', JSON.stringify(result.current.user, null, 2));
+    // console.log('期待値との一致:', JSON.stringify(mockUser) === JSON.stringify(result.current.user));
     expect(result.current.user).toEqual(mockUser); // 【確認内容】: 取得したユーザーデータが正確に設定されること 🟢
     expect(result.current.error).toBe(null); // 【確認内容】: エラー状態がクリアされること 🟢
-    expect(mockGetUserProfile).toHaveBeenCalledTimes(1); // 【確認内容】: userServiceが1回呼び出されること 🟢
+    expect(testUserService.getUserProfile).toHaveBeenCalledTimes(1); // 【確認内容】: userServiceが1回呼び出されること 🟢
   });
 
   test('API失敗時にエラー状態を正常設定', async () => {
@@ -109,12 +146,18 @@ describe('useUserProfile フック', () => {
     // 【テストデータ準備】: API エラーレスポンスをシミュレート
     // 【初期条件設定】: サーバーエラー（500）発生時の状態
     const mockError = new Error('プロフィール情報の取得に失敗しました');
-    // 【改善点】: エラーモック設定を統一し、確実なエラー処理テストを実行
-    mockGetUserProfile.mockRejectedValue(mockError);
+    // 【DI改善実装】: DIモックでの確実なエラー処理テスト実行
+    testUserService.getUserProfile.mockRejectedValue(mockError);
 
-    // 【実際の処理実行】: useUserProfileフックのエラーシナリオ実行
-    // 【処理内容】: API エラーレスポンス処理の確認
-    const { result } = renderHook(() => useUserProfile());
+    // 【Context DI実行】: Context Provider経由でモックサービスを注入（エラーケース）
+    // 【完全分離処理】: グローバル依存ゼロでのAPIエラーレスポンス処理確認
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <UserServiceProvider value={testUserService}>
+        {children}
+      </UserServiceProvider>
+    );
+
+    const { result } = renderHook(() => useUserProfile(), { wrapper });
 
     // 【結果検証】: API エラー時の状態遷移確認
     // 【期待値確認】: 適切なエラーハンドリングと状態更新
@@ -124,7 +167,7 @@ describe('useUserProfile フック', () => {
 
     expect(result.current.user).toBe(null); // 【確認内容】: エラー時はユーザーデータがnullであること 🟡
     expect(result.current.error).toEqual(mockError); // 【確認内容】: エラー情報が正確に設定されること 🟡
-    expect(mockGetUserProfile).toHaveBeenCalledTimes(1); // 【確認内容】: userServiceが1回呼び出されること 🟡
+    expect(testUserService.getUserProfile).toHaveBeenCalledTimes(1); // 【確認内容】: userServiceが1回呼び出されること 🟡
   });
 
   test('refetch関数による再取得機能', async () => {
@@ -144,24 +187,32 @@ describe('useUserProfile フック', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    // 【改善点】: より確実なrefetchテストのための段階的モック設定
+    // 【DI改善実装】: DIモックでの段階的refetchテスト設定
     // 初回は必ずエラー、2回目以降は成功データを返すよう設定
-    mockGetUserProfile.mockRejectedValueOnce(new Error('Network Error'));
+    testUserService.getUserProfile.mockRejectedValueOnce(
+      new Error('Network Error'),
+    );
 
-    // 【実際の処理実行】: useUserProfileフックのrefetch機能実行
-    // 【処理内容】: エラー発生後の再試行処理確認
-    const { result } = renderHook(() => useUserProfile());
+    // 【Context DI実行】: Context Provider経由でモックサービスを注入（refetchケース）
+    // 【完全分離処理】: グローバル依存ゼロでのエラー発生後の再試行処理確認
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <UserServiceProvider value={testUserService}>
+        {children}
+      </UserServiceProvider>
+    );
+
+    const { result } = renderHook(() => useUserProfile(), { wrapper });
 
     // 初回エラー確認
     await waitFor(() => {
       expect(result.current.error).toBeTruthy(); // 【確認内容】: 初回API呼び出しでエラー発生確認 🟡
     });
-    
-    // refetch用のモック成功設定を追加
-    mockGetUserProfile.mockResolvedValueOnce(mockUser);
+
+    // refetch用のDIモック成功設定を追加
+    testUserService.getUserProfile.mockResolvedValueOnce(mockUser);
 
     // refetch実行
     await result.current.refetch();
@@ -174,6 +225,6 @@ describe('useUserProfile フック', () => {
 
     expect(result.current.user).toEqual(mockUser); // 【確認内容】: refetch成功でユーザーデータが設定されること 🟡
     expect(result.current.error).toBe(null); // 【確認内容】: refetch成功でエラーがクリアされること 🟡
-    expect(mockGetUserProfile).toHaveBeenCalledTimes(2); // 【確認内容】: userServiceが2回（初回+refetch）呼び出されること 🟡
+    expect(testUserService.getUserProfile).toHaveBeenCalledTimes(2); // 【確認内容】: userServiceが2回（初回+refetch）呼び出されること 🟡
   });
 });

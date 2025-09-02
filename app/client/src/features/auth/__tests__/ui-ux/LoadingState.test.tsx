@@ -6,57 +6,17 @@
  * 【テスト目的】: プロダクション品質のユーザビリティとアクセシビリティ確保
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LoginButton } from '@/features/auth/components/LoginButton';
+import { createMockAuthService } from '@/features/auth/services/authService';
 
-// Supabase認証レスポンスの型定義
-interface SupabaseAuthResponse {
-  data: {
-    user?: {
-      id: string;
-      email?: string;
-    } | null;
-    session?: {
-      access_token: string;
-      user: {
-        id: string;
-        email?: string;
-      };
-    } | null;
-  };
-  error: Error | null;
-}
-
-// 【モック設定】: 認証処理の遅延をシミュレートするためのモック
-const mockSignInWithOAuth = mock(
-  () =>
-    Promise.resolve({ data: {}, error: null }) as Promise<SupabaseAuthResponse>,
-);
-
-// Supabaseクライアントのモック化 - Bun標準テスト環境対応
-mock.module('@/lib/supabase', () => ({
-  supabase: {
-    auth: {
-      signInWithOAuth: mockSignInWithOAuth,
-    },
-  },
-}));
+// 【DI実装】: グローバルモックを排除し、テスト分離を実現
 
 describe('LoginButton ローディング状態管理', () => {
-  beforeEach(() => {
-    // 【テスト前準備】: 各テスト実行前にモックをリセットし、一貫したテスト条件を保証
-    // 【環境初期化】: 前のテストの認証状態やモックの影響を受けないよう初期化
-    mockSignInWithOAuth.mockClear();
-  });
-
-  afterEach(() => {
-    // 【テスト後処理】: タイマーやPending状態をクリーンアップ
-    // 【状態復元】: 次のテストに影響しないよう非同期処理を適切に終了
-    // Bunではタイマー管理は自動的に処理されるため、明示的なクリーンアップは不要
-  });
+  // 【DI分離環境】: グローバルモックを使用しないため、セットアップ処理が不要
 
   test('認証処理中のローディングUI表示と操作制御確認', async () => {
     // 【テスト目的】: 認証開始から完了までのローディング状態での適切なUI制御確認
@@ -64,16 +24,16 @@ describe('LoginButton ローディング状態管理', () => {
     // 【期待される動作】: 処理中は操作を無効化し、視覚的フィードバックを提供する
     // 🟢 信頼性レベル: REQ-UI-001要件と既存実装から直接抽出
 
-    // 【テストデータ準備】: 3秒間の遅延をシミュレートして実際のGoogle OAuth処理時間を模擬
-    // 【初期条件設定】: 認証処理が開始されるがまだ完了していない状態を作成
-    const delayedPromise = new Promise<SupabaseAuthResponse>((resolve) => {
-      setTimeout(() => resolve({ data: {}, error: null }), 3000);
+    // 【DIモック準備】: 3秒間の遅延をシミュレートして実際のGoogle OAuth処理時間を模擬
+    // 【独立テスト環境】: 他のテストに影響しない完全分離されたモック環境
+    const mockAuthService = createMockAuthService({
+      shouldSucceed: true,
+      delay: 3000,
     });
-    mockSignInWithOAuth.mockImplementation(() => delayedPromise);
 
-    // 【実際の処理実行】: LoginButtonコンポーネントをレンダリングし、Google認証を開始
+    // 【実際の処理実行】: DIパターンでモックサービスを注入してLoginButtonをレンダリング
     // 【処理内容】: プロバイダー選択（Google）でログインボタンを表示
-    render(<LoginButton provider="google" />);
+    render(<LoginButton provider="google" authService={mockAuthService} />);
 
     const loginButton = screen.getByRole('button', {
       name: 'Googleでログイン',
@@ -121,16 +81,16 @@ describe('LoginButton ローディング状態管理', () => {
     // 【期待される動作】: 2回目のクリックを無視し、処理は1回のみ実行される
     // 🟡 信頼性レベル: EDGE-UI-001から妥当な実装推測
 
-    // 【テストデータ準備】: 処理完了まで十分な時間を確保（重複実行検証のため）
-    // 【初期条件設定】: 認証処理中の状態を継続してダブルクリックをテスト
-    const delayedPromise = new Promise<SupabaseAuthResponse>((resolve) => {
-      setTimeout(() => resolve({ data: {}, error: null }), 1000);
+    // 【DIモック準備】: 処理完了まで十分な時間を確保（重複実行検証のため）
+    // 【独立テスト環境】: 認証処理中の状態を継続してダブルクリックをテスト  
+    const mockAuthService = createMockAuthService({
+      shouldSucceed: true,
+      delay: 1000,
     });
-    mockSignInWithOAuth.mockImplementation(() => delayedPromise);
 
-    // 【実際の処理実行】: コンポーネントレンダリングと連続クリック実行
+    // 【実際の処理実行】: DIパターンでコンポーネントレンダリングと連続クリック実行
     // 【処理内容】: 短時間内（0.3秒）で2回クリックして重複実行を試行
-    render(<LoginButton provider="google" />);
+    render(<LoginButton provider="google" authService={mockAuthService} />);
 
     const loginButton = screen.getByRole('button', {
       name: 'Googleでログイン',
@@ -147,7 +107,7 @@ describe('LoginButton ローディング状態管理', () => {
 
     // 【結果検証】: 認証処理が1回のみ実行されることを確認
     // 【期待値確認】: システム負荷軽減とユーザー混乱防止の効果を検証
-    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1); // 【確認内容】: 認証処理が重複実行されていないことを確認 🟡
+    expect(mockAuthService.mockSignInWithOAuth).toHaveBeenCalledTimes(1); // 【確認内容】: 認証処理が重複実行されていないことを確認 🟡
 
     // 【品質保証】: 処理重複による不正な認証状態やシステム負荷を防止
   });

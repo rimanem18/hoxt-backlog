@@ -1,28 +1,32 @@
-import { afterEach, beforeEach, describe, expect, test, mock } from 'bun:test';
-import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { User } from '@/packages/shared-schemas/src/auth';
 import { UserProfile } from '../components/UserProfile';
+import { UserServiceProvider } from '../contexts/UserServiceContext';
+import type { UserServiceInterface } from '../services/userService';
 
-// まだ実装されていないフックとサービスのモック
-const mockUseUserProfile = mock();
-const mockUserService = mock();
+// 【Context DI用モック】: UserServiceモックのみを保持、useUserProfileは実物を使用
+let mockUserService: UserServiceInterface;
 
-// モック設定
-mock.module('../hooks/useUserProfile', () => ({
-  useUserProfile: mockUseUserProfile,
-}));
-
-mock.module('../services/userService', () => ({
-  userService: mockUserService,
-}));
+// 【Context DI移行】: mock.module()を廃止しContext経由でDIを実現
+// 【独立性向上】: グローバルモック汚染を根本解決
 
 describe('TASK-302: ユーザープロフィール表示実装', () => {
   beforeEach(() => {
-    // 【テスト前準備】: 各テストで独立した環境を構築し状態汚染を防止
-    // 【環境初期化】: モック状態のリセットとDOMの初期化
-    mockUseUserProfile.mockReset();
-    mockUserService.mockReset();
+    // 【Context DI環境構築】: 各テスト用の独立 UserService モック作成
+    // 【完全分離保証】: グローバル状態に一切依存しない独立環境
+    const mockGetUserProfile = mock().mockName(`userprofile-test-${Date.now()}`);
+    
+    mockUserService = {
+      getUserProfile: mockGetUserProfile,
+    };
   });
 
   afterEach(() => {
@@ -50,29 +54,33 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    mockUseUserProfile.mockReturnValue({
-      user: mockUser,
-      loading: false,
-      error: null,
-      refetch: mock()
+    // 【Context DI設定】: UserServiceモックで成功レスポンスを返すよう設定
+    mockUserService.getUserProfile.mockResolvedValue(mockUser);
+
+    // 【Context DI実行】: UserServiceProvider経由でモックサービスを注入
+    // 【完全分離処理】: グローバル依存ゼロでのコンポーネントテスト
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
+
+    // 【非同期待機】: Context DI経由でのuseUserProfileのデータ取得完了を待つ
+    // 【Context DI対応】: 実際のフックが非同期でモックデータを取得するまで待機
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 2, name: '山田太郎' }),
+      ).toBeTruthy(); // 【確認内容】: 名前が適切なh2見出しで表示されること 🟢
     });
-
-    // 【実際の処理実行】: UserProfileコンポーネントのレンダリング実行
-    // 【処理内容】: プロフィール情報の取得・表示・エラーハンドリングの一連の流れ
-    render(<UserProfile />);
-
-    // 【結果検証】: 表示内容・アクセシビリティ・レスポンシブ対応の包括的確認
-    // 【期待値確認】: チェックリスト要件に対する完全な適合性検証
-    expect(screen.getByRole('heading', { level: 2, name: '山田太郎' })).toBeTruthy(); // 【確認内容】: 名前が適切なh2見出しで表示されること 🟢
     expect(screen.getByText('user@example.com')).toBeTruthy(); // 【確認内容】: メールアドレスが正確に表示されること 🟢
-    
+
     const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
     expect(avatarImage).toBeTruthy(); // 【確認内容】: アバター画像が適切なalt属性で表示されること 🟢
     expect(avatarImage.getAttribute('width')).toBe('64'); // 【確認内容】: アバター画像のサイズが仕様通り64x64pxであること 🟢
-    
+
     expect(screen.getByText(/2025年9月1日.*19:30/)).toBeTruthy(); // 【確認内容】: 最終ログイン日時の日本語ローカライズ表示確認 🟢
   });
 
@@ -88,7 +96,7 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       user: null,
       loading: true,
       error: null,
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: ローディング状態でのUserProfileコンポーネントレンダリング
@@ -121,14 +129,14 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
     mockUseUserProfile.mockReturnValue({
       user: mockUser,
       loading: false,
       error: null,
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: レスポンシブ表示の確認
@@ -139,7 +147,7 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     // 【期待値確認】: 各サイズで適切な余白・フォントサイズ・レイアウト
     const container = screen.getByTestId('user-profile-container');
     expect(container).toHaveClass('responsive-container'); // 【確認内容】: レスポンシブコンテナクラスの適用確認 🟢
-    
+
     const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
     expect(avatarImage).toHaveClass('responsive-avatar'); // 【確認内容】: レスポンシブアバタークラスの適用確認 🟢
   });
@@ -159,7 +167,7 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       user: null,
       loading: false,
       error: { message: 'プロフィール情報の取得に失敗しました', status: 500 },
-      refetch: mockRefetch
+      refetch: mockRefetch,
     });
 
     // 【実際の処理実行】: エラー状態でのコンポーネントレンダリング
@@ -169,8 +177,10 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     // 【結果検証】: エラー表示とユーザビリティの確認
     // 【期待値確認】: 品質保証の観点でユーザーが迷わず復旧できるUX設計
     expect(screen.getByRole('alert')).toBeTruthy(); // 【確認内容】: エラー状態のaria-role="alert"設定確認 🟡
-    expect(screen.getByText('プロフィール情報の取得に失敗しました')).toBeTruthy(); // 【確認内容】: 技術的詳細を隠した分かりやすい日本語エラーメッセージ 🟡
-    
+    expect(
+      screen.getByText('プロフィール情報の取得に失敗しました'),
+    ).toBeTruthy(); // 【確認内容】: 技術的詳細を隠した分かりやすい日本語エラーメッセージ 🟡
+
     const retryButton = screen.getByRole('button', { name: /再試行/i });
     expect(retryButton).toBeTruthy(); // 【確認内容】: 再試行ボタンの表示確認 🟡
 
@@ -194,8 +204,11 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     mockUseUserProfile.mockReturnValue({
       user: null,
       loading: false,
-      error: { message: '認証が必要です。再度ログインしてください', status: 401 },
-      refetch: mock()
+      error: {
+        message: '認証が必要です。再度ログインしてください',
+        status: 401,
+      },
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: 認証エラー状態でのコンポーネントレンダリング
@@ -205,8 +218,12 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     // 【結果検証】: セキュリティとユーザビリティの適切なバランス
     // 【期待値確認】: 不正アクセス防止、適切な状態遷移
     expect(screen.getByRole('alert')).toBeTruthy(); // 【確認内容】: 認証エラーアラートの表示確認 🟢
-    expect(screen.getByText('認証が必要です。再度ログインしてください')).toBeTruthy(); // 【確認内容】: セキュリティを保ちつつユーザーフレンドリーなメッセージ 🟢
-    expect(screen.getByRole('link', { name: /ログインページへ/i })).toBeTruthy(); // 【確認内容】: ログインページへの誘導リンク表示 🟢
+    expect(
+      screen.getByText('認証が必要です。再度ログインしてください'),
+    ).toBeTruthy(); // 【確認内容】: セキュリティを保ちつつユーザーフレンドリーなメッセージ 🟢
+    expect(
+      screen.getByRole('link', { name: /ログインページへ/i }),
+    ).toBeTruthy(); // 【確認内容】: ログインページへの誘導リンク表示 🟢
   });
 
   test('2-3. ネットワーク接続不良時のエラー処理', () => {
@@ -221,7 +238,7 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       user: null,
       loading: false,
       error: { message: 'インターネット接続を確認してください', status: 0 },
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: ネットワークエラー状態でのコンポーネントレンダリング
@@ -231,7 +248,9 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     // 【結果検証】: モバイル環境での安定性確保
     // 【期待値確認】: グレースフル・デグラデーション対応
     expect(screen.getByRole('alert')).toBeTruthy(); // 【確認内容】: ネットワークエラーアラートの表示確認 🟡
-    expect(screen.getByText('インターネット接続を確認してください')).toBeTruthy(); // 【確認内容】: 技術的でないユーザー向けエラーメッセージ 🟡
+    expect(
+      screen.getByText('インターネット接続を確認してください'),
+    ).toBeTruthy(); // 【確認内容】: 技術的でないユーザー向けエラーメッセージ 🟡
     expect(screen.getByTestId('offline-indicator')).toBeTruthy(); // 【確認内容】: オフライン状態の視覚的表示 🟡
   });
 
@@ -254,14 +273,14 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
     mockUseUserProfile.mockReturnValue({
       user: longNameUser,
       loading: false,
       error: null,
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: 長い名前でのコンポーネントレンダリング
@@ -292,14 +311,14 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       avatarUrl: 'https://invalid-url.example.com/404.jpg',
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-09-01T10:30:00.000Z'
+      lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
     mockUseUserProfile.mockReturnValue({
       user: userWithInvalidAvatar,
       loading: false,
       error: null,
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: 無効画像URLでのコンポーネントレンダリング
@@ -309,16 +328,16 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     // 【結果検証】: 外部リソース依存での安定性確保
     // 【期待値確認】: エラー状態での確実な代替表示
     const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
-    
+
     // 【画像エラー発生シミュレーション】: onErrorイベントを手動で発火
     // 【テスト手法】: 実際の画像読み込みエラーをシミュレート
     fireEvent.error(avatarImage);
-    
+
     // 画像読み込み失敗を待機
     await waitFor(() => {
       expect(avatarImage.getAttribute('src')).toContain('default-avatar.png'); // 【確認内容】: デフォルト画像への自動フォールバック確認 🟢
     });
-    
+
     expect(avatarImage.getAttribute('alt')).toBe('プロフィール画像'); // 【確認内容】: 適切なalt属性の設定確認 🟢
   });
 
@@ -339,14 +358,14 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       avatarUrl: null, // 境界値：アバター未設定
       createdAt: '2025-08-29T10:30:00.000Z',
       updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: null // 境界値：初回ログイン時
+      lastLoginAt: null, // 境界値：初回ログイン時
     };
 
     mockUseUserProfile.mockReturnValue({
       user: incompleteUser,
       loading: false,
       error: null,
-      refetch: mock()
+      refetch: mock(),
     });
 
     // 【実際の処理実行】: 不完全データでのコンポーネントレンダリング
@@ -358,7 +377,7 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
     expect(screen.getByText('山田太郎')).toBeTruthy(); // 【確認内容】: 必須フィールドの正常表示確認 🟡
     expect(screen.getByText('user@example.com')).toBeTruthy(); // 【確認内容】: メールアドレスの正常表示確認 🟡
     expect(screen.getByText(/初回ログインです/)).toBeTruthy(); // 【確認内容】: 最終ログイン日時欄に初回ログインメッセージ表示 🟡
-    
+
     const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
     expect(avatarImage.getAttribute('src')).toContain('default-avatar.png'); // 【確認内容】: デフォルトアバター画像の表示確認 🟡
   });

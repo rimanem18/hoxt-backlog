@@ -23,7 +23,7 @@ name: rima-lite-implement
 
 2. `docker compose exec {コンテナサービス名} bun run fix` でフォーマットします。問題があれば修正します。
 
-3. コーディングが終わったら、 architecture-quality-reviewer を使用し、問題がないか確認します。
+3. コーディングが終わったら、 architecture-quality-code-reviewer を使用し、問題がないか確認します。
 
 4. レビューによって品質やセキュリティに問題が見つかったか？
   - Yes

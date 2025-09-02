@@ -1,308 +1,131 @@
 /**
- * 認証サービスの抽象化層。
- * Factory PatternとStrategy Patternで複数の認証プロバイダーを統一管理する。
+ * 認証サービスの抽象化インターフェースとDI実装
+ * DIパターンによりテスト分離を実現し、supabaseへの直接依存を排除
  */
 
-import type { User } from '@/packages/shared-schemas/src/auth';
-import type {
-  AuthProviderInterface,
-  AuthResult,
-  SessionInfo,
-} from './providers/authProviderInterface';
-import { GoogleAuthProvider } from './providers/googleAuthProvider';
+import { supabase } from '@/lib/supabase';
+import type { Provider } from '@supabase/supabase-js';
+import { mock, type Mock } from 'bun:test';
 
 /**
- * 認証サービス設定の型定義
+ * OAuth認証レスポンスの型定義
  */
-interface AuthServiceConfig {
-  /** デフォルトプロバイダー名 */
-  defaultProvider: string;
-  /** 利用可能プロバイダーのリスト */
-  availableProviders: string[];
-  /** 認証後のリダイレクトURL */
+export interface AuthResponse {
+  data: {
+    user?: {
+      id: string;
+      email?: string;
+    } | null;
+    session?: {
+      access_token: string;
+      user: {
+        id: string;
+        email?: string;
+      };
+    } | null;
+  };
+  error: Error | null;
+}
+
+/**
+ * OAuth認証オプションの型定義
+ */
+export interface AuthOptions {
   redirectTo?: string;
 }
 
+// TODO(human): AuthServiceInterfaceを定義してください
+// signInWithOAuthメソッドを含む型安全なインターフェースを実装し、
+// デフォルト実装とモック用のファクトリー関数も作成してください
+
 /**
- * プロバイダー切り替え結果の型定義
+ * 認証サービスインターフェース
+ * テスト時の依存性注入とモック化を可能にする
  */
-interface ProviderSwitchResult {
-  /** 切り替え成功フラグ */
-  success: boolean;
-  /** 切り替え前のプロバイダー名 */
-  previousProvider: string;
-  /** 切り替え後のプロバイダー名 */
-  currentProvider: string;
-  /** エラー情報 */
-  error?: string;
+export interface AuthServiceInterface {
+  /**
+   * OAuth認証を開始する
+   * @param provider - 認証プロバイダー（google, github等）
+   * @param options - 認証オプション（redirectTo等）
+   * @returns 認証結果のPromise
+   */
+  signInWithOAuth(
+    provider: Provider,
+    options?: AuthOptions
+  ): Promise<AuthResponse>;
 }
 
 /**
- * 認証プロバイダーの抽象化層。
- * Factory PatternとStrategy Patternで柔軟な認証システムを実現する。
- *
- * @example
- * ```typescript
- * const authService = new AuthService({ defaultProvider: 'google' });
- * const result = await authService.signIn();
- * ```
+ * デフォルトの認証サービス実装（Supabase使用）
  */
-export class AuthService {
-  private providers: Map<string, AuthProviderInterface> = new Map();
-  private currentProvider: AuthProviderInterface;
-  private config: AuthServiceConfig;
-
-  /**
-   * AuthServiceを初期化する
-   * @param config - 認証サービス設定またはプロバイダーインスタンス
-   */
-  constructor(config?: Partial<AuthServiceConfig> | AuthProviderInterface) {
-    // テスト用にプロバイダーを直接渡せるように対応
-    if (config && typeof config === 'object' && 'signIn' in config) {
-      // プロバイダーインスタンスが渡された場合
-      const provider = config as AuthProviderInterface;
-      this.config = {
-        defaultProvider: 'test',
-        availableProviders: ['test'],
-        redirectTo: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-      };
-      this.providers.set('test', provider);
-      this.currentProvider = provider;
-      return;
-    }
-
-    // 合理的なデフォルト値を設定
-    this.config = {
-      defaultProvider: 'google',
-      availableProviders: ['google'],
-      redirectTo:
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (typeof window !== 'undefined'
-          ? window.location.origin
-          : 'http://localhost:3000'),
-      ...(config as Partial<AuthServiceConfig>),
-    };
-
-    // 利用可能なプロバイダーを登録
-    this.initializeProviders();
-
-    // 初期プロバイダーを設定
-    const defaultProvider = this.providers.get(this.config.defaultProvider);
-    if (!defaultProvider) {
-      throw new Error(
-        `Default provider '${this.config.defaultProvider}' not found`,
-      );
-    }
-    this.currentProvider = defaultProvider;
-  }
-
-  /**
-   * 利用可能な認証プロバイダーを登録する
-   * 新しいプロバイダーの追加が容易な設計。
-   */
-  private initializeProviders(): void {
-    // Google OAuth実装を登録
-    if (this.config.availableProviders.includes('google')) {
-      this.providers.set('google', new GoogleAuthProvider());
-    }
-
-    // 将来のApple・Microsoft等の追加予定地点
-    // if (this.config.availableProviders.includes('apple')) {
-    //   this.providers.set('apple', new AppleAuthProvider());
-    // }
-
-    // if (this.config.availableProviders.includes('microsoft')) {
-    //   this.providers.set('microsoft', new MicrosoftAuthProvider());
-    // }
-  }
-
-  /**
-   * 認証フローを開始する
-   * @param provider - 使用するプロバイダー名（未指定時は現在のプロバイダー）
-   * @param options - 認証オプション
-   * @returns 認証結果
-   */
-  async signIn(
-    provider?: string,
-    options?: { redirectTo?: string },
-  ): Promise<AuthResult> {
-    try {
-      // 指定があれば一時的にプロバイダーを切り替え
-      const targetProvider = provider
-        ? this.providers.get(provider) || this.currentProvider
-        : this.currentProvider;
-
-      if (!targetProvider) {
-        return {
-          success: false,
-          error: `Provider '${provider}' not found`,
-          provider: provider || 'unknown',
-        };
-      }
-
-      // プロバイダー非依存の認証を開始
-      return await targetProvider.signIn({
-        redirectTo: options?.redirectTo || this.config.redirectTo,
+export const createDefaultAuthService = (): AuthServiceInterface => {
+  return {
+    async signInWithOAuth(provider: Provider, options?: AuthOptions): Promise<AuthResponse> {
+      // Supabaseの実際のsignInWithOAuthを呼び出し
+      const response = await supabase.auth.signInWithOAuth({
+        provider,
+        options,
       });
-    } catch (error) {
+      
+      // Supabase OAuthはリダイレクトURLを返すのみでuser/sessionは後でコールバックで取得
       return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Authentication failed',
-        provider: provider || this.currentProvider.getProviderName(),
+        data: {
+          user: null, // OAuthフローではコールバック後に取得
+          session: null, // OAuthフローではコールバック後に取得
+        },
+        error: response.error,
       };
-    }
-  }
+    },
+  };
+};
 
-  /**
-   * ログアウトを実行する
-   * @returns ログアウト結果
-   */
-  async signOut(): Promise<AuthResult> {
-    try {
-      return await this.currentProvider.signOut();
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Sign out failed',
-        provider: this.currentProvider.getProviderName(),
-      };
-    }
-  }
-
-  /**
-   * ユーザー情報を取得する
-   * @returns ユーザー情報
-   */
-  async getUser(): Promise<{ user: User | null }> {
-    try {
-      return await this.currentProvider.getUser();
-    } catch (error) {
-      console.error('Get user error:', error);
-      return { user: null };
-    }
-  }
-
-  /**
-   * セッション情報を取得する
-   * @returns セッション情報
-   */
-  async getSession(): Promise<SessionInfo | null> {
-    try {
-      return await this.currentProvider.getSession();
-    } catch (error) {
-      console.error('Get session error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * 現在のセッション情報を取得する（セッション復元用）
-   * @returns 現在のセッション情報
-   */
-  async getCurrentSession(): Promise<SessionInfo | null> {
-    return this.getSession();
-  }
-
-  /**
-   * 認証プロバイダーを切り替える
-   * @param providerName - 切り替え先プロバイダー名
-   * @returns プロバイダー切り替え結果
-   */
-  switchProvider(providerName: string): ProviderSwitchResult {
-    const previousProvider = this.currentProvider.getProviderName();
-    const newProvider = this.providers.get(providerName);
-
-    if (!newProvider) {
-      return {
-        success: false,
-        previousProvider,
-        currentProvider: previousProvider,
-        error: `Provider '${providerName}' not found`,
-      };
-    }
-
-    this.currentProvider = newProvider;
-
-    return {
-      success: true,
-      previousProvider,
-      currentProvider: providerName,
-    };
-  }
-
-  /**
-   * 利用可能な認証プロバイダーのリストを取得する
-   * @returns 利用可能プロバイダー名のリスト
-   */
-  getAvailableProviders(): string[] {
-    return Array.from(this.providers.keys());
-  }
-
-  /**
-   * 現在のプロバイダー名を取得する
-   * @returns 現在のプロバイダー名
-   */
-  getCurrentProviderName(): string {
-    return this.currentProvider.getProviderName();
-  }
-
-  /**
-   * 新しい認証プロバイダーを登録する
-   * プラグイン的なプロバイダー追加を支援する。
-   * @param name - プロバイダー名
-   * @param provider - プロバイダー実装インスタンス
-   * @returns 登録成功フラグ
-   */
-  registerProvider(name: string, provider: AuthProviderInterface): boolean {
-    try {
-      this.providers.set(name, provider);
-
-      // 利用可能プロバイダーリストに追加
-      if (!this.config.availableProviders.includes(name)) {
-        this.config.availableProviders.push(name);
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Failed to register provider '${name}':`, error);
-      return false;
-    }
-  }
-
-  /**
-   * 現在の認証サービス設定を取得する
-   * @returns 現在の設定情報（変更から保護されたコピー）
-   */
-  getConfig(): AuthServiceConfig {
-    return { ...this.config };
-  }
-
-  /**
-   * 認証サービス設定を更新する
-   * @param newConfig - 新しい設定情報
-   * @returns 設定更新成功フラグ
-   */
-  updateConfig(newConfig: Partial<AuthServiceConfig>): boolean {
-    try {
-      this.config = { ...this.config, ...newConfig };
-
-      // 設定変更に応じて利用可能プロバイダーを更新
-      if (newConfig.availableProviders) {
-        this.initializeProviders();
-      }
-
-      // 必要に応じてプロバイダーを切り替え
-      if (
-        newConfig.defaultProvider &&
-        this.providers.has(newConfig.defaultProvider)
-      ) {
-        this.switchProvider(newConfig.defaultProvider);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to update config:', error);
-      return false;
-    }
-  }
+/**
+ * テスト用モック認証サービス（呼び出し回数チェック付き）
+ */
+export interface MockAuthService extends AuthServiceInterface {
+  /** モック関数（呼び出し回数確認用） */
+  mockSignInWithOAuth: import('bun:test').Mock<(provider: Provider, options?: AuthOptions) => Promise<AuthResponse>>;
 }
+
+/**
+ * テスト用モック認証サービスファクトリー
+ */
+export const createMockAuthService = (config?: {
+  shouldSucceed?: boolean;
+  delay?: number;
+  mockError?: string;
+}): MockAuthService => {
+  const { shouldSucceed = true, delay = 0, mockError } = config ?? {};
+
+  const mockSignInWithOAuth = mock(async (): Promise<AuthResponse> => {
+    // 遅延をシミュレート
+    if (delay > 0) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    // エラーケースのシミュレート
+    if (!shouldSucceed) {
+      return {
+        data: { user: null, session: null },
+        error: new Error(mockError || 'Mock authentication failed'),
+      };
+    }
+
+    // 成功ケースのシミュレート
+    return {
+      data: { user: null, session: null },
+      error: null,
+    };
+  });
+
+  return {
+    signInWithOAuth: mockSignInWithOAuth,
+    mockSignInWithOAuth,
+  };
+};
+
+/**
+ * デフォルトの認証サービスインスタンス
+ * 通常の使用時はこれを使用
+ */
+export const defaultAuthService = createDefaultAuthService();
