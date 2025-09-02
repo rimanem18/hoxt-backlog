@@ -6,12 +6,12 @@
  * 【テスト目的】: プロダクション品質のユーザビリティとアクセシビリティ確保
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { LoginButton } from '@/features/auth/components/LoginButton';
-import { createMockAuthService } from '@/features/auth/services/authService';
+import { createMockAuthService } from '@/features/auth/services/__tests__/mockAuthService';
 
 // 【DI実装】: グローバルモックを排除し、テスト分離を実現
 
@@ -82,7 +82,7 @@ describe('LoginButton ローディング状態管理', () => {
     // 🟡 信頼性レベル: EDGE-UI-001から妥当な実装推測
 
     // 【DIモック準備】: 処理完了まで十分な時間を確保（重複実行検証のため）
-    // 【独立テスト環境】: 認証処理中の状態を継続してダブルクリックをテスト  
+    // 【独立テスト環境】: 認証処理中の状態を継続してダブルクリックをテスト
     const mockAuthService = createMockAuthService({
       shouldSucceed: true,
       delay: 1000,

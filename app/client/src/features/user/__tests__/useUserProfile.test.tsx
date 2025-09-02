@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test, type Mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { User } from '@/packages/shared-schemas/src/auth';
@@ -17,7 +17,6 @@ import type { User } from '@/packages/shared-schemas/src/auth';
  * - 完全な状態分離によるクリーンテスト
  */
 
-
 /**
  * 【DI完全解決】: 依存性注入による確実なテスト分離実装
  *
@@ -27,9 +26,9 @@ import type { User } from '@/packages/shared-schemas/src/auth';
  * - 他のテストファイルとの干渉を根本的に排除
  */
 
+import { UserServiceProvider } from '../contexts/UserServiceContext';
 // 【Context DI実装】: グローバル依存を完全排除したモジュールインポート
 import { useUserProfile } from '../hooks/useUserProfile';
-import { UserServiceProvider } from '../contexts/UserServiceContext';
 import type { UserServiceInterface } from '../services/userService';
 
 // 【テストスコープ変数】: describe内で共有するtestUserService変数

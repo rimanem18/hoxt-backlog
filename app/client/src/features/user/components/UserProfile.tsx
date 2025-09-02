@@ -68,7 +68,7 @@ const truncateUserName = (name: string): string => {
   }
 
   // 【省略処理】: 51文字以上の場合は47文字+"..."で省略表示
-  return sanitizedName.substring(0, 47) + '...'; // 【省略表示】: セキュリティ対応済みEDGE-101準拠ルール 🟢
+  return `${sanitizedName.substring(0, 47)}...`; // 【省略表示】: セキュリティ対応済みEDGE-101準拠ルール 🟢
 };
 
 /**
@@ -83,11 +83,11 @@ export const UserProfile: React.FC = memo(() => {
   // 【フック活用】: useUserProfileフックからプロフィール情報と状態を取得
   // 【状態管理】: ローディング・エラー・ユーザーデータの3つの状態を管理
   const { user, loading, error, refetch } = useUserProfile(); // 🟢 実装済みフックとの連携
-  
+
   // 【Hooks Rules準拠】: 条件分岐外でのuseState呼び出し（Rules of Hooks違反修正）
   // 【画像フォールバック設定】: 無効画像URLへのデフォルト画像対応
   const [avatarSrc, setAvatarSrc] = useState('/default-avatar.png');
-  
+
   // 【パフォーマンス最適化】: 画像エラー時のフォールバック処理を最適化
   // 【メモ化】: setAvatarSrc関数が同じ場合は再作成を避ける
   const handleImageError = useCallback(() => {
@@ -167,7 +167,6 @@ export const UserProfile: React.FC = memo(() => {
             <div className="mt-4">
               <a
                 href="/login"
-                role="link"
                 className="text-blue-500 hover:text-blue-700 underline"
               >
                 ログインページへ
@@ -201,7 +200,6 @@ export const UserProfile: React.FC = memo(() => {
     if (avatarSrc === '/default-avatar.png' && user.avatarUrl) {
       setAvatarSrc(user.avatarUrl);
     } // 【境界値対応】: null・無効URL時のフォールバック 🟢
-
 
     // 【最終ログイン日時処理】: null値の適切な処理と表示メッセージ生成
     const lastLoginDisplay = user.lastLoginAt

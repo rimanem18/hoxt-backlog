@@ -10,15 +10,14 @@
  * - React Context APIを使用したDIコンテナパターン
  * - カスタムフック（useUserService）による型安全なサービスアクセス
  */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 import {
-  userService,
   type UserServiceInterface,
+  userService,
 } from '../services/userService';
 
 // 1. Contextの作成（デフォルト値として本番サービスを設定）
-const UserServiceContext =
-  createContext<UserServiceInterface>(userService);
+const UserServiceContext = createContext<UserServiceInterface>(userService);
 
 // 2. Contextからサービスを取得するためのカスタムフック
 /**
@@ -34,13 +33,6 @@ interface UserServiceProviderProps {
   children: ReactNode;
   /** DIするUserServiceのインスタンス（テスト時に使用） */
   value?: UserServiceInterface;
-}
-
-// テスト用の明示的な型定義
-interface TestUserServiceProviderProps {
-  children: ReactNode;
-  /** テスト用DIサービス（必須） */
-  value: UserServiceInterface;
 }
 
 /**

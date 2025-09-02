@@ -3,9 +3,8 @@
  * DIパターンによりテスト分離を実現し、supabaseへの直接依存を排除
  */
 
-import { supabase } from '@/lib/supabase';
 import type { Provider } from '@supabase/supabase-js';
-import { mock, type Mock } from 'bun:test';
+import { supabase } from '@/lib/supabase';
 
 /**
  * OAuth認証レスポンスの型定義
@@ -51,7 +50,7 @@ export interface AuthServiceInterface {
    */
   signInWithOAuth(
     provider: Provider,
-    options?: AuthOptions
+    options?: AuthOptions,
   ): Promise<AuthResponse>;
 }
 
@@ -60,13 +59,16 @@ export interface AuthServiceInterface {
  */
 export const createDefaultAuthService = (): AuthServiceInterface => {
   return {
-    async signInWithOAuth(provider: Provider, options?: AuthOptions): Promise<AuthResponse> {
+    async signInWithOAuth(
+      provider: Provider,
+      options?: AuthOptions,
+    ): Promise<AuthResponse> {
       // Supabaseの実際のsignInWithOAuthを呼び出し
       const response = await supabase.auth.signInWithOAuth({
         provider,
         options,
       });
-      
+
       // Supabase OAuthはリダイレクトURLを返すのみでuser/sessionは後でコールバックで取得
       return {
         data: {
@@ -76,51 +78,6 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
         error: response.error,
       };
     },
-  };
-};
-
-/**
- * テスト用モック認証サービス（呼び出し回数チェック付き）
- */
-export interface MockAuthService extends AuthServiceInterface {
-  /** モック関数（呼び出し回数確認用） */
-  mockSignInWithOAuth: import('bun:test').Mock<(provider: Provider, options?: AuthOptions) => Promise<AuthResponse>>;
-}
-
-/**
- * テスト用モック認証サービスファクトリー
- */
-export const createMockAuthService = (config?: {
-  shouldSucceed?: boolean;
-  delay?: number;
-  mockError?: string;
-}): MockAuthService => {
-  const { shouldSucceed = true, delay = 0, mockError } = config ?? {};
-
-  const mockSignInWithOAuth = mock(async (): Promise<AuthResponse> => {
-    // 遅延をシミュレート
-    if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-
-    // エラーケースのシミュレート
-    if (!shouldSucceed) {
-      return {
-        data: { user: null, session: null },
-        error: new Error(mockError || 'Mock authentication failed'),
-      };
-    }
-
-    // 成功ケースのシミュレート
-    return {
-      data: { user: null, session: null },
-      error: null,
-    };
-  });
-
-  return {
-    signInWithOAuth: mockSignInWithOAuth,
-    mockSignInWithOAuth,
   };
 };
 

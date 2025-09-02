@@ -22,8 +22,10 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
   beforeEach(() => {
     // 【Context DI環境構築】: 各テスト用の独立 UserService モック作成
     // 【完全分離保証】: グローバル状態に一切依存しない独立環境
-    const mockGetUserProfile = mock().mockName(`userprofile-test-${Date.now()}`);
-    
+    const mockGetUserProfile = mock().mockName(
+      `userprofile-test-${Date.now()}`,
+    );
+
     mockUserService = {
       getUserProfile: mockGetUserProfile,
     };
@@ -92,16 +94,18 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
 
     // 【テストデータ準備】: API呼び出し中の非同期状態をシミュレート
     // 【初期条件設定】: loading: true状態のuseUserProfileフック
-    mockUseUserProfile.mockReturnValue({
-      user: null,
-      loading: true,
-      error: null,
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceで遅延をシミュレート
+    mockUserService.getUserProfile.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockUser), 1000)),
+    );
 
     // 【実際の処理実行】: ローディング状態でのUserProfileコンポーネントレンダリング
     // 【処理内容】: スケルトンUI表示処理の確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: スケルトンUI表示とアクセシビリティの確認
     // 【期待値確認】: ユーザビリティ向上、体感パフォーマンス改善の確認
@@ -132,16 +136,16 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    mockUseUserProfile.mockReturnValue({
-      user: mockUser,
-      loading: false,
-      error: null,
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceモックで成功レスポンスを返すよう設定
+    mockUserService.getUserProfile.mockResolvedValue(mockUser);
 
-    // 【実際の処理実行】: レスポンシブ表示の確認
-    // 【処理内容】: Tailwind CSSレスポンシブクラスの適用確認
-    render(<UserProfile />);
+    // 【実際の処理実行】: ローディング状態でのUserProfileコンポーネントレンダリング
+    // 【処理内容】: スケルトンUI表示処理の確認
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: レスポンシブ設計要件、ユーザビリティ確保
     // 【期待値確認】: 各サイズで適切な余白・フォントサイズ・レイアウト
@@ -162,17 +166,18 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
 
     // 【テストデータ準備】: サーバー内部エラーによる一時的な通信障害をシミュレート
     // 【初期条件設定】: API呼び出しで500 Internal Server Errorをモック
-    const mockRefetch = mock().mockResolvedValue(undefined);
-    mockUseUserProfile.mockReturnValue({
-      user: null,
-      loading: false,
-      error: { message: 'プロフィール情報の取得に失敗しました', status: 500 },
-      refetch: mockRefetch,
-    });
+    // 【Context DI設定】: UserServiceでエラーを投げる
+    mockUserService.getUserProfile.mockRejectedValue(
+      new Error('プロフィール情報の取得に失敗しました'),
+    );
 
     // 【実際の処理実行】: エラー状態でのコンポーネントレンダリング
     // 【処理内容】: エラーハンドリングとリカバリ機能の動作確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: エラー表示とユーザビリティの確認
     // 【期待値確認】: 品質保証の観点でユーザーが迷わず復旧できるUX設計
@@ -201,19 +206,18 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
 
     // 【テストデータ準備】: JWT有効期限切れ、不正なトークンをシミュレート
     // 【初期条件設定】: 401 Unauthorizedレスポンスをモック
-    mockUseUserProfile.mockReturnValue({
-      user: null,
-      loading: false,
-      error: {
-        message: '認証が必要です。再度ログインしてください',
-        status: 401,
-      },
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceで認証エラーを投げる
+    mockUserService.getUserProfile.mockRejectedValue(
+      new Error('認証が必要です。再度ログインしてください'),
+    );
 
     // 【実際の処理実行】: 認証エラー状態でのコンポーネントレンダリング
     // 【処理内容】: 認証エラーハンドリングの確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: セキュリティとユーザビリティの適切なバランス
     // 【期待値確認】: 不正アクセス防止、適切な状態遷移
@@ -234,16 +238,18 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
 
     // 【テストデータ準備】: ネットワーク接続の一時的または永続的な断絶をシミュレート
     // 【初期条件設定】: Network Error例外をモック
-    mockUseUserProfile.mockReturnValue({
-      user: null,
-      loading: false,
-      error: { message: 'インターネット接続を確認してください', status: 0 },
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceでネットワークエラーを投げる
+    mockUserService.getUserProfile.mockRejectedValue(
+      new Error('インターネット接続を確認してください'),
+    );
 
     // 【実際の処理実行】: ネットワークエラー状態でのコンポーネントレンダリング
     // 【処理内容】: ネットワークエラーハンドリングの確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: モバイル環境での安定性確保
     // 【期待値確認】: グレースフル・デグラデーション対応
@@ -276,16 +282,16 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    mockUseUserProfile.mockReturnValue({
-      user: longNameUser,
-      loading: false,
-      error: null,
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceで長い名前のユーザーデータを返す
+    mockUserService.getUserProfile.mockResolvedValue(longNameUser);
 
     // 【実際の処理実行】: 長い名前でのコンポーネントレンダリング
     // 【処理内容】: 名前省略処理とレイアウト保護の確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: 極端な入力値でのレイアウト保護
     // 【期待値確認】: 正確な文字数カウント、適切な省略位置
@@ -314,16 +320,16 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       lastLoginAt: '2025-09-01T10:30:00.000Z',
     };
 
-    mockUseUserProfile.mockReturnValue({
-      user: userWithInvalidAvatar,
-      loading: false,
-      error: null,
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceで無効アバターURLのユーザーデータを返す
+    mockUserService.getUserProfile.mockResolvedValue(userWithInvalidAvatar);
 
     // 【実際の処理実行】: 無効画像URLでのコンポーネントレンダリング
     // 【処理内容】: 画像フォールバック機能の確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: 外部リソース依存での安定性確保
     // 【期待値確認】: エラー状態での確実な代替表示
@@ -361,16 +367,16 @@ describe('TASK-302: ユーザープロフィール表示実装', () => {
       lastLoginAt: null, // 境界値：初回ログイン時
     };
 
-    mockUseUserProfile.mockReturnValue({
-      user: incompleteUser,
-      loading: false,
-      error: null,
-      refetch: mock(),
-    });
+    // 【Context DI設定】: UserServiceで不完全なユーザーデータを返す
+    mockUserService.getUserProfile.mockResolvedValue(incompleteUser);
 
     // 【実際の処理実行】: 不完全データでのコンポーネントレンダリング
     // 【処理内容】: null値処理とデフォルト表示の確認
-    render(<UserProfile />);
+    render(
+      <UserServiceProvider value={mockUserService}>
+        <UserProfile />
+      </UserServiceProvider>,
+    );
 
     // 【結果検証】: 不完全なデータでのアプリケーション動作保証
     // 【期待値確認】: null値の適切な判定と代替表示

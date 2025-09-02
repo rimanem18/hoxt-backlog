@@ -8,8 +8,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@/packages/shared-schemas/src/auth';
-import type { UserServiceInterface } from '../services/userService';
 import { useUserService } from '../contexts/UserServiceContext';
+import type { UserServiceInterface } from '../services/userService';
 
 /**
  * 【機能概要】: ユーザープロフィール取得と状態管理を行うカスタムフック
@@ -127,7 +127,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
  * 【Context移行】: 新規実装はuseUserProfile()を推奨、本関数は段階的廃止予定
  * @deprecated Context DI版のuseUserProfile()を使用してください
  */
-export const useUserProfileWithDI = (options?: {
+export const useUserProfileWithDI = (_options?: {
   userService?: UserServiceInterface;
 }): UseUserProfileReturn => {
   // 旧DIオプションは無視し、Context版を使用（段階的移行のための措置）

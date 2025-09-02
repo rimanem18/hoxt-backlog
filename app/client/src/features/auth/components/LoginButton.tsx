@@ -15,9 +15,9 @@ import {
   createSecureRedirectUrl,
 } from '@/features/auth/config/authConfig';
 import { useAuthLoading } from '@/features/auth/hooks/useAuthLoading';
-import { 
-  defaultAuthService, 
-  type AuthServiceInterface 
+import {
+  type AuthServiceInterface,
+  defaultAuthService,
 } from '@/features/auth/services/authService';
 
 /**
@@ -99,7 +99,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
         providerConfig.supabaseProvider,
         {
           redirectTo: secureRedirectUrl,
-        }
+        },
       );
 
       if (error) {
