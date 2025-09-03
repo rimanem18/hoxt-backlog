@@ -11,8 +11,10 @@
 'use client';
 import Image from 'next/image';
 import type React from 'react';
+import { useDispatch } from 'react-redux';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { logout } from '../store/authSlice';
 
 /**
  * UserProfileコンポーネントのProps型定義
@@ -29,20 +31,30 @@ interface UserProfileProps {
  * @returns {React.ReactNode} ユーザープロフィール表示要素
  */
 export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
+  const dispatch = useDispatch();
+
   /**
    * ログアウト処理
+   * Supabaseからのログアウトと、Reduxストアの状態更新を行う
    *
    * @returns {Promise<void>} ログアウト処理の完了
    */
   const handleLogout = async (): Promise<void> => {
-    await supabase.auth
-      .signOut()
-      .then(() => {
-        console.log('ログアウト成功！');
-      })
-      .catch((error) => {
-        console.error('ログアウト失敗！', error);
-      });
+    try {
+      // Supabaseからログアウト
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Supabaseログアウト失敗:', error);
+        return;
+      }
+
+      // Redux状態をログアウト状態に更新
+      dispatch(logout());
+      console.log('ログアウト成功！');
+    } catch (error) {
+      console.error('ログアウト処理エラー:', error);
+    }
   };
 
   // アバターURLが存在しない場合のデフォルト画像を設定
