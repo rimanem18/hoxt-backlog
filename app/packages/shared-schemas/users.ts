@@ -97,7 +97,7 @@ export const getUserProfileResponseSchema = z.object({
   success: z.literal(true),
   data: userBaseSchema.extend({
     createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(), // 【設計仕様準拠】: api-endpoints.md必須フィールド
+    updatedAt: z.string().datetime(), // 設計仕様準拠: api-endpoints.md必須フィールド
     lastLoginAt: z.string().datetime().nullable(),
   }),
 });
