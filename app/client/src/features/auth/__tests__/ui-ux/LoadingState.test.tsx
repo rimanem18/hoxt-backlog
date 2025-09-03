@@ -10,7 +10,6 @@ import '@testing-library/jest-dom';
 import { LoginButton } from '@/features/auth/components/LoginButton';
 import { createMockAuthService } from '@/features/auth/services/__tests__/mockAuthService';
 
-
 describe('LoginButton ローディング状態管理', () => {
   test('認証処理中のローディングUI表示と操作制御確認', async () => {
     // Given: 3秒間の遅延を持つモック認証サービス
