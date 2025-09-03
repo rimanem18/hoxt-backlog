@@ -174,7 +174,6 @@ describe('認証エラーハンドリング', () => {
       importError = error;
     }
 
-    // TODO(human): validationResultの型安全なプロパティアクセス
     // Then: 環境変数不備が検出され、適切なガイダンスが提供されることを確認
     if (validationResult) {
       expect(validationResult.isValid).toBe(false);

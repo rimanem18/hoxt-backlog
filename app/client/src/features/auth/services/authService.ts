@@ -33,10 +33,6 @@ export interface AuthOptions {
   redirectTo?: string;
 }
 
-// TODO(human): AuthServiceInterfaceを定義してください
-// signInWithOAuthメソッドを含む型安全なインターフェースを実装し、
-// デフォルト実装とモック用のファクトリー関数も作成してください
-
 /**
  * 認証サービスインターフェース
  * テスト時の依存性注入とモック化を可能にする
