@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ユーザープロフィール用レスポンシブスタイル */
+.responsive-container {
+  @apply w-full max-w-sm mx-auto;
+  @apply sm:max-w-md md:max-w-lg lg:max-w-xl;
+}
+
+.responsive-avatar {
+  @apply w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16;
+}
