@@ -63,6 +63,12 @@
 docker compose exec client bun run dev
 ```
 
+E2E テストの実行は playwright コンテナで実施してください
+```bash
+# example
+docker compose exec playwright npx playwright test
+```
+
 ## コード品質・フォーマット
 
 以下を考慮し、コードの品質を保ってください：

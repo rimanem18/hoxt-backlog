@@ -58,5 +58,17 @@ services:
       - ./docker/db/init-test-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     restart: unless-stopped
 
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.55.0-jammy
+    volumes:
+      - ./app/client:/workspace
+      - /workspace/node_modules
+    working_dir: /workspace
+    environment:
+      - CI=true
+    depends_on:
+      - client
+    command: tail -f /dev/null
+
 volumes:
   postgres_data:

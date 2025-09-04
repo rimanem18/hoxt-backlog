@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "test": "bun test --dom --preload ./src/test-setup.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "check": "biome check  src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit"
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
@@ -32,6 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "jsdom": "^26.1.0",
+    "playwright": "^1.55.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
