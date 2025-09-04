@@ -42,9 +42,6 @@ export default function DashboardPage(): React.ReactNode {
 
         <div className="flex flex-col items-center gap-6">
           <div className="w-full max-w-md">
-            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800">
-              ようこそ！
-            </h2>
             <UserProfile user={user} />
           </div>
         </div>
