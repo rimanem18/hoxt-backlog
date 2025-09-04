@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { UserProfile } from '@/features/google-auth/components/UserProfile';
 import { useAppSelector } from '@/store/hooks';
 
 /**
@@ -39,60 +40,18 @@ export default function DashboardPage(): React.ReactNode {
           </p>
         </div>
 
-        {/* 【ユーザー情報カード】: 認証済みユーザーの基本情報を表示 */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            ユーザー情報
-          </h2>
-
-          {/* 【ユーザー名表示】: E2Eテストで検証される要素 */}
-          <div className="mb-4">
-            <div className="block text-sm font-medium text-gray-700 mb-1">
-              名前
-            </div>
-            <p
-              data-testid="user-name"
-              className="text-lg text-gray-900 bg-gray-50 p-3 rounded border"
-            >
-              {/* 【名前表示】: Redux storeから取得したユーザー名を表示 */}
-              {user.name || 'ユーザー名未設定'}
-            </p>
-          </div>
-
-          {/* 【ユーザーメール表示】: E2Eテストで検証される要素 */}
-          <div className="mb-6">
-            <div className="block text-sm font-medium text-gray-700 mb-1">
-              メールアドレス
-            </div>
-            <p
-              data-testid="user-email"
-              className="text-lg text-gray-900 bg-gray-50 p-3 rounded border"
-            >
-              {/* 【メール表示】: Redux storeから取得したメールアドレスを表示 */}
-              {user.email || 'メールアドレス未設定'}
-            </p>
-          </div>
-
-          {/* 【ログアウトボタン】: E2Eテストで検証される要素 */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-              onClick={() => {
-                // 【ログアウト処理】: 実装は後のフェーズで追加予定
-                console.log('ログアウト処理を実行します');
-                // 【テスト対応】: 現段階では最小限の実装でテストを通す
-                router.push('/');
-              }}
-            >
-              ログアウト
-            </button>
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-full max-w-md">
+            <h2 className="text-2xl font-bold text-center mb-4 text-gray-800">
+              ようこそ！
+            </h2>
+            <UserProfile user={user} />
           </div>
         </div>
 
         {/* 【開発情報】: 開発環境でのみ認証状態をデバッグ表示 */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
             <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
             <p className="text-blue-700">認証状態: 認証済み</p>
             <p className="text-blue-700">ユーザーID: {user.id || '未設定'}</p>
