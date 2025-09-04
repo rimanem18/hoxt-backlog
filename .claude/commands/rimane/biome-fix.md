@@ -14,6 +14,7 @@ description: import パスの修正や biome での lint & format を実施し�
 2. 使用されていない package を uninstall
 3. 使用されていない import や変数や関数を削除
 4. `docker compose exec {コンテナ名} bun test` を実施
+    - コンテナ名に client が指定された場合に限り、`docker compose playwright exec npx playwright test` で E2E テストも実施
 5. `docker compose exec {コンテナ名} bunx tsc --noEmit` を実施
 6. 問題があれば修正
 7. `docker compose exec {コンテナ名} bun run fix` を実施
