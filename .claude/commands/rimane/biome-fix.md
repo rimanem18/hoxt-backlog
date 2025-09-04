@@ -29,21 +29,24 @@ description: import パスの修正や biome での lint & format を実施し�
 
 ## テストファイル
 
-**Testing Policy - Bun 標準のみ**
-`bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用する。
-`jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在を禁止する。
-依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` / `mock.module()` で行う。テスト終了時は `mock.restore()` と `mock.clearAllMocks()` を徹底する。
+**Testing Policy - Bun 標準のみ**  
+`bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用する。  
+`jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在を禁止する。  
+
+依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする。  
+`mock.module()` は最後の手段としてのみ使用する。  
+テスト終了時は `mock.restore()` と `mock.clearAllMocks()` を徹底する。  
+
+---
 
 ## 運用指針詳細
 
 ### 1. 依存と型
-
 - `bun test` を前提とし、追加のテスティングランタイムは導入しない。
 - TypeScript は `tsconfig.json` の `types` に `["bun-types"]` を設定し、`@types/jest` を含めない。
 - すべてのテストファイルは `.test.ts` / `.test.tsx`。
 
 ### 2. 使ってよい API（`bun:test` のみ）
-
 ```ts
 import {
   describe, it, test, expect,
@@ -54,81 +57,63 @@ import {
 } from "bun:test";
 ```
 
-- **モック**: `mock(fn)` を用いる（Jest の `jest.fn` は使用禁止）。
+- **モック**: `mock(fn)` を用いる（Jest の `jest.fn` は禁止）。
 - **スパイ**: 既存オブジェクトには `spyOn(obj, "method")`。
-- **モジュール差し替え**: 依存丸ごとは `mock.module("specifier", factory)`。
+- **モジュール差し替え**: `mock.module()` は「どうしても DI ができない外部依存」などに限定。
 - **後片付け**: `afterEach(() => { mock.restore(); mock.clearAllMocks(); })` を共通化。
 
 ### 3. 禁止事項
+- `jest` 名前空間の利用を禁止。
+- Jest エコシステム由来のパッケージを禁止。
+- `as unknown as` など乱暴なキャストでのモック化を禁止。
 
-- `import { jest } from "bun:test"`／`import * as jest from ...` を含む **あらゆる `jest` 名前空間の利用を禁止**。
-- `@jest/globals`, `@types/jest`, `jest-extended` など **Jest 由来のパッケージの追加を禁止**。
-- `as unknown as` による乱暴なキャストでのモック化を禁止。
+### 4. 標準パターン
+（※現行の関数モック／spyOn／インターフェースモック／モジュール差し替え／共通フック例はそのまま）
 
-### 4. 標準パターン（最小テンプレート）
+### 5. 設計原則
+- **まず DI**：可能な限り依存注入を優先し、直接 import した依存を差し替えるより、呼び出し側に抽象を注入してモックする。
+- 時刻・乱数・I/O などの外部性は **ラッパー関数** 経由にし、テストでそのラッパーをモック。
+- スナップショットは安定化処理をしてから比較。
+- 非同期は `await` を徹底。`done` コールバックは禁止。
 
-**関数の置き換え（単体モック）**
+### 6. 既存コードからの移行ルール
+- `jest.fn()` → `mock(fn)`
+- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
+- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（※基本は非推奨、必要最小限に）
+- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
+- `jest.Mocked<T>` → `satisfies T` と `mock()` の組み合わせ
 
-```ts
-const verifyToken = mock(async (token: string) => ({ valid: true, payload: { sub: "u1" } }));
-verifyToken.mockResolvedValue({ valid: true, payload: { sub: "u2" } });
-```
-
-**既存オブジェクトの監視／一時差し替え**
-
-```ts
-const spy = spyOn(authProvider, "verifyToken");
-spy.mockResolvedValue({ valid: true, payload: { sub: "u1" } });
-// expect(spy).toHaveBeenCalledWith("token");
-```
-
-**インターフェース全体を“Bun 流”でモック**
-
-```ts
-const authProviderMock = {
-  verifyToken: mock(async (_: string) => ({ valid: true, payload: { sub: "u" } })),
-  getExternalUserInfo: mock(async (_: JwtPayload) => ({ id: "ext1" }))
-} satisfies IAuthProvider;
-```
-
-**モジュール単位の差し替え**
+### 7. DI 活用モック
+- **mockClear / mockReset が煩雑になるケースでは DI を利用する。**
+- **DI ではテストごとに新しいモックを生成**し、他テストに影響を及ぼすグローバル共有は避ける。
+- **Bun の `Mock` 型**を使って依存のメソッドを型安全にスタブできるようにする。
+- **DI パターンでは mockClear は通常不要**（毎テストで新規生成するため）。
 
 ```ts
-mock.module("@/auth/provider", () => ({
-  verifyToken: mock(async () => ({ valid: true, payload: { sub: "mock" } })),
-  getExternalUserInfo: mock(async () => ({ id: "ext-mock" }))
-}));
-```
+type MockUserService = {
+  getUserProfile: Mock<[string], Promise<User>>;
+};
 
-**共通フック**
+let testUserService: MockUserService;
 
-```ts
-afterEach(() => {
-  mock.restore();
-  mock.clearAllMocks();
+beforeEach(() => {
+  testUserService = {
+    getUserProfile: mock().mockName("getUserProfile"),
+  };
 });
 ```
 
-### 5. 設計原則
-
-- 可能な限り **依存注入（DI）** を用い、直接 `import` した単体を差し替えるより、呼び出し側に抽象を注入してモックする。
-- 時刻・乱数・I/O などの外部性は **ラッパー関数** 経由にし、テストでそのラッパーを `mock()`／`spyOn()`。
-- スナップショットは **安定化**（正規化・小数点固定・順序ソート）してから比較する。
-- 非同期は `await` を徹底し、`done` コールバックは使用しない。
-
-### 6. 既存コードからの移行ルール
-
-- `jest.fn()` → `mock(fn)`
-- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
-- `jest.mock("mod", factory)` → `mock.module("mod", factory)`
-- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
-- `jest.Mocked<Interface>` 依存の型は撤廃し、`satisfies Interface` と `mock()` の組み合わせに置換。
+### 8. mock.module の注意点
+- **トップレベルでの使用は禁止**。  
+- **各 test 内でのみ宣言し、その後に動的 import** すること。  
+- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う。  
 
 ## 実行後の確認
 
 -  `jest`／`@jest/*`／`@types/jest` の導入・参照がない
 -  すべてのモックは `mock()`／`spyOn()` を使用
--  モジュール差し替えは `mock.module()` のみ
+-  モジュール差し替えは `mock.module()` のみであり、トップレベルで使用されていない。DI での対応が本当に不可能なのか検討する
 -  `afterEach` で `mock.restore()` と `mock.clearAllMocks()` を実施
 -  依存は注入可能で、直接 import を強く結合していない
 -  テストは非同期を `await` で完結させ、グローバル状態を持ち越さない
+

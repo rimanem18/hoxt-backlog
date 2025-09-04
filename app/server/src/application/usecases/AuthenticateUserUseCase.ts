@@ -153,20 +153,17 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: jwtValidationResult.errorMessage,
         });
 
-        // 【エラー分類実装】: JWT形式エラーの場合はAuthenticationError.invalidFormat()を使用
-        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
-        // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
-        throw AuthenticationError.invalidFormat();
+        // JWT構造検証失敗は全てValidationErrorとして統一処理
+        throw new ValidationError(
+          jwtValidationResult.errorMessage ?? 'JWT形式が無効です',
+        );
       }
 
       this.logger.info('Starting user authentication', {
         jwtLength: input.jwt.length,
       });
 
-      // 【パフォーマンス最適化】: 無駄な並列処理を除去し、直接実行に変更
-      // 【改善内容】: Promise.allの無意味な利用を削除、実行効率を向上
-      // 【設計方針】: 将来の拡張は必要な時点で適切な並列処理として実装
-      // 🟢 信頼性レベル: パフォーマンスレビューに基づく実証された改善
+      // 直接実行によりパフォーマンスを最適化
       const verificationResult = await this.authProvider.verifyToken(input.jwt);
 
       if (!verificationResult.valid || !verificationResult.payload) {
@@ -175,12 +172,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: verificationResult.error,
         });
 
-        // 【セキュリティ強化】: エラーメッセージ統一化による情報漏洩防止
-        // 【改善内容】: JWT検証エラーの詳細分類を廃止し、統一エラーで攻撃者情報収集を阻止
-        // 【設計方針】: 期限切れ・署名不正の区別を不可能にし、セキュリティ脆弱性を根本的に解決
-        // 🟢 信頼性レベル: セキュリティレビューに基づく実証された強化策
-
-        // 全てのJWT検証失敗を統一エラーとして処理（セキュリティベストプラクティス）
+        // セキュリティのため全てのJWT検証失敗を統一エラーとして処理
         throw AuthenticationError.invalidToken();
       }
 

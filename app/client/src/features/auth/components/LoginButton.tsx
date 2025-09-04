@@ -15,7 +15,10 @@ import {
   createSecureRedirectUrl,
 } from '@/features/auth/config/authConfig';
 import { useAuthLoading } from '@/features/auth/hooks/useAuthLoading';
-import { supabase } from '@/lib/supabase';
+import {
+  type AuthServiceInterface,
+  defaultAuthService,
+} from '@/features/auth/services/authService';
 
 /**
  * LoginButtonコンポーネントのProps定義
@@ -38,6 +41,9 @@ interface LoginButtonProps {
 
   /** 追加のスタイルクラス */
   className?: string;
+
+  /** 認証サービス（DI用、テスト時にモックを注入） */
+  authService?: AuthServiceInterface;
 }
 
 /**
@@ -58,6 +64,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
   onAuthSuccess,
   onAuthError,
   className = '',
+  authService = defaultAuthService,
 }) => {
   // ローディング状態管理をカスタムフックに分離して再利用性を向上
   const { isLoading, showLongProcessMessage, startLoading, stopLoading } =
@@ -88,12 +95,12 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
       // Host Header Attack対策で安全なリダイレクトURLを生成
       const secureRedirectUrl = createSecureRedirectUrl();
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: providerConfig.supabaseProvider,
-        options: {
+      const { data, error } = await authService.signInWithOAuth(
+        providerConfig.supabaseProvider,
+        {
           redirectTo: secureRedirectUrl,
         },
-      });
+      );
 
       if (error) {
         onAuthError?.(error.message);
@@ -117,6 +124,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
     onAuthError,
     startLoading,
     stopLoading,
+    authService,
   ]);
 
   // 動的スタイルをメモ化してパフォーマンス最適化

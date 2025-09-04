@@ -182,7 +182,9 @@ describe('AuthController', () => {
 
     mockContext.req.json = mock(() => Promise.resolve(requestBody));
     mockAuthenticateUserUseCase.execute = mock(() =>
-      Promise.reject(new AuthenticationError('Invalid JWT token')),
+      Promise.reject(
+        new AuthenticationError('INVALID_TOKEN', 'Invalid JWT token'),
+      ),
     );
 
     // When: 不正なJWTで認証を実行
@@ -207,7 +209,9 @@ describe('AuthController', () => {
 
     mockContext.req.json = mock(() => Promise.resolve(requestBody));
     mockAuthenticateUserUseCase.execute = mock(() =>
-      Promise.reject(new AuthenticationError('JWT token has expired')),
+      Promise.reject(
+        new AuthenticationError('TOKEN_EXPIRED', 'JWT token has expired'),
+      ),
     );
 
     // When: 期限切れJWTで認証を実行

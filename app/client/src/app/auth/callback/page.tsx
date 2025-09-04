@@ -25,7 +25,7 @@ export default function AuthCallbackPage(): React.ReactNode {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Google OAuth2.0はimplicit flowでaccess_tokenをURLフラグメントに付与するため解析
+        // URLフラグメントからトークンを解析
         const hashParams = new URLSearchParams(
           window.location.hash.substring(1),
         );
@@ -37,7 +37,7 @@ export default function AuthCallbackPage(): React.ReactNode {
           const errorDescription = hashParams.get('error_description');
 
           if (error === 'access_denied') {
-            // ユーザーが認証をキャンセルした場合はエラー表示なしでホームに戻る
+            // ユーザーキャンセル時はエラー表示なしでホームに戻る
             console.log('ユーザーが認証をキャンセルしました');
             router.push('/');
             return;
@@ -48,7 +48,7 @@ export default function AuthCallbackPage(): React.ReactNode {
           );
         }
 
-        // 【Supabaseセッション確立】: 取得したトークンでSupabaseセッションを設定
+        // Supabaseセッションを設定
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || '',
@@ -60,7 +60,7 @@ export default function AuthCallbackPage(): React.ReactNode {
           );
         }
 
-        // 【ユーザー情報取得】: 認証済みユーザーの詳細情報を取得
+        // 認証済みユーザーの情報を取得
         const { data: userData, error: userError } =
           await supabase.auth.getUser();
 
@@ -70,10 +70,10 @@ export default function AuthCallbackPage(): React.ReactNode {
           );
         }
 
-        // 【Redux状態更新】: 認証成功時の状態をストアに反映
+        // ユーザーオブジェクトを構築してReduxに保存
         const user = {
           id: userData.user.id,
-          externalId: userData.user.id, // Supabase UIDを外部IDとして使用
+          externalId: userData.user.id,
           provider: 'google' as const,
           email: userData.user.email || '',
           name:
@@ -84,18 +84,18 @@ export default function AuthCallbackPage(): React.ReactNode {
           lastLoginAt: new Date().toISOString(),
         };
 
-        // 【認証完了】: Redux storeに認証済み状態を設定
+        // Redux storeに認証成功状態を設定
         dispatch(authSlice.actions.authSuccess({ user, isNewUser: false }));
 
         console.log('認証が正常に完了しました:', user);
         setStatus('success');
 
-        // 【リダイレクト】: 成功後、短時間でホームページに遷移
+        // 1秒後にホームページにリダイレクト
         setTimeout(() => {
           router.push('/');
         }, 1000);
       } catch (error) {
-        // 【エラーハンドリング】: 認証処理中のエラーを適切に処理
+        // エラーメッセージを適切に処理
         const message =
           error instanceof Error
             ? error.message
@@ -105,21 +105,21 @@ export default function AuthCallbackPage(): React.ReactNode {
         setStatus('error');
         setErrorMessage(message);
 
-        // 【Redux状態更新】: エラー状態をストアに反映
+        // Redux storeにエラー状態を設定
         dispatch(authSlice.actions.authFailure({ error: message }));
 
-        // 【エラー時リダイレクト】: 3秒後にホームページに戻る
+        // 3秒後にホームページにリダイレクト
         setTimeout(() => {
           router.push('/');
         }, 3000);
       }
     };
 
-    // 【処理実行】: コンポーネントマウント時にコールバック処理を開始
+    // コンポーネントマウント時に認証コールバック処理を実行
     handleAuthCallback();
   }, [router, dispatch]);
 
-  // 【UI表示】: 処理状況に応じた適切なフィードバック表示
+  // 処理状態に応じたUIを表示
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">

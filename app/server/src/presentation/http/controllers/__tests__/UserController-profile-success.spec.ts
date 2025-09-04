@@ -18,6 +18,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
   let app: Hono;
   let userController: UserController;
   let mockGetUserProfileUseCase: IGetUserProfileUseCase;
+  let validJwtToken: string;
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にHonoアプリケーションとミドルウェアを初期化
@@ -30,16 +31,17 @@ describe('UserController - プロフィール取得成功テスト', () => {
     const mockUser: User = {
       id: '550e8400-e29b-41d4-a716-446655440000',
       externalId: 'google_123456789',
+      provider: 'google',
       email: 'user@example.com',
       name: '山田太郎',
       avatarUrl: 'https://lh3.googleusercontent.com/a/avatar.jpg',
-      createdAt: '2025-08-12T10:30:00.000Z',
-      updatedAt: '2025-08-12T10:30:00.000Z',
-      lastLoginAt: '2025-08-12T13:45:00.000Z',
+      createdAt: new Date('2025-08-12T10:30:00.000Z'),
+      updatedAt: new Date('2025-08-12T10:30:00.000Z'),
+      lastLoginAt: new Date('2025-08-12T13:45:00.000Z'),
     };
 
     mockGetUserProfileUseCase = {
-      execute: mock().mockResolvedValue(mockUser),
+      execute: mock().mockResolvedValue({ user: mockUser }),
     };
 
     // 【HTTPアプリケーションセットアップ】: 実際のミドルウェアとコントローラーを統合
@@ -48,17 +50,31 @@ describe('UserController - プロフィール取得成功テスト', () => {
     app = new Hono();
 
     // 【認証ミドルウェア統合】: テスト用のトークン取得関数でモック認証を実現
+    validJwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiWWFtYWRhIFRhcm8iLCJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvYXZhdGFyLmpwZyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IllhbWFkYSBUYXJvIn0sImlzcyI6Imh0dHBzOi8vc3VwYWJhc2UuZXhhbXBsZS5jb20iLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzEyNzA1Nn0.valid_signature';
     app.use(
       '/api/user/*',
       authMiddleware({
-        getToken: () => 'valid-test-token', // テスト用固定トークン
+        getToken: () => validJwtToken, // 有効なJWT形式のテスト用トークン
+        mockPayload: {
+          sub: '550e8400-e29b-41d4-a716-446655440000', // mockUser.id と一致
+          email: 'user@example.com',
+          app_metadata: { provider: 'google', providers: ['google'] },
+          user_metadata: {
+            name: 'Yamada Taro',
+            avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
+            email: 'user@example.com',
+            full_name: 'Yamada Taro'
+          },
+          iss: 'https://supabase.example.com',
+          iat: 1703123456,
+          exp: 1703127056
+        },
       }),
     );
 
     // 【ルーティング設定】: UserControllerのgetProfileメソッドをエンドポイントに接続
     app.get('/api/user/profile', async (c) => {
-      // 【コンテキスト設定】: テスト用ユーザーIDを設定（認証ミドルウェアが設定する想定）
-      c.set('userId', '550e8400-e29b-41d4-a716-446655440000');
+      // 認証ミドルウェアが自動的にuserId を設定するため、手動設定は不要
       return await userController.getProfile(c);
     });
   });
@@ -79,7 +95,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
     // 【初期条件設定】: 既存ユーザーが認証済み状態で、データベースに該当ユーザーが存在する状態
     const authHeaders = {
       Authorization:
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.valid_signature',
+        `Bearer ${validJwtToken}`,
       'Content-Type': 'application/json',
     };
 
@@ -101,17 +117,19 @@ describe('UserController - プロフィール取得成功テスト', () => {
 
     expect(responseBody.success).toBe(true); // 【確認内容】: APIレスポンスが成功を示すことを確認 🟢
     expect(responseBody.data).toBeDefined(); // 【確認内容】: ユーザーデータが返却されることを確認 🟢
-    expect(responseBody.data.id).toBe('550e8400-e29b-41d4-a716-446655440000'); // 【確認内容】: ユーザーIDが正確に返却されることを確認 🟢
-    expect(responseBody.data.externalId).toBe('google_123456789'); // 【確認内容】: 外部プロバイダーIDが正確に返却されることを確認 🟢
-    expect(responseBody.data.provider).toBe('google'); // 【確認内容】: 認証プロバイダーが正確に返却されることを確認 🟢
-    expect(responseBody.data.email).toBe('user@example.com'); // 【確認内容】: メールアドレスが正確に返却されることを確認 🟢
-    expect(responseBody.data.name).toBe('山田太郎'); // 【確認内容】: 表示名が正確に返却されることを確認 🟢
-    expect(responseBody.data.avatarUrl).toBe(
+
+    const userData = responseBody.data!;
+    expect(userData.id).toBe('550e8400-e29b-41d4-a716-446655440000'); // 【確認内容】: ユーザーIDが正確に返却されることを確認 🟢
+    expect(userData.externalId).toBe('google_123456789'); // 【確認内容】: 外部プロバイダーIDが正確に返却されることを確認 🟢
+    expect(userData.provider).toBe('google'); // 【確認内容】: 認証プロバイダーが正確に返却されることを確認 🟢
+    expect(userData.email).toBe('user@example.com'); // 【確認内容】: メールアドレスが正確に返却されることを確認 🟢
+    expect(userData.name).toBe('山田太郎'); // 【確認内容】: 表示名が正確に返却されることを確認 🟢
+    expect(userData.avatarUrl).toBe(
       'https://lh3.googleusercontent.com/a/avatar.jpg',
     ); // 【確認内容】: アバターURLが正確に返却されることを確認 🟢
-    expect(responseBody.data.createdAt).toBe('2025-08-12T10:30:00.000Z'); // 【確認内容】: アカウント作成日時が正確に返却されることを確認 🟢
-    expect(responseBody.data.updatedAt).toBe('2025-08-12T10:30:00.000Z'); // 【確認内容】: 最終更新日時が正確に返却されることを確認 🟢
-    expect(responseBody.data.lastLoginAt).toBe('2025-08-12T13:45:00.000Z'); // 【確認内容】: 最終ログイン日時が正確に返却されることを確認 🟢
+    expect(userData.createdAt).toBe('2025-08-12T10:30:00.000Z'); // 【確認内容】: アカウント作成日時が正確に返却されることを確認 🟢
+    expect(userData.updatedAt).toBe('2025-08-12T10:30:00.000Z'); // 【確認内容】: 最終更新日時が正確に返却されることを確認 🟢
+    expect(userData.lastLoginAt).toBe('2025-08-12T13:45:00.000Z'); // 【確認内容】: 最終ログイン日時が正確に返却されることを確認 🟢
 
     // 【品質保証】: この検証により、UserController・GetUserProfileUseCase・認証ミドルウェアの統合が正常に動作し、
     // RESTful APIとしての適切なレスポンス形式でプロフィール情報を返却することが保証される
@@ -128,7 +146,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
     const validAuthRequest = {
       method: 'GET',
       headers: {
-        Authorization: 'Bearer valid.jwt.token.with.proper.signature',
+        Authorization: `Bearer ${validJwtToken}`,
       },
     };
 

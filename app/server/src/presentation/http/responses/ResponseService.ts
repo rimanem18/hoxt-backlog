@@ -9,6 +9,7 @@ import type { Context } from 'hono';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import type { User } from '@/domain/user/UserEntity';
 import type {
+  User as ApiUser,
   AuthResponse,
   ErrorResponse,
 } from '@/packages/shared-schemas/src/auth';
@@ -33,6 +34,25 @@ export interface ErrorDetail {
 }
 
 /**
+ * ドメインUserエンティティをAPI用User型に変換
+ * @param domainUser ドメイン層のUserエンティティ
+ * @returns API用のUser型
+ */
+function mapDomainUserToApiUser(domainUser: User): ApiUser {
+  return {
+    id: domainUser.id,
+    externalId: domainUser.externalId,
+    provider: domainUser.provider,
+    email: domainUser.email,
+    name: domainUser.name,
+    avatarUrl: domainUser.avatarUrl,
+    createdAt: domainUser.createdAt.toISOString(),
+    updatedAt: domainUser.updatedAt.toISOString(),
+    lastLoginAt: domainUser.lastLoginAt?.toISOString() ?? null,
+  };
+}
+
+/**
  * レスポンス統一サービスクラス
  *
  * HTTPレスポンス形式の統一とエラーハンドリングの標準化。
@@ -53,7 +73,7 @@ export class ResponseService {
     const responseBody: AuthResponse = {
       success: true,
       data: {
-        user: data.user,
+        user: mapDomainUserToApiUser(data.user),
         isNewUser: data.isNewUser ?? false,
       },
     };
@@ -95,7 +115,7 @@ export class ResponseService {
       success: false,
       error: {
         message: errorDetail.message,
-        code: errorDetail.code,
+        code: errorDetail.code ?? 'UNKNOWN_ERROR',
       },
     };
 
