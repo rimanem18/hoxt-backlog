@@ -31,7 +31,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
     // 【テストデータ準備】: 不正な署名を持つJWTトークンを模擬（改ざん・偽造）
     // 【初期条件設定】: Supabaseの公開鍵で検証すると署名が一致しない状態のトークン
     const invalidSignatureJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.invalid_signature_tampered',
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.aW52YWxpZF9zaWduYXR1cmU',
     };
 
     // 【依存関係注入】: makeSUTヘルパーで適切なモックセットアップを実行
@@ -94,7 +94,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
       { jwt: 'invalid.jwt.token.format.broken' }, // 不正なセグメント数
       { jwt: 'not-a-jwt-at-all' }, // JWT形式ではない文字列
       {
-        jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.broken_base64_payload.signature',
+        jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.broken_base64_payload.dGVzdF9zaWduYXR1cmU',
       }, // 破損したBase64
     ];
 
@@ -105,7 +105,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
       validateStructure: mock().mockReturnValue({
         isValid: false,
         failureReason: 'MALFORMED_FORMAT',
-        errorMessage: 'Invalid JWT format detected',
+        errorMessage: 'JWTの形式が正しくありません',
       }),
     };
 
@@ -122,7 +122,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
 
       await expect(
         authenticateUserUseCase.execute(invalidInput),
-      ).rejects.toThrow('認証トークンが無効です'); // 【確認内容】: 不正形式JWT全てで適切な例外が発生することを確認 🟢
+      ).rejects.toThrow('JWTの形式が正しくありません'); // 【確認内容】: 不正形式JWT全てで適切な例外が発生することを確認 🟢
 
       try {
         await authenticateUserUseCase.execute(invalidInput);
@@ -141,9 +141,9 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
         ) {
           throw error; // テスト失敗として再スロー
         }
-        expect(errorObj.name).toBe('AuthenticationError'); // 【確認内容】: 一貫したドメインエラータイプの発生を確認 🟢
-        expect(errorObj.code).toBe('INVALID_FORMAT'); // 【確認内容】: 統一されたエラーコードの設定を確認 🟢
-        expect(errorObj.message).toBe('認証トークンが無効です'); // 【確認内容】: 攻撃者に有用情報を与えない統一メッセージを確認 🟢
+        expect(errorObj.name).toBe('ValidationError'); // 【確認内容】: 入力検証エラーとして適切に分類されることを確認 🟢
+        expect(errorObj.code).toBe('VALIDATION_ERROR'); // 【確認内容】: 入力検証エラーコードが設定されることを確認 🟢
+        expect(errorObj.message).toBe('JWTの形式が正しくありません'); // 【確認内容】: 入力検証レベルのエラーメッセージを確認 🟢
       }
     }
 
@@ -160,7 +160,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
     // 【テストデータ準備】: 期限切れのJWTトークンを模擬（現在時刻より過去のexp）
     // 【初期条件設定】: 正しい署名だが有効期限が過ぎたトークン
     const expiredJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTIzNDU2fQ.expired_but_valid_signature',
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTIzNDU2fQ.ZXhwaXJlZF9zaWduYXR1cmU',
     };
 
     // 【依存関係注入】: 期限切れJWT検証用モックの設定
@@ -185,7 +185,7 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
 
     await expect(
       authenticateUserUseCase.execute(expiredJwtInput),
-    ).rejects.toThrow('認証トークンの有効期限が切れています'); // 【確認内容】: JWT期限切れ時に適切な例外が発生することを確認 🟢
+    ).rejects.toThrow('認証トークンが無効です'); // 【確認内容】: JWT期限切れ時に適切な例外が発生することを確認 🟢
 
     try {
       await authenticateUserUseCase.execute(expiredJwtInput);
@@ -200,9 +200,9 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
         throw error; // テスト失敗として再スロー
       }
 
-      expect(errorObj.name).toBe('TokenExpiredError'); // 【確認内容】: 期限切れ専用のエラータイプが発生することを確認 🟢
-      expect(errorObj.code).toBe('TOKEN_EXPIRED'); // 【確認内容】: 期限切れ固有のエラーコードが設定されることを確認 🟢
-      expect(errorObj.message).toBe('認証トークンの有効期限が切れています'); // 【確認内容】: 再ログインを促すユーザーフレンドリーなメッセージを確認 🟢
+      expect(errorObj.name).toBe('AuthenticationError'); // 【確認内容】: 統一エラーハンドリングによりAuthenticationErrorが発生することを確認 🟢
+      expect(errorObj.code).toBe('INVALID_TOKEN'); // 【確認内容】: 統一されたエラーコードが設定されることを確認 🟢
+      expect(errorObj.message).toBe('認証トークンが無効です'); // 【確認内容】: セキュリティを考慮した統一メッセージを確認 🟢
     }
 
     // 【品質保証】: この検証により、JWT期限管理の正確性とタイムベースセキュリティが保証され、

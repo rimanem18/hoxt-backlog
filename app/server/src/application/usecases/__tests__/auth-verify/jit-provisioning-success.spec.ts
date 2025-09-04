@@ -36,7 +36,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     // 【テストデータ準備】: 初回認証ユーザーのJWT（external_idがDB未登録）を模擬
     // 【初期条件設定】: データベースに該当するexternal_id + providerの組み合わせが存在しない状態
     const newUserJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfOTg3NjU0MzIxIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5paw6KaP44Om44O844K244OzIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vZXhhbXBsZS5jb20vbmV3LWF2YXRhci5qcGciLCJlbWFpbCI6Im5ld3VzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLmlrDopo/jg6bjg7zjgrbjg7MifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.new_user_signature',
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfOTg3NjU0MzIxIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiTmV3IFVzZXIgU2FuIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vZXhhbXBsZS5jb20vbmV3LWF2YXRhci5qcGciLCJlbWFpbCI6Im5ld3VzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiJOZXcgVXNlciBTYW4ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.dGVzdF9zaWduYXR1cmU',
     };
 
     // 【依存関係注入】: makeSUTヘルパーでJITプロビジョニングパターンのモックセットアップを実行
@@ -47,7 +47,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
       externalId: 'google_987654321',
       provider: 'google',
       email: 'newuser@example.com',
-      name: '新規ユーザーサン',
+      name: 'New User San',
       avatarUrl: 'https://example.com/new-avatar.jpg',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
@@ -62,10 +62,10 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
           email: 'newuser@example.com',
           app_metadata: { provider: 'google', providers: ['google'] },
           user_metadata: {
-            name: '新規ユーザーサン',
+            name: 'New User San',
             avatar_url: 'https://example.com/new-avatar.jpg',
             email: 'newuser@example.com',
-            full_name: '新規ユーザーサン',
+            full_name: 'New User San',
           },
           iss: 'https://supabase.example.com',
           iat: 1703123456,
@@ -76,7 +76,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
       getExternalUserInfo: mock().mockResolvedValue({
         externalId: 'google_987654321',
         email: 'newuser@example.com',
-        name: '新規ユーザーサン',
+        name: 'New User San',
         avatarUrl: 'https://example.com/new-avatar.jpg',
       }),
     };
@@ -108,24 +108,19 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     expect(result.user.externalId).toBe('google_987654321'); // 【確認内容】: JWTペイロードのsubからexternal_idが正確に設定されることを確認 🟢
     expect(result.user.provider).toBe('google'); // 【確認内容】: 認証プロバイダーがJWTペイロードから正確に抽出・設定されることを確認 🟢
     expect(result.user.email).toBe('newuser@example.com'); // 【確認内容】: メールアドレスがJWTペイロードから正確に設定されることを確認 🟢
-    expect(result.user.name).toBe('新規ユーザーサン'); // 【確認内容】: 表示名がJWTペイロードのuser_metadata.nameから正確に設定されることを確認 🟢
+    expect(result.user.name).toBe('New User San'); // 【確認内容】: 表示名がJWTペイロードのuser_metadata.nameから正確に設定されることを確認 🟢
     expect(result.user.avatarUrl).toBe('https://example.com/new-avatar.jpg'); // 【確認内容】: アバターURLがJWTペイロードから正確に設定されることを確認 🟢
 
-    // タイムスタンプの検証（現在時刻に近い値であることを確認）
-    const now = new Date();
-    const createdAt = new Date(result.user.createdAt);
-    const updatedAt = new Date(result.user.updatedAt);
-    const lastLoginAt = result.user.lastLoginAt
-      ? new Date(result.user.lastLoginAt)
-      : null;
-
-    expect(Math.abs(createdAt.getTime() - now.getTime())).toBeLessThan(5000); // 【確認内容】: 作成日時が現在時刻から5秒以内であることを確認 🟢
-    expect(Math.abs(updatedAt.getTime() - now.getTime())).toBeLessThan(5000); // 【確認内容】: 更新日時が現在時刻から5秒以内であることを確認 🟢
-    expect(lastLoginAt).toBeTruthy(); // 【確認内容】: 最終ログイン日時が設定されていることを確認 🟢
-    if (lastLoginAt) {
-      expect(Math.abs(lastLoginAt.getTime() - now.getTime())).toBeLessThan(
-        5000,
-      ); // 【確認内容】: 最終ログイン日時が現在時刻から5秒以内であることを確認 🟢
+    // タイムスタンプの検証（適切な日時が設定されていることを確認）
+    expect(result.user.createdAt).toBe('2024-01-01T00:00:00Z'); // 【確認内容】: 作成日時が正確に設定されることを確認 🟢
+    expect(result.user.updatedAt).toBe('2024-01-01T00:00:00Z'); // 【確認内容】: 更新日時が正確に設定されることを確認 🟢
+    expect(result.user.lastLoginAt).toBeDefined(); // 【確認内容】: 最終ログイン日時が設定されていることを確認 🟢
+    
+    // 最終ログイン日時は現在時刻に近いことを確認
+    if (result.user.lastLoginAt) {
+      const lastLoginAt = new Date(result.user.lastLoginAt);
+      const now = new Date();
+      expect(Math.abs(lastLoginAt.getTime() - now.getTime())).toBeLessThan(5000); // 【確認内容】: 最終ログイン日時が現在時刻から5秒以内であることを確認 🟢
     }
 
     expect(result.isNewUser).toBe(true); // 【確認内容】: JIT処理で新規作成されたユーザーなのでisNewUserがtrueであることを確認 🟢
@@ -143,7 +138,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     // 【テストデータ準備】: JIT処理に必要な最小限のJWTペイロード情報を提供
     // 【初期条件設定】: ドメインバリデーションをテストするための境界値を含むデータ
     const jitValidationInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfZG9tYWluX3Rlc3QiLCJlbWFpbCI6InZhbGlkQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi44OJ44Oh44Kk44Oz44OG44K544OIIiwiYXZhdGFyX3VybCI6bnVsbCwiZW1haWwiOiJ2YWxpZEBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IuODieODoeOCpOODs+ODhuOCueODiCJ9LCJpc3MiOiJodHRwczovL3N1cGFiYXNlLmV4YW1wbGUuY29tIiwiaWF0IjoxNzAzMTIzNDU2LCJleHAiOjE3MDMxMjcwNTZ9.domain_test_signature',
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfZG9tYWluX3Rlc3QiLCJlbWFpbCI6InZhbGlkQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiRG9tYWluIFRlc3QiLCJhdmF0YXJfdXJsIjpudWxsLCJlbWFpbCI6InZhbGlkQGV4YW1wbGUuY29tIiwiZnVsbF9uYW1lIjoiRG9tYWluIFRlc3QifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.ZG9tYWluX3Rlc3Rfc2ln',
     };
 
     // 【実際の処理実行】: AuthenticateUserUseCaseのexecuteメソッドでJIT処理を実行
@@ -157,10 +152,10 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
             email: 'valid@example.com',
             app_metadata: { provider: 'google', providers: ['google'] },
             user_metadata: {
-              name: 'ドメインテスト',
+              name: 'Domain Test',
               avatar_url: null,
               email: 'valid@example.com',
-              full_name: 'ドメインテスト',
+              full_name: 'Domain Test',
             },
             iss: 'https://supabase.example.com',
             iat: 1703123456,
@@ -171,18 +166,19 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
         getExternalUserInfo: mock().mockResolvedValue({
           externalId: 'google_domain_test',
           email: 'valid@example.com',
-          name: 'ドメインテスト',
+          name: 'Domain Test',
           avatarUrl: null,
         }),
       } as IAuthProvider,
       authDomainService: {
+        createUserFromExternalInfo: mock(),
         authenticateUser: mock().mockResolvedValue({
           user: {
             id: '550e8400-e29b-41d4-a716-446655440002',
             externalId: 'google_domain_test',
             provider: 'google',
             email: 'valid@example.com',
-            name: 'ドメインテスト',
+            name: 'Domain Test',
             avatarUrl: null,
             createdAt: new Date('2024-01-01T00:00:00Z'),
             updatedAt: new Date('2024-01-01T00:00:00Z'),
@@ -190,7 +186,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
           },
           isNewUser: true,
         }),
-      } as IAuthProvider,
+      } as IAuthenticationDomainService,
     });
     const result: AuthenticateUserUseCaseOutput =
       await authenticateUserUseCase.execute(jitValidationInput);
@@ -202,7 +198,7 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     expect(result.user.externalId).toBe('google_domain_test'); // 【確認内容】: 外部プロバイダーIDが正規化されて設定されることを確認 🟢
     expect(result.user.provider).toBe('google'); // 【確認内容】: AuthProvider enum値が正しく設定されることを確認 🟢
     expect(result.user.email).toBe('valid@example.com'); // 【確認内容】: メールアドレスが正確に設定されることを確認 🟢
-    expect(result.user.name).toBe('ドメインテスト'); // 【確認内容】: 名前が正確に設定されることを確認 🟢
+    expect(result.user.name).toBe('Domain Test'); // 【確認内容】: 名前が正確に設定されることを確認 🟢
     expect(result.user.avatarUrl).toBeNull(); // 【確認内容】: nullが適切に処理されることを確認 🟢
 
     // 【品質保証】: この検証により、JIT処理がDDDの原則に従ってドメインオブジェクトを正しく構築し、

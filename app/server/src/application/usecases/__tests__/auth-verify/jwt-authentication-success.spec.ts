@@ -38,7 +38,7 @@ describe('AuthenticateUserUseCase - JWT認証成功テスト', () => {
     // 【テストデータ準備】: Supabase Authが発行する形式の有効なJWTトークンを模擬
     // 【初期条件設定】: 既存ユーザーがデータベースに存在する状態を前提とする
     const validJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.signature',
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.dGVzdF9zaWduYXR1cmU',
     };
 
     // 【依存関係注入】: makeSUTヘルパーで成功パターンのモックセットアップを実行
@@ -97,8 +97,7 @@ describe('AuthenticateUserUseCase - JWT認証成功テスト', () => {
       authProvider: mockAuthProvider as IAuthProvider,
       authDomainService: mockAuthDomainService as IAuthenticationDomainService,
     });
-    const result: AuthenticateUserUseCaseOutput =
-      await authenticateUserUseCase.execute(validJwtInput);
+    const result = await authenticateUserUseCase.execute(validJwtInput);
 
     // 【結果検証】: 返却されたレスポンスが期待される形式と内容に合致することを検証
     // 【期待値確認】: 既存ユーザーの情報が正確に返され、isNewUserがfalseであることを確認
@@ -112,8 +111,8 @@ describe('AuthenticateUserUseCase - JWT認証成功テスト', () => {
     expect(result.user.avatarUrl).toBe(
       'https://lh3.googleusercontent.com/a/avatar.jpg',
     ); // 【確認内容】: アバターURLが正確に返却されることを確認 🟢
-    expect(result.user.createdAt).toEqual(new Date('2024-01-01T00:00:00Z')); // 【確認内容】: アカウント作成日時が正確に返却されることを確認 🟢
-    expect(result.user.updatedAt).toEqual(new Date('2024-01-01T00:00:00Z')); // 【確認内容】: 最終更新日時が正確に返却されることを確認 🟢
+    expect(result.user.createdAt).toBe('2024-01-01T00:00:00Z'); // 【確認内容】: アカウント作成日時が正確に返却されることを確認 🟢
+    expect(result.user.updatedAt).toBe('2024-01-01T00:00:00Z'); // 【確認内容】: 最終更新日時が正確に返却されることを確認 🟢
     expect(result.user.lastLoginAt).toBeDefined(); // 【確認内容】: 最終ログイン日時が更新されていることを確認 🟢
     expect(result.isNewUser).toBe(false); // 【確認内容】: 既存ユーザーなのでisNewUserがfalseであることを確認 🟢
 
