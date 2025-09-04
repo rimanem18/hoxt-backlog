@@ -153,10 +153,13 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
           errorMessage: jwtValidationResult.errorMessage,
         });
 
-        // 【エラー分類実装】: JWT形式エラーの場合はAuthenticationError.invalidFormat()を使用
-        // 【実装方針】: テストで期待される具体的なエラーコードとメッセージを提供
+        // 【エラー分類実装】: JWT構造検証の失敗は全て ValidationError として統一
+        // 【実装方針】: セキュリティテスト要件に準拠し、入力バリデーション問題として統一的に扱う
+        // 【設計根拠】: 長大入力、Unicode攻撃、形式不正は全て入力検証レベルの問題
         // 🟢 信頼性レベル: テスト要件から直接抽出された確立された手法
-        throw AuthenticationError.invalidFormat();
+        throw new ValidationError(
+          jwtValidationResult.errorMessage ?? 'JWT形式が無効です',
+        );
       }
 
       this.logger.info('Starting user authentication', {

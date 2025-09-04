@@ -93,6 +93,7 @@ export class ErrorClassificationService implements IErrorClassificationService {
     if (this.isAuthenticationError(errorInfo)) {
       return {
         businessError: new AuthenticationError(
+          'AUTHENTICATION_FAILED',
           '認証処理でエラーが発生しました',
         ),
         classificationReason: 'Authentication error patterns detected',
@@ -102,7 +103,10 @@ export class ErrorClassificationService implements IErrorClassificationService {
 
     // フォールバック
     return {
-      businessError: new AuthenticationError('処理中にエラーが発生しました'),
+      businessError: new AuthenticationError(
+        'UNKNOWN_ERROR',
+        '処理中にエラーが発生しました',
+      ),
       classificationReason:
         'Unclassified error, defaulting to AuthenticationError',
       originalError: errorInfo,
