@@ -59,3 +59,32 @@ export type AuthProvider =
   | 'github'
   | 'facebook'
   | 'line';
+
+/**
+ * 認証成功レスポンス型
+ * 認証成功時のAPIレスポンス形式
+ */
+export interface AuthResponse {
+  /** 成功フラグ */
+  success: boolean;
+  /** 認証済みユーザーデータ */
+  data: AuthenticateUserUseCaseOutput;
+}
+
+/**
+ * エラーレスポンス型
+ * エラー時のAPIレスポンス形式
+ */
+export interface ErrorResponse {
+  /** 失敗フラグ */
+  success: false;
+  /** エラー情報 */
+  error: {
+    /** エラーコード */
+    code: string;
+    /** エラーメッセージ */
+    message: string;
+    /** 詳細情報（オプション） */
+    details?: string;
+  };
+}

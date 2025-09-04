@@ -38,3 +38,14 @@ export interface ApiError {
 export interface GetUserProfileResponse extends ApiResponse<User> {
   /** ApiResponse<User>を継承してユーザーデータ型を特定 */
 }
+
+/**
+ * エラーレスポンス型
+ * APIエラー時のレスポンス形式
+ */
+export interface ErrorResponse {
+  /** 失敗フラグ */
+  success: false;
+  /** エラー情報 */
+  error: ApiError;
+}
