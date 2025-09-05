@@ -17,7 +17,7 @@ server:
 client:
 	docker compose exec client ash
 e2e:
-	docker compose exec e2e bash
+	docker compose exec e2e npx playwright test
 db:
 	docker compose exec db ash
 sql:
