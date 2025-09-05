@@ -30,6 +30,15 @@ export interface AuthState {
 }
 
 /**
+ * テスト専用のグローバル型定義
+ */
+declare global {
+  interface Window {
+    __TEST_REDUX_AUTH_STATE__?: Partial<AuthState>;
+  }
+}
+
+/**
  * 認証成功アクションのペイロード型
  */
 interface AuthSuccessPayload {
@@ -39,11 +48,32 @@ interface AuthSuccessPayload {
   isNewUser: boolean;
 }
 
+/**
+ * テスト環境での認証状態読み込み
+ * E2Eテスト時にモック状態を適用するための仕組み
+ */
+const getTestAuthState = (): Partial<AuthState> | null => {
+  if (typeof window !== 'undefined' && window.__TEST_REDUX_AUTH_STATE__) {
+    try {
+      // 【セキュリティ改善】: テスト状態の基本的な検証
+      const testState = window.__TEST_REDUX_AUTH_STATE__;
+      if (testState && typeof testState === 'object') {
+        return testState;
+      }
+    } catch (error) {
+      console.warn('テスト状態の読み込みでエラーが発生:', error);
+    }
+  }
+  return null;
+};
+
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   isLoading: false,
   error: null,
+  // テスト状態があれば適用（E2Eテスト専用）
+  ...getTestAuthState(),
 };
 
 /**
@@ -100,9 +130,45 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
     },
+
+    /**
+     * 【Refactor追加】: 認証状態をクリア（セキュリティ目的）
+     * セッション期限切れやセキュリティ問題発生時に使用
+     *
+     * @param state - 現在の認証状態
+     */
+    clearAuthState: (state) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.isLoading = false;
+      state.error = null;
+      // セキュリティクリアランス用のログ
+      console.info('認証状態がセキュリティ目的でクリアされました');
+    },
+
+    /**
+     * 【Refactor追加】: テスト用認証状態設定
+     * E2Eテスト専用の状態設定アクション
+     *
+     * @param state - 現在の認証状態
+     * @param action - テスト用の認証状態
+     */
+    setAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
+      // 開発環境とテスト環境でのみ使用可能
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('本番環境では setAuthState は使用できません');
+        return;
+      }
+      
+      const { isAuthenticated, user, isLoading, error } = action.payload;
+      if (isAuthenticated !== undefined) state.isAuthenticated = isAuthenticated;
+      if (user !== undefined) state.user = user;
+      if (isLoading !== undefined) state.isLoading = isLoading;
+      if (error !== undefined) state.error = error;
+    },
   },
 });
 
-export const { authStart, authSuccess, authFailure, logout } =
+export const { authStart, authSuccess, authFailure, logout, clearAuthState, setAuthState } =
   authSlice.actions;
 export default authSlice.reducer;

@@ -163,6 +163,35 @@ export async function cleanupTestState(page: Page): Promise<void> {
 }
 
 /**
+ * Reduxストアに認証状態を直接設定
+ * 
+ * @param page - Playwrightのページオブジェクト
+ * @param user - テスト用ユーザーデータ
+ */
+export async function setReduxAuthState(
+  page: Page,
+  user: TestUser = DEFAULT_TEST_USER
+): Promise<void> {
+  await page.evaluate((userData) => {
+    try {
+      // Reduxストアに認証成功アクションを直接ディスパッチ
+      // グローバルウィンドウオブジェクトに一時的にストアを設定
+      if (typeof window !== 'undefined') {
+        // @ts-ignore - テスト専用のグローバル設定
+        window.__TEST_REDUX_AUTH_STATE__ = {
+          isAuthenticated: true,
+          user: userData,
+          isLoading: false,
+          error: null,
+        };
+      }
+    } catch (error) {
+      console.warn('Redux状態設定に失敗:', error);
+    }
+  }, user);
+}
+
+/**
  * 認証済みユーザー用の完全なテスト環境セットアップ
  * 
  * @param page - Playwrightのページオブジェクト  
@@ -174,4 +203,5 @@ export async function setupAuthenticatedTestEnvironment(
 ): Promise<void> {
   await setupAuthenticatedApiMocks(page, user);
   await setMockAuthSession(page, user);
+  await setReduxAuthState(page, user);
 }
