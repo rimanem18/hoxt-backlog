@@ -14,6 +14,7 @@ type ProviderProps = {
  * クライアントサイド状態管理を一元化する。
  */
 export default function Provider({ children }: ProviderProps) {
+
   // 5分間データを新鮮と判定し、フォーカス時の自動リフェッチは無効化
   const queryClient = new QueryClient({
     defaultOptions: {
