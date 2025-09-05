@@ -10,7 +10,7 @@
   - **テストに適した機能**: 型チェックによる早期エラー検出とIntelliSenseによる開発効率向上
 - **テストフレームワーク**: Playwright
   - **フレームワーク選択の理由**: タスク仕様で明示的に指定済み、複数ブラウザ対応とE2Eテストに最適化
-  - **テスト実行環境**: Docker Composeのclientコンテナ内でBunテストランナー使用
+  - **テスト実行環境**: Docker Composeのplaywrightコンテナ内でBunテストランナー使用
 - 🟢 この内容の信頼性レベル（タスク仕様で明示的に指定済み）
 
 ## 1. 正常系テストケース（基本的な動作）
@@ -243,4 +243,4 @@ afterEach(() => {
 - **テスト用Supabaseプロジェクト**: 本番環境と分離
 - **テスト用PostgreSQLデータベース**: 独立したテスト専用DB
 - **Google OAuthモック**: 外部依存を排除したモック実装
-- **Docker Compose**: clientコンテナでのPlaywright実行
+- **Docker Compose**: e2e コンテナでのPlaywright実行
