@@ -5,6 +5,7 @@ import { useEffect, useCallback, useMemo } from 'react';
 import { UserProfile } from '@/features/google-auth/components/UserProfile';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { setAuthState, restoreAuthState, handleExpiredToken } from '@/features/google-auth/store/authSlice';
+import { showNetworkError } from '@/features/auth/store/errorSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
@@ -38,6 +39,53 @@ export default function DashboardPage(): React.ReactNode {
     dispatch(restoreAuthState({ user, isNewUser: false }));
     console.log('T004: Authentication state restored successfully');
   }, [dispatch]);
+
+  // 【T007実装】: ネットワークエラー検出機能
+  // 【機能概要】: API通信失敗を検出し、ユーザーフレンドリーなエラーメッセージを表示
+  // 【実装方針】: 最小限の実装でT007テストを通すためのネットワークエラーハンドリング
+  // 【テスト対応】: T007のネットワークエラーメッセージ表示テストケースを満たす
+  // 🟡 信頼性レベル: 一般的なWebアプリのネットワークエラーハンドリングパターンから推測
+  const checkNetworkAndShowError = useCallback(async () => {
+    try {
+      // 【ネットワーク検証】: APIエンドポイントへのテスト通信で接続性を確認
+      // 【最小実装】: 既存のユーザー情報APIを使用してネットワーク状態を検証
+      const response = await fetch('/api/v1/users/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // 【タイムアウト設定】: 長時間の待機を避けるため短いタイムアウトを設定
+        signal: AbortSignal.timeout(5000),
+      });
+
+      // 【接続失敗判定】: レスポンスが取得できない場合はネットワークエラーと判定
+      if (!response.ok && response.status >= 500) {
+        throw new Error('Server error detected');
+      }
+    } catch (error) {
+      // 【T007対応】: ネットワークエラー検出時のエラーメッセージ表示処理
+      // 【エラー分類】: fetch失敗・タイムアウト・サーバーエラーをネットワークエラーとして処理
+      if (error instanceof Error && (
+        error.name === 'TypeError' ||  // fetch失敗（ネットワーク切断等）
+        error.name === 'TimeoutError' || // タイムアウト
+        error.message.includes('Failed to fetch') || // ネットワーク接続エラー
+        error.message.includes('Server error')  // サーバーエラー
+      )) {
+        console.log('T007: Network error detected, showing error message');
+        // 【Redux状態更新】: エラー状態をRedux storeに設定してUI表示をトリガー
+        dispatch(showNetworkError({
+          message: 'ネットワーク接続を確認してください',
+          details: `Error: ${error.message}`
+        }));
+      }
+    }
+  }, [dispatch]);
+
+  // 【T007実装】: ページ読み込み時のネットワーク状態確認
+  useEffect(() => {
+    // 【初回チェック】: ページ表示時に自動でネットワーク状態を確認
+    checkNetworkAndShowError();
+  }, [checkNetworkAndShowError]);
 
   // 【Green実装】: ページリロード時の認証状態復元機能
   useEffect(() => {

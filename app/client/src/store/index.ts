@@ -5,6 +5,7 @@
 
 import { configureStore } from '@reduxjs/toolkit';
 import { authSlice } from '@/features/google-auth/store/authSlice';
+import errorReducer from '@/features/auth/store/errorSlice';
 
 /**
  * Redux Store構成
@@ -14,6 +15,8 @@ export const store = configureStore({
   reducer: {
     // authSliceによる認証関連状態の管理
     auth: authSlice.reducer,
+    // 【T007実装】: グローバルエラー状態管理
+    error: errorReducer,
     // 将来拡張予定: user・ui・settingsなどのsliceを追加予定
   },
 

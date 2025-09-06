@@ -9,6 +9,7 @@ import {
 } from '@/features/google-auth/store/authSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
 import { validateStoredAuth, getAuthErrorMessage } from '@/shared/utils/authValidation';
+import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 
 type ProviderProps = {
   children: React.ReactNode;
@@ -96,7 +97,11 @@ export default function Provider({ children }: ProviderProps) {
 
   return (
     <ReduxProvider store={store}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        {/* 【T007実装】: グローバルエラー表示コンポーネント */}
+        <GlobalErrorToast />
+      </QueryClientProvider>
     </ReduxProvider>
   );
 }

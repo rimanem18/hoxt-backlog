@@ -372,6 +372,151 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(loginButton).toBeVisible();
   });
 
+  test('T007: ネットワークエラー時のフォールバック処理テスト', async ({ page }) => {
+    // コンソールログを収集してデバッグに活用
+    page.on('console', (msg) => {
+      if (msg.text().includes('T007')) {
+        console.log('Page Console:', msg.text());
+      }
+    });
+    
+    // 【テスト目的】: ネットワーク接続エラー時の適切なフォールバック処理とユーザー体験の確保
+    // 【テスト内容】: API通信失敗シミュレート → 接続エラー検出 → エラーメッセージ表示 → 再試行機能提供
+    // 【期待される動作】: ネットワーク問題を適切に検出し、ユーザーフレンドリーなエラー処理でUX向上
+    // 🟡 信頼性レベル: 一般的なWebアプリ要件として妥当な推測
+
+    // TODO(human) ネットワークエラーフォールバック機能実装が必要
+    // 以下の機能が未実装のため、現在このテストは失敗します:
+    // 1. ネットワーク接続エラーの自動検出機能
+    // 2. 接続エラー時の適切なユーザー向けメッセージ表示
+    // 3. 再試行ボタンの提供とリトライ機能
+    // 4. オフライン状態の視覚的インジケータ表示
+
+    // 【テストデータ準備】: 認証済みユーザーのデータを設定（ネットワークエラーをテストするため）
+    // 【初期条件設定】: 通常の認証ユーザーでネットワーク障害時の動作を確認
+    const networkUser = {
+      id: 'network-test-555',
+      name: 'Network Test User',
+      email: 'network.test@example.com',
+      avatarUrl: null,
+      lastLoginAt: new Date().toISOString(),
+      /** 【Refactor追加】: User型互換性のための必須フィールド */
+      externalId: 'google_network_555',
+      provider: 'google' as AuthProvider,
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 【ネットワークエラー設定】: すべてのAPI通信でネットワークエラーをシミュレート
+    await page.route('**/api/**', async (route) => {
+      // 【ネットワーク障害模擬】: 実際のネットワーク接続失敗をシミュレート
+      await route.abort('failed');
+    });
+    
+    // 【認証状態設定】: ネットワークエラー前の正常な認証状態を設定
+    await page.addInitScript((userData) => {
+      // LocalStorageに有効な認証情報を設定
+      const validAuthData = {
+        access_token: 'valid_token_for_network_test',
+        refresh_token: 'valid_refresh_token',
+        expires_at: Date.now() + 3600 * 1000, // 1時間後に期限切れ
+        user: userData,
+      };
+      localStorage.setItem('sb-localhost-auth-token', JSON.stringify(validAuthData));
+      console.log('T007: Valid auth token set for network test:', validAuthData);
+
+      // Reduxの初期状態は認証済みに設定
+      window.__TEST_REDUX_AUTH_STATE__ = {
+        isAuthenticated: true,
+        user: userData,
+        isLoading: false,
+        error: null,
+      };
+      console.log('T007: Initial authenticated state set (before network error)');
+    }, networkUser);
+
+    // 【実際の処理実行1】: ネットワークエラー状態でダッシュボードにアクセス
+    // 【処理内容】: API通信が必要なページ読み込み時にネットワークエラーが発生
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    
+    // 【デバッグ】: ネットワークエラー発生の詳細を確認
+    const debugInfo = await page.evaluate(() => {
+      const authData = localStorage.getItem('sb-localhost-auth-token');
+      const testState = window.__TEST_REDUX_AUTH_STATE__;
+      return {
+        authDataExists: !!authData,
+        testStateExists: !!testState,
+        currentURL: window.location.href,
+        navigatorOnline: navigator.onLine, // ブラウザのオンライン状態
+      };
+    });
+    console.log('T007 Debug Info:', debugInfo);
+
+    // 【結果検証1】: ネットワークエラー検出とエラーメッセージ表示確認
+    // 【期待値確認】: ネットワーク問題を検出し、分かりやすいエラーメッセージを表示
+    const networkErrorMessage = page.getByText('ネットワーク接続を確認してください', { exact: false });
+    await expect(networkErrorMessage).toBeVisible({ timeout: 10000 }); // 【確認内容】: ネットワークエラーメッセージの表示 🟡
+
+    // 【結果検証2】: 再試行ボタンの表示確認
+    // 【期待値確認】: ユーザーが簡単に再接続を試行できるUIを提供
+    const retryButton = page.getByRole('button', { name: /再試行|retry|もう一度/i });
+    await expect(retryButton).toBeVisible({ timeout: 5000 }); // 【確認内容】: 再試行ボタンの提供 🔴
+
+    // 【結果検証3】: オフライン状態インジケータの確認
+    // 【期待値確認】: ネットワーク接続状況の視覚的フィードバック提供
+    const offlineIndicator = page.locator('[data-testarea="network-status"]');
+    await expect(offlineIndicator).toContainText('オフライン'); // 【確認内容】: オフライン状態の視覚的表示 🔴
+
+    // 【実際の処理実行2】: 再試行ボタンのクリック機能確認
+    // 【処理内容】: 再試行ボタンクリックで再接続を試行
+    if (await retryButton.isVisible()) {
+      await retryButton.click();
+      
+      // 再試行実行中のローディング状態確認
+      const loadingIndicator = page.locator('[data-testarea="retry-loading"]');
+      await expect(loadingIndicator).toBeVisible({ timeout: 2000 }); // 【確認内容】: 再試行中のローディング表示 🔴
+    }
+
+    // 【結果検証4】: アプリケーション状態の安定性確認
+    // 【期待値確認】: ネットワークエラー時もアプリがクラッシュせず安定動作
+    const appStability = await page.evaluate(() => {
+      return {
+        pageExists: !!document.body,
+        hasError: document.querySelector('[data-testarea="error-boundary"]') !== null,
+        scriptErrors: window.onerror ? 'error-handler-present' : 'no-error-handler',
+      };
+    });
+    expect(appStability.pageExists).toBe(true); // 【確認内容】: アプリケーション安定性の維持 🟡
+    expect(appStability.hasError).toBe(false); // 【確認内容】: エラーバウンダリが発火していないこと 🟡
+
+    // 【結果検証5】: 接続復旧後の動作確認（ネットワーク復旧シミュレート）
+    // 【期待値確認】: ネットワーク復旧時の自動復帰またはユーザー操作による復帰
+    
+    // ネットワークエラールートを一時的に解除して復旧をシミュレート
+    await page.unroute('**/api/**');
+    
+    // 復旧後のAPIモック設定
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: networkUser,
+        }),
+      });
+    });
+
+    // ページリロードまたは再試行で接続復旧をテスト
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    
+    // 【復旧確認】: ネットワーク復旧後の正常動作
+    const recoveryDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
+    await expect(recoveryDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: ネットワーク復旧後の正常動作 🟡
+  });
+
   test('T005: 無効JWT認証エラーハンドリングテスト', async ({ page }) => {
     // コンソールログを収集してデバッグに活用
     page.on('console', (msg) => {
