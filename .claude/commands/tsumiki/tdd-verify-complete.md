@@ -19,7 +19,7 @@ TDD開発でテストケースの実装が完全に完了しているかを検�
 - `docs/implements/{test_case_name}-memo.md` を確認（メモファイルが存在する場合）
 - `docs/implements/{{task_id}}/{feature_name}-requirements.md` を確認
 - `docs/implements/{{task_id}}/{feature_name}-testcases.md` を確認
-- `doc/todo.md` を確認して対象タスクの現在のステータスを把握
+- `docs/todo.md` を確認して対象タスクの現在のステータスを把握
 - 予定していたテストケース数と内容を把握
 
 ### 2. 実装済みテストケースの確認

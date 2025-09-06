@@ -52,10 +52,21 @@ export default function DashboardPage(): React.ReactNode {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
           // 【T005対応・堅牢な期限判定】: expires_atの型と値を厳密にチェック
+          if (
+            parsedAuthData.expires_at === null ||
+            parsedAuthData.expires_at === undefined
+          ) {
+            console.warn('T005: expires_at is null or undefined');
+            handleTokenExpiration();
+            return;
+          }
           const expiresAt = Number(parsedAuthData.expires_at);
-          if (!parsedAuthData.expires_at || isNaN(expiresAt) || expiresAt <= Date.now()) {
-            if (isNaN(expiresAt) && parsedAuthData.expires_at) {
-              console.warn('T005: Invalid timestamp format detected:', parsedAuthData.expires_at);
+          if (isNaN(expiresAt) || expiresAt <= Date.now()) {
+            if (isNaN(expiresAt)) {
+              console.warn(
+                'T005: Invalid timestamp format detected:',
+                parsedAuthData.expires_at,
+              );
             }
             // 【パフォーマンス最適化】: メモ化された期限切れ処理を使用
             handleTokenExpiration();
@@ -140,7 +151,6 @@ export default function DashboardPage(): React.ReactNode {
       hasUser: !!user,
       hasTestAuthState,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
     });
     // 【リダイレクト処理】: 認証状態が確認できない場合は安全にホームページに誘導
     router.push('/');
@@ -176,11 +186,11 @@ export default function DashboardPage(): React.ReactNode {
             <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
             <p className="text-blue-700">認証状態: 認証済み</p>
             <p className="text-blue-700">テスト環境: {hasTestAuthState ? 'Yes' : 'No'}</p>
-            <p className="text-blue-700">ユーザーID: {effectiveUser?.id || '未設定'}</p>
+            <p className="text-blue-700">ユーザーID: {effectiveUser?.id ? '設定済み' : '未設定'}</p>
             <p className="text-blue-700">
               最終ログイン:{' '}
               {effectiveUser?.lastLoginAt
-                ? new Date(effectiveUser.lastLoginAt).toLocaleString('ja-JP')
+                ? '記録あり'
                 : '未設定'}
             </p>
           </div>
