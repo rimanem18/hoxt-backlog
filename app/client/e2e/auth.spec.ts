@@ -5,6 +5,7 @@ import {
   cleanupTestState,
   DEFAULT_TEST_USER 
 } from './helpers/test-setup';
+import type { AuthProvider } from '@/packages/shared-schemas/src/auth';
 
 test.describe('Google OAuth認証フロー E2Eテスト', () => {
   test.afterEach(async ({ page }) => {
@@ -88,6 +89,11 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       avatarUrl: null,
       // 2日前のログイン履歴
       lastLoginAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      /** 【Refactor追加】: User型互換性のための必須フィールド */
+      externalId: 'google_existing_456',
+      provider: 'google' as AuthProvider,
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     // 【Refactor改善】: より堅牢なテスト状態設定
@@ -140,6 +146,96 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     // ウェルカムメッセージではなく、既存ユーザー向けメッセージが表示される
     const existingUserMessage = page.getByText('おかえりなさい！', { exact: false });
     await expect(existingUserMessage).toBeVisible(); // 【確認内容】: 既存ユーザー向けメッセージが表示されること 🔴
+  });
+
+  test('T004: ページリロード時の認証状態復元テスト', async ({ page }) => {
+    // 【テスト目的】: 認証済みユーザーがページリロードした際の認証状態適切復元確認
+    // 【テスト内容】: 認証状態設定 → ダッシュボードアクセス → ページリロード → 認証状態維持確認
+    // 【期待される動作】: リロード後も認証状態が維持され、ユーザー情報が継続表示される
+    // 🟢 信頼性レベル: ユーザビリティの基本要件として明確に定義済み
+
+    // TODO(human) ページリロード時の認証状態復元機能実装が必要
+    // 以下の機能が未実装のため、現在このテストは失敗します:
+    // 1. ページリロード時のLocalStorage/SessionStorage からの認証情報復元
+    // 2. Supabase認証セッションの自動復元処理
+    // 3. Redux状態の適切な再初期化とユーザー情報の復元
+    // 4. リロード中のローディング状態管理
+
+    // 【テストデータ準備】: 認証済みユーザーの完全なセッション情報を設定
+    // 【初期条件設定】: 長期セッションを持つ認証済みユーザーのデータ準備
+    const authenticatedUser = {
+      id: 'auth-user-789',
+      name: 'Authenticated User',
+      email: 'auth.user@example.com',
+      avatarUrl: null,
+      lastLoginAt: new Date().toISOString(), // 現在ログイン中
+      /** 【Refactor追加】: User型互換性のための必須フィールド */
+      externalId: 'google_auth_789',
+      provider: 'google' as AuthProvider,
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 【初期認証状態設定】: 認証済み状態でダッシュボードにアクセス
+    await page.addInitScript((userData) => {
+      // ページが読み込まれる前にグローバル状態を設定
+      window.__TEST_REDUX_AUTH_STATE__ = {
+        isAuthenticated: true,
+        user: userData,
+        isLoading: false,
+        error: null,
+      };
+      console.log('T004 Initial auth state set:', window.__TEST_REDUX_AUTH_STATE__);
+    }, authenticatedUser);
+
+    // 【実際の処理実行1】: 初回ダッシュボードアクセス
+    // 【処理内容】: 認証済みユーザーとしてダッシュボード正常表示を確認
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // 【初期状態検証】: 認証済み状態の確認
+    const initialDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
+    await expect(initialDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: 初期ダッシュボード表示が正常に動作すること 🟢
+
+    const initialUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
+    await expect(initialUserName).toBeVisible({ timeout: 5000 }); // 【確認内容】: 初期ユーザー情報表示が正常であること 🟢
+
+    // 【実際の処理実行2】: ページリロード実行
+    // 【処理内容】: 認証状態を維持したままページリロードを実行
+    console.log('T004 Executing page reload...');
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // 【結果検証1】: リロード後のダッシュボード表示確認
+    // 【期待値確認】: リロード後も認証状態が維持され、ダッシュボードが表示される
+    const reloadedDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
+    await expect(reloadedDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: リロード後のダッシュボード表示維持 🔴
+
+    // 【結果検証2】: リロード後のユーザー情報表示確認
+    // 【期待値確認】: ユーザー情報がリロード前と同様に表示される
+    const reloadedUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
+    await expect(reloadedUserName).toBeVisible({ timeout: 5000 }); // 【確認内容】: リロード後のユーザー情報表示維持 🔴
+
+    const reloadedUserEmail = page.locator('p').filter({ hasText: authenticatedUser.email });
+    await expect(reloadedUserEmail).toBeVisible(); // 【確認内容】: リロード後のメールアドレス表示維持 🔴
+
+    // 【結果検証3】: リロード後の認証機能継続確認
+    // 【期待値確認】: ログアウトボタンが表示され、認証機能が継続利用可能
+    const reloadedLogoutButton = page.getByRole('button', { name: /ログアウト|logout/i });
+    await expect(reloadedLogoutButton).toBeVisible(); // 【確認内容】: リロード後の認証機能継続性 🔴
+
+    // 【結果検証4】: リロード後の認証状態永続化確認
+    // 【期待値確認】: LocalStorageまたはSessionStorageに認証情報が適切に保存されている
+    const persistedAuthState = await page.evaluate(() => {
+      // LocalStorageからSupabase認証情報を確認
+      const supabaseAuth = localStorage.getItem('sb-localhost-auth-token');
+      return supabaseAuth ? JSON.parse(supabaseAuth) : null;
+    });
+    expect(persistedAuthState).toBeTruthy(); // 【確認内容】: 認証状態の永続化が正しく動作すること 🔴
+
+    // 【セッション継続確認】: リロード後も既存ユーザーメッセージが表示される
+    const continuedSessionMessage = page.getByText('おかえりなさい！', { exact: false });
+    await expect(continuedSessionMessage).toBeVisible(); // 【確認内容】: セッション継続による適切なメッセージ表示 🔴
   });
 
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
