@@ -16,6 +16,23 @@ import type { User } from '@/packages/shared-schemas/src/auth';
  */
 
 /**
+ * 認証エラーの種類
+ */
+export type AuthErrorCode = 'EXPIRED' | 'UNAUTHORIZED' | 'NETWORK_ERROR';
+
+/**
+ * 認証エラー情報
+ */
+export interface AuthError {
+  /** エラーコード */
+  code: AuthErrorCode;
+  /** エラー発生時刻（epoch milliseconds） */
+  timestamp: number;
+  /** エラーメッセージ */
+  message?: string;
+}
+
+/**
  * 認証状態の型定義
  */
 export interface AuthState {
@@ -27,6 +44,8 @@ export interface AuthState {
   isLoading: boolean;
   /** 認証エラー情報（正常時はnull） */
   error: string | null;
+  /** 【T006対応】JWT期限切れなどの認証エラー詳細情報 */
+  authError: AuthError | null;
 }
 
 /**
@@ -72,6 +91,7 @@ const initialState: AuthState = {
   user: null,
   isLoading: false,
   error: null,
+  authError: null,
   // テスト状態があれば適用（E2Eテスト専用）
   ...getTestAuthState(),
 };
@@ -91,6 +111,7 @@ export const authSlice = createSlice({
     authStart: (state) => {
       state.isLoading = true;
       state.error = null;
+      state.authError = null;
     },
 
     /**
@@ -105,6 +126,7 @@ export const authSlice = createSlice({
       state.user = action.payload.user;
       state.isLoading = false;
       state.error = null;
+      state.authError = null;
       
       // 【T004対応】: LocalStorageに認証状態を保存してページリロード時に復元可能にする
       if (typeof window !== 'undefined') {
@@ -130,6 +152,7 @@ export const authSlice = createSlice({
       state.user = null;
       state.isLoading = false;
       state.error = action.payload.error;
+      state.authError = null;
       
       // 【T004対応】: 認証失敗時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
@@ -148,6 +171,7 @@ export const authSlice = createSlice({
       state.user = null;
       state.isLoading = false;
       state.error = null;
+      state.authError = null;
       
       // 【T004対応】: ログアウト時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
@@ -167,6 +191,7 @@ export const authSlice = createSlice({
       state.user = null;
       state.isLoading = false;
       state.error = null;
+      state.authError = null;
       
       // 【T004対応】: セキュリティクリアランス時もLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
@@ -189,6 +214,7 @@ export const authSlice = createSlice({
       state.user = action.payload.user;
       state.isLoading = false;
       state.error = null;
+      state.authError = null;
       console.log('T004: Authentication state restored from localStorage');
     },
 
@@ -206,11 +232,12 @@ export const authSlice = createSlice({
         return;
       }
       
-      const { isAuthenticated, user, isLoading, error } = action.payload;
+      const { isAuthenticated, user, isLoading, error, authError } = action.payload;
       if (isAuthenticated !== undefined) state.isAuthenticated = isAuthenticated;
       if (user !== undefined) state.user = user;
       if (isLoading !== undefined) state.isLoading = isLoading;
       if (error !== undefined) state.error = error;
+      if (authError !== undefined) state.authError = authError;
       
       // 【T004対応】: テスト用状態設定時もLocalStorageに保存
       if (isAuthenticated && user && typeof window !== 'undefined') {
@@ -224,9 +251,49 @@ export const authSlice = createSlice({
         console.log('T004: Test authentication state saved to localStorage');
       }
     },
+
+    /**
+     * 【T006実装・セキュリティ強化】: JWT期限切れ専用のエラーハンドリング
+     * 【機能概要】: トークン期限切れを検出した際に認証状態をクリアし、適切なエラー情報を設定
+     * 【セキュリティ】: 情報漏洩防止とセッションハイジャック対策を重視した設計
+     * 【実装方針】: 期限切れ時の完全な状態クリアと監査ログ出力
+     * 🟢 信頼性レベル: JWT標準仕様とセキュリティベストプラクティスに基づく実装
+     *
+     * @param state - 現在の認証状態
+     */
+    handleExpiredToken: (state) => {
+      // 【セキュリティクリア】: 認証状態の完全な初期化（情報漏洩防止）
+      state.isAuthenticated = false;
+      state.user = null;
+      state.isLoading = false;
+      state.error = null;
+      
+      // 【構造化エラー情報】: 期限切れ専用のエラー情報を適切な型で設定
+      // 【監査目的】: セキュリティインシデント追跡のための詳細情報保持
+      state.authError = {
+        code: 'EXPIRED',
+        timestamp: Date.now(),
+        message: 'セッションの有効期限が切れました',
+      };
+      
+      // 【セキュリティクリーンアップ】: LocalStorageからの期限切れトークン削除
+      // 【データ保護】: 不正使用防止のための確実なトークン削除
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sb-localhost-auth-token');
+        // 【追加セキュリティ】: 関連するセッション情報も削除
+        localStorage.removeItem('sb-localhost-refresh-token');
+        localStorage.removeItem('sb-localhost-auth-expires');
+        console.log('T006: Expired authentication tokens removed from localStorage');
+      }
+      
+      // 【セキュリティ監査ログ】: インシデント追跡とセキュリティ分析のための詳細ログ
+      // 【コンプライアンス】: セキュリティ要件に基づく適切な監査ログ出力
+      console.info('T006: JWT token has expired and authentication state cleared');
+      console.info(`T006: Expiration handled at ${new Date().toISOString()}`);
+    },
   },
 });;
 
-export const { authStart, authSuccess, authFailure, logout, clearAuthState, setAuthState, restoreAuthState } =
+export const { authStart, authSuccess, authFailure, logout, clearAuthState, setAuthState, restoreAuthState, handleExpiredToken } =
   authSlice.actions;
 export default authSlice.reducer;

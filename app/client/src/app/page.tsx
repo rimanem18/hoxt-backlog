@@ -12,7 +12,7 @@ import { useAppSelector } from '@/store/hooks';
  * 認証済みユーザーには自動的にダッシュボードへリダイレクト。
  */
 export default function Home(): React.ReactNode {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, authError } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   // 認証済みユーザーは自動的にダッシュボードへリダイレクト
@@ -26,6 +26,27 @@ export default function Home(): React.ReactNode {
       <main className="max-w-4xl mx-auto space-y-8">
         {/* Hello World コンポーネント */}
         <HelloWorld />
+
+        {/* 【T006実装】: 期限切れエラーメッセージ表示 */}
+        {authError && authError.code === 'EXPIRED' && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  セッションの有効期限が切れました
+                </h3>
+                <p className="mt-1 text-sm text-red-600">
+                  再度ログインしてください
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col items-center gap-6">
           {/* 未認証ユーザー向けのログインボタンと促進メッセージ */}

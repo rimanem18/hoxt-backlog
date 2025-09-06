@@ -238,6 +238,112 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(continuedSessionMessage).toBeVisible(); // 【確認内容】: セッション継続による適切なメッセージ表示 🔴
   });
 
+  test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ page }) => {
+    // コンソールログを収集してデバッグに活用
+    page.on('console', (msg) => {
+      if (msg.text().includes('T006')) {
+        console.log('Page Console:', msg.text());
+      }
+    });
+    // 【テスト目的】: JWT期限切れ時の適切なエラーハンドリングとユーザー誘導確認
+    // 【テスト内容】: 期限切れトークンでアクセス → 認証エラー検出 → 適切なエラーメッセージ表示 → 再認証プロンプト
+    // 【期待される動作】: 期限切れセッションを適切に検出し、ユーザーフレンドリーな再認証フローに誘導
+    // 🟡 信頼性レベル: JWT標準仕様とUX要件から導出した妥当なテストケース
+
+    // TODO(human) JWT期限切れエラーハンドリング機能実装が必要
+    // 以下の機能が未実装のため、現在このテストは失敗します:
+    // 1. JWT有効期限切れの自動検出機能
+    // 2. 期限切れ時の適切なエラーメッセージ表示
+    // 3. 自動的な認証状態クリアとLocalStorage削除
+    // 4. ユーザーを再ログインに誘導するフレンドリーなUI
+
+    // 【テストデータ準備】: 意図的に期限切れに設定したJWT認証状態を作成
+    // 【初期条件設定】: 過去の時刻を有効期限とする期限切れトークンでユーザー認証状態を設定
+    const expiredUser = {
+      id: 'expired-user-999',
+      name: 'Expired User',
+      email: 'expired.user@example.com',
+      avatarUrl: null,
+      lastLoginAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24時間前
+      /** 【Refactor追加】: User型互換性のための必須フィールド */
+      externalId: 'google_expired_999',
+      provider: 'google' as AuthProvider,
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    // 【期限切れ認証状態設定】: 意図的に期限切れのJWTトークンをLocalStorageに設定
+    await page.addInitScript((userData) => {
+      // 【期限切れトークン作成】: 過去の時刻を期限とするトークンデータを設定
+      const expiredAuthData = {
+        access_token: 'expired_access_token_test',
+        refresh_token: 'expired_refresh_token_test',
+        expires_at: Date.now() - 3600 * 1000, // 1時間前（期限切れ）
+        user: userData,
+      };
+      localStorage.setItem('sb-localhost-auth-token', JSON.stringify(expiredAuthData));
+      console.log('T006: Expired JWT token set in localStorage:', expiredAuthData);
+
+      // Reduxの初期状態は認証済みに設定（期限切れ検出前の状態をシミュレート）
+      window.__TEST_REDUX_AUTH_STATE__ = {
+        isAuthenticated: true,
+        user: userData,
+        isLoading: false,
+        error: null,
+      };
+      console.log('T006: Initial authenticated state set (before expiry detection)');
+    }, expiredUser);
+
+    // 【実際の処理実行1】: 期限切れトークン状態でダッシュボードにアクセス
+    // 【処理内容】: ページ読み込み時にJWT期限チェックが実行され、期限切れが検出される
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    
+    // 【デバッグ】: 期限切れ検出の詳細を確認
+    const debugInfo = await page.evaluate(() => {
+      const authData = localStorage.getItem('sb-localhost-auth-token');
+      const testState = window.__TEST_REDUX_AUTH_STATE__;
+      const now = Date.now();
+      const parsedAuthData = authData ? JSON.parse(authData) : null;
+      return {
+        currentTime: now,
+        authDataExists: !!authData,
+        authDataExpiry: parsedAuthData?.expires_at,
+        isExpired: parsedAuthData?.expires_at ? (parsedAuthData.expires_at <= now) : null,
+        testStateExists: !!testState,
+        currentURL: window.location.href,
+      };
+    });
+    console.log('T006 Debug Info:', debugInfo);
+
+    // 【結果検証1】: 期限切れ検出によるホームページへの自動リダイレクト確認
+    // 【期待値確認】: JWT期限切れを検出し、セキュリティのため認証が必要なページから退去
+    await expect(page).toHaveURL('/', { timeout: 10000 }); // 【確認内容】: 期限切れ検出時の適切なリダイレクト処理 🟡
+
+    // 【結果検証2】: 適切な期限切れエラーメッセージ表示確認
+    // 【期待値確認】: ユーザーフレンドリーな期限切れメッセージでUX向上
+    const expiredMessage = page.getByText('セッションの有効期限が切れました', { exact: false });
+    await expect(expiredMessage).toBeVisible({ timeout: 5000 }); // 【確認内容】: 期限切れ時の適切なエラーメッセージ表示 🔴
+
+    // 【結果検証3】: 再ログイン促進UI表示確認
+    // 【期待値確認】: ユーザーが迷わず再認証できる明確な誘導
+    const reloginPrompt = page.getByText('再度ログインしてください', { exact: false });
+    await expect(reloginPrompt).toBeVisible(); // 【確認内容】: 再認証プロンプトの適切な表示 🔴
+
+    // 【結果検証4】: 認証状態の適切なクリア確認
+    // 【期待値確認】: 期限切れトークンの安全な削除でセキュリティ確保
+    const clearedAuthState = await page.evaluate(() => {
+      const authData = localStorage.getItem('sb-localhost-auth-token');
+      return authData ? JSON.parse(authData) : null;
+    });
+    expect(clearedAuthState).toBeFalsy(); // 【確認内容】: 期限切れトークンの安全な削除処理 🔴
+
+    // 【結果検証5】: 再認証可能状態の確認
+    // 【期待値確認】: スムーズな再ログインフローでユーザビリティ確保
+    const loginButton = page.getByRole('button', { name: /ログイン|login/i });
+    await expect(loginButton).toBeVisible(); // 【確認内容】: 再認証のためのログインボタン表示 🟡
+  });
+
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
     // 【テスト目的】: 未認証ユーザーが保護されたルートにアクセスした際の適切なリダイレクト確認
     // 【セキュリティテスト】: 認証ガードの動作確認
