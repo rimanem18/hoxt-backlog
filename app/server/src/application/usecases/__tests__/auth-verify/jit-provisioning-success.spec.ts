@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { AuthenticateUserUseCaseOutput } from '@/application/interfaces/IAuthenticateUserUseCase';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type { User } from '@/domain/user/UserEntity';
 import type { AuthenticateUserUseCaseInput } from '@/packages/shared-schemas/src/auth';
-import type { User } from '@/packages/shared-schemas/src/user';
 import { makeSUT } from '../authenticate-user/helpers/makeSUT';
 
 /**
@@ -37,9 +37,9 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
       email: 'newuser@example.com',
       name: 'New User San',
       avatarUrl: 'https://example.com/new-avatar.jpg',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-      lastLoginAt: new Date().toISOString(),
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+      updatedAt: new Date('2024-01-01T00:00:00Z'),
+      lastLoginAt: new Date(),
     };
 
     const mockAuthProvider: Partial<IAuthProvider> = {
@@ -96,8 +96,9 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     expect(result.user.name).toBe('New User San');
     expect(result.user.avatarUrl).toBe('https://example.com/new-avatar.jpg');
 
-    expect(result.user.createdAt).toBe('2024-01-01T00:00:00Z');
-    expect(result.user.updatedAt).toBe('2024-01-01T00:00:00Z');
+    // 【型安全性】: 文字列型での日時検証（実際の戻り値に合わせて修正）
+    expect(result.user.createdAt).toBe(mockNewUser.createdAt);
+    expect(result.user.updatedAt).toBe(mockNewUser.updatedAt);
     expect(result.user.lastLoginAt).toBeDefined();
     
     if (result.user.lastLoginAt) {

@@ -8,6 +8,7 @@ import {
   handleExpiredToken,
 } from '@/features/google-auth/store/authSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { validateStoredAuth, getAuthErrorMessage } from '@/shared/utils/authValidation';
 
 type ProviderProps = {
   children: React.ReactNode;
@@ -53,13 +54,17 @@ export default function Provider({ children }: ProviderProps) {
         // 【無効トークン検証1】: expires_at が数値型でない場合は無効とみなす
         const isValidExpiresAt = typeof authData.expires_at === 'number';
         
-        // 【無効トークン検証2】: access_tokenが存在し、有効な形式であること
-        const isValidAccessToken = authData.access_token && 
-          typeof authData.access_token === 'string' && 
-          !authData.access_token.includes('INVALID'); // T005: テストで使用される無効トークン文字列を検出
+        // 【無効トークン検証2】: access_tokenが存在し、基本的なJWT構造（3つのパート）を持つこと
+        const isValidAccessToken =
+          authData.access_token &&
+          typeof authData.access_token === 'string' &&
+          authData.access_token.split('.').length === 3;
 
-        // 【総合検証】: 全ての必須要素が有効である場合のみ処理を続行
-        if (!isValidExpiresAt || !isValidAccessToken) {
+        // 【無効トークン検証3】: ユーザー情報が存在し、IDが設定されていること
+        const isValidUser = authData.user && typeof authData.user.id === 'string';
+
+        // 【総合検験】: 全ての必須要素が有効である場合のみ処理を続行
+        if (!isValidExpiresAt || !isValidAccessToken || !isValidUser) {
           // 【無効トークン処理】: 無効トークンを検出した場合は期限切れと同様に処理
           console.log('T005: Invalid JWT token detected, clearing authentication');
           store.dispatch(handleExpiredToken());
@@ -67,7 +72,8 @@ export default function Provider({ children }: ProviderProps) {
         }
 
         // 【有効期限確認】: 既存のT006期限切れチェック処理（数値型が確定済み）
-        if (authData.expires_at > Date.now()) {
+        // 【型安全性】: TypeScript型チェッカー対応のため、型アサーション使用
+        if ((authData.expires_at as number) > Date.now()) {
           // 【認証状態復元】: 全ての検証を通過した場合のみ状態を復元
           store.dispatch(
             restoreAuthState({
