@@ -5,6 +5,7 @@
  */
 
 import type { Page } from '@playwright/test';
+import type { AuthProvider } from '@/packages/shared-schemas/src/auth';
 
 /**
  * テスト用ユーザーデータの型定義
@@ -15,6 +16,11 @@ export interface TestUser {
   email: string;
   avatarUrl?: string | null;
   lastLoginAt?: string;
+  /** 【Refactor追加】: User型との互換性のために必要なフィールド */
+  externalId: string;
+  provider: AuthProvider; // 正しいAuthProvider型を使用
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -26,7 +32,12 @@ export const DEFAULT_TEST_USER: TestUser = {
   email: 'test.user@example.com',
   avatarUrl: null,
   lastLoginAt: new Date().toISOString(),
-};
+  /** 【Refactor追加】: User型互換性のための必須フィールド */
+  externalId: 'google_123456789',
+  provider: 'google' as AuthProvider, // 型安全なキャスト
+  createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30日前
+  updatedAt: new Date().toISOString(),
+};;;
 
 /**
  * 認証済み状態のAPIモックを設定
