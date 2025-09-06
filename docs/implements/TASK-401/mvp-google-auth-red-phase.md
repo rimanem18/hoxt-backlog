@@ -57,7 +57,7 @@
 ### 環境セットアップエラー
 
 ```
-Error: browserType.launch: Executable doesn't exist at /home/rimane/.cache/ms-playwright/chromium_headless_shell-1187/chrome-linux/headless_shell
+Error: browserType.launch: Executable doesn't exist at .cache/ms-playwright/chromium_headless_shell-1187/chrome-linux/headless_shell
 ```
 
 **原因**: Docker環境でのPlaywrightブラウザインストール不備
@@ -180,7 +180,7 @@ const existingUser = {
 ### 実装済みテストコード
 
 #### ファイル位置
-`/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`
+`app/client/e2e/auth.spec.ts`
 
 #### 主要なテスト実装内容
 

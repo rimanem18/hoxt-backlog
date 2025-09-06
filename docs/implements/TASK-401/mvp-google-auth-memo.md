@@ -98,7 +98,7 @@ test.describe('基本動作確認 E2Eテスト', () => {
 ### 期待される失敗
 
 1. **ブラウザインストール不備**: Playwrightブラウザが適切にインストールされていない
-   - エラー: `Executable doesn't exist at /home/rimane/.cache/ms-playwright/chromium_headless_shell-1187/chrome-linux/headless_shell`
+   - エラー: `Executable doesn't exist at .cache/ms-playwright/chromium_headless_shell-1187/chrome-linux/headless_shell`
 
 2. **認証UI未実装**: ログインボタン・認証フローが実装されていない
    - 期待される失敗: `getByRole('button', { name: /ログイン|login/i })` が見つからない
@@ -331,7 +331,7 @@ const existingUser = {
 
 ### 💻 実装したテストコード
 
-以下のテストコードを`/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`に追加実装：
+以下のテストコードを`app/client/e2e/auth.spec.ts`に追加実装：
 
 #### テストケース実装
 - **既存ユーザー認証環境セットアップ**: 過去のログイン履歴を持つユーザーのモック設定
@@ -395,7 +395,7 @@ Timeout: 10000ms
 ### 💻 実装されたコード
 
 #### 1. ダッシュボードページ修正
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/app/dashboard/page.tsx`
+**ファイル**: `app/client/src/app/dashboard/page.tsx`
 
 ```typescript
 // 【機能概要】: テスト環境での認証状態処理とRedux連携
@@ -413,7 +413,7 @@ useEffect(() => {
 ```
 
 #### 2. テスト内DOM生成実装
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`
+**ファイル**: `app/client/e2e/auth.spec.ts`
 
 ```typescript
 // 【実装内容】: DOM直接操作による最小実装でテスト通過を実現
@@ -516,7 +516,7 @@ await page.evaluate((userData) => {
 ### 💻 改善されたコード（強化された日本語コメント）
 
 #### 1. Redux認証ストア改善
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/features/google-auth/store/authSlice.ts`
+**ファイル**: `app/client/src/features/google-auth/store/authSlice.ts`
 
 ```typescript
 /**
@@ -539,7 +539,7 @@ setAuthState: (state, action: PayloadAction<AuthState>) => {
 ```
 
 #### 2. UserProfileコンポーネント最適化
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/features/google-auth/components/UserProfile.tsx`
+**ファイル**: `app/client/src/features/google-auth/components/UserProfile.tsx`
 
 ```typescript
 /**
@@ -566,7 +566,7 @@ const handleLogout = useCallback(async () => {
 ```
 
 #### 3. テストコード品質向上
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`
+**ファイル**: `app/client/e2e/auth.spec.ts`
 
 ```typescript
 // 【テスト状態設定】: DOM操作を排除し堅牢な状態設定に改善
@@ -694,7 +694,7 @@ const authenticatedUser = {
 
 ### 💻 実装したテストコード
 
-以下のテストコードを`/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`に追加実装：
+以下のテストコードを`app/client/e2e/auth.spec.ts`に追加実装：
 
 #### テストフロー実装
 1. **初期認証状態設定**: Redux状態とSupabaseセッションの設定
@@ -1004,7 +1004,7 @@ const expiredUser = {
 
 ### 💻 実装したテストコード
 
-T006テストケースを`/home/rimane/projects/hoxt-backlog/app/client/e2e/auth.spec.ts`に実装：
+T006テストケースを`app/client/e2e/auth.spec.ts`に実装：
 
 #### テストフロー実装
 1. **期限切れ認証状態設定**: 意図的に過去の時刻を期限とするJWTトークンをLocalStorageに設定
@@ -1085,7 +1085,7 @@ Timeout: 10000ms
 ### 💻 実装済みの主要コード
 
 #### 1. ダッシュボードページの期限切れ検出処理
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/app/dashboard/page.tsx`
+**ファイル**: `app/client/src/app/dashboard/page.tsx`
 
 ```typescript
 // 【T006対応】: 期限切れ検出を最優先で実行（テスト・本番環境共通）
@@ -1113,7 +1113,7 @@ if (typeof window !== 'undefined') {
 ```
 
 #### 2. authSliceのhandleExpiredTokenアクション
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/features/google-auth/store/authSlice.ts`
+**ファイル**: `app/client/src/features/google-auth/store/authSlice.ts`
 
 ```typescript
 /**
@@ -1230,7 +1230,7 @@ handleExpiredToken: (state) => {
 ### 💻 改善されたコード（強化された日本語コメント付き）
 
 #### 1. ダッシュボードページのセキュリティ・パフォーマンス強化
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/app/dashboard/page.tsx`
+**ファイル**: `app/client/src/app/dashboard/page.tsx`
 
 ```typescript
 /**
@@ -1257,7 +1257,7 @@ if (!parsedAuthData.user || !parsedAuthData.access_token) {
 ```
 
 #### 2. authSliceのセキュリティログ強化
-**ファイル**: `/home/rimane/projects/hoxt-backlog/app/client/src/features/google-auth/store/authSlice.ts`
+**ファイル**: `app/client/src/features/google-auth/store/authSlice.ts`
 
 ```typescript
 /**

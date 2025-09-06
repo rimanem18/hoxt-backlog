@@ -27,7 +27,7 @@ export default function Home(): React.ReactNode {
         {/* Hello World コンポーネント */}
         <HelloWorld />
 
-        {/* 【T006実装】: 期限切れエラーメッセージ表示 */}
+        {/* 【T005・T006実装】: 認証エラーメッセージ表示 */}
         {authError && authError.code === 'EXPIRED' && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
@@ -38,10 +38,10 @@ export default function Home(): React.ReactNode {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">
-                  セッションの有効期限が切れました
+                  認証に問題があります
                 </h3>
                 <p className="mt-1 text-sm text-red-600">
-                  再度ログインしてください
+                  もう一度ログインしてください
                 </p>
               </div>
             </div>

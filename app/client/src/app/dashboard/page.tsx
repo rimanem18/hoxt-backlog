@@ -51,9 +51,12 @@ export default function DashboardPage(): React.ReactNode {
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
-          // 【厳密期限判定】: ミリ秒精度での正確な期限チェック（タイミング攻撃対策）
-          // 【セキュリティログ】: 期限切れ検出時の詳細ログで不正アクセス監視
-          if (parsedAuthData.expires_at && parsedAuthData.expires_at <= Date.now()) {
+          // 【T005対応・堅牢な期限判定】: expires_atの型と値を厳密にチェック
+          const expiresAt = Number(parsedAuthData.expires_at);
+          if (!parsedAuthData.expires_at || isNaN(expiresAt) || expiresAt <= Date.now()) {
+            if (isNaN(expiresAt) && parsedAuthData.expires_at) {
+              console.warn('T005: Invalid timestamp format detected:', parsedAuthData.expires_at);
+            }
             // 【パフォーマンス最適化】: メモ化された期限切れ処理を使用
             handleTokenExpiration();
             return;

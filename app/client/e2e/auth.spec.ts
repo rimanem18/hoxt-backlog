@@ -185,7 +185,17 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('T004 Initial auth state set:', window.__TEST_REDUX_AUTH_STATE__);
+      
+      // 【T004修正】: LocalStorageに認証データを明示的に設定
+      const authData = {
+        access_token: 'mock_access_token_for_reload_test',
+        refresh_token: 'mock_refresh_token_for_reload_test', 
+        expires_at: Date.now() + 3600 * 1000, // 1時間後に期限切れ
+        user: userData,
+        isNewUser: false
+      };
+      localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
+      console.log('T004 Initial auth state and LocalStorage set:', window.__TEST_REDUX_AUTH_STATE__);
     }, authenticatedUser);
 
     // 【実際の処理実行1】: 初回ダッシュボードアクセス
@@ -360,5 +370,110 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     // 【検証】: ログインボタンが表示されることを確認
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
     await expect(loginButton).toBeVisible();
+  });
+
+  test('T005: 無効JWT認証エラーハンドリングテスト', async ({ page }) => {
+    // コンソールログを収集してデバッグに活用
+    page.on('console', (msg) => {
+      if (msg.text().includes('T005')) {
+        console.log('Page Console:', msg.text());
+      }
+    });
+    
+    // 【テスト目的】: 無効なJWTトークンでアクセスした際の適切なエラーハンドリング確認
+    // 【テスト内容】: 無効トークンでアクセス → 認証エラー検出 → エラーメッセージ表示 → 再認証誘導
+    // 【期待される動作】: 無効トークンを適切に検出し、ユーザーフレンドリーなエラー処理に誘導
+    // 🟡 信頼性レベル: JWTセキュリティ標準仕様とUX要件から導出した妥当なテストケース
+
+    // TODO(human) 無効JWTエラーハンドリング機能実装が必要
+    // 以下の機能が未実装のため、現在このテストは失敗します:
+    // 1. 無効JWT自動検出機能（破損・不正形式トークンの検出）
+    // 2. 無効トークン時の適切なエラーメッセージ表示
+    // 3. 自動的な認証状態クリアとLocalStorage削除
+    // 4. ユーザーを再ログインに誘導するフレンドリーなUI
+
+    // 【テストデータ準備】: 意図的に無効・破損に設定したJWT認証状態を作成
+    // 【初期条件設定】: 不正形式・破損したトークンでユーザー認証状態を設定
+    const invalidUser = {
+      id: 'invalid-user-111',
+      name: 'Invalid User',
+      email: 'invalid.user@example.com',
+      avatarUrl: null,
+      lastLoginAt: new Date().toISOString(),
+      /** 【Refactor追加】: User型互換性のための必須フィールド */
+      externalId: 'google_invalid_111',
+      provider: 'google' as AuthProvider,
+      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 【無効認証状態設定】: 意図的に無効なJWTトークンをLocalStorageに設定
+    await page.addInitScript((userData) => {
+      // 【無効トークン作成】: 複数パターンの無効トークンをテスト
+      const invalidAuthData = {
+        access_token: 'INVALID_MALFORMED_TOKEN_###', // 不正形式トークン
+        refresh_token: null, // 必須フィールド欠損
+        expires_at: 'invalid_timestamp', // 不正な期限設定
+        user: userData,
+        // 破損したJSONデータをシミュレート
+      };
+      localStorage.setItem('sb-localhost-auth-token', JSON.stringify(invalidAuthData));
+      console.log('T005: Invalid JWT token set in localStorage:', invalidAuthData);
+
+      // Reduxの初期状態は認証済みに設定（無効トークン検出前の状態をシミュレート）
+      window.__TEST_REDUX_AUTH_STATE__ = {
+        isAuthenticated: true,
+        user: userData,
+        isLoading: false,
+        error: null,
+      };
+      console.log('T005: Initial authenticated state set (before invalid token detection)');
+    }, invalidUser);
+
+    // 【実際の処理実行1】: 無効トークン状態でダッシュボードにアクセス
+    // 【処理内容】: ページ読み込み時に無効JWT検証が実行され、エラーが検出される
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    
+    // 【デバッグ】: 無効トークン検出の詳細を確認
+    const debugInfo = await page.evaluate(() => {
+      const authData = localStorage.getItem('sb-localhost-auth-token');
+      const testState = window.__TEST_REDUX_AUTH_STATE__;
+      const parsedAuthData = authData ? JSON.parse(authData) : null;
+      return {
+        authDataExists: !!authData,
+        authDataValid: parsedAuthData?.access_token && typeof parsedAuthData.expires_at === 'number',
+        testStateExists: !!testState,
+        currentURL: window.location.href,
+      };
+    });
+    console.log('T005 Debug Info:', debugInfo);
+
+    // 【結果検証1】: 無効トークン検出によるホームページへの自動リダイレクト確認
+    // 【期待値確認】: 無効JWT検出し、セキュリティのため認証が必要なページから退去
+    await expect(page).toHaveURL('/', { timeout: 10000 }); // 【確認内容】: 無効トークン検出時の適切なリダイレクト処理 🔴
+
+    // 【結果検証2】: 適切な無効トークンエラーメッセージ表示確認
+    // 【期待値確認】: ユーザーフレンドリーな認証エラーメッセージでUX向上
+    const invalidTokenMessage = page.getByText('認証に問題があります', { exact: false });
+    await expect(invalidTokenMessage).toBeVisible({ timeout: 5000 }); // 【確認内容】: 無効トークン時の適切なエラーメッセージ表示 🔴
+
+    // 【結果検証3】: 再ログイン促進UI表示確認
+    // 【期待値確認】: ユーザーが迷わず再認証できる明確な誘導
+    const reloginPrompt = page.getByText('もう一度ログインしてください', { exact: false });
+    await expect(reloginPrompt).toBeVisible(); // 【確認内容】: 再認証プロンプトの適切な表示 🔴
+
+    // 【結果検証4】: 認証状態の適切なクリア確認
+    // 【期待値確認】: 無効トークンの安全な削除でセキュリティ確保
+    const clearedAuthState = await page.evaluate(() => {
+      const authData = localStorage.getItem('sb-localhost-auth-token');
+      return authData ? JSON.parse(authData) : null;
+    });
+    expect(clearedAuthState).toBeFalsy(); // 【確認内容】: 無効トークンの安全な削除処理 🔴
+
+    // 【結果検証5】: 再認証可能状態の確認
+    // 【期待値確認】: スムーズな再ログインフローでユーザビリティ確保
+    const loginButton = page.getByRole('button', { name: /ログイン|login/i });
+    await expect(loginButton).toBeVisible(); // 【確認内容】: 再認証のためのログインボタン表示 🟡
   });
 });
