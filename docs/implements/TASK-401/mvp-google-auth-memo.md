@@ -6,6 +6,13 @@
 - 開発開始: 2025-09-04 18:11:31 JST
 - 現在のフェーズ: **Redフェーズ** (T007ネットワークエラーフォールバック失敗テスト作成完了)
 
+**このブランチでは、 E2E テストの実装をします**
+
+実行時:
+```bash
+docker compose exec e2e npx playwright test
+```
+
 ## 関連ファイル
 
 - 要件定義: `docs/implements/TASK-401/requirements.md`
