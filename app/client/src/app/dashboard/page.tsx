@@ -75,7 +75,7 @@ export default function DashboardPage(): React.ReactNode {
         // 【Redux状態更新】: エラー状態をRedux storeに設定してUI表示をトリガー
         dispatch(showNetworkError({
           message: 'ネットワーク接続を確認してください',
-          details: `Error: ${error.message}`
+          correlationId: `err_${Date.now()}_${Math.random().toString(36).slice(2)}`
         }));
       }
     }
