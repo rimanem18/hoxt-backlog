@@ -57,9 +57,10 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     const cancelMessage = page.getByText('Googleログインがキャンセルされました', { exact: false });
     await expect(cancelMessage).toBeVisible({ timeout: 5000 }); // 【確認内容】: ユーザーフレンドリーなキャンセルメッセージ 🟢
 
-    // エラー扱いではなく情報扱いであることを確認（エラー色ではなく情報色）
+    // エラー扱いではなく情報扱いであることを確認（意味的属性で検証）
     const messageContainer = page.locator('[data-testarea="auth-message"]');
-    await expect(messageContainer).toHaveClass(/info|success/); // 【確認内容】: エラー扱いではなく情報扱い 🟡
+    await expect(messageContainer).toHaveAttribute('data-error-type', 'cancelled'); // 【確認内容】: キャンセルタイプの正確な分類 🟢
+    await expect(messageContainer).toHaveAttribute('data-error-severity', 'info'); // 【確認内容】: エラー扱いではなく情報扱い 🟢
 
     // ログイン画面に留まっていることを確認（クエリパラメータは無視）
     await expect(page.url()).toMatch(/^http:\/\/.*:\d+\/(\?.*)?$/); // 【確認内容】: ログイン画面に留まり再試行を促す 🟢
@@ -127,9 +128,11 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     const retryButton = page.getByRole('button', { name: /再試行|retry|もう一度/i });
     await expect(retryButton).toBeVisible({ timeout: 5000 }); // 【確認内容】: 接続エラー後の再試行が可能 🟡
 
-    // エラー状態として適切に表示されることを確認（エラー色）
+    // エラー状態として適切に表示されることを確認（意味的属性で検証）
     const errorContainer = page.locator('[data-testarea="auth-error"]');
-    await expect(errorContainer).toHaveClass(/error|danger/); // 【確認内容】: ユーザーへの明確なエラー通知 🟡
+    await expect(errorContainer).toHaveAttribute('data-error-type', 'connection'); // 【確認内容】: 接続エラータイプの正確な分類 🟢
+    await expect(errorContainer).toHaveAttribute('data-error-severity', 'error'); // 【確認内容】: エラー重要度の適切な設定 🟢
+    await expect(errorContainer).toHaveAttribute('role', 'alert'); // 【確認内容】: アクセシビリティ対応のalertロール 🟢
 
     // 【リトライ機能テスト】: 再試行ボタンクリック機能確認
     // 【処理内容】: 再試行ボタンクリックで再接続を試行
@@ -206,8 +209,10 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     const retryButton = page.getByRole('button', { name: /再試行|retry/i });
     await expect(retryButton).not.toBeVisible(); // 【確認内容】: 設定修正まではリトライ不可 🟡
 
-    // 設定エラー状態として適切に表示されることを確認
+    // 設定エラー状態として適切に表示されることを確認（意味的属性で検証）
     const configErrorContainer = page.locator('[data-testarea="config-error"]');
-    await expect(configErrorContainer).toHaveClass(/error|warning/); // 【確認内容】: 設定エラーとして適切に分類 🔴
+    await expect(configErrorContainer).toHaveAttribute('data-error-type', 'config'); // 【確認内容】: 設定エラータイプの正確な分類 🟢
+    await expect(configErrorContainer).toHaveAttribute('data-error-severity', 'warning'); // 【確認内容】: 警告レベルの適切な設定 🟢
+    await expect(configErrorContainer).toHaveAttribute('role', 'alert'); // 【確認内容】: アクセシビリティ対応のalertロール 🟢
   });
 });
