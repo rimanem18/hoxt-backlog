@@ -5,6 +5,7 @@
 
 import type { Provider } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { OAuthErrorHandler } from './oauthErrorHandler';
 
 /**
  * OAuth認証レスポンスの型定義
@@ -66,35 +67,30 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
        * 🟡 信頼性レベル: Supabase OAuth標準フローに基づく妥当な実装
        */
       
-      // 【E2Eテスト対応】: テスト環境でのAPIモックエラーシミュレーション
-      // PlaywrightのAPIモックが設定されている場合、対応するエラーを発生
-      if (typeof window !== 'undefined') {
-        // テスト用のクエリパラメータチェック（開発環境）
+      // 【セキュリティ強化・テスト機能分離】: 開発環境限定のテスト機能
+      // 【XSS対策】: ホワイトリスト方式による厳格な入力値検証を実装
+      // 【パフォーマンス向上】: 本番バンドルからテスト用コードを完全除外
+      if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+        // 【セキュリティ強化】: 許可されたテストエラータイプのホワイトリスト
+        const ALLOWED_TEST_ERRORS = ['cancelled', 'connection', 'config'] as const;
+        
         const urlParams = new URLSearchParams(window.location.search);
         const testError = urlParams.get('test_oauth_error');
         
-        if (testError) {
-          console.log(`OAuth認証テストエラーを発生: ${testError}`);
-          let errorMessage = '';
+        // 【XSS対策】: 厳格な入力値検証によるクロスサイトスクリプティング攻撃防止
+        if (testError && ALLOWED_TEST_ERRORS.includes(testError as any)) {
+          console.log(`OAuth認証テストエラーを発生 [開発環境]: ${testError}`);
           
-          switch (testError) {
-            case 'cancelled':
-              errorMessage = 'ユーザーによりGoogleログインがキャンセルされました';
-              break;
-            case 'connection':
-              errorMessage = 'Googleとの接続に問題が発生しました';
-              break;
-            case 'config':
-              errorMessage = 'Google OAuth設定に問題があります';
-              break;
-            default:
-              errorMessage = 'OAuth認証でエラーが発生しました';
-          }
+          // 【統合エラーハンドリング】: OAuthErrorHandlerによる一元化された安全なエラー生成
+          const errorDetail = OAuthErrorHandler.analyzeError(`test_${testError}_error`);
           
           return {
             data: { user: null, session: null },
-            error: new Error(errorMessage),
+            error: new Error(errorDetail.userMessage),
           };
+        } else if (testError) {
+          // 【セキュリティログ】: 不正なテストパラメータの検出をログに記録
+          console.warn(`不正なテストエラーパラメータが検出されました: ${testError}`);
         }
       }
       
@@ -113,20 +109,13 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
         // 【エラーハンドリング】: OAuth URL生成時のエラーを適切に処理
         if (response.error) {
           /**
-           * 【機能概要】: Supabase OAuth APIエラーを分類してフロントエンド用エラーメッセージに変換
-           * 【実装方針】: E2EテストのAPIモック戦略に対応したエラーメッセージ生成
-           * 🟡 信頼性レベル: Supabase OAuth API仕様とE2Eテスト要件の組み合わせ
+           * 【リファクタリング改善】: 統合エラーハンドラーによる一元化されたエラー処理
+           * 【セキュリティ強化】: OAuthErrorHandlerによる安全なエラー分析とメッセージ生成
+           * 【保守性向上】: 重複するエラー分類ロジックの削除と統一されたエラー処理
+           * 🟢 信頼性レベル: 専用エラーハンドラーによる確実で安全な処理
            */
-          const errorMessage = response.error.message || '';
-          
-          // 【エラー分類】: Supabase APIエラーからフロントエンド表示用メッセージを生成
-          if (errorMessage.includes('access_denied') || errorMessage.includes('cancelled')) {
-            throw new Error('ユーザーによりGoogleログインがキャンセルされました');
-          } else if (errorMessage.includes('invalid_client') || errorMessage.includes('config')) {
-            throw new Error('Google OAuth設定に問題があります');
-          } else {
-            throw new Error('Googleとの接続に問題が発生しました');
-          }
+          const errorDetail = OAuthErrorHandler.analyzeError(response.error);
+          throw new Error(errorDetail.userMessage);
         }
 
         // 【ポップアップ開始】: window.openでポップアップウィンドウを開く
@@ -164,14 +153,16 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           error: null,
         };
       } catch (error) {
-        // 【例外処理】: 予期しないエラーを適切なAuthResponseに変換
-        const authError = error instanceof Error ? error : new Error('OAuth認証でエラーが発生しました');
+        // 【統合例外処理】: OAuthErrorHandlerによる統一されたエラー処理
+        const errorDetail = OAuthErrorHandler.analyzeError(
+          error instanceof Error ? error : new Error('OAuth認証でエラーが発生しました')
+        );
         return {
           data: {
             user: null,
             session: null,
           },
-          error: authError,
+          error: new Error(errorDetail.userMessage),
         };
       }
     },
