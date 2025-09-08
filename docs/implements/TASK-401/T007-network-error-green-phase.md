@@ -222,7 +222,7 @@ Running 2 tests using 1 worker
 
 **次のフェーズ**: `/tdd-refactor` でRefactorフェーズ（品質改善）の実施推奨
 
-## 🎯 完了確認とTODO.md更新
+## 🎯 完了確認とdocs/todo.md更新
 
 ### ✅ Greenフェーズ完了条件チェック
 - **テスト成功率**: 100% ✅
@@ -230,8 +230,8 @@ Running 2 tests using 1 worker
 - **コード品質**: Redux+TypeScript型安全性確保 ✅
 - **ドキュメント**: 実装詳細・テスト結果記録済み ✅
 
-### 📋 TODO.md更新推奨
-現在のタスク「T007 ネットワークエラーフォールバック処理」は完全実装済みのため、TODO.mdに完了マークを追加することを推奨します。
+### 📋 docs/todo.md更新推奨
+現在のタスク「T007 ネットワークエラーフォールバック処理」は完全実装済みのため、docs/todo.mdに完了マークを追加することを推奨します。
 
 **更新内容例**:
 ```markdown
