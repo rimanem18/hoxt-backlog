@@ -83,7 +83,8 @@ export function validateStoredAuth(): AuthValidationResult {
     // トークン有効期限の確認
     // 期限切れトークンの使用を防止
     const expiresAt = authData.expires_at as number;
-    if (expiresAt <= Date.now()) {
+    const currentTime = Date.now();
+    if (expiresAt <= currentTime) {
       return {
         isValid: false,
         reason: 'expired',
@@ -93,12 +94,13 @@ export function validateStoredAuth(): AuthValidationResult {
     // access_token の存在と形式確認
     // 無効トークン文字列の検出
     // 基本的なJWT形式（3つのパート）の確認
-    const isValidAccessToken =
-      authData.access_token &&
-      typeof authData.access_token === 'string' &&
-      authData.access_token.split('.').length === 3 &&
-      !authData.access_token.includes('INVALID');
-
+    const tokenExists = !!authData.access_token;
+    const tokenIsString = typeof authData.access_token === 'string';
+    const tokenHasThreeParts = authData.access_token && authData.access_token.split('.').length === 3;
+    const tokenNotInvalid = authData.access_token && !authData.access_token.includes('INVALID');
+    
+    const isValidAccessToken = tokenExists && tokenIsString && tokenHasThreeParts && tokenNotInvalid;
+    
     if (!isValidAccessToken) {
       return {
         isValid: false,
@@ -123,7 +125,7 @@ export function validateStoredAuth(): AuthValidationResult {
     };
   } catch (error) {
     // 予期しないエラー処理として localStorage アクセスエラー等
-    console.error('認証検証中にエラーが発生:', error);
+    console.error('validateStoredAuth: Unexpected error occurred:', error);
     return {
       isValid: false,
       reason: 'parse_error',

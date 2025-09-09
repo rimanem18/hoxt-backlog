@@ -25,7 +25,6 @@ export default function DashboardPage(): React.ReactNode {
 
   // JWT期限切れ時の処理をメモ化して複数回実行を防止
   const handleTokenExpiration = useCallback(() => {
-    console.log('T006: JWT token expired detected, handling expiration');
     dispatch(handleExpiredToken());
     router.push('/');
   }, [dispatch, router]);
@@ -34,7 +33,6 @@ export default function DashboardPage(): React.ReactNode {
   const handleAuthRestore = useCallback(
     (user: User) => {
       dispatch(restoreAuthState({ user, isNewUser: false }));
-      console.log('T004: Authentication state restored successfully');
     },
     [dispatch],
   );
@@ -65,7 +63,6 @@ export default function DashboardPage(): React.ReactNode {
           error.message.includes('Failed to fetch') ||
           error.message.includes('Server error'))
       ) {
-        console.log('T007: Network error detected, showing error message');
         // エラー状態をRedux storeに設定
         dispatch(
           showNetworkError({
@@ -97,17 +94,12 @@ export default function DashboardPage(): React.ReactNode {
             parsedAuthData.expires_at === null ||
             parsedAuthData.expires_at === undefined
           ) {
-            console.warn('T005: expires_at is null or undefined');
-            handleTokenExpiration();
+                handleTokenExpiration();
             return;
           }
           const expiresAt = Number(parsedAuthData.expires_at);
           if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
             if (Number.isNaN(expiresAt)) {
-              console.warn(
-                'T005: Invalid timestamp format detected:',
-                parsedAuthData.expires_at,
-              );
             }
             // 期限切れ処理を実行
             handleTokenExpiration();
@@ -115,18 +107,12 @@ export default function DashboardPage(): React.ReactNode {
           }
           // トークン構造の基本検証
           if (!parsedAuthData.user || !parsedAuthData.access_token) {
-            console.warn(
-              'T006: Invalid token structure detected, clearing authentication',
-            );
             // 期限切れ処理を実行
             handleTokenExpiration();
             return;
           }
         } catch {
           // 解析失敗時は不正トークンとして即座にクリア
-          console.error(
-            'T006: Error parsing auth data, clearing and redirecting',
-          );
           // メモ化された期限切れ処理を使用
           handleTokenExpiration();
           return;
@@ -136,17 +122,10 @@ export default function DashboardPage(): React.ReactNode {
       // 期限切れが未検出の場合のみ認証復元処理を実行
       if (window.__TEST_REDUX_AUTH_STATE__) {
         const testState = window.__TEST_REDUX_AUTH_STATE__;
-        console.log(
-          'Dashboard: applying test state (after token expiry check):',
-          testState,
-        );
 
         // LocalStorageクリア済みの場合はテスト状態を適用しない
         const currentAuthData = localStorage.getItem('sb-localhost-auth-token');
         if (!currentAuthData && testState.isAuthenticated && testState.user) {
-          console.log(
-            'Dashboard: Skipping test state application - localStorage was cleared due to token expiry',
-          );
           return;
         }
 
@@ -168,25 +147,16 @@ export default function DashboardPage(): React.ReactNode {
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
-          console.log(
-            'T004: Found valid auth data in localStorage:',
-            parsedAuthData,
-          );
 
           if (parsedAuthData.user) {
             // 認証状態復元処理を実行
             handleAuthRestore(parsedAuthData.user);
           }
         } catch (error) {
-          console.error(
-            'T004: Error restoring auth state from localStorage:',
-            error,
-          );
           // エラー時はLocalStorageをクリア
           localStorage.removeItem('sb-localhost-auth-token');
         }
       } else {
-        console.log('T004: No saved auth data found in localStorage');
       }
     }
   }, [handleTokenExpiration, handleAuthRestore, dispatch]);

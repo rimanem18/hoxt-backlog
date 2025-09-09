@@ -6,8 +6,9 @@ import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 import {
   handleExpiredToken,
   restoreAuthState,
+  logout,
 } from '@/features/google-auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
+import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { store } from '@/store';
 
 type ProviderProps = {
@@ -17,7 +18,7 @@ type ProviderProps = {
 /**
  * アプリケーション全体のProvider
  * Redux状態管理とReact Queryデータフェッチングを統合
- * 起動時認証状態復元・無効JWT検出機能を提供
+ * 起動時に認証状態を検証し、ストアと同期する
  */
 export default function Provider({ children }: ProviderProps) {
   // 5分間データを新鮮と判定し、フォーカス時の自動リフェッチは無効化
@@ -30,60 +31,33 @@ export default function Provider({ children }: ProviderProps) {
     },
   });
 
-  // アプリケーション初回読み込み時に認証状態を復元
+  // アプリケーション初回読み込み時に認証状態を検証・復元
   useEffect(() => {
-    try {
-      const persistedState = localStorage.getItem('sb-localhost-auth-token');
-      if (persistedState) {
-        const authData: {
-          user: User;
-          expires_at: number | string; // 無効な文字列型もサポート
-          access_token?: string;
-          isNewUser?: boolean;
-        } = JSON.parse(persistedState);
+    const validationResult = validateStoredAuth();
 
-        // 破損・不正形式のJWTトークンを検出し適切に処理
-
-        // expires_atが数値型でない場合は無効とみなす
-        const isValidExpiresAt = typeof authData.expires_at === 'number';
-
-        // access_tokenが基本的なJWT構造（3つのパート）を持つことを確認
-        const isValidAccessToken =
-          authData.access_token &&
-          typeof authData.access_token === 'string' &&
-          authData.access_token.split('.').length === 3;
-
-        // ユーザー情報の存在とID設定を確認
-        const isValidUser =
-          authData.user && typeof authData.user.id === 'string';
-
-        // 全ての必須要素が有効な場合のみ処理を続行
-        if (!isValidExpiresAt || !isValidAccessToken || !isValidUser) {
-          // 無効トークン検出時は期限切れと同様に処理
-          console.log('Invalid JWT token detected, clearing authentication');
+    if (validationResult.isValid && validationResult.data) {
+      // 検証成功：認証状態をReduxストアに復元
+      store.dispatch(
+        restoreAuthState({
+          user: validationResult.data.user,
+          isNewUser: validationResult.data.isNewUser ?? false,
+        }),
+      );
+    } else if (validationResult.reason) {
+      // 検証失敗：理由に応じて処理を分岐
+      switch (validationResult.reason) {
+        case 'expired':
+          // 期限切れの場合は専用のハンドラを呼び出す
           store.dispatch(handleExpiredToken());
-          return;
-        }
-
-        // 期限切れチェック処理（数値型確定済みで型アサーション使用）
-        if ((authData.expires_at as number) > Date.now()) {
-          // 検証通過時のみ状態を復元
-          store.dispatch(
-            restoreAuthState({
-              user: authData.user,
-              isNewUser: authData.isNewUser ?? false,
-            }),
-          );
-        } else {
-          // 期限切れ時は状態をクリア
-          store.dispatch(handleExpiredToken());
-        }
+          break;
+        case 'missing':
+          // 認証情報がない場合は何もしない（初期状態）
+          break;
+        default:
+          // その他のエラー（不正な形式など）はログアウトとして扱う
+          store.dispatch(logout());
+          break;
       }
-    } catch (error) {
-      // JSON解析失敗や予期しない構造の場合
-      console.error('Error parsing auth data, clearing authentication:', error);
-      // パース失敗時も状態をクリア
-      store.dispatch(handleExpiredToken());
     }
   }, []);
 
