@@ -15,11 +15,6 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     // Then: ユーザーフレンドリーなメッセージが表示され、再試行可能な状態が維持される
 
     // コンソールログを収集してデバッグに活用
-    page.on('console', (msg) => {
-      if (msg.text().includes('T008-cancel')) {
-        console.log('Page Console (OAuth Cancel):', msg.text());
-      }
-    });
 
     // Given: Google OAuth認証キャンセル状況をシミュレートするための設定
 
@@ -67,11 +62,6 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
 
   test('Google OAuth接続エラー時の適切なエラー表示とリトライ機能', async ({ page }) => {
     // Given: Google OAuthサービスへの接続失敗状況をシミュレート
-    page.on('console', (msg) => {
-      if (msg.text().includes('T008-connection')) {
-        console.log('Page Console (Connection Error):', msg.text());
-      }
-    });
 
     // When: OAuth接続エラーが発生
     await page.goto('/?test_oauth_error=connection');
@@ -114,11 +104,6 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
 
   test('Google OAuth設定エラー時の開発者向けエラーメッセージ', async ({ page }) => {
     // Given: Google OAuth設定不備をシミュレート
-    page.on('console', (msg) => {
-      if (msg.text().includes('T008-config')) {
-        console.log('Page Console (Config Error):', msg.text());
-      }
-    });
 
     // When: OAuth設定エラーが発生
     await page.goto('/?test_oauth_error=config');

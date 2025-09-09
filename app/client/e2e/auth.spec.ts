@@ -21,13 +21,11 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('T001 Test state initialized:', window.__TEST_REDUX_AUTH_STATE__);
     }, DEFAULT_TEST_USER);
 
     // When: ダッシュボードページにアクセス
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    console.log('T001 Current page URL:', page.url());
 
     // Then: ダッシュボードとユーザー情報が表示される
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
@@ -75,18 +73,14 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('Test state initialized:', window.__TEST_REDUX_AUTH_STATE__);
     }, existingUser);
 
     // When: ダッシュボードページにアクセス
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    console.log('Current page URL:', page.url());
-
     const reduxState = await page.evaluate(() => {
       return window.__TEST_REDUX_AUTH_STATE__;
     });
-    console.log('Redux test state:', reduxState);
 
     // Then: ダッシュボードと既存ユーザー情報が表示される
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
@@ -107,6 +101,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
   });
 
   test('T004: ページリロード時の認証状態復元テスト', async ({ page }) => {
+    // コンソールログを追跡
 
     // Given: 認証済みユーザーのセッション情報を設定
     const authenticatedUser = {
@@ -114,6 +109,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       name: 'Authenticated User',
       email: 'auth.user@example.com',
       avatarUrl: null,
+      lastLoginAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2時間前にログイン
       externalId: 'google_auth_789',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -128,14 +124,20 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         error: null,
       };
 
+      const mockJwt = [
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+        'eyJzdWIiOiJhdXRoLXVzZXItNzg5IiwiZXhwIjo5OTk5OTk5OTk5fQ', // Payload
+        'mock_signature', // Signature
+      ].join('.');
+
       const authData = {
-        access_token: 'mock_access_token_for_reload_test',
+        access_token: mockJwt,
         refresh_token: 'mock_refresh_token_for_reload_test',
         user: userData,
-        isNewUser: false
+        isNewUser: false,
+        expires_at: Date.now() + 3600 * 1000, // Expires in 1 hour
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
-      console.log('T004 Initial auth state and LocalStorage set:', window.__TEST_REDUX_AUTH_STATE__);
     }, authenticatedUser);
 
     await page.goto('/dashboard');
@@ -147,7 +149,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const initialUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
     await expect(initialUserName).toBeVisible({ timeout: 5000 });
 
-    console.log('T004 Executing page reload...');
+    // リロードを実行
     await page.reload();
     await page.waitForLoadState('networkidle');
 
@@ -174,11 +176,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
   });
 
   test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ page }) => {
-    page.on('console', (msg) => {
-      if (msg.text().includes('T006')) {
-        console.log('Page Console:', msg.text());
-      }
-    });
 
     // Given: 期限切れトークンでユーザー認証状態を設定
     const expiredUser = {
@@ -194,13 +191,19 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     };
 
     await page.addInitScript((userData) => {
+      const mockExpiredJwt = [
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+        'eyJzdWIiOiJleHBpcmVkLXVzZXItOTk5IiwiZXhwIjoxfQ', // Payload: expired
+        'expired_signature', // Signature
+      ].join('.');
+
       const expiredAuthData = {
-        access_token: 'expired_access_token_test',
+        access_token: mockExpiredJwt,
         refresh_token: 'expired_refresh_token_test',
         user: userData,
+        expires_at: Date.now() - 1000, // Expired 1 second ago
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(expiredAuthData));
-      console.log('T006: Expired JWT token set in localStorage:', expiredAuthData);
 
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
@@ -208,7 +211,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('T006: Initial authenticated state set (before expiry detection)');
     }, expiredUser);
 
     await page.goto('/dashboard');
@@ -228,7 +230,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         currentURL: window.location.href,
       };
     });
-    console.log('T006 Debug Info:', debugInfo);
 
     await expect(page).toHaveURL('/', { timeout: 10000 });
 
@@ -261,11 +262,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
   });
 
   test('T007: ネットワークエラー時のフォールバック処理テスト', async ({ page }) => {
-    page.on('console', (msg) => {
-      if (msg.text().includes('T007')) {
-        console.log('Page Console:', msg.text());
-      }
-    });
 
 
 
@@ -292,7 +288,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         user: userData,
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(validAuthData));
-      console.log('T007: Valid auth token set for network test:', validAuthData);
 
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
@@ -300,7 +295,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('T007: Initial authenticated state set (before network error)');
     }, networkUser);
 
     await page.goto('/dashboard');
@@ -315,7 +309,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         currentURL: window.location.href,
       };
     });
-    console.log('T007 Debug Info:', debugInfo);
 
     const networkErrorMessage = page.getByText('ネットワーク接続を確認してください', { exact: false });
 
@@ -358,11 +351,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
   });
 
   test('T005: 無効JWT認証エラーハンドリングテスト', async ({ page }) => {
-    page.on('console', (msg) => {
-      if (msg.text().includes('T005')) {
-        console.log('Page Console:', msg.text());
-      }
-    });
 
 
 
@@ -383,7 +371,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         user: userData,
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(invalidAuthData));
-      console.log('T005: Invalid JWT token set in localStorage:', invalidAuthData);
 
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
@@ -391,7 +378,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         isLoading: false,
         error: null,
       };
-      console.log('T005: Initial authenticated state set (before invalid token detection)');
     }, invalidUser);
 
     await page.goto('/dashboard');
@@ -408,7 +394,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         currentURL: window.location.href,
       };
     });
-    console.log('T005 Debug Info:', debugInfo);
 
 
     const invalidTokenMessage = page.getByText('認証に問題があります', { exact: false });
