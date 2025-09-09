@@ -94,7 +94,7 @@ export default function DashboardPage(): React.ReactNode {
             parsedAuthData.expires_at === null ||
             parsedAuthData.expires_at === undefined
           ) {
-                handleTokenExpiration();
+            handleTokenExpiration();
             return;
           }
           const expiresAt = Number(parsedAuthData.expires_at);
@@ -169,16 +169,22 @@ export default function DashboardPage(): React.ReactNode {
     window.__TEST_REDUX_AUTH_STATE__.user;
 
   // 未認証ユーザーをホームページにリダイレクト（テスト環境除く）
+  useEffect(() => {
+    if (!hasTestAuthState && (!isAuthenticated || !user)) {
+      // 未認証アクセス試行をログに記録
+      console.warn('未認証状態でのダッシュボードアクセス試行', {
+        isAuthenticated,
+        hasUser: !!user,
+        hasTestAuthState,
+        timestamp: new Date().toISOString(),
+      });
+      // ホームページに誘導
+      router.push('/');
+    }
+  }, [hasTestAuthState, isAuthenticated, user, router]);
+
+  // 認証チェック完了前またはリダイレクト対象の場合は何も表示しない
   if (!hasTestAuthState && (!isAuthenticated || !user)) {
-    // 未認証アクセス試行をログに記録
-    console.warn('未認証状態でのダッシュボードアクセス試行', {
-      isAuthenticated,
-      hasUser: !!user,
-      hasTestAuthState,
-      timestamp: new Date().toISOString(),
-    });
-    // ホームページに誘導
-    router.push('/');
     return null;
   }
 
