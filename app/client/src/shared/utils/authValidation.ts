@@ -96,11 +96,14 @@ export function validateStoredAuth(): AuthValidationResult {
     // 基本的なJWT形式（3つのパート）の確認
     const tokenExists = !!authData.access_token;
     const tokenIsString = typeof authData.access_token === 'string';
-    const tokenHasThreeParts = authData.access_token && authData.access_token.split('.').length === 3;
-    const tokenNotInvalid = authData.access_token && !authData.access_token.includes('INVALID');
-    
-    const isValidAccessToken = tokenExists && tokenIsString && tokenHasThreeParts && tokenNotInvalid;
-    
+    const tokenHasThreeParts =
+      authData.access_token && authData.access_token.split('.').length === 3;
+    const tokenNotInvalid =
+      authData.access_token && !authData.access_token.includes('INVALID');
+
+    const isValidAccessToken =
+      tokenExists && tokenIsString && tokenHasThreeParts && tokenNotInvalid;
+
     if (!isValidAccessToken) {
       return {
         isValid: false,

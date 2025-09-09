@@ -5,8 +5,8 @@ import { Provider as ReduxProvider } from 'react-redux';
 import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 import {
   handleExpiredToken,
-  restoreAuthState,
   logout,
+  restoreAuthState,
 } from '@/features/google-auth/store/authSlice';
 import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { store } from '@/store';
