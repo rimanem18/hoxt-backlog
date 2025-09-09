@@ -145,11 +145,29 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           );
 
           if (!popup) {
-            // ブラウザがポップアップをブロックした場合のエラー処理
-            throw new Error(
-              'ポップアップが開けませんでした。ブラウザの設定を確認してください。',
-            );
+            // ポップアップがブロックされた場合、エラーを表示せずリダイレクト方式にフォールバック
+            // この処理はサイレント（エラー表示なし）で行う
+            console.log('ポップアップがブロックされました。リダイレクト方式にフォールバックします。');
+            
+            // 現在のページからGoogleの認証ページにリダイレクト
+            window.location.assign(response.data.url);
+            return {
+              data: {
+                user: null,
+                session: null,
+              },
+              error: null,
+            };
           }
+
+          // ポップアップが一瞬開いた後にブロックされるケースへの対応
+          // 500ms後にウィンドウが閉じていればリダイレクトにフォールバック
+          setTimeout(() => {
+            if (popup.closed) {
+              console.log('ポップアップが予期せず閉じられました。リダイレクト方式にフォールバックします。');
+              window.location.assign(response.data.url);
+            }
+          }, 500);
         }
 
         // OAuthフロー開始成功のレスポンス
