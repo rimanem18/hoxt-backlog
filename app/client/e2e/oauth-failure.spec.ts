@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { 
-  cleanupTestState 
+import {
+  cleanupTestState
 } from './helpers/test-setup';
 
 test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () => {
@@ -123,7 +123,6 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     // Then: 設定エラーが検出され、開発者向けガイダンスが提供される
     const configErrorMessage = page.getByText('Google OAuth設定に問題があります', { exact: false });
     await expect(configErrorMessage).toBeVisible({ timeout: 10000 });
-
 
     // 設定修正まではリトライできないことを確認
     const retryButton = page.getByRole('button', { name: /再試行|retry/i });

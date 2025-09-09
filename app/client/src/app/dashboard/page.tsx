@@ -152,11 +152,10 @@ export default function DashboardPage(): React.ReactNode {
             // 認証状態復元処理を実行
             handleAuthRestore(parsedAuthData.user);
           }
-        } catch (error) {
+        } catch {
           // エラー時はLocalStorageをクリア
           localStorage.removeItem('sb-localhost-auth-token');
         }
-      } else {
       }
     }
   }, [handleTokenExpiration, handleAuthRestore, dispatch]);

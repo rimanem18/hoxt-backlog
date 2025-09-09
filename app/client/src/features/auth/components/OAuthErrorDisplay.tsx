@@ -263,7 +263,6 @@ const OAuthErrorDisplay: React.FC<OAuthErrorDisplayProps> = React.memo(
                 </button>
               </div>
             )}
-
           </div>
         </div>
       </div>
