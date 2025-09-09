@@ -44,7 +44,7 @@ export interface AuthState {
   isLoading: boolean;
   /** 認証エラー情報（正常時はnull） */
   error: string | null;
-  /** 【T006対応】JWT期限切れなどの認証エラー詳細情報 */
+  /** JWT期限切れなどの認証エラー詳細情報 */
   authError: AuthError | null;
 }
 
@@ -74,7 +74,7 @@ interface AuthSuccessPayload {
 const getTestAuthState = (): Partial<AuthState> | null => {
   if (typeof window !== 'undefined' && window.__TEST_REDUX_AUTH_STATE__) {
     try {
-      // 【セキュリティ改善】: テスト状態の基本的な検証
+      // テスト状態の基本的な検証
       const testState = window.__TEST_REDUX_AUTH_STATE__;
       if (testState && typeof testState === 'object') {
         return testState;
@@ -116,7 +116,7 @@ export const authSlice = createSlice({
 
     /**
      * 認証成功時の状態更新
-     * 【Green実装】: LocalStorageへの認証情報保存を追加
+     * LocalStorageへの認証情報保存も実行
      *
      * @param state - 現在の認証状態
      * @param action - 認証成功時のユーザー情報を含むアクション
@@ -128,7 +128,7 @@ export const authSlice = createSlice({
       state.error = null;
       state.authError = null;
       
-      // 【T004対応】: LocalStorageに認証状態を保存してページリロード時に復元可能にする
+      // LocalStorageに認証状態を保存してページリロード時に復元可能にする
       if (typeof window !== 'undefined') {
         const authData = {
           access_token: 'mock_access_token_for_test',
@@ -137,7 +137,7 @@ export const authSlice = createSlice({
           user: action.payload.user,
         };
         localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
-        console.log('T004: Authentication state saved to localStorage');
+        console.log('Authentication state saved to localStorage');
       }
     },
 
@@ -154,7 +154,7 @@ export const authSlice = createSlice({
       state.error = action.payload.error;
       state.authError = null;
       
-      // 【T004対応】: 認証失敗時はLocalStorageから認証情報を削除
+      // 認証失敗時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
       }
@@ -162,7 +162,7 @@ export const authSlice = createSlice({
 
     /**
      * ログアウト時の状態更新
-     * 【Green実装】: LocalStorageクリア機能を追加
+     * LocalStorageクリア機能も実行
      *
      * @param state - 現在の認証状態
      */
@@ -173,15 +173,15 @@ export const authSlice = createSlice({
       state.error = null;
       state.authError = null;
       
-      // 【T004対応】: ログアウト時はLocalStorageから認証情報を削除
+      // ログアウト時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
-        console.log('T004: Authentication state cleared from localStorage');
+        console.log('Authentication state cleared from localStorage');
       }
     },
 
     /**
-     * 【Refactor追加】: 認証状態をクリア（セキュリティ目的）
+     * 認証状態をクリア（セキュリティ目的）
      * セッション期限切れやセキュリティ問題発生時に使用
      *
      * @param state - 現在の認証状態
@@ -193,7 +193,7 @@ export const authSlice = createSlice({
       state.error = null;
       state.authError = null;
       
-      // 【T004対応】: セキュリティクリアランス時もLocalStorageから認証情報を削除
+      // セキュリティクリアランス時もLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
       }
@@ -203,7 +203,7 @@ export const authSlice = createSlice({
     },
 
     /**
-     * 【Green実装】: LocalStorageからの認証状態復元
+     * LocalStorageからの認証状態復元
      * ページリロード時に呼び出される認証状態復元専用アクション
      *
      * @param state - 現在の認証状態
@@ -215,11 +215,11 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.authError = null;
-      console.log('T004: Authentication state restored from localStorage');
+      console.log('Authentication state restored from localStorage');
     },
 
     /**
-     * 【Refactor追加】: テスト用認証状態設定
+     * テスト用認証状態設定
      * E2Eテスト専用の状態設定アクション
      *
      * @param state - 現在の認証状態
@@ -239,7 +239,7 @@ export const authSlice = createSlice({
       if (error !== undefined) state.error = error;
       if (authError !== undefined) state.authError = authError;
       
-      // 【T004対応】: テスト用状態設定時もLocalStorageに保存
+      // テスト用状態設定時もLocalStorageに保存
       if (isAuthenticated && user && typeof window !== 'undefined') {
         const authData = {
           access_token: 'test_access_token',
@@ -248,48 +248,46 @@ export const authSlice = createSlice({
           user: user,
         };
         localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
-        console.log('T004: Test authentication state saved to localStorage');
+        console.log('Test authentication state saved to localStorage');
       }
     },
 
     /**
-     * 【T006実装・セキュリティ強化】: JWT期限切れ専用のエラーハンドリング
-     * 【機能概要】: トークン期限切れを検出した際に認証状態をクリアし、適切なエラー情報を設定
-     * 【セキュリティ】: 情報漏洩防止とセッションハイジャック対策を重視した設計
-     * 【実装方針】: 期限切れ時の完全な状態クリアと監査ログ出力
-     * 🟢 信頼性レベル: JWT標準仕様とセキュリティベストプラクティスに基づく実装
+     * JWT期限切れ専用のエラーハンドリング
+     * トークン期限切れを検出した際に認証状態をクリアし、適切なエラー情報を設定
+     * 情報漏洩防止とセッションハイジャック対策を重視した設計
      *
      * @param state - 現在の認証状態
      */
     handleExpiredToken: (state) => {
-      // 【セキュリティクリア】: 認証状態の完全な初期化（情報漏洩防止）
+      // 認証状態の完全な初期化で情報漏洩防止
       state.isAuthenticated = false;
       state.user = null;
       state.isLoading = false;
       state.error = null;
       
-      // 【構造化エラー情報】: 期限切れ専用のエラー情報を適切な型で設定
-      // 【監査目的】: セキュリティインシデント追跡のための詳細情報保持
+      // 期限切れ専用のエラー情報を適切な型で設定
+      // セキュリティインシデント追跡のための詳細情報保持
       state.authError = {
         code: 'EXPIRED',
         timestamp: Date.now(),
         message: 'セッションの有効期限が切れました',
       };
       
-      // 【セキュリティクリーンアップ】: LocalStorageからの期限切れトークン削除
-      // 【データ保護】: 不正使用防止のための確実なトークン削除
+      // LocalStorageからの期限切れトークン削除
+      // 不正使用防止のための確実なトークン削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
-        // 【追加セキュリティ】: 関連するセッション情報も削除
+        // 関連するセッション情報も削除
         localStorage.removeItem('sb-localhost-refresh-token');
         localStorage.removeItem('sb-localhost-auth-expires');
-        console.log('T006: Expired authentication tokens removed from localStorage');
+        console.log('Expired authentication tokens removed from localStorage');
       }
       
-      // 【セキュリティ監査ログ】: インシデント追跡とセキュリティ分析のための詳細ログ
-      // 【コンプライアンス】: セキュリティ要件に基づく適切な監査ログ出力
-      console.info('T006: JWT token has expired and authentication state cleared');
-      console.info(`T006: Expiration handled at ${new Date().toISOString()}`);
+      // インシデント追跡とセキュリティ分析のための詳細ログ
+      // セキュリティ要件に基づく適切な監査ログ出力
+      console.info('JWT token has expired and authentication state cleared');
+      console.info(`Expiration handled at ${new Date().toISOString()}`);
     },
   },
 });;

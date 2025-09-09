@@ -14,15 +14,6 @@ import { OAuthErrorHandler } from '@/features/auth/services/oauthErrorHandler';
  * 認証状態に関係なくログイン促進メッセージを表示。
  * 認証済みユーザーには自動的にダッシュボードへリダイレクト。
  */
-/**
- * 【リファクタリング改善】: ホームページコンポーネント（T008 Refactor完了版）
- * 【改善内容】: OAuth認証エラー表示をOAuthErrorDisplayコンポーネントに分離
- * 【設計改善】: 単一責任原則の適用・Redux状態管理への移行・コンポーネント分離の実現
- * 【セキュリティ強化】: XSS攻撃対策・機密情報保護・安全なエラーハンドリング
- * 【パフォーマンス向上】: 不要な再レンダリング防止・メモリ効率化・状態管理最適化
- * 【保守性向上】: コード分離・責任明確化・拡張可能性の確保
- * 🟢 信頼性レベル: 包括的なRefactorプロセス完了の高品質実装
- */
 export default function Home(): React.ReactNode {
   const { isAuthenticated, user, authError } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
@@ -40,7 +31,7 @@ export default function Home(): React.ReactNode {
         {/* Hello World コンポーネント */}
         <HelloWorld />
 
-        {/* 【T005・T006実装】: 認証エラーメッセージ表示 */}
+        {/* 認証エラーメッセージ表示 */}
         {authError && authError.code === 'EXPIRED' && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
@@ -74,26 +65,19 @@ export default function Home(): React.ReactNode {
               provider="google"
               className="mx-auto"
               onAuthStart={() => {
-                // 【認証開始処理】: Redux経由でエラー状態をクリア
+                // Redux経由でエラー状態をクリア
                 dispatch(clearOAuthError());
                 console.log('認証を開始しました');
               }}
               onAuthSuccess={(data) => {
-                // 【認証成功処理】: Redux経由でエラー状態をクリア
+                // Redux経由でエラー状態をクリア
                 dispatch(clearOAuthError());
                 console.log('認証に成功しました', data);
               }}
               onAuthError={(error) => {
-                /**
-                 * 【最終リファクタリング完成】: 統合エラーハンドラーによる完全な一元化
-                 * 【セキュリティ強化】: OAuthErrorHandlerによる安全で統一されたエラー処理
-                 * 【保守性向上】: 重複排除・DRY原則適用・単一責任原則の実現
-                 * 【パフォーマンス向上】: 効率的なエラー分析と状態管理の統合
-                 * 🟢 信頼性レベル: 包括的なリファクタリング完了の高品質実装
-                 */
                 console.error('認証エラー:', error);
                 
-                // 【統合エラーハンドリング】: 全エラー処理をOAuthErrorHandlerに委任
+                // 統合エラーハンドラーでエラー分析とRedux状態更新
                 const errorDetail = OAuthErrorHandler.analyzeError(error);
                 dispatch(setOAuthError({ 
                   type: errorDetail.type, 
@@ -103,11 +87,11 @@ export default function Home(): React.ReactNode {
               }}
             />
 
-            {/* 【T008 Refactor実装】: OAuth認証エラー表示コンポーネント */}
+            {/* OAuth認証エラー表示コンポーネント */}
             <OAuthErrorDisplay 
               className="mt-4"
               onRetry={() => {
-                // 【再試行処理】: ログインボタンの再クリックをシミュレート
+                // ログインボタンの再クリックをシミュレート
                 console.log('OAuth認証を再試行中...');
                 // 実際の再試行処理は LoginButton 内部で処理される
               }}

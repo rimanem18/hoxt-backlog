@@ -1,18 +1,20 @@
 /**
- * 【機能概要】: OAuth認証エラー統合ハンドリングサービス（T008 Refactorフェーズ実装）
- * 【改善内容】: authServiceとUI側で重複していたエラー分類ロジックの一元化
- * 【設計方針】: 単一責任原則・DRY原則・エラー処理の専門化による保守性向上
- * 【セキュリティ強化】: エラーメッセージのサニタイゼーション・機密情報保護・安全な分類処理
- * 【パフォーマンス向上】: 効率的なパターンマッチング・メモリ効率・処理速度最適化
- * 【保守性向上】: 型安全性・テスタビリティ・拡張可能性を重視したサービス設計
- * 🟢 信頼性レベル: エラー処理のベストプラクティスに基づく本番レディ実装
+ * OAuth認証エラー統合ハンドリングサービス
+ * 
+ * authServiceとUI側で重複していたエラー分類ロジックを一元化。
+ * エラーメッセージのサニタイズや機密情報保護機能を含む。
+ * 
+ * @example
+ * ```typescript
+ * const errorDetail = OAuthErrorHandler.analyzeError(error);
+ * console.log(errorDetail.type, errorDetail.userMessage);
+ * ```
  */
 
 import { type OAuthErrorType } from '@/features/auth/store/oauthErrorSlice';
 
 /**
  * OAuth認証エラー詳細情報の型定義
- * 【拡張性】: 将来的なエラー情報拡張に対応する構造設計
  */
 export interface OAuthErrorDetail {
   /** エラータイプ分類 */
@@ -31,8 +33,8 @@ export interface OAuthErrorDetail {
 
 /**
  * エラーパターン検出用の設定
- * 【パフォーマンス最適化】: 正規表現の事前コンパイルによる高速化
- * 【保守性向上】: 一元管理されたエラーパターン定義
+ * 
+ * 正規表現の事前コンパイルによる高速化
  */
 const ERROR_PATTERNS: Record<OAuthErrorType, RegExp[]> = {
   cancelled: [
@@ -61,13 +63,11 @@ const ERROR_PATTERNS: Record<OAuthErrorType, RegExp[]> = {
     /oauth.*setup/i,
     /client.*credentials/i,
   ],
-  unknown: [], // unknownタイプ用の空配列を追加
+  unknown: [],
 };
 
 /**
  * エラータイプ別のデフォルト設定
- * 【ユーザビリティ】: エラータイプ別の適切なメッセージとUX設定
- * 🟢 信頼性レベル: E2Eテストで検証済みのメッセージ内容
  */
 const ERROR_TYPE_CONFIGS: Record<OAuthErrorType, {
   defaultMessage: string;
@@ -97,9 +97,9 @@ const ERROR_TYPE_CONFIGS: Record<OAuthErrorType, {
 };
 
 /**
- * 【セキュリティ強化】: 安全な相関ID生成
- * 【機密情報保護】: ユーザー情報・セッション情報を含まない安全な識別子生成
- * 🟢 信頼性レベル: 標準的な識別子生成パターンの実装
+ * 安全な相関ID生成
+ * 
+ * ユーザー情報・セッション情報を含まない安全な識別子を生成
  */
 const generateCorrelationId = (): string => {
   const timestamp = Date.now().toString(36);
@@ -108,23 +108,23 @@ const generateCorrelationId = (): string => {
 };
 
 /**
- * 【セキュリティ強化】: エラーメッセージの安全なサニタイゼーション
- * 【XSS対策】: 危険な文字列パターンの無害化処理
- * 【情報漏洩防止】: 機密情報を含む可能性のある詳細エラーの汎用化
- * 🟢 信頼性レベル: セキュリティベストプラクティスに基づく実装
+ * エラーメッセージの安全なサニタイズ
+ * 
+ * XSS対策として危険な文字列パターンを除去し、
+ * 機密情報漏洩を防止する。
  */
 const sanitizeErrorMessage = (message: string): string => {
   if (!message || typeof message !== 'string') {
     return '';
   }
 
-  // 【長さ制限】: DoS攻撃対策として異常に長いメッセージを制限
+  // DoS攻撃対策として異常に長いメッセージを制限
   const maxLength = 500;
   if (message.length > maxLength) {
     return message.substring(0, maxLength) + '...';
   }
 
-  // 【危険文字除去】: HTMLタグとスクリプトの除去
+  // HTMLタグとスクリプトの除去
   return message
     .replace(/<[^>]*>/g, '') // HTMLタグ除去
     .replace(/javascript:/gi, '') // javascript:プロトコル除去
@@ -134,14 +134,14 @@ const sanitizeErrorMessage = (message: string): string => {
 };
 
 /**
- * 【高性能パターンマッチング】: エラーメッセージからタイプを効率的に検出
- * 【パフォーマンス最適化】: 早期終了による処理速度向上
- * 🟢 信頼性レベル: 包括的なパターンマッチングによる確実な分類
+ * エラーメッセージからタイプを効率的に検出
+ * 
+ * 早期終了による処理速度向上
  */
 const detectErrorType = (errorMessage: string): OAuthErrorType => {
   const normalizedMessage = errorMessage.toLowerCase();
 
-  // 【効率的検索】: 最も一般的なエラーから順番にチェック
+  // 最も一般的なエラーから順番にチェック
   for (const [type, patterns] of Object.entries(ERROR_PATTERNS) as Array<[OAuthErrorType, RegExp[]]>) {
     for (const pattern of patterns) {
       if (pattern.test(normalizedMessage)) {
@@ -155,26 +155,26 @@ const detectErrorType = (errorMessage: string): OAuthErrorType => {
 
 /**
  * OAuth認証エラーハンドリングサービス
- * 【単一責任】: OAuth認証エラー処理のみに特化したサービス
- * 【DRY原則】: 重複するエラー処理ロジックの一元化
+ * 
+ * OAuth認証エラー処理のみに特化し、重複するロジックを一元化。
  */
 export class OAuthErrorHandler {
   /**
-   * 【メイン機能】: OAuth認証エラーを分析して詳細情報を生成
-   * 【セキュリティ強化】: 安全なエラー分析と情報漏洩防止
-   * 【パフォーマンス最適化】: 効率的なエラー分析処理
-   * 🟢 信頼性レベル: 包括的なエラーハンドリング仕様に基づく実装
+   * OAuth認証エラーを分析して詳細情報を生成
+   * 
+   * @param error - 分析するErrorオブジェクトまたは文字列
+   * @returns エラーの詳細情報
    */
   static analyzeError(error: Error | string): OAuthErrorDetail {
     const errorMessage = error instanceof Error ? error.message : error;
     const sanitizedMessage = sanitizeErrorMessage(errorMessage);
     const correlationId = generateCorrelationId();
 
-    // 【エラータイプ検出】: パターンマッチングによる分類
+    // パターンマッチングによるエラータイプ検出
     const detectedType = detectErrorType(sanitizedMessage);
     const config = ERROR_TYPE_CONFIGS[detectedType];
 
-    // 【詳細情報生成】: 統一されたエラー詳細オブジェクトの生成
+    // 統一されたエラー詳細オブジェクトの生成
     const errorDetail: OAuthErrorDetail = {
       type: detectedType,
       userMessage: config.defaultMessage,
@@ -183,7 +183,7 @@ export class OAuthErrorHandler {
       correlationId,
     };
 
-    // 【開発支援】: 開発環境でのデバッグ情報付加
+    // 開発環境でのデバッグ情報付加
     if (process.env.NODE_ENV === 'development') {
       errorDetail.debugInfo = sanitizedMessage;
       console.log(`OAuth Error Analysis [${correlationId}]:`, {
@@ -198,8 +198,10 @@ export class OAuthErrorHandler {
   }
 
   /**
-   * 【便利メソッド】: エラータイプの直接判定
-   * 【パフォーマンス最適化】: 軽量な判定処理
+   * エラータイプの直接判定
+   * 
+   * @param error - 判定するErrorオブジェクトまたは文字列
+   * @returns エラータイプ
    */
   static getErrorType(error: Error | string): OAuthErrorType {
     const errorMessage = error instanceof Error ? error.message : error;
@@ -207,8 +209,10 @@ export class OAuthErrorHandler {
   }
 
   /**
-   * 【便利メソッド】: エラーが再試行可能かどうかの判定
-   * 【UX改善】: 適切な再試行ボタン表示制御のサポート
+   * エラーが再試行可能かどうかの判定
+   * 
+   * @param error - 判定するErrorオブジェクトまたは文字列
+   * @returns 再試行可能かどうか
    */
   static isRetryable(error: Error | string): boolean {
     const errorType = this.getErrorType(error);
@@ -216,8 +220,10 @@ export class OAuthErrorHandler {
   }
 
   /**
-   * 【便利メソッド】: エラーの重要度取得
-   * 【UI制御】: 重要度に応じた表示スタイルの制御サポート
+   * エラーの重要度取得
+   * 
+   * @param error - 判定するErrorオブジェクトまたは文字列
+   * @returns 重要度レベル
    */
   static getSeverity(error: Error | string): 'info' | 'warning' | 'error' {
     const errorType = this.getErrorType(error);
@@ -225,9 +231,10 @@ export class OAuthErrorHandler {
   }
 
   /**
-   * 【拡張機能】: カスタムエラーパターンの追加
-   * 【保守性向上】: 動的なエラーパターン拡張機能
-   * 🟡 信頼性レベル: 将来的な拡張要件からの妥当な推測
+   * カスタムエラーパターンの追加
+   * 
+   * @param type - エラータイプ
+   * @param pattern - 追加する正規表現パターン
    */
   static addCustomPattern(type: OAuthErrorType, pattern: RegExp): void {
     if (process.env.NODE_ENV === 'development') {
@@ -242,8 +249,12 @@ export class OAuthErrorHandler {
 }
 
 /**
- * 【ファクトリー関数】: 統合されたエラーハンドリング
- * 【後方互換性】: 既存コードとの互換性を保ちながら新機能を提供
+ * 統合されたエラーハンドリングのファクトリー関数
+ * 
+ * 既存コードとの互換性を保ちながら新機能を提供。
+ * 
+ * @param error - 分析するErrorオブジェクトまたは文字列
+ * @returns エラーの詳細情報
  */
 export const handleOAuthError = (error: Error | string): OAuthErrorDetail => {
   return OAuthErrorHandler.analyzeError(error);

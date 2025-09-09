@@ -61,27 +61,23 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
       options?: AuthOptions,
     ): Promise<AuthResponse> {
       /**
-       * 【機能概要】: Google OAuth認証のポップアップウィンドウを開く機能
-       * 【実装方針】: E2Eテストが`page.waitForEvent('popup')`で検出できるよう実際のポップアップを開く
-       * 【テスト対応】: oauth-failure.spec.ts の3つのテストケースを通すための最小実装
-       * 🟡 信頼性レベル: Supabase OAuth標準フローに基づく妥当な実装
+       * Google OAuth認証のポップアップウィンドウを開く機能
+       * E2Eテストで`page.waitForEvent('popup')`の検出を可能にする
        */
       
-      // 【セキュリティ強化・テスト機能分離】: 開発環境限定のテスト機能
-      // 【XSS対策】: ホワイトリスト方式による厳格な入力値検証を実装
-      // 【パフォーマンス向上】: 本番バンドルからテスト用コードを完全除外
+      // 開発環境限定のテスト機能（XSS対策とパフォーマンス向上）
       if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-        // 【セキュリティ強化】: 許可されたテストエラータイプのホワイトリスト
+        // 許可されたテストエラータイプのホワイトリスト
         const ALLOWED_TEST_ERRORS = ['cancelled', 'connection', 'config'] as const;
         
         const urlParams = new URLSearchParams(window.location.search);
         const testError = urlParams.get('test_oauth_error');
         
-        // 【XSS対策】: 厳格な入力値検証によるクロスサイトスクリプティング攻撃防止
+        // 厳格な入力値検証でXSS攻撃を防止
         if (testError && ALLOWED_TEST_ERRORS.includes(testError as any)) {
           console.log(`OAuth認証テストエラーを発生 [開発環境]: ${testError}`);
           
-          // 【統合エラーハンドリング】: OAuthErrorHandlerによる一元化された安全なエラー生成
+          // OAuthErrorHandlerで統合エラーハンドリング
           const errorDetail = OAuthErrorHandler.analyzeError(`test_${testError}_error`);
           
           return {
@@ -89,37 +85,34 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
             error: new Error(errorDetail.userMessage),
           };
         } else if (testError) {
-          // 【セキュリティログ】: 不正なテストパラメータの検出をログに記録
+          // 不正なテストパラメータの検出をログに記録
           console.warn(`不正なテストエラーパラメータが検出されました: ${testError}`);
         }
       }
       
       try {
-        // 【OAuth URL生成】: Supabaseを通じてGoogle OAuthの認証URLを取得
+        // Supabaseを通じてGoogle OAuthの認証URLを取得
         const response = await supabase.auth.signInWithOAuth({
           provider,
           options: {
             ...options,
-            // 【ポップアップ設定】: E2Eテストでポップアップを検出するために必要
+            // E2Eテストでポップアップ検出のためにskipBrowserRedirectをfalseに設定
             skipBrowserRedirect: false,
           },
         });
 
 
-        // 【エラーハンドリング】: OAuth URL生成時のエラーを適切に処理
+        // OAuth URL生成時のエラーを処理
         if (response.error) {
           /**
-           * 【リファクタリング改善】: 統合エラーハンドラーによる一元化されたエラー処理
-           * 【セキュリティ強化】: OAuthErrorHandlerによる安全なエラー分析とメッセージ生成
-           * 【保守性向上】: 重複するエラー分類ロジックの削除と統一されたエラー処理
-           * 🟢 信頼性レベル: 専用エラーハンドラーによる確実で安全な処理
+           * 統合エラーハンドラーで一元化されたエラー処理
+           * OAuthErrorHandlerで安全なエラー分析とメッセージ生成
            */
           const errorDetail = OAuthErrorHandler.analyzeError(response.error);
           throw new Error(errorDetail.userMessage);
         }
 
-        // 【ポップアップ開始】: window.openでポップアップウィンドウを開く
-        // 【E2Eテスト対応】: page.waitForEvent('popup')がこのポップアップを検出できる
+        // window.openでポップアップウィンドウを開き、E2Eテストで検出可能にする
         if (response.data.url) {
           // テスト環境では実際のポップアップ無しでURL生成成功を返す
           if (process.env.NODE_ENV === 'test') {
@@ -139,12 +132,12 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           );
 
           if (!popup) {
-            // 【ポップアップブロック対応】: ブラウザがポップアップを妨げた場合のエラー
+            // ブラウザがポップアップをブロックした場合のエラー処理
             throw new Error('ポップアップが開けませんでした。ブラウザの設定を確認してください。');
           }
         }
 
-        // 【成功レスポンス】: OAuth フロー開始成功
+        // OAuthフロー開始成功のレスポンス
         return {
           data: {
             user: null, // OAuthフローではコールバック後に取得
@@ -153,7 +146,7 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           error: null,
         };
       } catch (error) {
-        // 【統合例外処理】: OAuthErrorHandlerによる統一されたエラー処理
+        // OAuthErrorHandlerで統一された例外処理
         const errorDetail = OAuthErrorHandler.analyzeError(
           error instanceof Error ? error : new Error('OAuth認証でエラーが発生しました')
         );

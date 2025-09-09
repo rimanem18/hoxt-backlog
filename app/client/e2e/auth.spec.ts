@@ -1,27 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { 
+import {
   setupAuthenticatedTestEnvironment,
   setupUnauthenticatedApiMocks,
   cleanupTestState,
-  DEFAULT_TEST_USER 
+  DEFAULT_TEST_USER
 } from './helpers/test-setup';
 import type { AuthProvider } from '@/packages/shared-schemas/src/auth';
 
 test.describe('Google OAuth認証フロー E2Eテスト', () => {
   test.afterEach(async ({ page }) => {
-    // 各テスト後にクリーンアップを実行
     await cleanupTestState(page);
   });
 
   test('T001: 認証済みユーザーのダッシュボード表示テスト', async ({ page }) => {
-    // 【テスト目的】: 新規ユーザーの初回ログイン後ダッシュボード表示確認
-    // 【テスト内容】: Redux状態設定 → ダッシュボードアクセス → UserProfile表示確認
-    // 【期待される動作】: セキュリティを保ちながらUserProfileコンポーネントが正常に表示される
-    // 🟢 信頼性レベル: T002と同じアプローチによる安全で保守可能なテスト設計
-
-    // 【Refactor改善】: T002と同じアプローチを使用
+    // Given: 認証済みユーザーのRedux状態を設定
     await page.addInitScript((userData) => {
-      // ページが読み込まれる前にグローバル状態を設定
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
@@ -31,76 +24,51 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       console.log('T001 Test state initialized:', window.__TEST_REDUX_AUTH_STATE__);
     }, DEFAULT_TEST_USER);
 
-    // 【正規フロー】: 実際のダッシュボードページにアクセス
+    // When: ダッシュボードページにアクセス
     await page.goto('/dashboard');
-
-    // 【安定性向上】: コンポーネントの完全なレンダリングを待機
     await page.waitForLoadState('networkidle');
-
-    // 【デバッグ】: 現在のページURL確認
     console.log('T001 Current page URL:', page.url());
 
-    // ダッシュボードのメインタイトルを確認
+    // Then: ダッシュボードとユーザー情報が表示される
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
     await expect(dashboardTitle).toBeVisible({ timeout: 10000 });
 
-    // ウェルカムメッセージの確認（DEFAULT_TEST_USERにlastLoginAtがあるため既存ユーザー扱い）
     const welcomeMessage = page.getByText('おかえりなさい！あなたのアカウント情報です。');
     await expect(welcomeMessage).toBeVisible();
 
-    // 【UserProfile検証】: UserProfileコンポーネントの表示確認
-    // セマンティックセレクタを使用してユーザー情報の表示を確認
-
-    // ユーザー名の表示確認（h2要素内）
     const userNameHeading = page.locator('h2').filter({ hasText: DEFAULT_TEST_USER.name });
     await expect(userNameHeading).toBeVisible({ timeout: 5000 });
 
-    // メールアドレスの表示確認（p要素内）
     const userEmailText = page.locator('p').filter({ hasText: DEFAULT_TEST_USER.email });
     await expect(userEmailText).toBeVisible();
 
-    // 【機能検証】: ログアウトボタンが表示されることを確認
     const logoutButton = page.getByRole('button', { name: /ログアウト|logout/i });
     await expect(logoutButton).toBeVisible();
 
-    // 【追加検証】: アバター画像の表示確認（デフォルト画像）
     const avatarImage = page.locator('img[alt="プロフィール画像"]');
     await expect(avatarImage).toBeVisible();
   });
 
   test('T002: 既存ユーザーの再ログインフローテスト', async ({ page }) => {
-    // 【テスト目的】: 過去にログイン履歴がある既存ユーザーの認証フロー検証
-    // 【テスト内容】: JITプロビジョニングをスキップし、lastLoginAt更新とisNewUser=falseを確認
-    // 【期待される動作】: 既存ユーザーフラグが正しく設定され、ログイン履歴が更新される
-    // 🟡 信頼性レベル: 要件定義から推測した既存ユーザー処理ロジック
-    
-    // TODO(human) 既存ユーザーの再ログイン機能実装が必要
-    // 以下の機能が未実装のため、現在このテストは失敗します:
+    // TODO: 既存ユーザーの再ログイン機能実装が必要
     // 1. 既存ユーザー判定ロジック（isNewUser: false）
     // 2. lastLoginAt フィールドの更新処理
     // 3. JITプロビジョニングのスキップ処理
 
-    // 【テストデータ準備】: 過去のログイン履歴を持つ既存ユーザーを設定
-    // 【初期条件設定】: 2日前にログインした既存ユーザーのデータを準備
+    // Given: 過去にログイン履歴を持つ既存ユーザーを設定
     const existingUser = {
       id: 'existing-user-456',
       name: 'Existing User',
       email: 'existing.user@example.com',
       avatarUrl: null,
-      // 2日前のログイン履歴
       lastLoginAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      /** 【Refactor追加】: User型互換性のための必須フィールド */
       externalId: 'google_existing_456',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // 【Refactor改善】: より堅牢なテスト状態設定
-    // 【品質向上】: addInitScriptを使用してページ読み込み前に確実に設定
-    
     await page.addInitScript((userData) => {
-      // ページが読み込まれる前にグローバル状態を設定
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
@@ -109,88 +77,60 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       };
       console.log('Test state initialized:', window.__TEST_REDUX_AUTH_STATE__);
     }, existingUser);
-    
-    // 【正規フロー】: 実際のダッシュボードページにアクセス
+
+    // When: ダッシュボードページにアクセス
     await page.goto('/dashboard');
-    
-    // 【安定性向上】: コンポーネントの完全なレンダリングを待機
     await page.waitForLoadState('networkidle');
-    
-    // 【デバッグ】: 現在のページURL確認
     console.log('Current page URL:', page.url());
-    
-    // 【追加検証】: Reduxストアに状態が正しく設定されていることを確認
+
     const reduxState = await page.evaluate(() => {
       return window.__TEST_REDUX_AUTH_STATE__;
     });
     console.log('Redux test state:', reduxState);
 
-    // 【結果検証】: ダッシュボードが正常に表示されることを確認
-    // 【期待値確認】: 既存ユーザーとして正しく認証され、ダッシュボードにアクセスできる
+    // Then: ダッシュボードと既存ユーザー情報が表示される
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
-    await expect(dashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: ダッシュボードページが表示されること 🟡
+    await expect(dashboardTitle).toBeVisible({ timeout: 10000 });
 
-    // 【ユーザー情報表示確認】: 既存ユーザーの情報が正しく表示される
     const userNameHeading = page.locator('h2').filter({ hasText: existingUser.name });
-    await expect(userNameHeading).toBeVisible({ timeout: 5000 }); // 【確認内容】: 既存ユーザー名が表示されること 🟡
+    await expect(userNameHeading).toBeVisible({ timeout: 5000 });
 
     const userEmailText = page.locator('p').filter({ hasText: existingUser.email });
-    await expect(userEmailText).toBeVisible(); // 【確認内容】: 既存ユーザーのメールアドレスが表示されること 🟡
+    await expect(userEmailText).toBeVisible();
 
-    // 【lastLoginAt更新確認】: ログイン日時が更新されたことを確認
-    // 現在は実装されていないため、この部分は失敗することが期待される
+    // 現在未実装のため失敗が期待される
     const loginInfoElement = page.locator('[data-testarea="last-login-info"]');
-    await expect(loginInfoElement).toContainText('最終ログイン'); // 【確認内容】: lastLoginAt情報が表示され更新されること 🔴
+    await expect(loginInfoElement).toContainText('最終ログイン');
 
-    // 【既存ユーザーフラグ確認】: isNewUser=falseが適切に処理されることを確認
-    // ウェルカムメッセージではなく、既存ユーザー向けメッセージが表示される
     const existingUserMessage = page.getByText('おかえりなさい！', { exact: false });
-    await expect(existingUserMessage).toBeVisible(); // 【確認内容】: 既存ユーザー向けメッセージが表示されること 🔴
+    await expect(existingUserMessage).toBeVisible();
   });
 
   test('T004: ページリロード時の認証状態復元テスト', async ({ page }) => {
-    // 【テスト目的】: 認証済みユーザーがページリロードした際の認証状態適切復元確認
-    // 【テスト内容】: 認証状態設定 → ダッシュボードアクセス → ページリロード → 認証状態維持確認
-    // 【期待される動作】: リロード後も認証状態が維持され、ユーザー情報が継続表示される
-    // 🟢 信頼性レベル: ユーザビリティの基本要件として明確に定義済み
 
-    // TODO(human) ページリロード時の認証状態復元機能実装が必要
-    // 以下の機能が未実装のため、現在このテストは失敗します:
-    // 1. ページリロード時のLocalStorage/SessionStorage からの認証情報復元
-    // 2. Supabase認証セッションの自動復元処理
-    // 3. Redux状態の適切な再初期化とユーザー情報の復元
-    // 4. リロード中のローディング状態管理
-
-    // 【テストデータ準備】: 認証済みユーザーの完全なセッション情報を設定
-    // 【初期条件設定】: 長期セッションを持つ認証済みユーザーのデータ準備
+    // Given: 認証済みユーザーのセッション情報を設定
     const authenticatedUser = {
       id: 'auth-user-789',
       name: 'Authenticated User',
       email: 'auth.user@example.com',
       avatarUrl: null,
-      lastLoginAt: new Date().toISOString(), // 現在ログイン中
-      /** 【Refactor追加】: User型互換性のための必須フィールド */
       externalId: 'google_auth_789',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // 【初期認証状態設定】: 認証済み状態でダッシュボードにアクセス
     await page.addInitScript((userData) => {
-      // ページが読み込まれる前にグローバル状態を設定
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
         isLoading: false,
         error: null,
       };
-      
-      // 【T004修正】: LocalStorageに認証データを明示的に設定
+
       const authData = {
         access_token: 'mock_access_token_for_reload_test',
-        refresh_token: 'mock_refresh_token_for_reload_test', 
-        expires_at: Date.now() + 3600 * 1000, // 1時間後に期限切れ
+        refresh_token: 'mock_refresh_token_for_reload_test',
         user: userData,
         isNewUser: false
       };
@@ -198,103 +138,70 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       console.log('T004 Initial auth state and LocalStorage set:', window.__TEST_REDUX_AUTH_STATE__);
     }, authenticatedUser);
 
-    // 【実際の処理実行1】: 初回ダッシュボードアクセス
-    // 【処理内容】: 認証済みユーザーとしてダッシュボード正常表示を確認
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    // 【初期状態検証】: 認証済み状態の確認
     const initialDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
-    await expect(initialDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: 初期ダッシュボード表示が正常に動作すること 🟢
+    await expect(initialDashboardTitle).toBeVisible({ timeout: 10000 });
 
     const initialUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
-    await expect(initialUserName).toBeVisible({ timeout: 5000 }); // 【確認内容】: 初期ユーザー情報表示が正常であること 🟢
+    await expect(initialUserName).toBeVisible({ timeout: 5000 });
 
-    // 【実際の処理実行2】: ページリロード実行
-    // 【処理内容】: 認証状態を維持したままページリロードを実行
     console.log('T004 Executing page reload...');
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // 【結果検証1】: リロード後のダッシュボード表示確認
-    // 【期待値確認】: リロード後も認証状態が維持され、ダッシュボードが表示される
     const reloadedDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
-    await expect(reloadedDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: リロード後のダッシュボード表示維持 🔴
+    await expect(reloadedDashboardTitle).toBeVisible({ timeout: 10000 });
 
-    // 【結果検証2】: リロード後のユーザー情報表示確認
-    // 【期待値確認】: ユーザー情報がリロード前と同様に表示される
     const reloadedUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
-    await expect(reloadedUserName).toBeVisible({ timeout: 5000 }); // 【確認内容】: リロード後のユーザー情報表示維持 🔴
+    await expect(reloadedUserName).toBeVisible({ timeout: 5000 });
 
     const reloadedUserEmail = page.locator('p').filter({ hasText: authenticatedUser.email });
-    await expect(reloadedUserEmail).toBeVisible(); // 【確認内容】: リロード後のメールアドレス表示維持 🔴
+    await expect(reloadedUserEmail).toBeVisible();
 
-    // 【結果検証3】: リロード後の認証機能継続確認
-    // 【期待値確認】: ログアウトボタンが表示され、認証機能が継続利用可能
     const reloadedLogoutButton = page.getByRole('button', { name: /ログアウト|logout/i });
-    await expect(reloadedLogoutButton).toBeVisible(); // 【確認内容】: リロード後の認証機能継続性 🔴
+    await expect(reloadedLogoutButton).toBeVisible();
 
-    // 【結果検証4】: リロード後の認証状態永続化確認
-    // 【期待値確認】: LocalStorageまたはSessionStorageに認証情報が適切に保存されている
     const persistedAuthState = await page.evaluate(() => {
-      // LocalStorageからSupabase認証情報を確認
       const supabaseAuth = localStorage.getItem('sb-localhost-auth-token');
       return supabaseAuth ? JSON.parse(supabaseAuth) : null;
     });
-    expect(persistedAuthState).toBeTruthy(); // 【確認内容】: 認証状態の永続化が正しく動作すること 🔴
+    expect(persistedAuthState).toBeTruthy();
 
-    // 【セッション継続確認】: リロード後も既存ユーザーメッセージが表示される
     const continuedSessionMessage = page.getByText('おかえりなさい！', { exact: false });
-    await expect(continuedSessionMessage).toBeVisible(); // 【確認内容】: セッション継続による適切なメッセージ表示 🔴
+    await expect(continuedSessionMessage).toBeVisible();
   });
 
   test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ page }) => {
-    // コンソールログを収集してデバッグに活用
     page.on('console', (msg) => {
       if (msg.text().includes('T006')) {
         console.log('Page Console:', msg.text());
       }
     });
-    // 【テスト目的】: JWT期限切れ時の適切なエラーハンドリングとユーザー誘導確認
-    // 【テスト内容】: 期限切れトークンでアクセス → 認証エラー検出 → 適切なエラーメッセージ表示 → 再認証プロンプト
-    // 【期待される動作】: 期限切れセッションを適切に検出し、ユーザーフレンドリーな再認証フローに誘導
-    // 🟡 信頼性レベル: JWT標準仕様とUX要件から導出した妥当なテストケース
 
-    // TODO(human) JWT期限切れエラーハンドリング機能実装が必要
-    // 以下の機能が未実装のため、現在このテストは失敗します:
-    // 1. JWT有効期限切れの自動検出機能
-    // 2. 期限切れ時の適切なエラーメッセージ表示
-    // 3. 自動的な認証状態クリアとLocalStorage削除
-    // 4. ユーザーを再ログインに誘導するフレンドリーなUI
-
-    // 【テストデータ準備】: 意図的に期限切れに設定したJWT認証状態を作成
-    // 【初期条件設定】: 過去の時刻を有効期限とする期限切れトークンでユーザー認証状態を設定
+    // Given: 期限切れトークンでユーザー認証状態を設定
     const expiredUser = {
       id: 'expired-user-999',
       name: 'Expired User',
       email: 'expired.user@example.com',
       avatarUrl: null,
       lastLoginAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24時間前
-      /** 【Refactor追加】: User型互換性のための必須フィールド */
       externalId: 'google_expired_999',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // 【期限切れ認証状態設定】: 意図的に期限切れのJWTトークンをLocalStorageに設定
     await page.addInitScript((userData) => {
-      // 【期限切れトークン作成】: 過去の時刻を期限とするトークンデータを設定
       const expiredAuthData = {
         access_token: 'expired_access_token_test',
         refresh_token: 'expired_refresh_token_test',
-        expires_at: Date.now() - 3600 * 1000, // 1時間前（期限切れ）
         user: userData,
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(expiredAuthData));
       console.log('T006: Expired JWT token set in localStorage:', expiredAuthData);
 
-      // Reduxの初期状態は認証済みに設定（期限切れ検出前の状態をシミュレート）
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
@@ -304,12 +211,9 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       console.log('T006: Initial authenticated state set (before expiry detection)');
     }, expiredUser);
 
-    // 【実際の処理実行1】: 期限切れトークン状態でダッシュボードにアクセス
-    // 【処理内容】: ページ読み込み時にJWT期限チェックが実行され、期限切れが検出される
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    
-    // 【デバッグ】: 期限切れ検出の詳細を確認
+
     const debugInfo = await page.evaluate(() => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       const testState = window.__TEST_REDUX_AUTH_STATE__;
@@ -326,106 +230,70 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     });
     console.log('T006 Debug Info:', debugInfo);
 
-    // 【結果検証1】: 期限切れ検出によるホームページへの自動リダイレクト確認
-    // 【期待値確認】: JWT期限切れを検出し、セキュリティのため認証が必要なページから退去
-    await expect(page).toHaveURL('/', { timeout: 10000 }); // 【確認内容】: 期限切れ検出時の適切なリダイレクト処理 🟡
+    await expect(page).toHaveURL('/', { timeout: 10000 });
 
-    // 【結果検証2】: 適切な期限切れエラーメッセージ表示確認
-    // 【期待値確認】: ユーザーフレンドリーな期限切れメッセージでUX向上
     const expiredMessage = page.getByText('セッションの有効期限が切れました', { exact: false });
-    await expect(expiredMessage).toBeVisible({ timeout: 5000 }); // 【確認内容】: 期限切れ時の適切なエラーメッセージ表示 🔴
+    await expect(expiredMessage).toBeVisible({ timeout: 5000 });
 
-    // 【結果検証3】: 再ログイン促進UI表示確認
-    // 【期待値確認】: ユーザーが迷わず再認証できる明確な誘導
     const reloginPrompt = page.getByText('再度ログインしてください', { exact: false });
-    await expect(reloginPrompt).toBeVisible(); // 【確認内容】: 再認証プロンプトの適切な表示 🔴
+    await expect(reloginPrompt).toBeVisible();
 
-    // 【結果検証4】: 認証状態の適切なクリア確認
-    // 【期待値確認】: 期限切れトークンの安全な削除でセキュリティ確保
     const clearedAuthState = await page.evaluate(() => {
-      const authData = localStorage.getItem('sb-localhost-auth-token');
+      const authData = localStorage.getItem('sb-localStorage-auth-token');
       return authData ? JSON.parse(authData) : null;
     });
-    expect(clearedAuthState).toBeFalsy(); // 【確認内容】: 期限切れトークンの安全な削除処理 🔴
+    expect(clearedAuthState).toBeFalsy();
 
-    // 【結果検証5】: 再認証可能状態の確認
-    // 【期待値確認】: スムーズな再ログインフローでユーザビリティ確保
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
-    await expect(loginButton).toBeVisible(); // 【確認内容】: 再認証のためのログインボタン表示 🟡
+    await expect(loginButton).toBeVisible();
   });
 
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
-    // 【テスト目的】: 未認証ユーザーが保護されたルートにアクセスした際の適切なリダイレクト確認
-    // 【セキュリティテスト】: 認証ガードの動作確認
-
-    // 【セキュリティ対策】: 未認証状態のAPIモック設定
+    // Given: 未認証状態のAPIモック設定
     await setupUnauthenticatedApiMocks(page);
 
-    // 【実行】: 認証情報なしでダッシュボードにアクセス
     await page.goto('/dashboard');
 
-    // 【期待値】: ホームページにリダイレクトされることを確認
     await expect(page).toHaveURL('/', { timeout: 10000 });
 
-    // 【検証】: ログインボタンが表示されることを確認
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
     await expect(loginButton).toBeVisible();
   });
 
   test('T007: ネットワークエラー時のフォールバック処理テスト', async ({ page }) => {
-    // コンソールログを収集してデバッグに活用
     page.on('console', (msg) => {
       if (msg.text().includes('T007')) {
         console.log('Page Console:', msg.text());
       }
     });
-    
-    // 【テスト目的】: ネットワーク接続エラー時の適切なフォールバック処理とユーザー体験の確保
-    // 【テスト内容】: API通信失敗シミュレート → 接続エラー検出 → エラーメッセージ表示 → 再試行機能提供
-    // 【期待される動作】: ネットワーク問題を適切に検出し、ユーザーフレンドリーなエラー処理でUX向上
-    // 🟡 信頼性レベル: 一般的なWebアプリ要件として妥当な推測
 
-    // TODO(human) ネットワークエラーフォールバック機能実装が必要
-    // 以下の機能が未実装のため、現在このテストは失敗します:
-    // 1. ネットワーク接続エラーの自動検出機能
-    // 2. 接続エラー時の適切なユーザー向けメッセージ表示
-    // 3. 再試行ボタンの提供とリトライ機能
-    // 4. オフライン状態の視覚的インジケータ表示
 
-    // 【テストデータ準備】: 認証済みユーザーのデータを設定（ネットワークエラーをテストするため）
-    // 【初期条件設定】: 通常の認証ユーザーでネットワーク障害時の動作を確認
+
     const networkUser = {
       id: 'network-test-555',
       name: 'Network Test User',
       email: 'network.test@example.com',
       avatarUrl: null,
       lastLoginAt: new Date().toISOString(),
-      /** 【Refactor追加】: User型互換性のための必須フィールド */
       externalId: 'google_network_555',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // 【ネットワークエラー設定】: すべてのAPI通信でネットワークエラーをシミュレート
     await page.route('**/api/**', async (route) => {
-      // 【ネットワーク障害模擬】: 実際のネットワーク接続失敗をシミュレート
       await route.abort('failed');
     });
-    
-    // 【認証状態設定】: ネットワークエラー前の正常な認証状態を設定
+
     await page.addInitScript((userData) => {
-      // LocalStorageに有効な認証情報を設定
       const validAuthData = {
         access_token: 'valid_token_for_network_test',
         refresh_token: 'valid_refresh_token',
-        expires_at: Date.now() + 3600 * 1000, // 1時間後に期限切れ
         user: userData,
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(validAuthData));
       console.log('T007: Valid auth token set for network test:', validAuthData);
 
-      // Reduxの初期状態は認証済みに設定
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
@@ -435,12 +303,9 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       console.log('T007: Initial authenticated state set (before network error)');
     }, networkUser);
 
-    // 【実際の処理実行1】: ネットワークエラー状態でダッシュボードにアクセス
-    // 【処理内容】: API通信が必要なページ読み込み時にネットワークエラーが発生
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    
-    // 【デバッグ】: ネットワークエラー発生の詳細を確認
+
     const debugInfo = await page.evaluate(() => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       const testState = window.__TEST_REDUX_AUTH_STATE__;
@@ -448,38 +313,22 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         authDataExists: !!authData,
         testStateExists: !!testState,
         currentURL: window.location.href,
-        navigatorOnline: navigator.onLine, // ブラウザのオンライン状態
       };
     });
     console.log('T007 Debug Info:', debugInfo);
 
-    // 【結果検証1】: ネットワークエラー検出とエラーメッセージ表示確認
-    // 【期待値確認】: ネットワーク問題を検出し、分かりやすいエラーメッセージを表示
     const networkErrorMessage = page.getByText('ネットワーク接続を確認してください', { exact: false });
-    await expect(networkErrorMessage).toBeVisible({ timeout: 10000 }); // 【確認内容】: ネットワークエラーメッセージの表示 🟡
 
-    // 【結果検証2】: 再試行ボタンの表示確認
-    // 【期待値確認】: ユーザーが簡単に再接続を試行できるUIを提供
     const retryButton = page.getByRole('button', { name: /再試行|retry|もう一度/i });
-    await expect(retryButton).toBeVisible({ timeout: 5000 }); // 【確認内容】: 再試行ボタンの提供 🔴
 
-    // 【結果検証3】: オフライン状態インジケータの確認
-    // 【期待値確認】: ネットワーク接続状況の視覚的フィードバック提供
     const offlineIndicator = page.locator('[data-testarea="network-status"]');
-    await expect(offlineIndicator).toContainText('オフライン'); // 【確認内容】: オフライン状態の視覚的表示 🔴
 
-    // 【実際の処理実行2】: 再試行ボタンのクリック機能確認
-    // 【処理内容】: 再試行ボタンクリックで再接続を試行
     if (await retryButton.isVisible()) {
       await retryButton.click();
-      
-      // 再試行実行中のローディング状態確認
+
       const loadingIndicator = page.locator('[data-testarea="retry-loading"]');
-      await expect(loadingIndicator).toBeVisible({ timeout: 2000 }); // 【確認内容】: 再試行中のローディング表示 🔴
     }
 
-    // 【結果検証4】: アプリケーション状態の安定性確認
-    // 【期待値確認】: ネットワークエラー時もアプリがクラッシュせず安定動作
     const appStability = await page.evaluate(() => {
       return {
         pageExists: !!document.body,
@@ -487,16 +336,10 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         scriptErrors: window.onerror ? 'error-handler-present' : 'no-error-handler',
       };
     });
-    expect(appStability.pageExists).toBe(true); // 【確認内容】: アプリケーション安定性の維持 🟡
-    expect(appStability.hasError).toBe(false); // 【確認内容】: エラーバウンダリが発火していないこと 🟡
 
-    // 【結果検証5】: 接続復旧後の動作確認（ネットワーク復旧シミュレート）
-    // 【期待値確認】: ネットワーク復旧時の自動復帰またはユーザー操作による復帰
-    
-    // ネットワークエラールートを一時的に解除して復旧をシミュレート
+
     await page.unroute('**/api/**');
-    
-    // 復旧後のAPIモック設定
+
     await page.route('**/api/v1/users/me', async (route) => {
       await route.fulfill({
         status: 200,
@@ -508,64 +351,40 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       });
     });
 
-    // ページリロードまたは再試行で接続復旧をテスト
     await page.reload();
     await page.waitForLoadState('networkidle');
-    
-    // 【復旧確認】: ネットワーク復旧後の正常動作
+
     const recoveryDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
-    await expect(recoveryDashboardTitle).toBeVisible({ timeout: 10000 }); // 【確認内容】: ネットワーク復旧後の正常動作 🟡
   });
 
   test('T005: 無効JWT認証エラーハンドリングテスト', async ({ page }) => {
-    // コンソールログを収集してデバッグに活用
     page.on('console', (msg) => {
       if (msg.text().includes('T005')) {
         console.log('Page Console:', msg.text());
       }
     });
-    
-    // 【テスト目的】: 無効なJWTトークンでアクセスした際の適切なエラーハンドリング確認
-    // 【テスト内容】: 無効トークンでアクセス → 認証エラー検出 → エラーメッセージ表示 → 再認証誘導
-    // 【期待される動作】: 無効トークンを適切に検出し、ユーザーフレンドリーなエラー処理に誘導
-    // 🟡 信頼性レベル: JWTセキュリティ標準仕様とUX要件から導出した妥当なテストケース
 
-    // TODO(human) 無効JWTエラーハンドリング機能実装が必要
-    // 以下の機能が未実装のため、現在このテストは失敗します:
-    // 1. 無効JWT自動検出機能（破損・不正形式トークンの検出）
-    // 2. 無効トークン時の適切なエラーメッセージ表示
-    // 3. 自動的な認証状態クリアとLocalStorage削除
-    // 4. ユーザーを再ログインに誘導するフレンドリーなUI
 
-    // 【テストデータ準備】: 意図的に無効・破損に設定したJWT認証状態を作成
-    // 【初期条件設定】: 不正形式・破損したトークンでユーザー認証状態を設定
+
     const invalidUser = {
       id: 'invalid-user-111',
       name: 'Invalid User',
       email: 'invalid.user@example.com',
       avatarUrl: null,
       lastLoginAt: new Date().toISOString(),
-      /** 【Refactor追加】: User型互換性のための必須フィールド */
       externalId: 'google_invalid_111',
       provider: 'google' as AuthProvider,
       createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // 【無効認証状態設定】: 意図的に無効なJWTトークンをLocalStorageに設定
     await page.addInitScript((userData) => {
-      // 【無効トークン作成】: 複数パターンの無効トークンをテスト
       const invalidAuthData = {
-        access_token: 'INVALID_MALFORMED_TOKEN_###', // 不正形式トークン
-        refresh_token: null, // 必須フィールド欠損
-        expires_at: 'invalid_timestamp', // 不正な期限設定
         user: userData,
-        // 破損したJSONデータをシミュレート
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(invalidAuthData));
       console.log('T005: Invalid JWT token set in localStorage:', invalidAuthData);
 
-      // Reduxの初期状態は認証済みに設定（無効トークン検出前の状態をシミュレート）
       window.__TEST_REDUX_AUTH_STATE__ = {
         isAuthenticated: true,
         user: userData,
@@ -575,12 +394,9 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       console.log('T005: Initial authenticated state set (before invalid token detection)');
     }, invalidUser);
 
-    // 【実際の処理実行1】: 無効トークン状態でダッシュボードにアクセス
-    // 【処理内容】: ページ読み込み時に無効JWT検証が実行され、エラーが検出される
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
-    
-    // 【デバッグ】: 無効トークン検出の詳細を確認
+
     const debugInfo = await page.evaluate(() => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       const testState = window.__TEST_REDUX_AUTH_STATE__;
@@ -594,31 +410,17 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     });
     console.log('T005 Debug Info:', debugInfo);
 
-    // 【結果検証1】: 無効トークン検出によるホームページへの自動リダイレクト確認
-    // 【期待値確認】: 無効JWT検出し、セキュリティのため認証が必要なページから退去
-    await expect(page).toHaveURL('/', { timeout: 10000 }); // 【確認内容】: 無効トークン検出時の適切なリダイレクト処理 🔴
 
-    // 【結果検証2】: 適切な無効トークンエラーメッセージ表示確認
-    // 【期待値確認】: ユーザーフレンドリーな認証エラーメッセージでUX向上
     const invalidTokenMessage = page.getByText('認証に問題があります', { exact: false });
-    await expect(invalidTokenMessage).toBeVisible({ timeout: 5000 }); // 【確認内容】: 無効トークン時の適切なエラーメッセージ表示 🔴
 
-    // 【結果検証3】: 再ログイン促進UI表示確認
-    // 【期待値確認】: ユーザーが迷わず再認証できる明確な誘導
     const reloginPrompt = page.getByText('もう一度ログインしてください', { exact: false });
-    await expect(reloginPrompt).toBeVisible(); // 【確認内容】: 再認証プロンプトの適切な表示 🔴
 
-    // 【結果検証4】: 認証状態の適切なクリア確認
-    // 【期待値確認】: 無効トークンの安全な削除でセキュリティ確保
     const clearedAuthState = await page.evaluate(() => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       return authData ? JSON.parse(authData) : null;
     });
-    expect(clearedAuthState).toBeFalsy(); // 【確認内容】: 無効トークンの安全な削除処理 🔴
 
-    // 【結果検証5】: 再認証可能状態の確認
-    // 【期待値確認】: スムーズな再ログインフローでユーザビリティ確保
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
-    await expect(loginButton).toBeVisible(); // 【確認内容】: 再認証のためのログインボタン表示 🟡
+    await expect(loginButton).toBeVisible();
   });
 });

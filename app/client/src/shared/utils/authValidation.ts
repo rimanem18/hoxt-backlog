@@ -1,9 +1,7 @@
 /**
- * 【認証検証ユーティリティ】: 認証関連の検証ロジックを統合
- * 【機能概要】: provider.tsxとdashboard/page.tsxで共通する認証検証処理を統合
- * 【設計方針】: DRY原則に基づく重複コード除去とメンテナンス性向上
- * 【リファクタリング理由】: 複数箇所で同様の検証ロジックが散在していた課題を解決
- * 🟢 信頼性レベル: 既存の実装から抽出した安定性の高い検証ロジック
+ * 認証検証ユーティリティ
+ * provider.tsxとdashboard/page.tsxで共通する認証検証処理を統合
+ * DRY原則に基づく重複コード除去とメンテナンス性向上
  */
 
 import type { User } from '@/packages/shared-schemas/src/auth';
@@ -32,7 +30,7 @@ export interface AuthValidationResult {
 /**
  * localStorage から認証データを取得し、包括的な検証を行う
  * 
- * 【検証項目】:
+ * 検証項目:
  * - 認証データの存在確認
  * - JSON形式の妥当性
  * - expires_at の型と値の検証
@@ -44,8 +42,8 @@ export interface AuthValidationResult {
  */
 export function validateStoredAuth(): AuthValidationResult {
   try {
-    // 【ステップ1】: localStorage からの認証データ取得
-    // 【エラーハンドリング】: データ不存在の場合は早期リターン
+    // localStorage からの認証データ取得
+    // データ不存在の場合は早期リターン
     const persistedState = localStorage.getItem('sb-localhost-auth-token');
     if (!persistedState) {
       return {
@@ -54,8 +52,8 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【ステップ2】: JSON解析と型安全性確保
-    // 【例外処理】: 不正なJSON形式に対する適切なエラー処理
+    // JSON解析と型安全性確保
+    // 不正なJSON形式に対する適切なエラー処理
     let authData: StoredAuthData;
     try {
       authData = JSON.parse(persistedState);
@@ -66,8 +64,8 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【ステップ3】: expires_at の型検証と数値変換
-    // 【型安全性】: T005 対応 - 無効な型の expires_at を検出
+    // expires_at の型検証と数値変換
+    // 無効な型の expires_at を検出
     const isValidExpiresAt = typeof authData.expires_at === 'number';
     if (!isValidExpiresAt) {
       return {
@@ -76,8 +74,8 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【ステップ4】: トークン有効期限の確認
-    // 【セキュリティ】: 期限切れトークンの使用を防止
+    // トークン有効期限の確認
+    // 期限切れトークンの使用を防止
     const expiresAt = authData.expires_at as number;
     if (expiresAt <= Date.now()) {
       return {
@@ -86,9 +84,9 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【ステップ5】: access_token の存在と形式確認
-    // 【セキュリティ強化】: T005 対応 - 無効トークン文字列の検出
-    // 【JWT構造検証】: 基本的なJWT形式（3つのパート）の確認
+    // access_token の存在と形式確認
+    // 無効トークン文字列の検出
+    // 基本的なJWT形式（3つのパート）の確認
     const isValidAccessToken = 
       authData.access_token && 
       typeof authData.access_token === 'string' && 
@@ -102,8 +100,8 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【ステップ6】: ユーザー情報の完全性確認
-    // 【データ整合性】: 必須ユーザー情報の存在確認
+    // ユーザー情報の完全性確認
+    // 必須ユーザー情報の存在確認
     const isValidUser = authData.user && typeof authData.user.id === 'string';
     if (!isValidUser) {
       return {
@@ -112,14 +110,14 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
-    // 【成功時】: すべての検証を通過した場合
+    // すべての検証を通過した場合
     return {
       isValid: true,
       data: authData,
     };
 
   } catch (error) {
-    // 【予期しないエラー処理】: localStorage アクセスエラー等
+    // 予期しないエラー処理として localStorage アクセスエラー等
     console.error('認証検証中にエラーが発生:', error);
     return {
       isValid: false,
@@ -150,14 +148,14 @@ export function getAuthErrorMessage(reason: string): string {
 /**
  * 認証状態のクリーンアップを実行
  * 
- * 【機能概要】: localStorage からの認証データ削除
- * 【安全性】: エラー発生時も処理を継続
+ * localStorage からの認証データ削除
+ * エラー発生時も処理を継続
  */
 export function clearStoredAuth(): void {
   try {
     localStorage.removeItem('sb-localhost-auth-token');
   } catch (error) {
-    // 【エラー処理】: localStorage へのアクセス失敗時も安全に処理
+    // localStorage へのアクセス失敗時も安全に処理
     console.error('認証データクリア中にエラーが発生:', error);
   }
 }

@@ -25,9 +25,7 @@ export default function AuthCallbackPage(): React.ReactNode {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // 【トークン解析処理】: URLフラグメントからOAuth認証トークンを取得
-        // 【実装方針】: E2Eテスト対応のため、モック認証トークンも受け入れる
-        // 🟡 信頼性レベル: テスト要件から推測したモック認証対応
+        // URLフラグメントからOAuth認証トークンを取得
         const hashParams = new URLSearchParams(
           window.location.hash.substring(1),
         );
@@ -50,12 +48,9 @@ export default function AuthCallbackPage(): React.ReactNode {
           );
         }
 
-        // 【環境分離実装完了】: 本番環境でのモック認証を完全無効化
-
-        // 【モック認証対応】: E2Eテスト用のモック認証トークンを特別処理
-        // 【処理内容】: テスト環境でのモック認証フローを実装
+        // E2Eテスト用のモック認証トークンを特別処理
         if (accessToken === 'mock_access_token') {
-          // 【セキュリティガード】: 本番環境でのモック認証を完全無効化
+          // 本番環境でのモック認証を無効化
           const isTestEnvironment =
             process.env.NODE_ENV === 'test' ||
             process.env.NODE_ENV === 'development' ||
@@ -67,7 +62,7 @@ export default function AuthCallbackPage(): React.ReactNode {
             return;
           }
 
-          // 【モックユーザー作成】: テスト用のユーザー情報を構築
+          // テスト用のユーザー情報を構築
           const mockUser = {
             id: 'mock-user-id',
             externalId: 'mock-user-id',
@@ -80,7 +75,7 @@ export default function AuthCallbackPage(): React.ReactNode {
             lastLoginAt: new Date().toISOString(),
           };
 
-          // 【モック認証成功処理】: Redux storeに認証成功状態を設定
+          // Redux storeに認証成功状態を設定
           dispatch(
             authSlice.actions.authSuccess({ user: mockUser, isNewUser: false }),
           );
@@ -88,8 +83,7 @@ export default function AuthCallbackPage(): React.ReactNode {
           console.log('モック認証が正常に完了しました:', mockUser);
           setStatus('success');
 
-          // 【テスト対応リダイレクト】: E2Eテストの期待値に合わせてダッシュボードに遷移
-          // パフォーマンス最適化: テスト環境でのみディレイを適用、本番では即座にリダイレクト
+          // E2Eテストに合わせてダッシュボードに遷移、テスト環境ではディレイあり
           const redirectDelay = process.env.NODE_ENV === 'test' ? 1000 : 0;
           setTimeout(() => {
             router.push('/dashboard');
@@ -139,15 +133,13 @@ export default function AuthCallbackPage(): React.ReactNode {
         console.log('認証が正常に完了しました:', user);
         setStatus('success');
 
-        // 【認証成功後のリダイレクト】: E2Eテストの期待値に合わせてダッシュボードに遷移
-        // 【実装方針】: TDDのGreenフェーズとして、テストを通すための最小限の修正
-        // パフォーマンス最適化: テスト環境でのみディレイを適用
+        // 認証成功後はダッシュボードに遷移
         const successRedirectDelay = process.env.NODE_ENV === 'test' ? 1000 : 0;
         setTimeout(() => {
           router.push('/dashboard');
         }, successRedirectDelay);
       } catch (error) {
-        // 【エラー分類と適切な処理】: エラー種別に応じた詳細な処理
+        // エラー種別に応じた処理
         let userMessage = '認証処理中にエラーが発生しました';
         let logMessage = 'OAuth認証コールバックエラー';
 
@@ -177,7 +169,7 @@ export default function AuthCallbackPage(): React.ReactNode {
           }
         }
 
-        // 【詳細ログ出力】: デバッグ情報とエラースタックの記録
+        // デバッグ情報とエラースタックを記録
         console.error(logMessage, {
           error,
           stack: error instanceof Error ? error.stack : undefined,

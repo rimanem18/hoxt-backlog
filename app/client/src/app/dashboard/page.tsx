@@ -9,70 +9,56 @@ import { showNetworkError } from '@/features/auth/store/errorSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
- * 【機能概要】: 認証済みユーザー専用のダッシュボードページ
- * 【実装方針】: セキュリティファーストの認証チェックとパフォーマンス最適化を重視した設計
- * 【セキュリティ機能】: JWT期限切れ自動検出・トークン構造検証・不正アクセス防止
- * 【パフォーマンス】: useCallback・useMemoによるメモ化で最適化済み
- * 【テスト対応】: T001-T006の高優先度テストケース完全対応
- * 【品質水準】: セキュリティレビュー・パフォーマンスレビューを完了した高品質実装
- * 🟢 信頼性レベル: JWT標準仕様・セキュリティベストプラクティスに基づく実装
+ * 認証済みユーザー専用のダッシュボードページ
+ * JWT期限切れ検出・認証状態復元・ネットワークエラーハンドリング機能を提供
  *
- * @returns {React.ReactNode} 認証済みユーザー向けダッシュボード画面
+ * @returns 認証済みユーザー向けダッシュボード画面
  */
 export default function DashboardPage(): React.ReactNode {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  // 【パフォーマンス最適化】: JWT期限切れチェック処理をメモ化
-  // 【効率化】: 複数回実行を防ぎ、不要な処理を削減
+  // JWT期限切れ時の処理をメモ化して複数回実行を防止
   const handleTokenExpiration = useCallback(() => {
     console.log('T006: JWT token expired detected, handling expiration');
     dispatch(handleExpiredToken());
     router.push('/');
   }, [dispatch, router]);
 
-  // 【パフォーマンス最適化】: 認証状態復元処理をメモ化
-  // 【効率化】: useEffectの再実行を最小限に抑制
-  // 【型安全性】: User型を正確に指定して型安全性を確保
+  // 認証状態復元処理をメモ化してuseEffectの再実行を最小限に抑制
   const handleAuthRestore = useCallback((user: User) => {
     dispatch(restoreAuthState({ user, isNewUser: false }));
     console.log('T004: Authentication state restored successfully');
   }, [dispatch]);
 
-  // 【T007実装】: ネットワークエラー検出機能
-  // 【機能概要】: API通信失敗を検出し、ユーザーフレンドリーなエラーメッセージを表示
-  // 【実装方針】: 最小限の実装でT007テストを通すためのネットワークエラーハンドリング
-  // 【テスト対応】: T007のネットワークエラーメッセージ表示テストケースを満たす
-  // 🟡 信頼性レベル: 一般的なWebアプリのネットワークエラーハンドリングパターンから推測
+  // ネットワークエラーを検出してユーザーフレンドリーなメッセージを表示
   const checkNetworkAndShowError = useCallback(async () => {
     try {
-      // 【ネットワーク検証】: APIエンドポイントへのテスト通信で接続性を確認
-      // 【最小実装】: 既存のユーザー情報APIを使用してネットワーク状態を検証
+      // ユーザー情報APIでネットワーク状態を検証
       const response = await fetch('/api/v1/users/me', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        // 【タイムアウト設定】: 長時間の待機を避けるため短いタイムアウトを設定
+        // 5秒のタイムアウトを設定
         signal: AbortSignal.timeout(5000),
       });
 
-      // 【接続失敗判定】: レスポンスが取得できない場合はネットワークエラーと判定
+      // 500番台エラーはネットワークエラーと判定
       if (!response.ok && response.status >= 500) {
         throw new Error('Server error detected');
       }
     } catch (error) {
-      // 【T007対応】: ネットワークエラー検出時のエラーメッセージ表示処理
-      // 【エラー分類】: fetch失敗・タイムアウト・サーバーエラーをネットワークエラーとして処理
+      // fetch失敗・タイムアウト・サーバーエラーをネットワークエラーとして処理
       if (error instanceof Error && (
-        error.name === 'TypeError' ||  // fetch失敗（ネットワーク切断等）
-        error.name === 'TimeoutError' || // タイムアウト
-        error.message.includes('Failed to fetch') || // ネットワーク接続エラー
-        error.message.includes('Server error')  // サーバーエラー
+        error.name === 'TypeError' ||
+        error.name === 'TimeoutError' ||
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('Server error')
       )) {
         console.log('T007: Network error detected, showing error message');
-        // 【Redux状態更新】: エラー状態をRedux storeに設定してUI表示をトリガー
+        // エラー状態をRedux storeに設定
         dispatch(showNetworkError({
           message: 'ネットワーク接続を確認してください',
           correlationId: `err_${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -81,25 +67,22 @@ export default function DashboardPage(): React.ReactNode {
     }
   }, [dispatch]);
 
-  // 【T007実装】: ページ読み込み時のネットワーク状態確認
+  // ページ読み込み時にネットワーク状態を確認
   useEffect(() => {
-    // 【初回チェック】: ページ表示時に自動でネットワーク状態を確認
+    // ネットワーク状態を自動確認
     checkNetworkAndShowError();
   }, [checkNetworkAndShowError]);
 
-  // 【Green実装】: ページリロード時の認証状態復元機能
+  // ページリロード時の認証状態復元
   useEffect(() => {
-    // 【T006対応・セキュリティ強化】: JWT期限切れ検出をセキュリティファーストで実行
-    // 【実装方針】: 期限切れ検出を最優先処理として配置し、不正アクセスを即座にブロック
-    // 【セキュリティ】: タイミング攻撃対策とデータ漏洩防止を重視した設計
+    // セキュリティ重視でJWT期限切れ検出を最優先実行
     if (typeof window !== 'undefined') {
-      // 【Step 1・セキュリティ優先】: 期限切れチェックを最初に実行
-      // 【データ保護】: 不正なトークンによるデータアクセスを防止
+      // 期限切れチェックを最初に実行して不正アクセスを防止
       const savedAuthData = localStorage.getItem('sb-localhost-auth-token');
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
-          // 【T005対応・堅牢な期限判定】: expires_atの型と値を厳密にチェック
+          // expires_atの値を厳密にチェック
           if (
             parsedAuthData.expires_at === null ||
             parsedAuthData.expires_at === undefined
@@ -116,33 +99,32 @@ export default function DashboardPage(): React.ReactNode {
                 parsedAuthData.expires_at,
               );
             }
-            // 【パフォーマンス最適化】: メモ化された期限切れ処理を使用
+            // 期限切れ処理を実行
             handleTokenExpiration();
             return;
           }
-          // 【追加セキュリティ】: トークン構造の基本検証で不正トークンを検出
+          // トークン構造の基本検証
           if (!parsedAuthData.user || !parsedAuthData.access_token) {
             console.warn('T006: Invalid token structure detected, clearing authentication');
-            // 【パフォーマンス最適化】: メモ化された期限切れ処理を使用
+            // 期限切れ処理を実行
             handleTokenExpiration();
             return;
           }
         } catch (error) {
-          // 【セキュリティエラー処理】: 解析失敗時は不正トークンとして扱い即座にクリア
+          // 解析失敗時は不正トークンとして即座にクリア
           console.error('T006: Error parsing auth data, clearing and redirecting');
-          // 【パフォーマンス最適化】: メモ化された期限切れ処理を使用
+          // メモ化された期限切れ処理を使用
           handleTokenExpiration();
           return;
         }
       }
 
-      // 【Step 2】: 期限切れが検出されなかった場合のみ、通常の認証復元処理を実行
-      // テスト環境の場合、テスト用認証状態を適用
+      // 期限切れが未検出の場合のみ認証復元処理を実行
       if (window.__TEST_REDUX_AUTH_STATE__) {
         const testState = window.__TEST_REDUX_AUTH_STATE__;
         console.log('Dashboard: applying test state (after token expiry check):', testState);
         
-        // 【T006対応】: 期限切れ処理でLocalStorageがクリアされている場合は、テスト用認証状態を適用しない
+        // LocalStorageクリア済みの場合はテスト状態を適用しない
         const currentAuthData = localStorage.getItem('sb-localhost-auth-token');
         if (!currentAuthData && testState.isAuthenticated && testState.user) {
           console.log('Dashboard: Skipping test state application - localStorage was cleared due to token expiry');
@@ -150,7 +132,7 @@ export default function DashboardPage(): React.ReactNode {
         }
         
         if (testState.isAuthenticated && testState.user) {
-          // 【Refactor改善】: 専用のテスト用アクションを使用
+          // テスト用認証状態を設定
           dispatch(setAuthState({
             isAuthenticated: testState.isAuthenticated,
             user: testState.user,
@@ -161,57 +143,54 @@ export default function DashboardPage(): React.ReactNode {
         return;
       }
 
-      // 【T004実装】: 本番環境でのLocalStorageからの認証状態復元
-      // 【Note】: 期限切れチェックはStep 1で完了済み、ここでは有効なトークンの復元のみを実行
+      // 本番環境での認証状態復元（期限切れチェック済み）
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
           console.log('T004: Found valid auth data in localStorage:', parsedAuthData);
           
           if (parsedAuthData.user) {
-            // 【T004対応・パフォーマンス最適化】: メモ化された認証状態復元処理を使用
+            // 認証状態復元処理を実行
             handleAuthRestore(parsedAuthData.user);
           }
         } catch (error) {
           console.error('T004: Error restoring auth state from localStorage:', error);
-          // エラー時は安全のためLocalStorageをクリア
+          // エラー時はLocalStorageをクリア
           localStorage.removeItem('sb-localhost-auth-token');
         }
       } else {
         console.log('T004: No saved auth data found in localStorage');
       }
     }
-  }, [handleTokenExpiration, handleAuthRestore]); // 【パフォーマンス最適化】: メモ化された関数を依存関係に設定
+  }, [handleTokenExpiration, handleAuthRestore]);
 
-  // 【テスト環境チェック】: テスト用認証状態があるかを確認
+  // テスト用認証状態の存在確認
   const hasTestAuthState = typeof window !== 'undefined' && 
     window.__TEST_REDUX_AUTH_STATE__ && 
     window.__TEST_REDUX_AUTH_STATE__.isAuthenticated &&
     window.__TEST_REDUX_AUTH_STATE__.user;
 
-  // 【未認証チェック】: 認証されていないユーザーをホームページにリダイレクト
-  // 【セキュリティ対応】: 未認証ユーザーのダッシュボードアクセスを防ぐ
-  // 【テスト除外】: テスト環境ではリダイレクトを回避してダッシュボードを表示
+  // 未認証ユーザーをホームページにリダイレクト（テスト環境除く）
   if (!hasTestAuthState && (!isAuthenticated || !user)) {
-    // 【エラーログ記録】: 不正なダッシュボードアクセス試行をログに記録
+    // 未認証アクセス試行をログに記録
     console.warn('未認証状態でのダッシュボードアクセス試行', {
       isAuthenticated,
       hasUser: !!user,
       hasTestAuthState,
       timestamp: new Date().toISOString(),
     });
-    // 【リダイレクト処理】: 認証状態が確認できない場合は安全にホームページに誘導
+    // ホームページに誘導
     router.push('/');
-    return null; // 【描画抑制】: リダイレクト中は何も表示しない
+    return null;
   }
 
-  // テスト環境ではモック状態、本番環境では実際の認証状態を使用
+  // テスト環境ではモック状態を使用
   const effectiveUser = hasTestAuthState ? window.__TEST_REDUX_AUTH_STATE__?.user : user;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* 【ページヘッダー】: ダッシュボードのタイトル表示 */}
+        {/* ダッシュボードタイトル */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="mt-2 text-gray-600">
@@ -228,7 +207,7 @@ export default function DashboardPage(): React.ReactNode {
           </div>
         </div>
 
-        {/* 【開発情報】: 開発環境でのみ認証状態をデバッグ表示 */}
+        {/* 開発環境での認証状態デバッグ表示 */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
             <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
