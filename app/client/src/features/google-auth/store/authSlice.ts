@@ -246,8 +246,14 @@ export const authSlice = createSlice({
 
       // テスト用状態設定時もLocalStorageに保存
       if (isAuthenticated && user && typeof window !== 'undefined') {
+        const mockJwt = [
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+          'eyJzdWIiOiJ0ZXN0LXVzZXIiLCJleHAiOjk5OTk5OTk5OTl9', // Payload
+          'test_signature', // Signature
+        ].join('.');
+
         const authData = {
-          access_token: 'test_access_token',
+          access_token: mockJwt,
           refresh_token: 'test_refresh_token',
           expires_at: Date.now() + 3600 * 1000,
           user: user,
