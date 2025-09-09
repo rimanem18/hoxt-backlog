@@ -4,9 +4,9 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
-import { authSlice } from '@/features/google-auth/store/authSlice';
 import errorReducer from '@/features/auth/store/errorSlice';
 import oauthErrorReducer from '@/features/auth/store/oauthErrorSlice';
+import { authSlice } from '@/features/google-auth/store/authSlice';
 
 /**
  * Redux Store構成

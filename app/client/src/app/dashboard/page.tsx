@@ -1,12 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useCallback, useMemo } from 'react';
-import { UserProfile } from '@/features/google-auth/components/UserProfile';
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { setAuthState, restoreAuthState, handleExpiredToken } from '@/features/google-auth/store/authSlice';
+import { useCallback, useEffect } from 'react';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
+import { UserProfile } from '@/features/google-auth/components/UserProfile';
+import {
+  handleExpiredToken,
+  restoreAuthState,
+  setAuthState,
+} from '@/features/google-auth/store/authSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
  * 認証済みユーザー専用のダッシュボードページ
@@ -27,10 +31,13 @@ export default function DashboardPage(): React.ReactNode {
   }, [dispatch, router]);
 
   // 認証状態復元処理をメモ化してuseEffectの再実行を最小限に抑制
-  const handleAuthRestore = useCallback((user: User) => {
-    dispatch(restoreAuthState({ user, isNewUser: false }));
-    console.log('T004: Authentication state restored successfully');
-  }, [dispatch]);
+  const handleAuthRestore = useCallback(
+    (user: User) => {
+      dispatch(restoreAuthState({ user, isNewUser: false }));
+      console.log('T004: Authentication state restored successfully');
+    },
+    [dispatch],
+  );
 
   // ネットワークエラーを検出してユーザーフレンドリーなメッセージを表示
   const checkNetworkAndShowError = useCallback(async () => {
@@ -51,18 +58,21 @@ export default function DashboardPage(): React.ReactNode {
       }
     } catch (error) {
       // fetch失敗・タイムアウト・サーバーエラーをネットワークエラーとして処理
-      if (error instanceof Error && (
-        error.name === 'TypeError' ||
-        error.name === 'TimeoutError' ||
-        error.message.includes('Failed to fetch') ||
-        error.message.includes('Server error')
-      )) {
+      if (
+        error instanceof Error &&
+        (error.name === 'TypeError' ||
+          error.name === 'TimeoutError' ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('Server error'))
+      ) {
         console.log('T007: Network error detected, showing error message');
         // エラー状態をRedux storeに設定
-        dispatch(showNetworkError({
-          message: 'ネットワーク接続を確認してください',
-          correlationId: `err_${Date.now()}_${Math.random().toString(36).slice(2)}`
-        }));
+        dispatch(
+          showNetworkError({
+            message: 'ネットワーク接続を確認してください',
+            correlationId: `err_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          }),
+        );
       }
     }
   }, [dispatch]);
@@ -92,8 +102,8 @@ export default function DashboardPage(): React.ReactNode {
             return;
           }
           const expiresAt = Number(parsedAuthData.expires_at);
-          if (isNaN(expiresAt) || expiresAt <= Date.now()) {
-            if (isNaN(expiresAt)) {
+          if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+            if (Number.isNaN(expiresAt)) {
               console.warn(
                 'T005: Invalid timestamp format detected:',
                 parsedAuthData.expires_at,
@@ -105,14 +115,18 @@ export default function DashboardPage(): React.ReactNode {
           }
           // トークン構造の基本検証
           if (!parsedAuthData.user || !parsedAuthData.access_token) {
-            console.warn('T006: Invalid token structure detected, clearing authentication');
+            console.warn(
+              'T006: Invalid token structure detected, clearing authentication',
+            );
             // 期限切れ処理を実行
             handleTokenExpiration();
             return;
           }
-        } catch (error) {
+        } catch {
           // 解析失敗時は不正トークンとして即座にクリア
-          console.error('T006: Error parsing auth data, clearing and redirecting');
+          console.error(
+            'T006: Error parsing auth data, clearing and redirecting',
+          );
           // メモ化された期限切れ処理を使用
           handleTokenExpiration();
           return;
@@ -122,23 +136,30 @@ export default function DashboardPage(): React.ReactNode {
       // 期限切れが未検出の場合のみ認証復元処理を実行
       if (window.__TEST_REDUX_AUTH_STATE__) {
         const testState = window.__TEST_REDUX_AUTH_STATE__;
-        console.log('Dashboard: applying test state (after token expiry check):', testState);
-        
+        console.log(
+          'Dashboard: applying test state (after token expiry check):',
+          testState,
+        );
+
         // LocalStorageクリア済みの場合はテスト状態を適用しない
         const currentAuthData = localStorage.getItem('sb-localhost-auth-token');
         if (!currentAuthData && testState.isAuthenticated && testState.user) {
-          console.log('Dashboard: Skipping test state application - localStorage was cleared due to token expiry');
+          console.log(
+            'Dashboard: Skipping test state application - localStorage was cleared due to token expiry',
+          );
           return;
         }
-        
+
         if (testState.isAuthenticated && testState.user) {
           // テスト用認証状態を設定
-          dispatch(setAuthState({
-            isAuthenticated: testState.isAuthenticated,
-            user: testState.user,
-            isLoading: testState.isLoading || false,
-            error: testState.error || null,
-          }));
+          dispatch(
+            setAuthState({
+              isAuthenticated: testState.isAuthenticated,
+              user: testState.user,
+              isLoading: testState.isLoading || false,
+              error: testState.error || null,
+            }),
+          );
         }
         return;
       }
@@ -147,14 +168,20 @@ export default function DashboardPage(): React.ReactNode {
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
-          console.log('T004: Found valid auth data in localStorage:', parsedAuthData);
-          
+          console.log(
+            'T004: Found valid auth data in localStorage:',
+            parsedAuthData,
+          );
+
           if (parsedAuthData.user) {
             // 認証状態復元処理を実行
             handleAuthRestore(parsedAuthData.user);
           }
         } catch (error) {
-          console.error('T004: Error restoring auth state from localStorage:', error);
+          console.error(
+            'T004: Error restoring auth state from localStorage:',
+            error,
+          );
           // エラー時はLocalStorageをクリア
           localStorage.removeItem('sb-localhost-auth-token');
         }
@@ -162,11 +189,12 @@ export default function DashboardPage(): React.ReactNode {
         console.log('T004: No saved auth data found in localStorage');
       }
     }
-  }, [handleTokenExpiration, handleAuthRestore]);
+  }, [handleTokenExpiration, handleAuthRestore, dispatch]);
 
   // テスト用認証状態の存在確認
-  const hasTestAuthState = typeof window !== 'undefined' && 
-    window.__TEST_REDUX_AUTH_STATE__ && 
+  const hasTestAuthState =
+    typeof window !== 'undefined' &&
+    window.__TEST_REDUX_AUTH_STATE__ &&
     window.__TEST_REDUX_AUTH_STATE__.isAuthenticated &&
     window.__TEST_REDUX_AUTH_STATE__.user;
 
@@ -185,7 +213,9 @@ export default function DashboardPage(): React.ReactNode {
   }
 
   // テスト環境ではモック状態を使用
-  const effectiveUser = hasTestAuthState ? window.__TEST_REDUX_AUTH_STATE__?.user : user;
+  const effectiveUser = hasTestAuthState
+    ? window.__TEST_REDUX_AUTH_STATE__?.user
+    : user;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -194,10 +224,9 @@ export default function DashboardPage(): React.ReactNode {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="mt-2 text-gray-600">
-            {effectiveUser?.lastLoginAt ? 
-              'おかえりなさい！あなたのアカウント情報です。' : 
-              'ようこそ！あなたのアカウント情報です。'
-            }
+            {effectiveUser?.lastLoginAt
+              ? 'おかえりなさい！あなたのアカウント情報です。'
+              : 'ようこそ！あなたのアカウント情報です。'}
           </p>
         </div>
 
@@ -212,13 +241,14 @@ export default function DashboardPage(): React.ReactNode {
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
             <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
             <p className="text-blue-700">認証状態: 認証済み</p>
-            <p className="text-blue-700">テスト環境: {hasTestAuthState ? 'Yes' : 'No'}</p>
-            <p className="text-blue-700">ユーザーID: {effectiveUser?.id ? '設定済み' : '未設定'}</p>
             <p className="text-blue-700">
-              最終ログイン:{' '}
-              {effectiveUser?.lastLoginAt
-                ? '記録あり'
-                : '未設定'}
+              テスト環境: {hasTestAuthState ? 'Yes' : 'No'}
+            </p>
+            <p className="text-blue-700">
+              ユーザーID: {effectiveUser?.id ? '設定済み' : '未設定'}
+            </p>
+            <p className="text-blue-700">
+              最終ログイン: {effectiveUser?.lastLoginAt ? '記録あり' : '未設定'}
             </p>
           </div>
         )}

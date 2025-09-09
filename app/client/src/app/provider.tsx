@@ -1,15 +1,14 @@
 'use client';
-import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
-import { store } from '@/store';
+import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 import {
-  restoreAuthState,
   handleExpiredToken,
+  restoreAuthState,
 } from '@/features/google-auth/store/authSlice';
 import type { User } from '@/packages/shared-schemas/src/auth';
-import { validateStoredAuth, getAuthErrorMessage } from '@/shared/utils/authValidation';
-import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
+import { store } from '@/store';
 
 type ProviderProps = {
   children: React.ReactNode;
@@ -47,7 +46,7 @@ export default function Provider({ children }: ProviderProps) {
 
         // expires_atが数値型でない場合は無効とみなす
         const isValidExpiresAt = typeof authData.expires_at === 'number';
-        
+
         // access_tokenが基本的なJWT構造（3つのパート）を持つことを確認
         const isValidAccessToken =
           authData.access_token &&
@@ -55,7 +54,8 @@ export default function Provider({ children }: ProviderProps) {
           authData.access_token.split('.').length === 3;
 
         // ユーザー情報の存在とID設定を確認
-        const isValidUser = authData.user && typeof authData.user.id === 'string';
+        const isValidUser =
+          authData.user && typeof authData.user.id === 'string';
 
         // 全ての必須要素が有効な場合のみ処理を続行
         if (!isValidExpiresAt || !isValidAccessToken || !isValidUser) {

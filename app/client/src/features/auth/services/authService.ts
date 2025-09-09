@@ -64,32 +64,46 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
        * Google OAuth認証のポップアップウィンドウを開く機能
        * E2Eテストで`page.waitForEvent('popup')`の検出を可能にする
        */
-      
+
       // 開発環境限定のテスト機能（XSS対策とパフォーマンス向上）
-      if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+      if (
+        process.env.NODE_ENV === 'development' &&
+        typeof window !== 'undefined'
+      ) {
         // 許可されたテストエラータイプのホワイトリスト
-        const ALLOWED_TEST_ERRORS = ['cancelled', 'connection', 'config'] as const;
-        
+        const ALLOWED_TEST_ERRORS = [
+          'cancelled',
+          'connection',
+          'config',
+        ] as const;
+
         const urlParams = new URLSearchParams(window.location.search);
         const testError = urlParams.get('test_oauth_error');
-        
+
         // 厳格な入力値検証でXSS攻撃を防止
-        if (testError && ALLOWED_TEST_ERRORS.includes(testError as any)) {
+        if (
+          testError &&
+          (ALLOWED_TEST_ERRORS as readonly string[]).includes(testError)
+        ) {
           console.log(`OAuth認証テストエラーを発生 [開発環境]: ${testError}`);
-          
+
           // OAuthErrorHandlerで統合エラーハンドリング
-          const errorDetail = OAuthErrorHandler.analyzeError(`test_${testError}_error`);
-          
+          const errorDetail = OAuthErrorHandler.analyzeError(
+            `test_${testError}_error`,
+          );
+
           return {
             data: { user: null, session: null },
             error: new Error(errorDetail.userMessage),
           };
         } else if (testError) {
           // 不正なテストパラメータの検出をログに記録
-          console.warn(`不正なテストエラーパラメータが検出されました: ${testError}`);
+          console.warn(
+            `不正なテストエラーパラメータが検出されました: ${testError}`,
+          );
         }
       }
-      
+
       try {
         // Supabaseを通じてGoogle OAuthの認証URLを取得
         const response = await supabase.auth.signInWithOAuth({
@@ -100,7 +114,6 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
             skipBrowserRedirect: false,
           },
         });
-
 
         // OAuth URL生成時のエラーを処理
         if (response.error) {
@@ -124,16 +137,18 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
               error: null,
             };
           }
-          
+
           const popup = window.open(
             response.data.url,
             'oauth-popup',
-            'width=500,height=600,scrollbars=yes,resizable=yes'
+            'width=500,height=600,scrollbars=yes,resizable=yes',
           );
 
           if (!popup) {
             // ブラウザがポップアップをブロックした場合のエラー処理
-            throw new Error('ポップアップが開けませんでした。ブラウザの設定を確認してください。');
+            throw new Error(
+              'ポップアップが開けませんでした。ブラウザの設定を確認してください。',
+            );
           }
         }
 
@@ -148,7 +163,9 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
       } catch (error) {
         // OAuthErrorHandlerで統一された例外処理
         const errorDetail = OAuthErrorHandler.analyzeError(
-          error instanceof Error ? error : new Error('OAuth認証でエラーが発生しました')
+          error instanceof Error
+            ? error
+            : new Error('OAuth認証でエラーが発生しました'),
         );
         return {
           data: {

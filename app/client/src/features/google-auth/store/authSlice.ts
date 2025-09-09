@@ -127,7 +127,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.authError = null;
-      
+
       // LocalStorageに認証状態を保存してページリロード時に復元可能にする
       if (typeof window !== 'undefined') {
         const authData = {
@@ -136,7 +136,10 @@ export const authSlice = createSlice({
           expires_at: Date.now() + 3600 * 1000, // 1時間後
           user: action.payload.user,
         };
-        localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
+        localStorage.setItem(
+          'sb-localhost-auth-token',
+          JSON.stringify(authData),
+        );
         console.log('Authentication state saved to localStorage');
       }
     },
@@ -153,7 +156,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload.error;
       state.authError = null;
-      
+
       // 認証失敗時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
@@ -172,7 +175,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.authError = null;
-      
+
       // ログアウト時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
@@ -192,12 +195,12 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.authError = null;
-      
+
       // セキュリティクリアランス時もLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-localhost-auth-token');
       }
-      
+
       // セキュリティクリアランス用のログ
       console.info('認証状態がセキュリティ目的でクリアされました');
     },
@@ -231,14 +234,16 @@ export const authSlice = createSlice({
         console.warn('本番環境では setAuthState は使用できません');
         return;
       }
-      
-      const { isAuthenticated, user, isLoading, error, authError } = action.payload;
-      if (isAuthenticated !== undefined) state.isAuthenticated = isAuthenticated;
+
+      const { isAuthenticated, user, isLoading, error, authError } =
+        action.payload;
+      if (isAuthenticated !== undefined)
+        state.isAuthenticated = isAuthenticated;
       if (user !== undefined) state.user = user;
       if (isLoading !== undefined) state.isLoading = isLoading;
       if (error !== undefined) state.error = error;
       if (authError !== undefined) state.authError = authError;
-      
+
       // テスト用状態設定時もLocalStorageに保存
       if (isAuthenticated && user && typeof window !== 'undefined') {
         const authData = {
@@ -247,7 +252,10 @@ export const authSlice = createSlice({
           expires_at: Date.now() + 3600 * 1000,
           user: user,
         };
-        localStorage.setItem('sb-localhost-auth-token', JSON.stringify(authData));
+        localStorage.setItem(
+          'sb-localhost-auth-token',
+          JSON.stringify(authData),
+        );
         console.log('Test authentication state saved to localStorage');
       }
     },
@@ -265,7 +273,7 @@ export const authSlice = createSlice({
       state.user = null;
       state.isLoading = false;
       state.error = null;
-      
+
       // 期限切れ専用のエラー情報を適切な型で設定
       // セキュリティインシデント追跡のための詳細情報保持
       state.authError = {
@@ -273,7 +281,7 @@ export const authSlice = createSlice({
         timestamp: Date.now(),
         message: 'セッションの有効期限が切れました',
       };
-      
+
       // LocalStorageからの期限切れトークン削除
       // 不正使用防止のための確実なトークン削除
       if (typeof window !== 'undefined') {
@@ -283,15 +291,23 @@ export const authSlice = createSlice({
         localStorage.removeItem('sb-localhost-auth-expires');
         console.log('Expired authentication tokens removed from localStorage');
       }
-      
+
       // インシデント追跡とセキュリティ分析のための詳細ログ
       // セキュリティ要件に基づく適切な監査ログ出力
       console.info('JWT token has expired and authentication state cleared');
       console.info(`Expiration handled at ${new Date().toISOString()}`);
     },
   },
-});;
+});
 
-export const { authStart, authSuccess, authFailure, logout, clearAuthState, setAuthState, restoreAuthState, handleExpiredToken } =
-  authSlice.actions;
+export const {
+  authStart,
+  authSuccess,
+  authFailure,
+  logout,
+  clearAuthState,
+  setAuthState,
+  restoreAuthState,
+  handleExpiredToken,
+} = authSlice.actions;
 export default authSlice.reducer;

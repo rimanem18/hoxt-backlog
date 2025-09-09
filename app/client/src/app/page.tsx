@@ -2,11 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { LoginButton } from '@/features/auth/components/LoginButton';
-import { HelloWorld } from '@/features/hello-world';
 import OAuthErrorDisplay from '@/features/auth/components/OAuthErrorDisplay';
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { setOAuthError, clearOAuthError } from '@/features/auth/store/oauthErrorSlice';
 import { OAuthErrorHandler } from '@/features/auth/services/oauthErrorHandler';
+import {
+  clearOAuthError,
+  setOAuthError,
+} from '@/features/auth/store/oauthErrorSlice';
+import { HelloWorld } from '@/features/hello-world';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
  * ホームページコンポーネント
@@ -15,7 +18,9 @@ import { OAuthErrorHandler } from '@/features/auth/services/oauthErrorHandler';
  * 認証済みユーザーには自動的にダッシュボードへリダイレクト。
  */
 export default function Home(): React.ReactNode {
-  const { isAuthenticated, user, authError } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user, authError } = useAppSelector(
+    (state) => state.auth,
+  );
   const dispatch = useAppDispatch();
   const router = useRouter();
 
@@ -36,8 +41,18 @@ export default function Home(): React.ReactNode {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-label="エラー"
+                >
+                  <title>エラー</title>
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -76,19 +91,21 @@ export default function Home(): React.ReactNode {
               }}
               onAuthError={(error) => {
                 console.error('認証エラー:', error);
-                
+
                 // 統合エラーハンドラーでエラー分析とRedux状態更新
                 const errorDetail = OAuthErrorHandler.analyzeError(error);
-                dispatch(setOAuthError({ 
-                  type: errorDetail.type, 
-                  message: errorDetail.userMessage,
-                  correlationId: errorDetail.correlationId 
-                }));
+                dispatch(
+                  setOAuthError({
+                    type: errorDetail.type,
+                    message: errorDetail.userMessage,
+                    correlationId: errorDetail.correlationId,
+                  }),
+                );
               }}
             />
 
             {/* OAuth認証エラー表示コンポーネント */}
-            <OAuthErrorDisplay 
+            <OAuthErrorDisplay
               className="mt-4"
               onRetry={() => {
                 // ログインボタンの再クリックをシミュレート

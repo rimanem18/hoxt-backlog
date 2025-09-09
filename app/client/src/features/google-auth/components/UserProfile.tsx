@@ -73,7 +73,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
   // 【パフォーマンス最適化】: アバター画像URLのメモ化
   const avatarImageSrc = useMemo(
     () => user.avatarUrl || '/default-avatar.png',
-    [user.avatarUrl]
+    [user.avatarUrl],
   );
 
   return (
@@ -96,8 +96,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
 
       {/* 【Refactor追加】: lastLoginAt情報の表示 */}
       {user.lastLoginAt && (
-        <p 
-          className="text-gray-500 text-center text-sm mb-4" 
+        <p
+          className="text-gray-500 text-center text-sm mb-4"
           data-testarea="last-login-info"
         >
           最終ログイン: {new Date(user.lastLoginAt).toLocaleString('ja-JP')}

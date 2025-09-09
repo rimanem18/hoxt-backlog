@@ -24,12 +24,18 @@ export interface StoredAuthData {
 export interface AuthValidationResult {
   isValid: boolean;
   data?: StoredAuthData;
-  reason?: 'missing' | 'parse_error' | 'invalid_expires_at' | 'expired' | 'invalid_token' | 'invalid_user';
+  reason?:
+    | 'missing'
+    | 'parse_error'
+    | 'invalid_expires_at'
+    | 'expired'
+    | 'invalid_token'
+    | 'invalid_user';
 }
 
 /**
  * localStorage から認証データを取得し、包括的な検証を行う
- * 
+ *
  * 検証項目:
  * - 認証データの存在確認
  * - JSON形式の妥当性
@@ -37,7 +43,7 @@ export interface AuthValidationResult {
  * - トークンの有効期限確認
  * - access_token の存在確認
  * - user 情報の完全性確認
- * 
+ *
  * @returns AuthValidationResult - 検証結果と詳細情報
  */
 export function validateStoredAuth(): AuthValidationResult {
@@ -87,12 +93,12 @@ export function validateStoredAuth(): AuthValidationResult {
     // access_token の存在と形式確認
     // 無効トークン文字列の検出
     // 基本的なJWT形式（3つのパート）の確認
-    const isValidAccessToken = 
-      authData.access_token && 
-      typeof authData.access_token === 'string' && 
+    const isValidAccessToken =
+      authData.access_token &&
+      typeof authData.access_token === 'string' &&
       authData.access_token.split('.').length === 3 &&
       !authData.access_token.includes('INVALID');
-    
+
     if (!isValidAccessToken) {
       return {
         isValid: false,
@@ -115,7 +121,6 @@ export function validateStoredAuth(): AuthValidationResult {
       isValid: true,
       data: authData,
     };
-
   } catch (error) {
     // 予期しないエラー処理として localStorage アクセスエラー等
     console.error('認証検証中にエラーが発生:', error);
@@ -128,7 +133,7 @@ export function validateStoredAuth(): AuthValidationResult {
 
 /**
  * 認証エラーの詳細メッセージを取得
- * 
+ *
  * @param reason - 検証失敗の理由
  * @returns ユーザー向けの分かりやすいエラーメッセージ
  */
@@ -142,12 +147,15 @@ export function getAuthErrorMessage(reason: string): string {
     invalid_user: 'ユーザー情報が不正です',
   } as const;
 
-  return errorMessages[reason as keyof typeof errorMessages] || '認証エラーが発生しました';
+  return (
+    errorMessages[reason as keyof typeof errorMessages] ||
+    '認証エラーが発生しました'
+  );
 }
 
 /**
  * 認証状態のクリーンアップを実行
- * 
+ *
  * localStorage からの認証データ削除
  * エラー発生時も処理を継続
  */

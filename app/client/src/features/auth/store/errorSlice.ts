@@ -69,27 +69,39 @@ const errorSlice = createSlice({
      * ネットワークエラーを表示する
      * セキュリティ・パフォーマンス・保守性を強化した実装
      */
-    showNetworkError: (state, action: PayloadAction<{ message?: string; correlationId?: string; autoClose?: boolean }>) => {
+    showNetworkError: (
+      state,
+      action: PayloadAction<{
+        message?: string;
+        correlationId?: string;
+        autoClose?: boolean;
+      }>,
+    ) => {
       // 既存タイマーのクリーンアップでメモリリーク防止
       if (state.autoCloseTimer) {
         clearTimeout(state.autoCloseTimer);
       }
-      
+
       // 効率的な状態設定
       state.isVisible = true;
-      state.message = action.payload.message || 'ネットワーク接続を確認してください';
+      state.message =
+        action.payload.message || 'ネットワーク接続を確認してください';
       state.type = 'network';
-      state.correlationId = action.payload.correlationId || generateCorrelationId();
+      state.correlationId =
+        action.payload.correlationId || generateCorrelationId();
       state.timestamp = Date.now();
-      
+
       // 自動消去機能でユーザビリティを向上（オプション）
       if (action.payload.autoClose !== false) {
         // タイマーはコンポーネント側で管理（Redux purity保持）
       }
-      
+
       // 開発環境のみでデバッグログ出力（本番環境での不要処理削減）
       if (isDevelopment) {
-        console.log(`Network error displayed [${state.correlationId}]:`, state.message);
+        console.log(
+          `Network error displayed [${state.correlationId}]:`,
+          state.message,
+        );
       }
     },
 
@@ -97,13 +109,16 @@ const errorSlice = createSlice({
      * 高度なネットワークエラー表示（詳細制御版）
      * 将来の拡張要件に対応する柔軟なAPI設計
      */
-    showAdvancedNetworkError: (state, action: PayloadAction<{
-      message?: string;
-      severity?: 'low' | 'medium' | 'high';
-      retryable?: boolean;
-      correlationId?: string;
-      metadata?: Record<string, unknown>;
-    }>) => {
+    showAdvancedNetworkError: (
+      state,
+      action: PayloadAction<{
+        message?: string;
+        severity?: 'low' | 'medium' | 'high';
+        retryable?: boolean;
+        correlationId?: string;
+        metadata?: Record<string, unknown>;
+      }>,
+    ) => {
       // メモリリーク防止のためタイマーをクリーンアップ
       if (state.autoCloseTimer) {
         clearTimeout(state.autoCloseTimer);
@@ -111,9 +126,11 @@ const errorSlice = createSlice({
 
       // 拡張可能なエラー情報管理
       state.isVisible = true;
-      state.message = action.payload.message || 'ネットワーク接続を確認してください';
+      state.message =
+        action.payload.message || 'ネットワーク接続を確認してください';
       state.type = 'network';
-      state.correlationId = action.payload.correlationId || generateCorrelationId();
+      state.correlationId =
+        action.payload.correlationId || generateCorrelationId();
       state.timestamp = Date.now();
 
       // 開発環境で詳細情報付きログ出力
@@ -136,7 +153,7 @@ const errorSlice = createSlice({
       if (state.autoCloseTimer) {
         clearTimeout(state.autoCloseTimer);
       }
-      
+
       // 効率的なリセット処理
       state.isVisible = false;
       state.message = '';
@@ -144,7 +161,7 @@ const errorSlice = createSlice({
       state.correlationId = undefined;
       state.timestamp = undefined;
       state.autoCloseTimer = undefined;
-      
+
       // 開発環境のみでデバッグログ出力
       if (isDevelopment) {
         console.log('Error state cleared safely');
@@ -155,32 +172,39 @@ const errorSlice = createSlice({
      * 汎用エラー表示機能
      * あらゆるエラー種別に対応する拡張可能な実装
      */
-    showError: (state, action: PayloadAction<{ 
-      message: string; 
-      type?: ErrorType; 
-      correlationId?: string;
-      timestamp?: number;
-      severity?: 'info' | 'warning' | 'error' | 'critical';
-    }>) => {
+    showError: (
+      state,
+      action: PayloadAction<{
+        message: string;
+        type?: ErrorType;
+        correlationId?: string;
+        timestamp?: number;
+        severity?: 'info' | 'warning' | 'error' | 'critical';
+      }>,
+    ) => {
       // 既存タイマーのクリーンアップでメモリリーク防止
       if (state.autoCloseTimer) {
         clearTimeout(state.autoCloseTimer);
       }
-      
+
       // 包括的な状態更新
       state.isVisible = true;
       state.message = action.payload.message;
       state.type = action.payload.type || 'unknown';
-      state.correlationId = action.payload.correlationId || generateCorrelationId();
+      state.correlationId =
+        action.payload.correlationId || generateCorrelationId();
       state.timestamp = action.payload.timestamp || Date.now();
-      
+
       // 開発環境のみでの詳細ログ出力
       if (isDevelopment) {
-        console.log(`Error displayed [${state.type}] [${state.correlationId}]:`, {
-          message: state.message,
-          severity: action.payload.severity || 'error',
-          timestamp: new Date(state.timestamp).toISOString(),
-        });
+        console.log(
+          `Error displayed [${state.type}] [${state.correlationId}]:`,
+          {
+            message: state.message,
+            severity: action.payload.severity || 'error',
+            timestamp: new Date(state.timestamp).toISOString(),
+          },
+        );
       }
     },
 
@@ -191,9 +215,12 @@ const errorSlice = createSlice({
     updateErrorState: (state, action: PayloadAction<Partial<ErrorState>>) => {
       // 指定されたフィールドのみを更新
       Object.assign(state, action.payload);
-      
+
       if (isDevelopment) {
-        console.log(`Error state updated [${state.correlationId}]:`, action.payload);
+        console.log(
+          `Error state updated [${state.correlationId}]:`,
+          action.payload,
+        );
       }
     },
 
@@ -206,25 +233,28 @@ const errorSlice = createSlice({
       if (state.autoCloseTimer) {
         clearTimeout(state.autoCloseTimer);
       }
-      
+
       // 新タイマー設定
       state.autoCloseTimer = action.payload.timerId;
-      
+
       if (isDevelopment) {
-        console.log(`Auto-close timer set [${state.correlationId}]:`, action.payload.timerId);
+        console.log(
+          `Auto-close timer set [${state.correlationId}]:`,
+          action.payload.timerId,
+        );
       }
     },
   },
 });
 
 // action creatorsのエクスポート
-export const { 
-  showNetworkError, 
+export const {
+  showNetworkError,
   showAdvancedNetworkError,
-  clearError, 
+  clearError,
   showError,
   updateErrorState,
-  setAutoCloseTimer 
+  setAutoCloseTimer,
 } = errorSlice.actions;
 
 // Redux storeで使用するためのreducer
@@ -268,5 +298,6 @@ export const errorSelectors = {
   type: (state: { error: ErrorState }) => state.error.type,
   correlationId: (state: { error: ErrorState }) => state.error.correlationId,
   timestamp: (state: { error: ErrorState }) => state.error.timestamp,
-  hasActiveTimer: (state: { error: ErrorState }) => state.error.autoCloseTimer !== undefined,
+  hasActiveTimer: (state: { error: ErrorState }) =>
+    state.error.autoCloseTimer !== undefined,
 } as const;
