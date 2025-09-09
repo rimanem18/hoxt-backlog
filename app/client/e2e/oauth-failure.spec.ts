@@ -124,17 +124,6 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
     const configErrorMessage = page.getByText('Google OAuth設定に問題があります', { exact: false });
     await expect(configErrorMessage).toBeVisible({ timeout: 10000 });
 
-    // 開発環境での詳細ガイダンス
-    const devInfo = page.locator('[data-testarea="development-info"]');
-    if (process.env.NODE_ENV === 'development') {
-      await expect(devInfo).toBeVisible();
-      
-      const envGuideText = page.getByText('.env.local', { exact: false });
-      await expect(envGuideText).toBeVisible();
-
-      const missingVarText = page.getByText('NEXT_PUBLIC_GOOGLE_CLIENT_ID', { exact: false });
-      await expect(missingVarText).toBeVisible();
-    }
 
     // 設定修正まではリトライできないことを確認
     const retryButton = page.getByRole('button', { name: /再試行|retry/i });

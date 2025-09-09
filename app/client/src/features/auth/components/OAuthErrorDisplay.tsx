@@ -264,20 +264,6 @@ const OAuthErrorDisplay: React.FC<OAuthErrorDisplayProps> = React.memo(
               </div>
             )}
 
-            {/* 設定エラー時の開発環境限定情報 */}
-            {errorType === 'config' &&
-              process.env.NODE_ENV === 'development' && (
-                <div
-                  data-testarea="development-info"
-                  className="mt-3 p-3 bg-yellow-100 rounded text-xs text-yellow-700"
-                >
-                  <p className="font-semibold">開発者情報:</p>
-                  <p>.env.local ファイルに以下を設定してください:</p>
-                  <code className="block mt-1 font-mono">
-                    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_client_id
-                  </code>
-                </div>
-              )}
           </div>
         </div>
       </div>
