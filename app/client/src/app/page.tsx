@@ -60,7 +60,10 @@ export default function Home(): React.ReactNode {
                   認証に問題があります
                 </h3>
                 <p className="mt-1 text-sm text-red-600">
-                  もう一度ログインしてください
+                  {authError.message}
+                </p>
+                <p className="mt-1 text-sm text-red-600">
+                  再度ログインしてください
                 </p>
               </div>
             </div>
