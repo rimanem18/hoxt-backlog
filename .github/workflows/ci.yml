@@ -25,12 +25,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-client-${{ hashFiles('app/client/bun.lock') }}
+          key: ${{ runner.os }}-bun-client-${{ hashFiles('app/client/bun.lock', 'app/packages/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-client-
 
       - name: Install dependencies
         run: bun install
+
+      - name: Install shared-schemas dependencies
+        run: |
+          cd ../packages/shared-schemas
+          bun install
 
       - name: Run lint and type check
         run: bun run check
@@ -57,12 +62,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-server-${{ hashFiles('app/server/bun.lock') }}
+          key: ${{ runner.os }}-bun-server-${{ hashFiles('app/server/bun.lock', 'app/packages/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-server-
 
       - name: Install dependencies
         run: bun install
+
+      - name: Install shared-schemas dependencies
+        run: |
+          cd ../packages/shared-schemas
+          bun install
 
       - name: Run lint and type check
         run: bun run check
@@ -150,6 +160,10 @@ jobs:
           cd ./app/server
           bun install
           npm install
+
+          echo "--- Installing shared-schemas dependencies ---"
+          cd ../packages/shared-schemas
+          bun install
 
           echo "--- Starting server in background (Node.js runtime) ---"
           npm run start:node &
