@@ -1,0 +1,83 @@
+name: Unit Test
+
+on:
+  workflow_call:
+    inputs:
+      test-type:
+        description: 'Type of test (client or server)'
+        required: true
+        type: string
+      working-directory:
+        description: 'Working directory for the test'
+        required: true
+        type: string
+      needs-postgres:
+        description: 'Whether PostgreSQL service is needed'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: ${{ inputs.needs-postgres && 'postgres:15-alpine' || '' }}
+        env:
+          POSTGRES_USER: ${{ inputs.needs-postgres && 'postgres' || '' }}
+          POSTGRES_PASSWORD: ${{ inputs.needs-postgres && 'test_password' || '' }}
+          POSTGRES_DB: ${{ inputs.needs-postgres && 'postgres' || '' }}
+        ports:
+          - ${{ inputs.needs-postgres && '5432:5432' || '' }}
+        options: >-
+          ${{ inputs.needs-postgres && '--health-cmd "pg_isready -U postgres -d postgres" --health-interval 10s --health-timeout 5s --health-retries 5' || '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Environment
+        uses: ./.github/actions/setup-bun
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          cache-key-suffix: ${{ inputs.test-type }}
+
+      - name: Setup PostgreSQL Environment
+        if: ${{ inputs.needs-postgres }}
+        uses: ./.github/actions/setup-postgres
+        with:
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+      - name: Run lint and type check
+        working-directory: ${{ inputs.working-directory }}
+        run: bun run check
+
+      - name: Run database migrations
+        if: ${{ inputs.needs-postgres }}
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Testing database connection..."
+          bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
+          
+          echo "Generating migrations..."
+          bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
+          
+          echo "Pushing schema to database..."
+          bunx drizzle-kit push --config=drizzle.config.ts
+
+      - name: Run tests
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          NODE_ENV: test
+          # Supabase test environment variables (mocked)
+          SUPABASE_URL: ${{ inputs.needs-postgres && 'http://localhost:54321' || '' }}
+          SUPABASE_ANON_KEY: ${{ inputs.needs-postgres && 'test_anon_key' || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ inputs.needs-postgres && 'test_service_key' || '' }}
+          SUPABASE_JWT_SECRET: ${{ inputs.needs-postgres && 'test_jwt_secret' || '' }}
+        run: bun test

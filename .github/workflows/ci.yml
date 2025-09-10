@@ -5,251 +5,34 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # Client (Next.js) のユニット/結合テスト
+  # Client (Next.js) のユニットテスト
   client-test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./app/client
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-client-${{ hashFiles('app/client/bun.lock', 'app/packages/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-client-
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Install shared-schemas dependencies
-        run: |
-          cd ../packages/shared-schemas
-          bun install
-
-      - name: Run lint and type check
-        run: bun run check
-
-      - name: Run tests
-        run: bun test
+    name: Client Unit Tests
+    uses: ./.github/workflows/unit-test.yml
+    with:
+      test-type: client
+      working-directory: ./app/client
+      needs-postgres: false
 
   # Server (Hono) のユニット/結合テスト
   server-test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./app/server
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-server-${{ hashFiles('app/server/bun.lock', 'app/packages/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-server-
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Install shared-schemas dependencies
-        run: |
-          cd ../packages/shared-schemas
-          bun install
-
-      - name: Run lint and type check
-        run: bun run check
-
-      - name: Run database migrations
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@postgres:5432/test_db
-          DB_HOST: postgres
-          DB_PORT: 5432
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_TABLE_PREFIX: test_
-        run: |
-          # Check database connection
-          echo "Testing database connection..."
-          bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
-
-          # Generate and apply migrations
-          echo "Generating migrations..."
-          bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
-
-          echo "Pushing schema to database..."
-          bunx drizzle-kit push --config=drizzle.config.ts
-
-      - name: Run tests
-        env:
-          NODE_ENV: test
-          DATABASE_URL: postgresql://test_user:test_password@postgres:5432/test_db
-          DB_HOST: postgres
-          DB_PORT: 5432
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-          DB_TABLE_PREFIX: test_
-          # Supabase test environment variables (mocked)
-          SUPABASE_URL: http://localhost:54321
-          SUPABASE_ANON_KEY: test_anon_key
-          SUPABASE_SERVICE_ROLE_KEY: test_service_key
-          SUPABASE_JWT_SECRET: test_jwt_secret
-        run: bun test
+    name: Server Unit Tests
+    uses: ./.github/workflows/unit-test.yml
+    with:
+      test-type: server
+      working-directory: ./app/server
+      needs-postgres: true
 
   # E2E (Playwright) テスト
   e2e-test:
-    runs-on: ubuntu-latest
+    name: E2E Tests
     needs: [client-test, server-test]
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    container:
-      image: mcr.microsoft.com/playwright:v1.55.0-jammy
-      options: --shm-size=1gb
-      env:
-        # Database connection
-        DATABASE_URL: "postgresql://postgres:test_password@postgres:5432/postgres"
-        DB_HOST: postgres
-        DB_PORT: 5432
-        DB_NAME: postgres
-        DB_USER: postgres
-        DB_PASSWORD: test_password
-        DB_TABLE_PREFIX: test_
-        # Application ports
-        SERVER_PORT: 3001
-        CLIENT_PORT: 3000
-        # E2E test configuration
-        NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache Playwright and Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.bun/install/cache
-            **/playwright/.cache
-            **/node_modules/.playwright
-          key: ${{ runner.os }}-e2e-cache-${{ hashFiles('app/client/bun.lock', 'app/server/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-e2e-cache-
-            ${{ runner.os }}-playwright-
-            ${{ runner.os }}-bun-
-
-      - name: Install and start server and client
-        env:
-          # Client用の環境変数
-          CLIENT_PORT: 3000
-          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
-          # Server用の環境変数
-          SERVER_PORT: 3001
-        run: |
-          set -e
-
-          echo "--- Installing server dependencies ---"
-          cd ./app/server
-          bun install
-          npm install
-
-          echo "--- Installing shared-schemas dependencies ---"
-          cd ../packages/shared-schemas
-          bun install
-
-          echo "--- Starting server in background (Node.js runtime) ---"
-          npm run start:node &
-          SERVER_PID=$!
-
-          echo "--- Installing client dependencies ---"
-          cd ../client
-          bun install
-
-          echo "--- Starting client in background ---"
-          bun run dev &
-          CLIENT_PID=$!
-
-          echo "--- Waiting for services to be ready ---"
-          # Wait for services to be ready with exponential backoff
-          for i in {1..30}; do
-            if curl -f http://localhost:3000 >/dev/null 2>&1 && \
-               curl -f http://localhost:3001/api/health >/dev/null 2>&1; then
-              echo "All services are ready!"
-              break
-            fi
-            echo "Waiting for services... (attempt $i/30)"
-            sleep $(( i < 10 ? 2 : 5 ))
-          done
-
-          echo "--- Running Playwright tests ---"
-          bun run test:e2e
-
-          # Cleanup background processes
-          kill $SERVER_PID $CLIENT_PID || true
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: app/client/playwright-report/
-          retention-days: 30
+    uses: ./.github/workflows/e2e-test.yml

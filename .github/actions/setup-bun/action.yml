@@ -1,0 +1,42 @@
+name: 'Setup Bun Environment'
+description: 'Sets up Bun with caching and installs dependencies including shared-schemas'
+
+inputs:
+  working-directory:
+    description: 'The directory to run commands in'
+    required: true
+    default: '.'
+  cache-key-suffix:
+    description: 'A unique suffix for the cache key (e.g., client, server, e2e)'
+    required: true
+  bun-version:
+    description: 'Bun version to install'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: Cache Bun dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ inputs.cache-key-suffix }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), 'app/packages/bun.lock') }}
+        restore-keys: |
+          bun-${{ runner.os }}-${{ inputs.cache-key-suffix }}-
+          bun-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun install
+
+    - name: Install shared-schemas dependencies
+      shell: bash
+      working-directory: ./app/packages/shared-schemas
+      run: bun install

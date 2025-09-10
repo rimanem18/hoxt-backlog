@@ -1,0 +1,121 @@
+name: E2E Test
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-jammy
+      options: --shm-size=1gb
+      env:
+        CI: true
+
+    concurrency:
+      group: e2e-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Environment for Client
+        uses: ./.github/actions/setup-bun
+        with:
+          working-directory: ./app/client
+          cache-key-suffix: e2e-client
+
+      - name: Setup PostgreSQL Environment
+        uses: ./.github/actions/setup-postgres
+        with:
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Playwright dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            **/playwright/.cache
+            **/node_modules/.playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('app/client/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install server dependencies
+        working-directory: ./app/server
+        run: |
+          bun install --frozen-lockfile
+          npm install
+
+      - name: Start services and run E2E tests
+        env:
+          CLIENT_PORT: 3000
+          SERVER_PORT: 3001
+          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
+        run: |
+          set -e
+          
+          echo "--- Starting server in background (Node.js runtime) ---"
+          cd ./app/server
+          npm run start:node &
+          SERVER_PID=$!
+          cd ../..
+          
+          echo "--- Starting client in background ---"
+          cd ./app/client
+          bun run dev &
+          CLIENT_PID=$!
+          cd ../..
+          
+          echo "--- Waiting for services to be ready ---"
+          for i in {1..30}; do
+            if curl -f http://localhost:3000 >/dev/null 2>&1 && \
+               curl -f http://localhost:3001/api/health >/dev/null 2>&1; then
+              echo "All services are ready!"
+              break
+            fi
+            echo "Waiting for services... (attempt $i/30)"
+            sleep $(( i < 10 ? 2 : 5 ))
+          done
+          
+          echo "--- Running Playwright tests ---"
+          cd ./app/client
+          bun run test:e2e
+          
+          # Cleanup background processes
+          kill $SERVER_PID $CLIENT_PID || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/client/playwright-report/
+          retention-days: 30
