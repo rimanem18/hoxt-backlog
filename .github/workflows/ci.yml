@@ -103,7 +103,15 @@ jobs:
           DB_PASSWORD: test_password
           DB_TABLE_PREFIX: test_
         run: |
-          # Drizzle migrations
+          # Check database connection
+          echo "Testing database connection..."
+          bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
+          
+          # Generate and apply migrations
+          echo "Generating migrations..."
+          bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
+          
+          echo "Pushing schema to database..."
           bunx drizzle-kit push --config=drizzle.config.ts
 
       - name: Run tests
