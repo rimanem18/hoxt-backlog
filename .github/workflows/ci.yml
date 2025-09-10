@@ -16,20 +16,16 @@ jobs:
   # Client (Next.js) のユニットテスト
   client-test:
     name: Client Unit Tests
-    uses: ./.github/workflows/unit-test.yml
+    uses: ./.github/workflows/client-test.yml
     with:
-      test-type: client
       working-directory: ./app/client
-      needs-postgres: false
 
   # Server (Hono) のユニット/結合テスト
   server-test:
     name: Server Unit Tests
-    uses: ./.github/workflows/unit-test.yml
+    uses: ./.github/workflows/server-test.yml
     with:
-      test-type: server
       working-directory: ./app/server
-      needs-postgres: true
 
   # E2E (Playwright) テスト
   e2e-test:

@@ -1,21 +1,12 @@
-name: Unit Test
+name: Server Test
 
 on:
   workflow_call:
     inputs:
-      test-type:
-        description: 'Type of test (client or server)'
-        required: true
-        type: string
       working-directory:
         description: 'Working directory for the test'
         required: true
         type: string
-      needs-postgres:
-        description: 'Whether PostgreSQL service is needed'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -26,15 +17,18 @@ jobs:
     
     services:
       postgres:
-        image: ${{ inputs.needs-postgres && 'postgres:15-alpine' || '' }}
+        image: postgres:15-alpine
         env:
-          POSTGRES_USER: ${{ inputs.needs-postgres && 'postgres' || '' }}
-          POSTGRES_PASSWORD: ${{ inputs.needs-postgres && 'test_password' || '' }}
-          POSTGRES_DB: ${{ inputs.needs-postgres && 'postgres' || '' }}
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
         ports:
-          - ${{ inputs.needs-postgres && '5432:5432' || '' }}
+          - 5432:5432
         options: >-
-          ${{ inputs.needs-postgres && '--health-cmd "pg_isready -U postgres -d postgres" --health-interval 10s --health-timeout 5s --health-retries 5' || '' }}
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -44,10 +38,9 @@ jobs:
         uses: ./.github/actions/setup-bun
         with:
           working-directory: ${{ inputs.working-directory }}
-          cache-key-suffix: ${{ inputs.test-type }}
+          cache-key-suffix: server
 
       - name: Setup PostgreSQL Environment
-        if: ${{ inputs.needs-postgres }}
         uses: ./.github/actions/setup-postgres
         with:
           db-name: postgres
@@ -59,7 +52,6 @@ jobs:
         run: bun run check
 
       - name: Run database migrations
-        if: ${{ inputs.needs-postgres }}
         working-directory: ${{ inputs.working-directory }}
         run: |
           echo "Testing database connection..."
@@ -76,8 +68,8 @@ jobs:
         env:
           NODE_ENV: test
           # Supabase test environment variables (mocked)
-          SUPABASE_URL: ${{ inputs.needs-postgres && 'http://localhost:54321' || '' }}
-          SUPABASE_ANON_KEY: ${{ inputs.needs-postgres && 'test_anon_key' || '' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ inputs.needs-postgres && 'test_service_key' || '' }}
-          SUPABASE_JWT_SECRET: ${{ inputs.needs-postgres && 'test_jwt_secret' || '' }}
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test_anon_key
+          SUPABASE_SERVICE_ROLE_KEY: test_service_key
+          SUPABASE_JWT_SECRET: test_jwt_secret
         run: bun test
