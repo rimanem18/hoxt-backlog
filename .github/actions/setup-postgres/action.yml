@@ -5,7 +5,7 @@ inputs:
   db-host:
     description: 'Database host'
     required: false
-    default: 'postgres'
+    default: 'localhost'
   db-port:
     description: 'Database port'
     required: false
