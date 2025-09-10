@@ -49,7 +49,7 @@ jobs:
     defaults:
       run:
         working-directory: ./app/server
-    
+
     services:
       postgres:
         image: postgres:15
@@ -64,7 +64,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -95,8 +95,8 @@ jobs:
 
       - name: Run database migrations
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          DB_HOST: localhost
+          DATABASE_URL: postgresql://test_user:test_password@postgres:5432/test_db
+          DB_HOST: postgres
           DB_PORT: 5432
           DB_NAME: test_db
           DB_USER: test_user
@@ -106,19 +106,19 @@ jobs:
           # Check database connection
           echo "Testing database connection..."
           bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
-          
+
           # Generate and apply migrations
           echo "Generating migrations..."
           bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
-          
+
           echo "Pushing schema to database..."
           bunx drizzle-kit push --config=drizzle.config.ts
 
       - name: Run tests
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          DB_HOST: localhost
+          DATABASE_URL: postgresql://test_user:test_password@postgres:5432/test_db
+          DB_HOST: postgres
           DB_PORT: 5432
           DB_NAME: test_db
           DB_USER: test_user
