@@ -15,14 +15,15 @@ describe('EnvironmentConfig', () => {
 
   describe('getDatabaseConfig', () => {
     test('正常なデータベース設定が取得できること', () => {
-      // Given: 有効な環境変数設定
-      process.env.DB_HOST = 'localhost';
-      process.env.DB_PORT = '5432';
-      process.env.DB_NAME = 'test_db';
-      process.env.DB_USER = 'test_user';
-      process.env.DB_PASSWORD = 'test_password';
-      process.env.DB_TABLE_PREFIX = 'test_';
+      // Given: 有効な環境変数設定（既存の値があれば優先）
+      process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+      process.env.DB_PORT = process.env.DB_PORT || '5432';
+      process.env.DB_NAME = process.env.DB_NAME || 'test_db';
+      process.env.DB_USER = process.env.DB_USER || 'test_user';
+      process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'test_password';
+      process.env.DB_TABLE_PREFIX = process.env.DB_TABLE_PREFIX || 'test_';
       process.env.DATABASE_URL =
+        process.env.DATABASE_URL ||
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
       // When: 設定を取得
@@ -80,14 +81,15 @@ describe('EnvironmentConfig', () => {
 
   describe('validateConfig', () => {
     test('有効な設定で検証が通過すること', () => {
-      // Given: 有効な環境変数設定
-      process.env.DB_HOST = 'localhost';
-      process.env.DB_PORT = '5432';
-      process.env.DB_NAME = 'test_db';
-      process.env.DB_USER = 'test_user';
-      process.env.DB_PASSWORD = 'test_password';
-      process.env.DB_TABLE_PREFIX = 'test_';
+      // Given: 有効な環境変数設定（既存の値があれば優先）
+      process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+      process.env.DB_PORT = process.env.DB_PORT || '5432';
+      process.env.DB_NAME = process.env.DB_NAME || 'test_db';
+      process.env.DB_USER = process.env.DB_USER || 'test_user';
+      process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'test_password';
+      process.env.DB_TABLE_PREFIX = process.env.DB_TABLE_PREFIX || 'test_';
       process.env.DATABASE_URL =
+        process.env.DATABASE_URL ||
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
       // When & Then: エラーが発生しない
