@@ -23,6 +23,8 @@ export default defineConfig({
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_NAME || 'postgres',
+    // CI環境とローカル開発環境ではSSLを無効化、本番環境では有効化
+    ssl: process.env.NODE_ENV === 'production' ? true : false,
   },
 
   // デバッグ設定
