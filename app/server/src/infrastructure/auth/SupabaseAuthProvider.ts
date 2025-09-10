@@ -1,10 +1,10 @@
+import { createLocalJWKSet, jwtVerify } from 'jose';
 import type {
   ExternalUserInfo,
   IAuthProvider,
   JwtPayload,
   JwtVerificationResult,
 } from '@/domain/services/IAuthProvider';
-import { jwtVerify, createLocalJWKSet } from 'jose';
 
 // JWT処理で使用される設定定数
 const JWT_CONFIG = {
@@ -157,7 +157,7 @@ export class SupabaseAuthProvider implements IAuthProvider {
         // SupabaseのJWT署名をSecret文字列で検証（開発・テスト環境用）
         // 本番環境では JWKS エンドポイント使用を推奨
         const secret = new TextEncoder().encode(this.jwtSecret);
-        
+
         const { payload: verifiedPayload } = await jwtVerify(token, secret, {
           issuer: process.env.SUPABASE_URL || 'https://localhost:54321',
           audience: 'authenticated',
@@ -167,8 +167,11 @@ export class SupabaseAuthProvider implements IAuthProvider {
         decodedPayload = verifiedPayload as unknown as JwtPayload;
       } catch (jwtError) {
         // 署名検証失敗時の詳細ログ（デバッグ用、本番では削除推奨）
-        console.error('JWT署名検証失敗:', jwtError instanceof Error ? jwtError.message : 'Unknown error');
-        
+        console.error(
+          'JWT署名検証失敗:',
+          jwtError instanceof Error ? jwtError.message : 'Unknown error',
+        );
+
         return {
           valid: false,
           error: ERROR_MESSAGES.INVALID_SIGNATURE,

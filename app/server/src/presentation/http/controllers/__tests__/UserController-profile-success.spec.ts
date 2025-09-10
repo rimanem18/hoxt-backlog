@@ -51,7 +51,8 @@ describe('UserController - プロフィール取得成功テスト', () => {
     app = new Hono();
 
     // 【認証ミドルウェア統合】: テスト用のトークン取得関数でモック認証を実現
-    validJwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiWWFtYWRhIFRhcm8iLCJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvYXZhdGFyLmpwZyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IllhbWFkYSBUYXJvIn0sImlzcyI6Imh0dHBzOi8vc3VwYWJhc2UuZXhhbXBsZS5jb20iLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzEyNzA1Nn0.valid_signature';
+    validJwtToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiWWFtYWRhIFRhcm8iLCJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvYXZhdGFyLmpwZyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IllhbWFkYSBUYXJvIn0sImlzcyI6Imh0dHBzOi8vc3VwYWJhc2UuZXhhbXBsZS5jb20iLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzEyNzA1Nn0.valid_signature';
     app.use(
       '/api/user/*',
       authMiddleware({
@@ -64,11 +65,11 @@ describe('UserController - プロフィール取得成功テスト', () => {
             name: 'Yamada Taro',
             avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
             email: 'user@example.com',
-            full_name: 'Yamada Taro'
+            full_name: 'Yamada Taro',
           },
           iss: 'https://supabase.example.com',
           iat: 1703123456,
-          exp: 1703127056
+          exp: 1703127056,
         },
       }),
     );
@@ -95,8 +96,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
     // 【テストデータ準備】: 有効な認証ヘッダーを持つHTTPリクエストを模擬
     // 【初期条件設定】: 既存ユーザーが認証済み状態で、データベースに該当ユーザーが存在する状態
     const authHeaders = {
-      Authorization:
-        `Bearer ${validJwtToken}`,
+      Authorization: `Bearer ${validJwtToken}`,
       'Content-Type': 'application/json',
     };
 

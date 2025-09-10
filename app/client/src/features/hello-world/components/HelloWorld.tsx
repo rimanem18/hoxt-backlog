@@ -9,9 +9,12 @@ export default function HelloWorld() {
     queryKey: ['helloWorld'],
     queryFn: () => {
       // 環境変数からAPI Base URLを取得、フォールバック値としてlocalhost:3001を使用
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
-      const apiUrl = apiBaseUrl.endsWith('/api') ? `${apiBaseUrl}/greet` : `${apiBaseUrl}/api/greet`;
-      
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+      const apiUrl = apiBaseUrl.endsWith('/api')
+        ? `${apiBaseUrl}/greet`
+        : `${apiBaseUrl}/api/greet`;
+
       return fetch(apiUrl).then((res) => {
         return res.json();
       });

@@ -147,8 +147,10 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           if (!popup) {
             // ポップアップがブロックされた場合、エラーを表示せずリダイレクト方式にフォールバック
             // この処理はサイレント（エラー表示なし）で行う
-            console.log('ポップアップがブロックされました。リダイレクト方式にフォールバックします。');
-            
+            console.log(
+              'ポップアップがブロックされました。リダイレクト方式にフォールバックします。',
+            );
+
             // 現在のページからGoogleの認証ページにリダイレクト
             window.location.assign(response.data.url);
             return {
@@ -164,7 +166,9 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           // 500ms後にウィンドウが閉じていればリダイレクトにフォールバック
           setTimeout(() => {
             if (popup.closed) {
-              console.log('ポップアップが予期せず閉じられました。リダイレクト方式にフォールバックします。');
+              console.log(
+                'ポップアップが予期せず閉じられました。リダイレクト方式にフォールバックします。',
+              );
               window.location.assign(response.data.url);
             }
           }, 500);

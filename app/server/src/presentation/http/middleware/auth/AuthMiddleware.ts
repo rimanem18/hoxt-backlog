@@ -52,7 +52,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       }
 
       // JWT検証実行（テスト用モックペイロードがあれば使用）
-      const payload = options.mockPayload || await verifyJWT(token);
+      const payload = options.mockPayload || (await verifyJWT(token));
 
       // ユーザーID抽出
       const userId = payload.sub;

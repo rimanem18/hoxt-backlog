@@ -100,12 +100,14 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
     expect(result.user.createdAt).toBe(mockNewUser.createdAt);
     expect(result.user.updatedAt).toBe(mockNewUser.updatedAt);
     expect(result.user.lastLoginAt).toBeDefined();
-    
+
     if (result.user.lastLoginAt) {
       const lastLoginAt = new Date(result.user.lastLoginAt);
       const now = new Date();
       // 最終ログイン日時が現在時刻から5秒以内であることを確認
-      expect(Math.abs(lastLoginAt.getTime() - now.getTime())).toBeLessThan(5000);
+      expect(Math.abs(lastLoginAt.getTime() - now.getTime())).toBeLessThan(
+        5000,
+      );
     }
 
     expect(result.isNewUser).toBe(true);
