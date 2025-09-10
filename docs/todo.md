@@ -12,17 +12,21 @@
 
 ## 実装タスク
 
-### Phase 1: CI ワークフロー作成
-- [ ] `.github/workflows/ci.yml` を作成
-  - [ ] client-test ジョブ: GitHub Actions ランナーで `app/client` の bun test + 型チェック実行
-  - [ ] server-test ジョブ: GitHub Actions ランナーで `app/server` の bun test + 型チェック実行  
-  - [ ] e2e-test ジョブ: Playwright 公式コンテナ内でテスト実行
-    - [ ] PostgreSQL サービスコンテナとの連携設定
-    - [ ] コンテナ内で client/server を起動してからテスト実行
-    - [ ] wait-on を使用したサービス起動待機処理
-- [ ] client-test, server-test に Bun 依存関係キャッシュ設定を追加
-- [ ] e2e-test に needs 依存（client-test, server-test 成功後に実行）を設定
-- [ ] E2E テスト失敗時の Playwright レポート自動保存設定（`actions/upload-artifact` 使用）
+### Phase 1: CI ワークフロー作成 ✅
+- [x] `.github/workflows/ci.yml` を作成
+  - [x] client-test ジョブ: GitHub Actions ランナーで `app/client` の bun test + 型チェック実行
+  - [x] server-test ジョブ: GitHub Actions ランナーで `app/server` の bun test + 型チェック実行  
+  - [x] e2e-test ジョブ: Playwright 公式コンテナ内でテスト実行
+    - [x] PostgreSQL サービスコンテナとの連携設定
+    - [x] コンテナ内で client/server を起動してからテスト実行
+    - [x] wait-on を使用したサービス起動待機処理
+- [x] client-test, server-test に Bun 依存関係キャッシュ設定を追加
+- [x] e2e-test に needs 依存（client-test, server-test 成功後に実行）を設定
+- [x] E2E テスト失敗時の Playwright レポート自動保存設定（`actions/upload-artifact` 使用）
+- [x] **追加対応**: 環境依存URL問題の解決
+  - [x] Playwright 設定での CI 環境判定による baseURL 分岐
+  - [x] テストファイル内の正規表現動的生成  
+  - [x] コンポーネントでの API URL 環境変数対応
 
 ### Phase 2: package.json スクリプト調整
 - [ ] client の `package.json` に `check` スクリプト追加（lint + 型チェック）

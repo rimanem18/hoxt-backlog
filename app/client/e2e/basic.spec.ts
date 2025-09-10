@@ -7,7 +7,11 @@ test.describe('基本動作確認 E2Eテスト', () => {
     await page.goto('/');
     
     // Then: ページが正常に表示される
-    await expect(page).toHaveURL(/client:3000/);
+    // 環境に応じてURLパターンを動的に生成
+    const expectedUrlPattern = process.env.CI 
+      ? /localhost:3000/
+      : /client:3000/;
+    await expect(page).toHaveURL(expectedUrlPattern);
     await expect(page).toHaveTitle(/.+/);
   });
   

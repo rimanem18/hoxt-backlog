@@ -24,8 +24,12 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    // ベースURL（Docker Compose環境のNext.jsアプリケーション）
-    baseURL: 'http://client:3000',
+    // ベースURL（環境に応じて分岐）
+    // CI環境: GitHub Actions内のlocalhostアクセス
+    // ローカル: Docker Compose環境のサービス名アクセス
+    baseURL: process.env.CI 
+      ? 'http://localhost:3000'
+      : 'http://client:3000',
     // トレース記録の設定（失敗時のみ）
     trace: 'on-first-retry',
     // スクリーンショット設定（失敗時のみ）
