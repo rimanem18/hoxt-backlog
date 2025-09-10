@@ -8,7 +8,7 @@ test.describe('基本動作確認 E2Eテスト', () => {
     
     // Then: ページが正常に表示される
     // 環境に応じてURLパターンを動的に生成
-    const expectedUrlPattern = process.env.CI 
+    const expectedUrlPattern = process.env.GITHUB_ACTIONS 
       ? /localhost:3000/
       : /client:3000/;
     await expect(page).toHaveURL(expectedUrlPattern);

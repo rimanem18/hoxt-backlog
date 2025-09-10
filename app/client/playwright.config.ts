@@ -15,8 +15,8 @@ export default defineConfig({
   // テスト実行の並行性を制御（安定性を重視し並行実行を制限）
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.GITHUB_ACTIONS ? 2 : 0,
+  workers: process.env.GITHUB_ACTIONS ? 1 : undefined,
   // レポート形式の設定
   reporter: [
     ['html'],
@@ -25,9 +25,9 @@ export default defineConfig({
   ],
   use: {
     // ベースURL（環境に応じて分岐）
-    // CI環境: GitHub Actions内のlocalhostアクセス
-    // ローカル: Docker Compose環境のサービス名アクセス
-    baseURL: process.env.CI 
+    // Docker Compose環境: サービス名アクセス
+    // GitHub Actions CI環境: localhostアクセス
+    baseURL: process.env.GITHUB_ACTIONS 
       ? 'http://localhost:3000'
       : 'http://client:3000',
     // トレース記録の設定（失敗時のみ）

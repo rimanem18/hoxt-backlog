@@ -22,7 +22,7 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
 
     // テスト用のクエリパラメータでOAuth認証キャンセルをシミュレート
     await page.goto('/?test_oauth_error=cancelled');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // ログインボタンの存在確認
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
@@ -65,7 +65,7 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
 
     // When: OAuth接続エラーが発生
     await page.goto('/?test_oauth_error=connection');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // ログインボタンの存在確認
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
@@ -107,7 +107,7 @@ test.describe('T008: Google OAuth認証失敗エラー表示 E2Eテスト', () =
 
     // When: OAuth設定エラーが発生
     await page.goto('/?test_oauth_error=config');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // ログインボタンの存在確認
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
