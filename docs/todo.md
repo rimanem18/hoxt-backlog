@@ -28,10 +28,17 @@
   - [x] テストファイル内の正規表現動的生成  
   - [x] コンポーネントでの API URL 環境変数対応
 
-### Phase 2: package.json スクリプト調整
-- [ ] client の `package.json` に `check` スクリプト追加（lint + 型チェック）
-- [ ] server の `package.json` に `check` スクリプト追加（lint + 型チェック）
-- [ ] E2E テスト用の build/start コマンド確認・調整
+### Phase 2: package.json スクリプト調整 ✅
+- [x] client の `package.json` に `check` スクリプト追加（lint + 型チェック）
+  - [x] `typecheck` と `biome check` を組み合わせた包括的品質チェック
+  - [x] `dev`/`start` コマンドに `CLIENT_PORT` 環境変数対応追加
+- [x] server の `package.json` に `check` スクリプト追加（lint + 型チェック）
+  - [x] `typecheck` と `biome check` を組み合わせた包括的品質チェック  
+  - [x] `start`/`test` コマンドを CI 用に追加
+- [x] E2E テスト用の build/start コマンド確認・調整
+  - [x] client: `build` → `start` の本番ビルドフロー確認
+  - [x] server: `SERVER_PORT` 環境変数対応確認
+  - [x] CI ワークフローとの整合性確保
 
 ### Phase 3: 安定性・効率性向上（o3 評価に基づく改善）
 - [ ] Docker Compose healthcheck 設定を追加（wait-on より確実な readiness 判定）
