@@ -21,10 +21,12 @@ import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
 
 // テストデータ生成ヘルパー
 function createTestUserInput(): CreateUserInput {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(7);
   return {
-    externalId: `test_${Date.now()}_${Math.random()}`,
+    externalId: `test_${timestamp}_${random}`,
     provider: 'google' as AuthProvider,
-    email: `test${Date.now()}${Math.random()}@example.com`,
+    email: `test${timestamp}${random}@example.com`,
     name: 'テストユーザー',
     avatarUrl: 'https://example.com/avatar.jpg',
   };
@@ -49,9 +51,14 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     resetPoolForTesting();
 
     repository = new PostgreSQLUserRepository();
+
+    // テスト開始前にクリーンアップ
+    await cleanupTestData();
   });
 
   afterAll(async () => {
+    // テスト終了後にクリーンアップ
+    await cleanupTestData();
     await closePool();
   });
 
@@ -323,8 +330,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 async function cleanupTestData() {
   const client = await getConnection();
   try {
+    // test_で始まるexternal_idを持つレコードを削除
     await client.query(
-      "DELETE FROM test_users WHERE email LIKE '%@example.com'",
+      "DELETE FROM test_users WHERE external_id LIKE 'test_%' OR email LIKE '%@example.com'",
     );
   } catch (_error) {
     // テーブルが存在しない場合などのエラーは無視
