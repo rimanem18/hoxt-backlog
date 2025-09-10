@@ -24,7 +24,14 @@ services:
       - DB_TABLE_PREFIX=test_
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT}/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     tty: true
 
   client:
@@ -43,6 +50,15 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CLIENT_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      server:
+        condition: service_healthy
     tty: true
 
   db:
@@ -56,6 +72,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/db/init-test-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   e2e:

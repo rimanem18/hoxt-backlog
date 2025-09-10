@@ -40,17 +40,38 @@
   - [x] server: `SERVER_PORT` 環境変数対応確認
   - [x] CI ワークフローとの整合性確保
 
-### Phase 3: 安定性・効率性向上（o3 評価に基づく改善）
-- [ ] Docker Compose healthcheck 設定を追加（wait-on より確実な readiness 判定）
-  - [ ] server サービスに healthcheck エンドポイント追加
-  - [ ] `docker compose up --wait` でヘルスチェック完了まで待機
-- [ ] Playwright コンテナの安定性向上
-  - [ ] `--shm-size=1G` などメモリ設定を明示してブラウザ起動失敗を防止
-  - [ ] 必要に応じて `mcr.microsoft.com/playwright:base-debian` への軽量化検討
-- [ ] キャッシュ最適化
-  - [ ] `~/.bun/install/cache` と `**/playwright/.cache` をキャッシュ対象に追加
-  - [ ] Docker レイヤキャッシュ（`cache-from: type=gha`）の導入検討
-- [ ] ランタイム差分テスト（Bun vs Node）の週次実行設定を追加
+### Phase 3: 安定性・効率性向上（o3 評価に基づく改善） ✅
+- [x] Docker Compose healthcheck 設定を追加（wait-on より確実な readiness 判定）
+  - [x] server サービスに healthcheck エンドポイント追加（既存の `/api/health` 活用）
+  - [x] DB, server, client の順次 healthcheck 依存関係設定
+  - [x] CI で healthcheck を活用した指数バックオフ待機ロジック追加
+- [x] Playwright コンテナの安定性向上
+  - [x] `--shm-size=1gb` メモリ設定でブラウザ起動失敗を防止
+  - [x] 軽量化は必要に応じて将来検討（現在は安定性優先）
+- [x] キャッシュ最適化
+  - [x] `~/.bun/install/cache` と `**/playwright/.cache` をキャッシュ対象に追加
+  - [x] E2E ジョブで client/server 両方の lockfile をキーに使用
+  - [x] Docker レイヤキャッシュは現在の設計では不要（CI が Docker 未使用のため）
+- [x] ランタイム差分テスト（Bun vs Node）の週次実行設定
+  - [x] 検討の結果、メンテナンス負担削減のため実装を見送り
+  - [x] E2E テストが Playwright コンテナ（Node）で実行されることで基本的な差異は検知可能
+  - [x] 必要に応じて将来的に手動で互換性確認を実施
+
+### 最終 CI 戦略の確定 ✅
+- [x] **ハイブリッド戦略の採用**: 複数検討の結果、以下の組み合わせが最適と判断
+  - **Unit Tests（client-test, server-test）**: Bun ランタイム使用
+    - 理由: 開発時との一貫性、高速実行、既存テストコードとの互換性
+  - **E2E Tests（e2e-test）**: Server を Node.js で起動、Playwright は Node コンテナで実行
+    - 理由: 本番環境（Node.js）との整合性確保、実際の運用環境での動作検証
+- [x] **技術的根拠**:
+  - Client（Next.js）: ビルド後は静的ファイルのため、ランタイム差異は影響しない
+  - Server（Hono API）: 本番は Node.js のため、E2E で Node.js 動作を検証することは有意義
+  - Test compatibility: Unit tests は Bun 標準テスト用に作成済み、Node.js では動作不可
+- [x] **実装済み要素**:
+  - `app/server/src/presentation/http/server/node.serve.ts`: Node.js 起動スクリプト
+  - `app/server/package.json`: `start:node` スクリプト追加
+  - `.github/workflows/ci.yml`: E2E で `npm run start:node` 使用
+  - 必要な依存関係: `@hono/node-server`, `tsx` をpackage.jsonに追加済み
 
 ### Phase 4: 動作確認・観測性
 - [ ] テスト PR を作成して CI が正常動作することを確認
