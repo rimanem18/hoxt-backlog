@@ -17,10 +17,9 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { getDatabaseConfig } from '../config/env';
 
-// データベース接続設定の取得
-const config = getDatabaseConfig();
+// テーブルプレフィックスを環境変数から直接取得
+const tablePrefix = process.env.DB_TABLE_PREFIX || '';
 
 /**
  * 認証プロバイダー種別のenum定義
@@ -40,7 +39,7 @@ export const authProviderType = pgEnum('auth_provider_type', [
  * DDD User Entityに対応するメインテーブル
  */
 export const users = pgTable(
-  `${config.tablePrefix}users`,
+  `${tablePrefix}users`,
   {
     // プライマリキー（UUID v4）
     id: uuid('id').primaryKey().defaultRandom(),

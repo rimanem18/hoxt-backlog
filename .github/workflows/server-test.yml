@@ -64,14 +64,31 @@ jobs:
           DB_TABLE_PREFIX: test_
           DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
         run: |
-          echo "Testing database connection..."
+          echo "=== Environment Variables ==="
+          echo "DB_HOST: $DB_HOST"
+          echo "DB_PORT: $DB_PORT"
+          echo "DB_NAME: $DB_NAME"
+          echo "DB_USER: $DB_USER"
+          echo "DB_TABLE_PREFIX: $DB_TABLE_PREFIX"
+          echo "DATABASE_URL: $DATABASE_URL"
+          
+          echo "=== Testing PostgreSQL connection ==="
+          pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER || echo "PostgreSQL not ready"
+          
+          echo "=== Testing database access ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" || echo "Database connection failed"
+          
+          echo "=== Drizzle introspect ==="
           bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
           
-          echo "Generating migrations..."
+          echo "=== Drizzle generate ==="
           bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
           
-          echo "Pushing schema to database..."
+          echo "=== Drizzle push schema ==="
           bunx drizzle-kit push --config=drizzle.config.ts
+          
+          echo "=== Verify table creation ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\dt test_*" || echo "No test tables found"
 
       - name: Run tests
         working-directory: ${{ inputs.working-directory }}
