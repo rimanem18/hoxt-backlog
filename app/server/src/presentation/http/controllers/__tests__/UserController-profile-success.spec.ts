@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
-import type { User } from '@/packages/shared-schemas/src/user';
+import type { User } from '@/domain/user';
 import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
 import { UserController } from '../UserController';
 
@@ -35,10 +35,10 @@ describe('UserController - プロフィール取得成功テスト', () => {
       email: 'user@example.com',
       name: '山田太郎',
       avatarUrl: 'https://lh3.googleusercontent.com/a/avatar.jpg',
-      // 【型安全性】: User型の仕様に合わせてISO文字列形式で指定
-      createdAt: '2025-08-12T10:30:00.000Z',
-      updatedAt: '2025-08-12T10:30:00.000Z',
-      lastLoginAt: '2025-08-12T13:45:00.000Z',
+      // 【型安全性】: User型の仕様に合わせてDateオブジェクト形式で指定
+      createdAt: new Date('2025-08-12T10:30:00.000Z'),
+      updatedAt: new Date('2025-08-12T10:30:00.000Z'),
+      lastLoginAt: new Date('2025-08-12T13:45:00.000Z'),
     };
 
     mockGetUserProfileUseCase = {
@@ -50,9 +50,8 @@ describe('UserController - プロフィール取得成功テスト', () => {
     userController = new UserController(mockGetUserProfileUseCase);
     app = new Hono();
 
-    // 【認証ミドルウェア統合】: テスト用のトークン取得関数でモック認証を実現
-    validJwtToken =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiWWFtYWRhIFRhcm8iLCJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvYXZhdGFyLmpwZyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IllhbWFkYSBUYXJvIn0sImlzcyI6Imh0dHBzOi8vc3VwYWJhc2UuZXhhbXBsZS5jb20iLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzEyNzA1Nn0.valid_signature';
+    // 【認証ミドルウェア統合】: MockAuthProvider 対応のテスト用トークンを使用
+    validJwtToken = 'valid-test-token';
     app.use(
       '/api/user/*',
       authMiddleware({
