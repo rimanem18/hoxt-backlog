@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
 import type { User } from '@/domain/user/UserEntity';
-import type {
-  AuthenticateUserUseCaseInput,
-  AuthenticateUserUseCaseOutput,
-} from '@/packages/shared-schemas/src/auth';
+import type { AuthenticateUserUseCaseInput } from '@/packages/shared-schemas/src/auth';
 import { makeSUT } from '../authenticate-user/helpers/makeSUT';
 
 /**

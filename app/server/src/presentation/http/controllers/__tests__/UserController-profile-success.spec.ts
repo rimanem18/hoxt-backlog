@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
-import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
 import type { User } from '@/domain/user';
+import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
 import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
 import { UserController } from '../UserController';
 
@@ -118,7 +118,10 @@ describe('UserController - プロフィール取得成功テスト', () => {
     expect(responseBody.success).toBe(true); // 【確認内容】: APIレスポンスが成功を示すことを確認 🟢
     expect(responseBody.data).toBeDefined(); // 【確認内容】: ユーザーデータが返却されることを確認 🟢
 
-    const userData = responseBody.data!;
+    if (!responseBody.data) {
+      throw new Error('Response data should be defined');
+    }
+    const userData = responseBody.data;
     expect(userData.id).toBe('550e8400-e29b-41d4-a716-446655440000'); // 【確認内容】: ユーザーIDが正確に返却されることを確認 🟢
     expect(userData.externalId).toBe('google_123456789'); // 【確認内容】: 外部プロバイダーIDが正確に返却されることを確認 🟢
     expect(userData.provider).toBe('google'); // 【確認内容】: 認証プロバイダーが正確に返却されることを確認 🟢

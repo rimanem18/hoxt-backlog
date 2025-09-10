@@ -7,7 +7,10 @@ import type {
 import { SupabaseAuthProvider } from '../SupabaseAuthProvider';
 
 // CI環境またはテスト環境では外部サービス依存のテストをスキップ
-const skipInCI = (process.env.CI === 'true' || process.env.NODE_ENV === 'test') ? describe.skip : describe;
+const skipInCI =
+  process.env.CI === 'true' || process.env.NODE_ENV === 'test'
+    ? describe.skip
+    : describe;
 
 skipInCI('SupabaseAuthProvider', () => {
   let authProvider: SupabaseAuthProvider;

@@ -37,9 +37,22 @@ export function GlobalErrorToast() {
 
     // Network Information APIで接続タイプを検出（対応ブラウザのみ）
     if ('connection' in navigator) {
-      // Navigator型ではNetwork Information APIが未定義のため一時的にany使用
-      // 将来的にはdom.d.tsでNavigator.connection型が追加される予定
-      const connection = (navigator as any).connection;
+      // Network Information APIの型定義
+      interface NetworkInformation extends EventTarget {
+        effectiveType?: string;
+        type?: string;
+        addEventListener(
+          type: string,
+          listener: EventListenerOrEventListenerObject,
+        ): void;
+        removeEventListener(
+          type: string,
+          listener: EventListenerOrEventListenerObject,
+        ): void;
+      }
+      const connection = (
+        navigator as Navigator & { connection?: NetworkInformation }
+      ).connection;
       if (connection) {
         setConnectionType(connection.effectiveType || connection.type || null);
 

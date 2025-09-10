@@ -97,7 +97,13 @@ export class MockAuthProvider implements IAuthProvider {
 
     // モックペイロードを生成
     const currentTime = Math.floor(Date.now() / 1000);
-    const userInfo = this.testUsers.get(userId)!;
+    const userInfo = this.testUsers.get(userId);
+    if (!userInfo) {
+      return {
+        valid: false,
+        error: `Test user with ID ${userId} not found`,
+      };
+    }
 
     const payload: JwtPayload = {
       sub: userInfo.id,

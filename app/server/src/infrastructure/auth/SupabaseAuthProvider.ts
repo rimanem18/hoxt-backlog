@@ -1,4 +1,4 @@
-import { createLocalJWKSet, jwtVerify } from 'jose';
+import { jwtVerify } from 'jose';
 import type {
   ExternalUserInfo,
   IAuthProvider,
