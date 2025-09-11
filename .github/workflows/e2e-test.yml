@@ -41,6 +41,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install required tools
+        run: |
+          apt-get update
+          apt-get install -y unzip
+
       - name: Setup Bun Environment for Client
         uses: ./.github/actions/setup-bun
         with:
