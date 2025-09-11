@@ -26,13 +26,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    container:
-      image: mcr.microsoft.com/playwright:v1.55.0-jammy
-      options: --shm-size=1gb
-      env:
-        CI: true
-        HOME: /root  # Fix Firefox launch issue in GitHub Actions
-
     concurrency:
       group: e2e-${{ github.ref }}
       cancel-in-progress: true
@@ -41,113 +34,66 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install required tools
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build E2E Docker image with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/e2e/Dockerfile
+          # イメージをビルドし、ローカルのDockerデーモンにロードする
+          load: true
+          # レジストリにはプッシュしない
+          push: false
+          # 後続のステップで参照するためのタグ
+          tags: playwright-e2e:latest
+          # GitHub Actionsキャッシュバックエンドでレイヤーをキャッシュ
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Playwright E2E tests in Docker container
         run: |
-          apt-get update
-          apt-get install -y unzip
+          # Docker networkを作成してPostgreSQLサービスにアクセス
+          docker network create e2e-network || true
+          
+          # PostgreSQLコンテナをネットワークに接続
+          POSTGRES_CONTAINER=$(docker ps -q --filter "ancestor=postgres:15-alpine")
+          docker network connect e2e-network $POSTGRES_CONTAINER
+          
+          # E2Eテストをキャッシュされたイメージで実行
+          docker run --rm --shm-size=1gb \
+            --network e2e-network \
+            -e CI=true \
+            -e HOME=/root \
+            -e GITHUB_ACTIONS=true \
+            -e CLIENT_PORT=3000 \
+            -e SERVER_PORT=3001 \
+            -e NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api \
+            -e NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321 \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=test_anon_key \
+            -e NEXT_PUBLIC_TRUSTED_DOMAINS=localhost:3000,localhost:3001 \
+            -e NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+            -e DB_HOST=$POSTGRES_CONTAINER \
+            -e DB_PORT=5432 \
+            -e DB_NAME=postgres \
+            -e DB_USER=postgres \
+            -e DB_PASSWORD=test_password \
+            -e DATABASE_URL=postgresql://postgres:test_password@$POSTGRES_CONTAINER:5432/postgres \
+            playwright-e2e:latest
 
-      - name: Setup Bun Environment for Client
-        uses: ./.github/actions/setup-bun
-        with:
-          working-directory: ./app/client
-          cache-key-suffix: e2e-client
-
-      - name: Setup PostgreSQL Environment
-        uses: ./.github/actions/setup-postgres
-        with:
-          db-name: postgres
-          db-user: postgres
-          db-password: test_password
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
-          cache: 'npm'
-          cache-dependency-path: './app/server/package-lock.json'
-
-      - name: Cache Playwright dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            **/playwright/.cache
-            **/node_modules/.playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('app/client/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install server dependencies
-        working-directory: ./app/server
+      - name: Extract test reports from container
+        if: always()
         run: |
-          bun install --frozen-lockfile
-          npm install
-
-      - name: Start services and run E2E tests
-        env:
-          CLIENT_PORT: 3000
-          SERVER_PORT: 3001
-          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
-          # Supabase test environment variables (mocked)
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: test_anon_key
-          # Additional client environment variables from compose.yaml
-          NEXT_PUBLIC_TRUSTED_DOMAINS: localhost:3000,localhost:3001
-          NEXT_PUBLIC_SITE_URL: http://localhost:3000
-        run: |
-          set -e
-          
-          echo "--- Starting server in background (Node.js runtime) ---"
-          cd ./app/server
-          SERVER_PORT=3001 \
-          ACCESS_ALLOW_ORIGIN=http://localhost:3000 \
-          ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
-          ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
-          SUPABASE_URL=http://localhost:54321 \
-          SUPABASE_JWT_SECRET=test_jwt_secret \
-          DB_HOST=localhost \
-          DB_PORT=5432 \
-          DB_NAME=postgres \
-          DB_USER=postgres \
-          DB_PASSWORD=test_password \
-          DB_TABLE_PREFIX=test_ \
-          DATABASE_URL=postgresql://postgres:test_password@localhost:5432/postgres \
-          npm run start:node &
-          SERVER_PID=$!
-          cd ../..
-          
-          echo "--- Starting client in background ---"
-          cd ./app/client
-          bun run dev &
-          CLIENT_PID=$!
-          cd ../..
-          
-          echo "--- Waiting for services to be ready ---"
-          for i in $(seq 1 30); do
-            if curl -f http://localhost:3000 >/dev/null 2>&1 && \
-               curl -f http://localhost:3001/api/health >/dev/null 2>&1; then
-              echo "All services are ready!"
-              break
-            fi
-            echo "Waiting for services... (attempt $i/30)"
-            if [ $i -lt 10 ]; then
-              sleep 2
-            else  
-              sleep 5
-            fi
-          done
-          
-          echo "--- Running Playwright tests ---"
-          cd ./app/client
-          bun run test:e2e
-          
-          # Cleanup background processes
-          kill $SERVER_PID $CLIENT_PID || true
+          # テストレポートをコンテナから抽出
+          docker create --name temp-container playwright-e2e:latest
+          docker cp temp-container:/app/client/playwright-report ./playwright-report || echo "No report found"
+          docker rm temp-container
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: app/client/playwright-report/
+          path: playwright-report/
           retention-days: 30
