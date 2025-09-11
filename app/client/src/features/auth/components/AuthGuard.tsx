@@ -17,10 +17,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // 認証状態復元が完了していて、未認証またはトークン期限切れの場合のみリダイレクト
-    if (!isAuthRestoring && (!isAuthenticated || authError?.code === 'EXPIRED')) {
+    if (
+      !isAuthRestoring &&
+      (!isAuthenticated || authError?.code === 'EXPIRED')
+    ) {
       console.log(
         'AuthGuard: Redirecting to home due to unauthenticated state or expired token',
-        { isAuthenticated, authError: authError?.code }
+        { isAuthenticated, authError: authError?.code },
       );
       router.replace('/');
     }

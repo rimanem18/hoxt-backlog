@@ -281,9 +281,17 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     });
 
     await page.addInitScript((userData) => {
+      // JWT形式（3部構成）の有効なトークンを生成
+      const validJwtToken = [
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+        'eyJzdWIiOiJuZXR3b3JrLXRlc3QtNTU1IiwiZXhwIjo5OTk5OTk5OTk5fQ', // Payload: network user, long expiry
+        'network_test_signature', // Signature
+      ].join('.');
+      
       const validAuthData = {
-        access_token: 'valid_token_for_network_test',
+        access_token: validJwtToken,
         refresh_token: 'valid_refresh_token',
+        expires_at: Date.now() + 3600 * 1000, // 1時間後
         user: userData,
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(validAuthData));
