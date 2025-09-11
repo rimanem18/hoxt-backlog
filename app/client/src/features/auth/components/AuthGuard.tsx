@@ -9,21 +9,22 @@ import { useAppSelector } from '@/store/hooks';
  * 認証が必要なページをラップして、認証状態に応じてリダイレクトまたはローディング表示を行う
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthRestoring } = useAppSelector(
+  const { isAuthenticated, isAuthRestoring, authError } = useAppSelector(
     (state) => state.auth,
   );
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // 認証状態復元が完了していて、未認証の場合のみリダイレクト
-    if (!isAuthRestoring && !isAuthenticated) {
+    // 認証状態復元が完了していて、未認証またはトークン期限切れの場合のみリダイレクト
+    if (!isAuthRestoring && (!isAuthenticated || authError?.code === 'EXPIRED')) {
       console.log(
-        'AuthGuard: Redirecting to home due to unauthenticated state',
+        'AuthGuard: Redirecting to home due to unauthenticated state or expired token',
+        { isAuthenticated, authError: authError?.code }
       );
       router.replace('/');
     }
-  }, [isAuthRestoring, isAuthenticated, router]);
+  }, [isAuthRestoring, isAuthenticated, authError, router]);
 
   // 認証状態復元中はローディング表示
   if (isAuthRestoring) {
@@ -37,8 +38,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 認証済みの場合のみコンテンツを表示
-  if (isAuthenticated) {
+  // 認証済みかつトークンが有効な場合のみコンテンツを表示
+  if (isAuthenticated && !authError) {
     return <>{children}</>;
   }
 

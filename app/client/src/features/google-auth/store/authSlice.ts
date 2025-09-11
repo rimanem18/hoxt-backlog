@@ -301,6 +301,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.isLoading = false;
+      state.isAuthRestoring = false; // 期限切れ検出で復元処理完了とみなす
       state.error = null;
 
       // 期限切れ専用のエラー情報を適切な型で設定
