@@ -30,5 +30,6 @@ jobs:
   # E2E (Playwright) テスト
   e2e-test:
     name: E2E Tests
-    needs: [client-test, server-test]
+    # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
+    # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
