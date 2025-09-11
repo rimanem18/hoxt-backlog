@@ -84,11 +84,30 @@ jobs:
           CLIENT_PORT: 3000
           SERVER_PORT: 3001
           NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
+          # Supabase test environment variables (mocked)
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test_anon_key
+          # Additional client environment variables from compose.yaml
+          NEXT_PUBLIC_TRUSTED_DOMAINS: localhost:3000,localhost:3001
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
         run: |
           set -e
           
           echo "--- Starting server in background (Node.js runtime) ---"
           cd ./app/server
+          SERVER_PORT=3001 \
+          ACCESS_ALLOW_ORIGIN=http://localhost:3000 \
+          ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
+          ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
+          SUPABASE_URL=http://localhost:54321 \
+          SUPABASE_JWT_SECRET=test_jwt_secret \
+          DB_HOST=localhost \
+          DB_PORT=5432 \
+          DB_NAME=postgres \
+          DB_USER=postgres \
+          DB_PASSWORD=test_password \
+          DB_TABLE_PREFIX=test_ \
+          DATABASE_URL=postgresql://postgres:test_password@localhost:5432/postgres \
           npm run start:node &
           SERVER_PID=$!
           cd ../..
