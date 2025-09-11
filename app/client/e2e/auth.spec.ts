@@ -149,9 +149,15 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const initialUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
     await expect(initialUserName).toBeVisible({ timeout: 5000 });
 
-    // リロードを実行
-    await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    // Firefox互換性を考慮したページリロード
+    if (page.context().browser()?.browserType().name() === 'firefox') {
+      // Firefox では URL hash問題を回避
+      const url = page.url().split('#')[0];
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+    } else {
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
+    }
 
     const reloadedDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
     await expect(reloadedDashboardTitle).toBeVisible({ timeout: 10000 });
@@ -349,8 +355,17 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       });
     });
 
-    await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    // Firefox互換性を考慮したページリロード（ネットワークエラー環境で安全な実装）
+    if (page.context().browser()?.browserType().name() === 'firefox') {
+      // Firefox では evaluate を使用してリロード実行
+      await Promise.all([
+        page.waitForLoadState('domcontentloaded', { timeout: 30000 }),
+        page.evaluate(() => location.reload())
+      ]);
+    } else {
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
+    }
     
     // ネットワークエラー時でもアプリケーションが動作することを確認
     // ダッシュボード表示ができない場合は、最低限ページが表示されることを確認
@@ -390,14 +405,20 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     };
 
     await page.addInitScript((userData) => {
+      // 無効なJWTトークンを含む認証データを設定
       const invalidAuthData = {
         user: userData,
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkLXVzZXItMTExIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDAzMDB9.invalid-signature-that-will-fail-verification',
+        refresh_token: 'invalid-refresh-token-12345',
+        expires_at: Math.floor(Date.now() / 1000) - 3600, // 1時間前に期限切れ
+        token_type: 'bearer'
       };
       localStorage.setItem('sb-localhost-auth-token', JSON.stringify(invalidAuthData));
 
+      // Reduxの初期状態は未認証にして、実際のJWT検証に委ねる
       window.__TEST_REDUX_AUTH_STATE__ = {
-        isAuthenticated: true,
-        user: userData,
+        isAuthenticated: false,
+        user: null,
         isLoading: false,
         error: null,
       };
@@ -410,13 +431,21 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       const testState = window.__TEST_REDUX_AUTH_STATE__;
       const parsedAuthData = authData ? JSON.parse(authData) : null;
+      const now = Math.floor(Date.now() / 1000);
+      
       return {
         authDataExists: !!authData,
-        authDataValid: parsedAuthData?.access_token && typeof parsedAuthData.expires_at === 'number',
+        hasAccessToken: !!parsedAuthData?.access_token,
+        isExpired: parsedAuthData?.expires_at ? parsedAuthData.expires_at < now : false,
+        expiresAt: parsedAuthData?.expires_at,
+        currentTime: now,
         testStateExists: !!testState,
+        reduxAuthenticated: testState?.isAuthenticated,
         currentURL: window.location.href,
       };
     });
+    
+    console.log('Debug Info:', JSON.stringify(debugInfo, null, 2));
 
 
     // 無効JWT処理を待機してからエラーメッセージ確認
