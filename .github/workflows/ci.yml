@@ -24,9 +24,6 @@ jobs:
     uses: ./.github/workflows/client-test.yml
     with:
       working-directory: ./app/client
-    strategy:
-      fail-fast: true
-      max-parallel: 1
 
   # Server (Hono) のユニット/結合テスト
   server-test:
@@ -34,9 +31,6 @@ jobs:
     uses: ./.github/workflows/server-test.yml
     with:
       working-directory: ./app/server
-    strategy:
-      fail-fast: true
-      max-parallel: 1
 
   # E2E (Playwright) テスト
   e2e-test:
@@ -44,6 +38,3 @@ jobs:
     # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
     # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
-    strategy:
-      fail-fast: true
-      max-parallel: 1

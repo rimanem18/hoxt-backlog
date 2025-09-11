@@ -15,7 +15,8 @@ export default defineConfig({
   // テスト実行の並行性を制御（安定性を重視し並行実行を制限）
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.GITHUB_ACTIONS ? 2 : 0,
+  // GitHub Actions CI環境では1回のリトライに制限し、ローカル環境では通常通り
+  retries: process.env.GITHUB_ACTIONS ? 1 : 0,
   workers: process.env.GITHUB_ACTIONS ? 1 : undefined,
   // レポート形式の設定
   reporter: [

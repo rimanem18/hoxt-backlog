@@ -31,6 +31,7 @@ jobs:
       options: --shm-size=1gb
       env:
         CI: true
+        HOME: /root  # Fix Firefox launch issue in GitHub Actions
 
     concurrency:
       group: e2e-${{ github.ref }}
