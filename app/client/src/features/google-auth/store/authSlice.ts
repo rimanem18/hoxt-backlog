@@ -130,8 +130,14 @@ export const authSlice = createSlice({
 
       // LocalStorageに認証状態を保存してページリロード時に復元可能にする
       if (typeof window !== 'undefined') {
+        // JWT形式（3部構成）のトークンを生成してauthValidation.tsとの互換性を保つ
+        const mockJwtToken = [
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // header
+          'eyJzdWIiOiJkZXYtdXNlciIsImV4cCI6OTk5OTk5OTk5OX0', // payload (dev user, long expiry)
+          'dev_signature' // signature
+        ].join('.');
         const authData = {
-          access_token: 'mock_access_token_for_test',
+          access_token: mockJwtToken,
           refresh_token: 'mock_refresh_token_for_test',
           expires_at: Date.now() + 3600 * 1000, // 1時間後
           user: action.payload.user,
