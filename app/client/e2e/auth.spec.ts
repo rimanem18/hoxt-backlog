@@ -149,15 +149,8 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const initialUserName = page.locator('h2').filter({ hasText: authenticatedUser.name });
     await expect(initialUserName).toBeVisible({ timeout: 5000 });
 
-    // Firefox互換性を考慮したページリロード
-    if (page.context().browser()?.browserType().name() === 'firefox') {
-      // Firefox では URL hash問題を回避
-      const url = page.url().split('#')[0];
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
-    } else {
-      await page.reload();
-      await page.waitForLoadState('domcontentloaded');
-    }
+    // UI要素の表示に基づく堅牢なリロード処理（Playwright推奨）
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     const reloadedDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
     await expect(reloadedDashboardTitle).toBeVisible({ timeout: 10000 });
@@ -355,17 +348,8 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       });
     });
 
-    // Firefox互換性を考慮したページリロード（ネットワークエラー環境で安全な実装）
-    if (page.context().browser()?.browserType().name() === 'firefox') {
-      // Firefox では evaluate を使用してリロード実行
-      await Promise.all([
-        page.waitForLoadState('domcontentloaded', { timeout: 30000 }),
-        page.evaluate(() => location.reload())
-      ]);
-    } else {
-      await page.reload();
-      await page.waitForLoadState('domcontentloaded');
-    }
+    // UI要素の表示に基づく堅牢なリロード処理（Playwright推奨）
+    await page.reload({ waitUntil: 'domcontentloaded' });
     
     // ネットワークエラー時でもアプリケーションが動作することを確認
     // ダッシュボード表示ができない場合は、最低限ページが表示されることを確認
