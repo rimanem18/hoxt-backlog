@@ -1,0 +1,44 @@
+name: 'Setup PostgreSQL Environment Variables'
+description: 'Sets up PostgreSQL environment variables for testing'
+
+inputs:
+  db-host:
+    description: 'Database host'
+    required: false
+    default: 'localhost'
+  db-port:
+    description: 'Database port'
+    required: false
+    default: '5432'
+  db-name:
+    description: 'Database name'
+    required: true
+  db-user:
+    description: 'Database user'
+    required: true
+  db-password:
+    description: 'Database password'
+    required: true
+  table-prefix:
+    description: 'Table prefix for testing'
+    required: false
+    default: 'test_'
+
+outputs:
+  database-url:
+    description: 'Constructed database URL'
+    value: postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Export PostgreSQL environment variables
+      shell: bash
+      run: |
+        echo "DATABASE_URL=postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }}" >> $GITHUB_ENV
+        echo "DB_HOST=${{ inputs.db-host }}" >> $GITHUB_ENV
+        echo "DB_PORT=${{ inputs.db-port }}" >> $GITHUB_ENV
+        echo "DB_NAME=${{ inputs.db-name }}" >> $GITHUB_ENV
+        echo "DB_USER=${{ inputs.db-user }}" >> $GITHUB_ENV
+        echo "DB_PASSWORD=${{ inputs.db-password }}" >> $GITHUB_ENV
+        echo "DB_TABLE_PREFIX=${{ inputs.table-prefix }}" >> $GITHUB_ENV

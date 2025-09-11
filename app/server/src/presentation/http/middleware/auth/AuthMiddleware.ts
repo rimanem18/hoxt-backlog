@@ -21,7 +21,20 @@ export interface AuthMiddlewareOptions {
   // テスト用モックペイロード（JWT検証をバイパス）
   mockPayload?: {
     sub: string;
-    [key: string]: any;
+    email?: string;
+    app_metadata?: {
+      provider: string;
+      providers: string[];
+    };
+    user_metadata?: {
+      name?: string;
+      avatar_url?: string;
+      email?: string;
+      full_name?: string;
+    };
+    iss?: string;
+    iat?: number;
+    exp?: number;
   };
 }
 
@@ -52,7 +65,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       }
 
       // JWT検証実行（テスト用モックペイロードがあれば使用）
-      const payload = options.mockPayload || await verifyJWT(token);
+      const payload = options.mockPayload || (await verifyJWT(token));
 
       // ユーザーID抽出
       const userId = payload.sub;

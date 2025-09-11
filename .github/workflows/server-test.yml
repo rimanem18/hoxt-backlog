@@ -1,0 +1,115 @@
+name: Server Test
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: 'Working directory for the test'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Environment
+        uses: ./.github/actions/setup-bun
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          cache-key-suffix: server
+
+      - name: Setup PostgreSQL Environment
+        uses: ./.github/actions/setup-postgres
+        with:
+          db-host: localhost
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+      - name: Run lint and type check
+        working-directory: ${{ inputs.working-directory }}
+        run: bun run check
+
+      - name: Run database migrations
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          # CI環境では明示的にlocalhostを指定
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: postgres
+          DB_USER: postgres
+          DB_PASSWORD: test_password
+          DB_TABLE_PREFIX: test_
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
+        run: |
+          echo "=== Environment Variables ==="
+          echo "DB_HOST: $DB_HOST"
+          echo "DB_PORT: $DB_PORT"
+          echo "DB_NAME: $DB_NAME"
+          echo "DB_USER: $DB_USER"
+          echo "DB_TABLE_PREFIX: $DB_TABLE_PREFIX"
+          echo "DATABASE_URL: $DATABASE_URL"
+          
+          echo "=== Testing PostgreSQL connection ==="
+          pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER || echo "PostgreSQL not ready"
+          
+          echo "=== Testing database access ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" || echo "Database connection failed"
+          
+          echo "=== Drizzle introspect ==="
+          bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
+          
+          echo "=== Drizzle generate ==="
+          bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
+          
+          echo "=== Drizzle push schema ==="
+          bunx drizzle-kit push --config=drizzle.config.ts --force
+          
+          echo "=== Verify table creation ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\dt test_*" || echo "No test tables found"
+
+      - name: Run tests
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          NODE_ENV: test
+          # CI環境では明示的にlocalhostを指定
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: postgres
+          DB_USER: postgres
+          DB_PASSWORD: test_password
+          DB_TABLE_PREFIX: test_
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
+          # Supabase test environment variables (mocked)
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test_anon_key
+          SUPABASE_SERVICE_ROLE_KEY: test_service_key
+          SUPABASE_JWT_SECRET: test_jwt_secret
+          # CORS test environment variables
+          ACCESS_ALLOW_ORIGIN: http://localhost:3000
+          ACCESS_ALLOW_METHODS: GET,POST,PUT,DELETE,OPTIONS
+          ACCESS_ALLOW_HEADERS: Authorization,Content-Type
+        run: bun test

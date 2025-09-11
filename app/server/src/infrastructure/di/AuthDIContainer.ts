@@ -2,6 +2,8 @@ import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUser
 import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { AuthenticationDomainService } from '@/domain/services/AuthenticationDomainService';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import { MockAuthProvider } from '@/infrastructure/auth/__tests__/MockAuthProvider';
 import { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
 import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
 import type { Logger } from '@/shared/logging/Logger';
@@ -20,7 +22,7 @@ export class AuthDIContainer {
   private static getUserProfileUseCaseInstance: GetUserProfileUseCase | null =
     null;
   private static userRepositoryInstance: PostgreSQLUserRepository | null = null;
-  private static authProviderInstance: SupabaseAuthProvider | null = null;
+  private static authProviderInstance: IAuthProvider | null = null;
   private static loggerInstance: Logger | null = null;
 
   /**
@@ -102,17 +104,22 @@ export class AuthDIContainer {
   }
 
   /**
-   * 【機能概要】: SupabaseAuthProviderの共有インスタンスを返す
-   * 【改善内容】: 認証専用のAuthProvider管理
-   * 【設計方針】: JWT検証・ユーザー認証専用インスタンス
+   * 【機能概要】: AuthProviderの共有インスタンスを返す
+   * 【改善内容】: 環境に応じてSupabase/Mock実装を切り替え
+   * 【設計方針】: CI環境ではMock、本番環境ではSupabase認証を使用
    * 【パフォーマンス】: 重複インスタンス生成を防止
    * 【保守性】: 認証関連設定を一箇所で管理
-   * 🟢 信頼性レベル: 既存のSupabaseAuthProvider実装をそのまま活用
+   * 🟢 信頼性レベル: 環境変数による動的プロバイダー選択実装
    */
-  private static getAuthProvider(): SupabaseAuthProvider {
+  private static getAuthProvider(): IAuthProvider {
     if (!AuthDIContainer.authProviderInstance) {
-      // 【認証サービス連携】: Supabase JWT検証・ユーザー情報取得
-      AuthDIContainer.authProviderInstance = new SupabaseAuthProvider();
+      // テスト環境またはCI環境ではMockAuthProviderを使用
+      if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
+        AuthDIContainer.authProviderInstance = new MockAuthProvider();
+      } else {
+        // 本番・開発環境ではSupabaseAuthProviderを使用
+        AuthDIContainer.authProviderInstance = new SupabaseAuthProvider();
+      }
     }
 
     return AuthDIContainer.authProviderInstance;

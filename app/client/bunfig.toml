@@ -3,3 +3,5 @@
 [test]
 preload = ["./src/test-setup.ts"]
 timeout = 20000  # 20秒のタイムアウト設定（長時間処理テスト対応）
+# Bunにsrc以下しかテストを探さなくする（e2eディレクトリ除外）
+root = "src"

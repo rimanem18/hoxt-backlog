@@ -1,5 +1,5 @@
 ---
-description: git add & git commit をします。
+description: Jira のプロジェクトキー issue 番号を渡し、git add & git commit をします。
 ---
 
 ## 事前確認
@@ -7,6 +7,7 @@ description: git add & git commit をします。
 - ステージング済の内容を確認します。
 - `git diff` をおこない、直前との差を確認します。
 - ブランチ名に含まれる issue 番号を確認します。（issue 番号らしきものが見当たらない場合、ユーザーに指示を仰いでください）
+- ユーザーから{大文字の英字列-数字}が渡された場合、それを Jira に紐つく {PROJECT-KEY} と認識します。
 
 ## 実行内容
 
@@ -34,7 +35,7 @@ description: git add & git commit をします。
 
 ## コミットメッセージフォーマット例
 ```
-refactor: セキュリティ・パフォーマンス・品質向上のためにリファクタリング #{issue 番号}
+refactor: セキュリティ・パフォーマンス・品質向上のためにリファクタリング {PROJECT-KEY} #{issue 番号}
 
 - オープンリダイレクト脆弱性の修正
 - URL検証前処理最適化でパフォーマンス向上

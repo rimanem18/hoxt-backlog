@@ -24,7 +24,8 @@ services:
       - DB_TABLE_PREFIX=test_
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     tty: true
 
   client:
@@ -42,7 +43,8 @@ services:
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
+    depends_on:
+      - server
     tty: true
 
   db:
@@ -56,7 +58,24 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/db/init-test-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.55.0-jammy
+    volumes:
+      - ./app/client:/workspace
+    working_dir: /workspace
+    environment:
+      - CI=true
+    depends_on:
+      - client
+    command: tail -f /dev/null
 
 volumes:
   postgres_data:

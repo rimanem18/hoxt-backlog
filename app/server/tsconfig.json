@@ -35,6 +35,6 @@
     // DOM が要るなら lib を追加
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx","src/**/*.test.*", "src/**/*.spec.*"],
+  "include": ["src/**/*.ts", "src/**/*.tsx","src/**/*.test.*", "src/**/*.spec.*", "../packages/**/*.ts"],
   "exclude": ["node_modules", "dist", "build"]
 }

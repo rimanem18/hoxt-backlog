@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CI最適化設定
+  ACTIONS_RUNNER_DEBUG: false
+  ACTIONS_STEP_DEBUG: false
+
+jobs:
+  # Client (Next.js) のユニットテスト
+  client-test:
+    name: Client Unit Tests
+    uses: ./.github/workflows/client-test.yml
+    with:
+      working-directory: ./app/client
+
+  # Server (Hono) のユニット/結合テスト
+  server-test:
+    name: Server Unit Tests
+    uses: ./.github/workflows/server-test.yml
+    with:
+      working-directory: ./app/server
+
+  # E2E (Playwright) テスト
+  e2e-test:
+    name: E2E Tests
+    # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
+    # needs: [client-test, server-test]  # コスト効率重視の場合
+    uses: ./.github/workflows/e2e-test.yml

@@ -2,7 +2,7 @@
 name: rima-lite-implement
 ---
 
-伝えられた要件名と TASK 番号をもとに、その要件のタスクを完了してください。
+伝えられた要件名を参考にしつつ、与えられたタスクを完了してください。
 
 ## 要件・設計の理解
 
@@ -14,8 +14,6 @@ name: rima-lite-implement
 - `docs/design/{要件名}/api-endpoints.md` を確認
 - `docs/design/{要件名}/interfaces.ts` を確認
 - `docs/design/{要件名}/dataflow.md` を確認
-- `docs/tasks/{要件名}-tasks.md` を確認
-
 
 ## 実装
 

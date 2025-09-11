@@ -4,6 +4,8 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
+import errorReducer from '@/features/auth/store/errorSlice';
+import oauthErrorReducer from '@/features/auth/store/oauthErrorSlice';
 import { authSlice } from '@/features/google-auth/store/authSlice';
 
 /**
@@ -14,6 +16,10 @@ export const store = configureStore({
   reducer: {
     // authSliceによる認証関連状態の管理
     auth: authSlice.reducer,
+    // 【T007実装】: グローバルエラー状態管理
+    error: errorReducer,
+    // 【T008 Refactor実装】: OAuth認証エラー専用状態管理
+    oauthError: oauthErrorReducer,
     // 将来拡張予定: user・ui・settingsなどのsliceを追加予定
   },
 

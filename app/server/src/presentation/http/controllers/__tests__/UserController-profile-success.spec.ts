@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
+import type { User } from '@/domain/user';
 import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
-import type { User } from '@/packages/shared-schemas/src/user';
 import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
 import { UserController } from '../UserController';
 
@@ -35,6 +35,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
       email: 'user@example.com',
       name: '山田太郎',
       avatarUrl: 'https://lh3.googleusercontent.com/a/avatar.jpg',
+      // 【型安全性】: User型の仕様に合わせてDateオブジェクト形式で指定
       createdAt: new Date('2025-08-12T10:30:00.000Z'),
       updatedAt: new Date('2025-08-12T10:30:00.000Z'),
       lastLoginAt: new Date('2025-08-12T13:45:00.000Z'),
@@ -49,8 +50,8 @@ describe('UserController - プロフィール取得成功テスト', () => {
     userController = new UserController(mockGetUserProfileUseCase);
     app = new Hono();
 
-    // 【認証ミドルウェア統合】: テスト用のトークン取得関数でモック認証を実現
-    validJwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiWWFtYWRhIFRhcm8iLCJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvYXZhdGFyLmpwZyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImZ1bGxfbmFtZSI6IllhbWFkYSBUYXJvIn0sImlzcyI6Imh0dHBzOi8vc3VwYWJhc2UuZXhhbXBsZS5jb20iLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzEyNzA1Nn0.valid_signature';
+    // 【認証ミドルウェア統合】: MockAuthProvider 対応のテスト用トークンを使用
+    validJwtToken = 'valid-test-token';
     app.use(
       '/api/user/*',
       authMiddleware({
@@ -63,11 +64,11 @@ describe('UserController - プロフィール取得成功テスト', () => {
             name: 'Yamada Taro',
             avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
             email: 'user@example.com',
-            full_name: 'Yamada Taro'
+            full_name: 'Yamada Taro',
           },
           iss: 'https://supabase.example.com',
           iat: 1703123456,
-          exp: 1703127056
+          exp: 1703127056,
         },
       }),
     );
@@ -94,8 +95,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
     // 【テストデータ準備】: 有効な認証ヘッダーを持つHTTPリクエストを模擬
     // 【初期条件設定】: 既存ユーザーが認証済み状態で、データベースに該当ユーザーが存在する状態
     const authHeaders = {
-      Authorization:
-        `Bearer ${validJwtToken}`,
+      Authorization: `Bearer ${validJwtToken}`,
       'Content-Type': 'application/json',
     };
 
@@ -118,7 +118,10 @@ describe('UserController - プロフィール取得成功テスト', () => {
     expect(responseBody.success).toBe(true); // 【確認内容】: APIレスポンスが成功を示すことを確認 🟢
     expect(responseBody.data).toBeDefined(); // 【確認内容】: ユーザーデータが返却されることを確認 🟢
 
-    const userData = responseBody.data!;
+    if (!responseBody.data) {
+      throw new Error('Response data should be defined');
+    }
+    const userData = responseBody.data;
     expect(userData.id).toBe('550e8400-e29b-41d4-a716-446655440000'); // 【確認内容】: ユーザーIDが正確に返却されることを確認 🟢
     expect(userData.externalId).toBe('google_123456789'); // 【確認内容】: 外部プロバイダーIDが正確に返却されることを確認 🟢
     expect(userData.provider).toBe('google'); // 【確認内容】: 認証プロバイダーが正確に返却されることを確認 🟢

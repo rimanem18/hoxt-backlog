@@ -37,6 +37,11 @@ export class PostgreSQLUserRepository implements IUserRepository {
    * データベースエラーをドメインエラーに変換する
    */
   private handleDatabaseError(error: unknown): never {
+    // UserNotFoundErrorなどのドメインエラーはそのまま再スロー
+    if (error instanceof UserNotFoundError) {
+      throw error;
+    }
+
     if (this.isPgDatabaseError(error)) {
       if (error.code === '23505') {
         if (error.constraint === 'unique_external_id_provider') {

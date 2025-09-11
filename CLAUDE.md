@@ -6,19 +6,6 @@
 
 また、Zod スキーマをバックエンドとフロントエンドでシェアし、スキーマ駆動開発をしています。
 
-## コミットメッセージ
-
-プレフィックスをつけてください。それに伴い、コミットの粒度を細かくすることを意識してください:
-
-- feat: 新しい機能
-- fix: バグの修正
-- docs: ドキュメントのみの変更
-- style: 空白、フォーマット、セミコロン追加など
-- refactor: 仕様に影響がないコード改善(リファクタ)
-- perf: パフォーマンス向上関連
-- test: テスト関連
-- chore: ビルド、補助ツール、ライブラリ関連
-
 ## ディレクトリ構成
 
 - **`app/client/`**: client コンテナにバインド（Next.js アプリケーション）
@@ -61,6 +48,12 @@
 ```bash
 # example
 docker compose exec client bun run dev
+```
+
+E2E テストの実行は e2e コンテナで実施してください
+```bash
+# example
+docker compose exec e2e npx playwright test
 ```
 
 ## コード品質・フォーマット

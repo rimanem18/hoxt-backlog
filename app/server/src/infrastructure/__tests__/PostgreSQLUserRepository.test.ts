@@ -21,10 +21,12 @@ import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
 
 // テストデータ生成ヘルパー
 function createTestUserInput(): CreateUserInput {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(7);
   return {
-    externalId: `test_${Date.now()}_${Math.random()}`,
+    externalId: `test_${timestamp}_${random}`,
     provider: 'google' as AuthProvider,
-    email: `test${Date.now()}${Math.random()}@example.com`,
+    email: `test${timestamp}${random}@example.com`,
     name: 'テストユーザー',
     avatarUrl: 'https://example.com/avatar.jpg',
   };
@@ -34,23 +36,29 @@ describe('PostgreSQLUserRepository統合テスト', () => {
   let repository: PostgreSQLUserRepository;
 
   beforeAll(async () => {
-    // テスト用環境変数を直接上書き
-    process.env.DB_HOST = 'db';
-    process.env.DB_PORT = '5432';
-    process.env.DB_NAME = 'postgres';
-    process.env.DB_USER = 'postgres';
-    process.env.DB_PASSWORD = 'test_password';
-    process.env.DB_TABLE_PREFIX = 'test_';
+    // テスト用環境変数を設定（既存の値があれば優先）
+    process.env.DB_HOST = process.env.DB_HOST || 'db';
+    process.env.DB_PORT = process.env.DB_PORT || '5432';
+    process.env.DB_NAME = process.env.DB_NAME || 'postgres';
+    process.env.DB_USER = process.env.DB_USER || 'postgres';
+    process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'test_password';
+    process.env.DB_TABLE_PREFIX = process.env.DB_TABLE_PREFIX || 'test_';
     process.env.DATABASE_URL =
+      process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';
 
     // プールをリセットして新しい設定を反映
     resetPoolForTesting();
 
     repository = new PostgreSQLUserRepository();
+
+    // テスト開始前にクリーンアップ
+    await cleanupTestData();
   });
 
   afterAll(async () => {
+    // テスト終了後にクリーンアップ
+    await cleanupTestData();
     await closePool();
   });
 
@@ -322,8 +330,9 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 async function cleanupTestData() {
   const client = await getConnection();
   try {
+    // test_で始まるexternal_idを持つレコードを削除
     await client.query(
-      "DELETE FROM test_users WHERE email LIKE '%@example.com'",
+      "DELETE FROM test_users WHERE external_id LIKE 'test_%' OR email LIKE '%@example.com'",
     );
   } catch (_error) {
     // テーブルが存在しない場合などのエラーは無視

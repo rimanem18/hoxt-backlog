@@ -62,7 +62,6 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
       expect(errorObj.code).toBe('INVALID_TOKEN');
       expect(errorObj.message).toBe('認証トークンが無効です');
     }
-
   });
 
   test('不正な形式のJWTで認証が失敗する', async () => {
@@ -117,7 +116,6 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
         expect(errorObj.message).toBe('JWTの形式が正しくありません');
       }
     }
-
   });
 
   test('期限切れJWTで認証が失敗する', async () => {
@@ -162,7 +160,6 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
       expect(errorObj.code).toBe('INVALID_TOKEN');
       expect(errorObj.message).toBe('認証トークンが無効です');
     }
-
   });
 
   test('空文字列JWTで入力検証エラーが発生する', async () => {

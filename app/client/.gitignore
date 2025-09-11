@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+# package managers
+package-lock.json
+
 # testing
 /coverage
 
@@ -39,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# e2e test
+playwright-report
+test-results

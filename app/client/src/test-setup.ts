@@ -88,6 +88,45 @@ Object.defineProperty(globalThis, 'cancelAnimationFrame', {
   writable: true,
 });
 
+// localStorage モック設定
+// Redux authSliceで使用するlocalStorageをテスト環境でモック化
+// メモリベースのストレージで実際のlocalStorageの動作をシミュレート
+
+class MockStorage implements Storage {
+  private store: Record<string, string> = {};
+
+  get length(): number {
+    return Object.keys(this.store).length;
+  }
+
+  key(index: number): string | null {
+    const keys = Object.keys(this.store);
+    return keys[index] || null;
+  }
+
+  getItem(key: string): string | null {
+    return this.store[key] || null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.store[key] = value;
+  }
+
+  removeItem(key: string): void {
+    delete this.store[key];
+  }
+
+  clear(): void {
+    this.store = {};
+  }
+}
+
+// localStorageをグローバルに設定
+Object.defineProperty(globalThis, 'localStorage', {
+  value: new MockStorage(),
+  writable: true,
+});
+
 // グローバルの型宣言
 declare global {
   namespace JSX {
