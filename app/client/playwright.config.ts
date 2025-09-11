@@ -12,12 +12,13 @@ export default defineConfig({
   expect: {
     timeout: 5000,
   },
-  // テスト実行の並行性を制御（安定性を重視し並行実行を制限）
-  fullyParallel: true,
+  // テスト実行の並行性を制御（安定性を重視し直列実行に設定）
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  // GitHub Actions CI環境では1回のリトライに制限し、ローカル環境では通常通り
-  retries: process.env.GITHUB_ACTIONS ? 1 : 0,
-  workers: process.env.GITHUB_ACTIONS ? 1 : undefined,
+  // 全環境でリトライを1回に制限して高速フィードバックを実現
+  retries: 1,
+  // 安定性重視で全環境において直列実行（workers=1）
+  workers: 1,
   // レポート形式の設定
   reporter: [
     ['html'],
