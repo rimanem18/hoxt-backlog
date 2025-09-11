@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.x'
 
       - name: Cache Playwright dependencies
         uses: actions/cache@v4
@@ -100,14 +100,18 @@ jobs:
           cd ../..
           
           echo "--- Waiting for services to be ready ---"
-          for i in {1..30}; do
+          for i in $(seq 1 30); do
             if curl -f http://localhost:3000 >/dev/null 2>&1 && \
                curl -f http://localhost:3001/api/health >/dev/null 2>&1; then
               echo "All services are ready!"
               break
             fi
             echo "Waiting for services... (attempt $i/30)"
-            sleep $(( i < 10 ? 2 : 5 ))
+            if [ $i -lt 10 ]; then
+              sleep 2
+            else  
+              sleep 5
+            fi
           done
           
           echo "--- Running Playwright tests ---"
