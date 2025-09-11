@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 import {
+  finishAuthRestore,
   handleExpiredToken,
   logout,
   restoreAuthState,
@@ -51,13 +52,17 @@ export default function Provider({ children }: ProviderProps) {
           store.dispatch(handleExpiredToken());
           break;
         case 'missing':
-          // 認証情報がない場合は何もしない（初期状態）
+          // 認証情報がない場合は復元完了をマーク
+          store.dispatch(finishAuthRestore());
           break;
         default:
           // その他のエラー（不正な形式など）はログアウトとして扱う
           store.dispatch(logout());
           break;
       }
+    } else {
+      // 予期しないケース（認証データなし）の場合も復元完了をマーク
+      store.dispatch(finishAuthRestore());
     }
   }, []);
 

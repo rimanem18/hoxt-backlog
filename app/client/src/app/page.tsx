@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { LoginButton } from '@/features/auth/components/LoginButton';
 import OAuthErrorDisplay from '@/features/auth/components/OAuthErrorDisplay';
 import { OAuthErrorHandler } from '@/features/auth/services/oauthErrorHandler';
@@ -18,16 +19,31 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
  * 認証済みユーザーには自動的にダッシュボードへリダイレクト。
  */
 export default function Home(): React.ReactNode {
-  const { isAuthenticated, user, authError } = useAppSelector(
+  const { isAuthenticated, user, authError, isAuthRestoring } = useAppSelector(
     (state) => state.auth,
   );
   const dispatch = useAppDispatch();
   const router = useRouter();
 
   // 認証済みユーザーは自動的にダッシュボードへリダイレクト
-  if (isAuthenticated && user) {
-    router.push('/dashboard');
-    return null;
+  // 認証状態復元完了後のみリダイレクト実行（AuthGuardとの競合回避）
+  useEffect(() => {
+    if (!isAuthRestoring && isAuthenticated && user) {
+      console.log('Home: Redirecting authenticated user to dashboard');
+      router.replace('/dashboard'); // 履歴を残さずリダイレクト
+    }
+  }, [isAuthRestoring, isAuthenticated, user, router]);
+
+  // 認証状態復元中はローディング表示（ページリロード時のチラツキ防止）
+  if (isAuthRestoring) {
+    return (
+      <div className="font-sans min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">認証状態を確認中...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -1,41 +1,27 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
 import { UserProfile } from '@/features/google-auth/components/UserProfile';
-import {
-  handleExpiredToken,
-  restoreAuthState,
-  setAuthState,
-} from '@/features/google-auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
+import { handleExpiredToken } from '@/features/google-auth/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
  * 認証済みユーザー専用のダッシュボードページ
- * JWT期限切れ検出・認証状態復元・ネットワークエラーハンドリング機能を提供
+ * AuthGuardによって認証が保証されているため、認証チェックは不要
+ * JWT期限切れ検出とネットワークエラーハンドリングのみを担当
  *
  * @returns 認証済みユーザー向けダッシュボード画面
  */
 export default function DashboardPage(): React.ReactNode {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
-  const router = useRouter();
+  const { user } = useAppSelector((state) => state.auth);
 
   // JWT期限切れ時の処理をメモ化して複数回実行を防止
   const handleTokenExpiration = useCallback(() => {
     dispatch(handleExpiredToken());
-    router.push('/');
-  }, [dispatch, router]);
-
-  // 認証状態復元処理をメモ化してuseEffectの再実行を最小限に抑制
-  const handleAuthRestore = useCallback(
-    (user: User) => {
-      dispatch(restoreAuthState({ user, isNewUser: false }));
-    },
-    [dispatch],
-  );
+    // AuthGuardが自動的にリダイレクトするため、手動リダイレクトは不要
+  }, [dispatch]);
 
   // ネットワークエラーを検出してユーザーフレンドリーなメッセージを表示
   const checkNetworkAndShowError = useCallback(async () => {
@@ -80,117 +66,25 @@ export default function DashboardPage(): React.ReactNode {
     checkNetworkAndShowError();
   }, [checkNetworkAndShowError]);
 
-  // ページリロード時の認証状態復元
+  // JWT期限切れの監視のみを実行（認証状態復元はprovider.tsxで実施）
   useEffect(() => {
-    // セキュリティ重視でJWT期限切れ検出を最優先実行
     if (typeof window !== 'undefined') {
-      // 期限切れチェックを最初に実行して不正アクセスを防止
       const savedAuthData = localStorage.getItem('sb-localhost-auth-token');
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
-          // expires_atの値を厳密にチェック
-          if (
-            parsedAuthData.expires_at === null ||
-            parsedAuthData.expires_at === undefined
-          ) {
-            handleTokenExpiration();
-            return;
-          }
           const expiresAt = Number(parsedAuthData.expires_at);
+
+          // 期限切れチェックのみ実行
           if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-            if (Number.isNaN(expiresAt)) {
-            }
-            // 期限切れ処理を実行
             handleTokenExpiration();
-            return;
-          }
-          // トークン構造の基本検証
-          if (!parsedAuthData.user || !parsedAuthData.access_token) {
-            // 期限切れ処理を実行
-            handleTokenExpiration();
-            return;
           }
         } catch {
-          // 解析失敗時は不正トークンとして即座にクリア
-          // メモ化された期限切れ処理を使用
           handleTokenExpiration();
-          return;
-        }
-      }
-
-      // 期限切れが未検出の場合のみ認証復元処理を実行
-      if (window.__TEST_REDUX_AUTH_STATE__) {
-        const testState = window.__TEST_REDUX_AUTH_STATE__;
-
-        // LocalStorageクリア済みの場合はテスト状態を適用しない
-        const currentAuthData = localStorage.getItem('sb-localhost-auth-token');
-        if (!currentAuthData && testState.isAuthenticated && testState.user) {
-          return;
-        }
-
-        if (testState.isAuthenticated && testState.user) {
-          // テスト用認証状態を設定
-          dispatch(
-            setAuthState({
-              isAuthenticated: testState.isAuthenticated,
-              user: testState.user,
-              isLoading: testState.isLoading || false,
-              error: testState.error || null,
-            }),
-          );
-        }
-        return;
-      }
-
-      // 本番環境での認証状態復元（期限切れチェック済み）
-      if (savedAuthData) {
-        try {
-          const parsedAuthData = JSON.parse(savedAuthData);
-
-          if (parsedAuthData.user) {
-            // 認証状態復元処理を実行
-            handleAuthRestore(parsedAuthData.user);
-          }
-        } catch {
-          // エラー時はLocalStorageをクリア
-          localStorage.removeItem('sb-localhost-auth-token');
         }
       }
     }
-  }, [handleTokenExpiration, handleAuthRestore, dispatch]);
-
-  // テスト用認証状態の存在確認
-  const hasTestAuthState =
-    typeof window !== 'undefined' &&
-    window.__TEST_REDUX_AUTH_STATE__ &&
-    window.__TEST_REDUX_AUTH_STATE__.isAuthenticated &&
-    window.__TEST_REDUX_AUTH_STATE__.user;
-
-  // 未認証ユーザーをホームページにリダイレクト（テスト環境除く）
-  useEffect(() => {
-    if (!hasTestAuthState && (!isAuthenticated || !user)) {
-      // 未認証アクセス試行をログに記録
-      console.warn('未認証状態でのダッシュボードアクセス試行', {
-        isAuthenticated,
-        hasUser: !!user,
-        hasTestAuthState,
-        timestamp: new Date().toISOString(),
-      });
-      // ホームページに誘導
-      router.push('/');
-    }
-  }, [hasTestAuthState, isAuthenticated, user, router]);
-
-  // 認証チェック完了前またはリダイレクト対象の場合は何も表示しない
-  if (!hasTestAuthState && (!isAuthenticated || !user)) {
-    return null;
-  }
-
-  // テスト環境ではモック状態を使用
-  const effectiveUser = hasTestAuthState
-    ? window.__TEST_REDUX_AUTH_STATE__?.user
-    : user;
+  }, [handleTokenExpiration]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -199,7 +93,7 @@ export default function DashboardPage(): React.ReactNode {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="mt-2 text-gray-600">
-            {effectiveUser?.lastLoginAt
+            {user?.lastLoginAt
               ? 'おかえりなさい！あなたのアカウント情報です。'
               : 'ようこそ！あなたのアカウント情報です。'}
           </p>
@@ -207,7 +101,7 @@ export default function DashboardPage(): React.ReactNode {
 
         <div className="flex flex-col items-center gap-6">
           <div className="w-full max-w-md">
-            {effectiveUser && <UserProfile user={effectiveUser} />}
+            {user && <UserProfile user={user} />}
           </div>
         </div>
 
@@ -215,15 +109,12 @@ export default function DashboardPage(): React.ReactNode {
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
             <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
-            <p className="text-blue-700">認証状態: 認証済み</p>
+            <p className="text-blue-700">認証状態: 認証済み（AuthGuard保証）</p>
             <p className="text-blue-700">
-              テスト環境: {hasTestAuthState ? 'Yes' : 'No'}
+              ユーザーID: {user?.id ? '設定済み' : '未設定'}
             </p>
             <p className="text-blue-700">
-              ユーザーID: {effectiveUser?.id ? '設定済み' : '未設定'}
-            </p>
-            <p className="text-blue-700">
-              最終ログイン: {effectiveUser?.lastLoginAt ? '記録あり' : '未設定'}
+              最終ログイン: {user?.lastLoginAt ? '記録あり' : '未設定'}
             </p>
           </div>
         )}

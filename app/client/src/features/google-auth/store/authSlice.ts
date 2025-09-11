@@ -42,6 +42,8 @@ export interface AuthState {
   user: User | null;
   /** 認証処理中のローディング状態 */
   isLoading: boolean;
+  /** 認証状態復元中のフラグ（ページリロード時のチラツキ防止用） */
+  isAuthRestoring: boolean;
   /** 認証エラー情報（正常時はnull） */
   error: string | null;
   /** JWT期限切れなどの認証エラー詳細情報 */
@@ -90,6 +92,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   isLoading: false,
+  isAuthRestoring: true, // 認証状態復元中フラグ（初期は復元中）
   error: null,
   authError: null,
   // テスト状態があれば適用（E2Eテスト専用）
@@ -110,6 +113,7 @@ export const authSlice = createSlice({
      */
     authStart: (state) => {
       state.isLoading = true;
+      state.isAuthRestoring = false; // 認証開始時は復元完了とみなす
       state.error = null;
       state.authError = null;
     },
@@ -125,6 +129,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.isLoading = false;
+      state.isAuthRestoring = false; // 認証成功時は復元完了とみなす
       state.error = null;
       state.authError = null;
 
@@ -134,7 +139,7 @@ export const authSlice = createSlice({
         const mockJwtToken = [
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // header
           'eyJzdWIiOiJkZXYtdXNlciIsImV4cCI6OTk5OTk5OTk5OX0', // payload (dev user, long expiry)
-          'dev_signature' // signature
+          'dev_signature', // signature
         ].join('.');
         const authData = {
           access_token: mockJwtToken,
@@ -222,9 +227,21 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.isLoading = false;
+      state.isAuthRestoring = false; // 復元完了
       state.error = null;
       state.authError = null;
       console.log('Authentication state restored from localStorage');
+    },
+
+    /**
+     * 認証状態復元完了（復元するべき状態がない場合）
+     * ページリロード時にLocalStorageに認証情報がない場合の完了処理
+     *
+     * @param state - 現在の認証状態
+     */
+    finishAuthRestore: (state) => {
+      state.isAuthRestoring = false;
+      console.log('Authentication restore completed - no stored auth found');
     },
 
     /**
@@ -320,6 +337,7 @@ export const {
   clearAuthState,
   setAuthState,
   restoreAuthState,
+  finishAuthRestore,
   handleExpiredToken,
 } = authSlice.actions;
 export default authSlice.reducer;
