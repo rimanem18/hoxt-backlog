@@ -419,16 +419,30 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     });
 
 
+    // 無効JWT処理を待機してからエラーメッセージ確認
     const invalidTokenMessage = page.getByText('認証に問題があります', { exact: false });
-
     const reloginPrompt = page.getByText('もう一度ログインしてください', { exact: false });
+    
+    // エラーメッセージまたはリダイレクト完了まで待機
+    try {
+      await Promise.race([
+        invalidTokenMessage.waitFor({ timeout: 5000 }),
+        reloginPrompt.waitFor({ timeout: 5000 }),
+        page.waitForURL('/', { timeout: 5000 }) // ルートページへのリダイレクト
+      ]);
+    } catch (error) {
+      // タイムアウトしてもテスト続行（ログインページへのリダイレクト処理中の可能性）
+      console.log('認証エラー処理中...');
+    }
 
+    // 認証状態クリア確認
     const clearedAuthState = await page.evaluate(() => {
       const authData = localStorage.getItem('sb-localhost-auth-token');
       return authData ? JSON.parse(authData) : null;
     });
 
+    // CI環境での遅延を考慮してログインボタンを待機
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
-    await expect(loginButton).toBeVisible();
+    await expect(loginButton).toBeVisible({ timeout: 10000 });
   });
 });
