@@ -1,0 +1,150 @@
+# 継続的デプロイメントシステム アーキテクチャ設計
+
+作成日: 2025年09月12日
+最終更新: 2025年09月12日
+
+## システム概要
+
+GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステム。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（Supabase）の統合デプロイメントを自動化し、セキュリティと運用効率を両立する。
+
+## アーキテクチャパターン
+
+- **パターン**: マイクロサービス指向 + Infrastructure as Code + GitOps
+- **理由**: サービス独立性確保、インフラ変更の追跡可能性、Git中心の運用フローによる監査性向上
+
+## システムアーキテクチャ図
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Developer     │    │   GitHub         │    │   Services      │
+│                 │    │                  │    │                 │
+│ git push main   │───▶│ GitHub Actions   │───▶│ CloudFlare Pages│
+│ create PR       │    │ ├─ OIDC Auth     │    │ AWS Lambda      │
+└─────────────────┘    │ ├─ Terraform     │    │ Supabase        │
+                       │ ├─ Test & Deploy │    │                 │
+                       │ └─ Approval Flow │    └─────────────────┘
+                       └──────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────┐
+                       │ Infrastructure   │
+                       │ ├─ AWS S3 (State)│
+                       │ ├─ AWS KMS       │
+                       │ ├─ IAM Roles     │
+                       │ └─ CloudFlare    │
+                       └──────────────────┘
+```
+
+## コンポーネント構成
+
+### CI/CDプラットフォーム
+- **プラットフォーム**: GitHub Actions
+- **認証方式**: GitHub OIDC（シークレットレス）
+- **ワークフロー**: main push トリガー + PR preview
+- **並列制御**: job dependency + concurrency groups
+
+### Infrastructure as Code
+- **ツール**: Terraform
+- **状態管理**: AWS S3 + KMS暗号化
+- **実行制御**: plan → approval → apply の段階実行
+- **破壊的変更**: 手動承認フロー必須
+
+### フロントエンド
+- **フレームワーク**: Next.js 15 (SSG)
+- **プラットフォーム**: CloudFlare Pages
+- **デプロイ方式**: GitHub Actions ビルド + CloudFlare Pages API
+- **環境分離**: main (production) / PR (preview)
+- **API連携**: Hono Lambda API との HTTP 通信
+
+### バックエンド
+- **フレームワーク**: Hono 4 + AWS Lambda adapter
+- **プラットフォーム**: AWS Lambda (Node.js 20.x)
+- **ビルド**: `bun run build:lambda` で lambda.js 生成
+- **デプロイ**: Terraform + Lambda ZIP package
+- **環境管理**: Lambda エイリアス（$LATEST / stable）
+- **API Gateway**: AWS API Gateway v2 (HTTP API)
+
+### データベース
+- **サービス**: Supabase（無料版）
+- **マイグレーション**: Supabase CLI + GitHub Actions
+- **環境分離**: テーブルプレフィックスによる分離
+  - Production: `${TABLE_PREFIX}_*`（例: `hoxtbl_users`）
+  - Preview: `${TABLE_PREFIX}_dev_*`（例: `hoxtbl_dev_users`）
+- **セキュリティ**: Row-Level Security (RLS) 必須
+
+### セキュリティ
+- **認証**: GitHub OIDC による一元認証
+- **権限管理**: AWS IAM 最小権限原則
+- **シークレット管理**: GitHub Environment Secrets
+- **監査**: CloudTrail + GitHub Actions logs
+
+## デプロイメント順序
+
+1. **Infrastructure (Terraform)**
+   - AWS リソース作成/更新
+   - CloudFlare 設定
+   - IAM ロール・ポリシー適用
+
+2. **Database (Supabase)**
+   - スキーママイグレーション
+   - RLS ポリシー適用
+   - データ整合性確認
+
+3. **Backend (AWS Lambda)**
+   - 関数コードデプロイ
+   - API Gateway 設定更新
+   - Lambda エイリアス更新
+
+4. **Frontend (CloudFlare Pages)**
+   - 静的ファイルビルド
+   - CloudFlare Pages デプロイ
+   - DNS 設定確認
+
+## 環境戦略
+
+### Production環境
+- **トリガー**: main ブランチへの push
+- **承認**: Terraform 破壊的変更時のみ
+- **監視**: 基本ログ収集（実行者・日時・対象）
+
+### Preview環境
+- **トリガー**: PR 作成・更新
+- **データベース**: 同一Supabaseプロジェクト内で `${TABLE_PREFIX}_dev_*` テーブル使用
+- **リソース**: CloudFlare Preview + Lambda $LATEST（PR close で自動削除）
+- **制限**: Terraform は read-only plan のみ
+- **注意**: テーブルは上書き型（複数PRで共有、競合の可能性あり）
+
+## エラーハンドリング
+
+### AWS API 制限
+- **戦略**: 指数バックオフ再試行
+- **最大回数**: 5回
+- **タイムアウト**: 30秒/回
+
+### Terraform State ロック
+- **検出**: 10分間の待機タイムアウト
+- **解決**: 手動介入オプション提供
+- **予防**: concurrency groups による排他制御
+
+### データベースマイグレーション
+- **方針**: Forward-only（ロールバック非対応）
+- **長時間実行**: 管理者アラート + 手動介入
+- **失敗時**: プロセス全体停止
+
+## 運用・監査
+
+### ログ記録
+- **対象**: デプロイ実行者・日時・対象サービス
+- **保存先**: GitHub Actions logs + CloudTrail
+- **保持期間**: 90日間
+
+### Secret Scanning
+- **範囲**: 全リポジトリファイル
+- **対象**: AWS keys, API tokens, certificates
+- **アクション**: push ブロック + 通知
+
+### アクセス制御
+- **GitHub**: Organization owner / Repository admin
+- **AWS**: Terraform 専用 IAM role（OIDC条件付き）
+- **CloudFlare**: API token（ページ管理権限のみ）
+- **Supabase**: Service role（マイグレーション権限）
