@@ -6,6 +6,13 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   /**
+   * 静的サイト生成設定 (SSG)
+   * 継続的デプロイメント対応: CloudFlare Pages 用の静的出力
+   */
+  output: 'export',
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+  /**
    * 外部画像ホストの安全な許可リスト設定
    */
   images: {
