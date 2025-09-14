@@ -77,5 +77,33 @@ services:
       - client
     command: tail -f /dev/null
 
+  iac:
+    build:
+      context: .
+      dockerfile: docker/terraform/Dockerfile
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./terraform:/workspace
+      - ./app/server/dist:/workspace/app/server/dist:ro
+      - terraform_cache:/workspace/.terraform.d
+    working_dir: /workspace
+    environment:
+      - AWS_ROLE_ARN=${AWS_ROLE_ARN}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - TF_VAR_environment=${ENVIRONMENT}
+      - TF_VAR_project_name=${PROJECT_NAME}
+      - TF_VAR_aws_region=${AWS_REGION}
+      - TF_VAR_aws_oidc_role_arn=${AWS_OIDC_ROLE_ARN}
+      - TF_VAR_database_url=${DATABASE_URL}
+      - TF_VAR_cloudflare_api_token=${CLOUDFLARE_API_TOKEN}
+      - TF_VAR_cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}
+      - TF_VAR_domain_name=${DOMAIN_NAME}
+      - TF_VAR_table_prefix=${DB_TABLE_PREFIX}
+      - TF_VAR_supabase_access_token=${SUPABASE_ACCESS_TOKEN}
+    command: tail -f /dev/null
+
 volumes:
   postgres_data:
+  terraform_cache:

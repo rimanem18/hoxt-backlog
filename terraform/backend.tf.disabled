@@ -1,0 +1,22 @@
+/**
+ * Terraform Remote Backend設定
+ * S3とDynamoDBを使用したstate管理とロック機能
+ *
+ * 注意: 最初の実行時は、まずstate管理リソースを作成してから
+ * このbackend設定を有効化する必要があります
+ */
+terraform {
+  backend "s3" {
+    bucket         = "your-project-terraform-state"
+    key            = "infrastructure/terraform.tfstate"
+    region         = "ap-northeast-1"
+    encrypt        = true
+    kms_key_id     = "alias/your-project-terraform-state"
+    dynamodb_table = "your-project-terraform-locks"
+
+    # 状態ファイルの検証を有効化
+    skip_metadata_api_check     = false
+    skip_region_validation      = false
+    skip_credentials_validation = false
+  }
+}

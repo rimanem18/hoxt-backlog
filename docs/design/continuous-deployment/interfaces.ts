@@ -119,7 +119,7 @@ export interface LambdaFunctionConfig {
   /** 関数名 */
   function_name: string;
   /** ランタイム */
-  runtime: 'nodejs18.x' | 'nodejs20.x';
+  runtime: 'nodejs22.x';
   /** ハンドラー（Hono Lambda adapterでは 'index.handler' 固定） */
   handler: 'index.handler';
   /** メモリサイズ（MB） */
@@ -209,10 +209,12 @@ export interface SupabaseConfig {
   service_role_key: string;
   /** データベースURL */
   database_url: string;
-  /** テーブルプレフィックス */
+  /** ベーステーブルプレフィックス */
+  base_table_prefix: string;
+  /** 実際に使用するテーブルプレフィックス */
   table_prefix: string;
-  /** preview環境用テーブルプレフィックス */
-  preview_table_prefix?: string;
+  /** 環境種別 */
+  environment: 'production' | 'preview';
 }
 
 /**
@@ -312,7 +314,9 @@ export interface SecurityFinding {
 export interface EnvironmentConfig {
   /** 環境名 */
   name: 'production' | 'preview';
-  /** テーブルプレフィックス（preview時は _dev が付与） */
+  /** ベーステーブルプレフィックス */
+  base_table_prefix: string;
+  /** 実際に使用するテーブルプレフィックス（preview時は base_table_prefix + '_dev'） */
   table_prefix: string;
   /** AWS設定 */
   aws: {

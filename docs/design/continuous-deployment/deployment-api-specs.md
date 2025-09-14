@@ -78,7 +78,7 @@ Content-Type: application/zip
 {
   "FunctionName": "hoxt-backlog-api-production",
   "FunctionArn": "arn:aws:lambda:ap-northeast-1:123456789012:function:hoxt-backlog-api-production",
-  "Runtime": "nodejs20.x",
+  "Runtime": "nodejs22.x",
   "Version": "42",
   "LastModified": "2025-09-12T10:30:00.000+0000",
   "CodeSha256": "abc123def456...",
@@ -298,9 +298,9 @@ Supabase無料版のため、ブランチ機能の代わりにテーブルプレ
 
 #### Preview環境テーブル作成
 ```sql
--- Production: hoxtbl_users
--- Preview: hoxtbl_dev_users として作成
-CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_dev_users (
+-- Production: prefix_users (TABLE_PREFIX = prefix)
+-- Preview: prefix_dev_users (TABLE_PREFIX = prefix_dev)
+CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -310,10 +310,10 @@ CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_dev_users (
 
 #### Preview環境テーブル削除
 ```sql
--- PR終了時の cleanup
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_dev_users CASCADE;
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_dev_projects CASCADE;
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_dev_tasks CASCADE;
+-- PR終了時のcleanup (TABLE_PREFIX = prefix_dev)
+DROP TABLE IF EXISTS ${TABLE_PREFIX}_users CASCADE;
+DROP TABLE IF EXISTS ${TABLE_PREFIX}_projects CASCADE;
+DROP TABLE IF EXISTS ${TABLE_PREFIX}_tasks CASCADE;
 ```
 
 ## Terraform Cloud API (State Management)

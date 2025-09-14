@@ -47,11 +47,6 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - レスポンス形式・エラーハンドリング
 - Webhookエンドポイント仕様
 
-### [hono-lambda-config.md](./hono-lambda-config.md)
-- Hono + Lambda adapter構成
-- 開発・本番環境の実行方式
-- ビルド・パッケージング・デプロイ設定
-- パフォーマンス最適化
 
 ## 主要設計ポイント
 

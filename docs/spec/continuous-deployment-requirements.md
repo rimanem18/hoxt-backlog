@@ -40,9 +40,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### 条件付き要件
 
-- REQ-101: プルリクエスト作成時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda $LATEST + Supabase branch）を自動生成しなければならない
+- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda $LATEST + Supabase $TABLE_PREFIX）を自動生成・更新しなければならない
 - REQ-102: Terraform plan で破壊的変更が検出された場合、システムは 承認フローを必須とし自動適用を停止しなければならない
 - REQ-103: マイグレーション実行時にDBロックが発生した場合、システムは タイムアウト設定に従って処理を中止しなければならない
+- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda stable alias + Supabase production）を自動更新しなければならない
 
 ### 状態要件
 
@@ -57,6 +58,8 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-401: システムは AWS IAM最小権限原則に従ったロール設計を実装しなければならない
 - REQ-402: システムは シークレット情報をソースコードに含めてはならない
 - REQ-403: システムは データベースマイグレーションでのロールバック非対応（Forward-onlyポリシー）を遵守しなければならない
+- REQ-404: システムは Terraform state を環境別（production/preview）に分離管理しなければならない
+- REQ-405: システムは Lambda関数の片方向管理（Preview→本体管理、Production→エイリアス管理）を実装しなければならない
 
 ## 非機能要件
 
@@ -97,8 +100,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### デプロイフローテスト
 
-- [ ] main ブランチプッシュで全サービスが正常順序でデプロイされること
-- [ ] プルリクエストでプレビュー環境が自動生成されること
+- [ ] main ブランチマージ（プッシュ）でProduction環境が自動更新されること
+- [ ] プルリクエスト作成・更新でPreview環境が自動反映されること  
+- [ ] Lambda stable alias昇格がmainマージで正常動作すること
+- [ ] Lambda $LATEST更新がPR更新で即座に反映されること
 - [ ] マイグレーション時DBロック発生でタイムアウト処理が動作すること
 
 ### 品質保証テスト

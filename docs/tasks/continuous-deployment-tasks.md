@@ -12,7 +12,7 @@
 
 #### TASK-501: Terraform基盤設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-002, REQ-401, REQ-402, NFR-002
 - **依存タスク**: なし
@@ -22,13 +22,13 @@
   - Terraform backend設定ファイル作成
   - バージョン管理とプロバイダー設定
 - **テスト要件**:
-  - [ ] S3バケット暗号化確認
-  - [ ] DynamoDBロックテーブル動作確認
-  - [ ] Terraform init/plan実行確認
+  - [x] S3バケット暗号化確認
+  - [x] DynamoDBロックテーブル動作確認
+  - [x] Terraform init/plan実行確認
 - **完了条件**:
-  - [ ] infrastructure/ディレクトリ構造完成
-  - [ ] backend.tf、versions.tf作成完了
-  - [ ] State管理リソース構築完了
+  - [x] terraform/ディレクトリ構造完成
+  - [x] backend.tf、versions.tf作成完了
+  - [x] State管理リソース構築完了
 
 #### TASK-502: GitHub OIDC認証設定
 
@@ -385,15 +385,15 @@ gantt
 ```yaml
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Production
-  TERRAFORM_STATE_BUCKET: hoxt-backlog-terraform-state
+  TERRAFORM_STATE_BUCKET: your-project-terraform-state
   TERRAFORM_APPROVERS: admin1,admin2
-  LAMBDA_FUNCTION_NAME: hoxt-backlog-api-production  
+  LAMBDA_FUNCTION_NAME: your-project-api-production  
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  TABLE_PREFIX: hoxtbl
+  TABLE_PREFIX: prefix
   CLOUDFLARE_ACCOUNT_ID: your-account-id
-  CLOUDFLARE_PROJECT_NAME: hoxt-backlog-production
-  CLOUDFLARE_DOMAIN: hoxt-backlog.com
-  API_URL: https://api.hoxt-backlog.com
+  CLOUDFLARE_PROJECT_NAME: your-project-production
+  CLOUDFLARE_DOMAIN: your-project.com
+  API_URL: https://api.your-project.com
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
@@ -404,11 +404,11 @@ Secrets:
 ```yaml  
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
-  LAMBDA_FUNCTION_NAME: hoxt-backlog-api-production  # 同じ関数を$LATESTで使用
+  LAMBDA_FUNCTION_NAME: your-project-api-production  # 同じ関数を$LATESTで使用
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
-  TABLE_PREFIX: hoxtbl  # dev prefixは実行時に付与
+  TABLE_PREFIX: prefix  # dev prefixは実行時に付与
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
-  CLOUDFLARE_PROJECT_NAME: hoxt-backlog-production  # 同じプロジェクトでpreview
+  CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx  # 本番と同じトークン
