@@ -68,8 +68,8 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **サービス**: Supabase（無料版）
 - **マイグレーション**: Supabase CLI + GitHub Actions
 - **環境分離**: テーブルプレフィックスによる分離
-  - Production: `${TABLE_PREFIX}_*`（例: `hoxtbl_users`）
-  - Preview: `${TABLE_PREFIX}_dev_*`（例: `hoxtbl_dev_users`）
+  - Production: `${TABLE_PREFIX}_*`（例: `prefix_users`）
+  - Preview: `${TABLE_PREFIX}_dev_*`（例: `prefix_dev_users`）
 - **セキュリティ**: Row-Level Security (RLS) 必須
 
 ### セキュリティ

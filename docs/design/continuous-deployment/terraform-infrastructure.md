@@ -504,7 +504,7 @@ domain_name        = "your-domain.com"
 frontend_domain    = "https://your-domain.com"
 project_name       = "your-project"
 repository_name    = "owner/your-repo"
-base_table_prefix  = "hoxtbl"
+base_table_prefix  = "prefix"
 
 # Sensitive variables are set via GitHub Secrets or environment variables
 # supabase_url = "https://xxxxx.supabase.co"

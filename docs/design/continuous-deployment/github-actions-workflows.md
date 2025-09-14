@@ -427,7 +427,7 @@ Variables:
   TERRAFORM_APPROVERS: admin1,admin2
   LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  BASE_TABLE_PREFIX: hoxtbl  # ベーステーブルプレフィックス
+  BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-domain.com
@@ -444,7 +444,7 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
   LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  # REQ-101準拠: 単一関数+$LATEST使用
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # Same as production
-  BASE_TABLE_PREFIX: hoxtbl  # ベーステーブルプレフィックス（runtime時に_dev付与）
+  BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス（runtime時に_dev付与）
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
   CLOUDFLARE_PROJECT_NAME: your-project-production  # REQ-101準拠: 単一プロジェクト使用
   CLOUDFLARE_DOMAIN: preview.your-domain.com

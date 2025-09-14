@@ -298,8 +298,8 @@ Supabase無料版のため、ブランチ機能の代わりにテーブルプレ
 
 #### Preview環境テーブル作成
 ```sql
--- Production: hoxtbl_users (TABLE_PREFIX = hoxtbl)
--- Preview: hoxtbl_dev_users (TABLE_PREFIX = hoxtbl_dev)
+-- Production: prefix_users (TABLE_PREFIX = prefix)
+-- Preview: prefix_dev_users (TABLE_PREFIX = prefix_dev)
 CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -310,7 +310,7 @@ CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_users (
 
 #### Preview環境テーブル削除
 ```sql
--- PR終了時のcleanup (TABLE_PREFIX = hoxtbl_dev)
+-- PR終了時のcleanup (TABLE_PREFIX = prefix_dev)
 DROP TABLE IF EXISTS ${TABLE_PREFIX}_users CASCADE;
 DROP TABLE IF EXISTS ${TABLE_PREFIX}_projects CASCADE;
 DROP TABLE IF EXISTS ${TABLE_PREFIX}_tasks CASCADE;

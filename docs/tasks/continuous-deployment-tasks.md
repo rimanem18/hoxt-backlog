@@ -389,7 +389,7 @@ Variables:
   TERRAFORM_APPROVERS: admin1,admin2
   LAMBDA_FUNCTION_NAME: your-project-api-production  
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  TABLE_PREFIX: hoxtbl
+  TABLE_PREFIX: prefix
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-project.com
@@ -406,7 +406,7 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
   LAMBDA_FUNCTION_NAME: your-project-api-production  # 同じ関数を$LATESTで使用
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
-  TABLE_PREFIX: hoxtbl  # dev prefixは実行時に付与
+  TABLE_PREFIX: prefix  # dev prefixは実行時に付与
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
   CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview
 
