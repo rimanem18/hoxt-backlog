@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
    * 外部画像ホストの安全な許可リスト設定
    */
   images: {
+    // SSG出力モード用: 画像最適化APIを無効化
+    unoptimized: true,
     // 認証プロバイダーの公式画像ホストのみを厳選
     remotePatterns: [
       {
