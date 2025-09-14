@@ -10,7 +10,7 @@ Terraform を使用した AWS と CloudFlare のインフラ管理。GitHub OIDC
 ## ディレクトリ構造
 
 ```
-infrastructure/
+terraform/
 ├── environments/
 │   ├── production/
 │   │   ├── main.tf
@@ -24,7 +24,8 @@ infrastructure/
 │       └── outputs.tf
 ├── modules/
 │   ├── iam-oidc/
-│   ├── lambda-function/
+│   ├── lambda-function/    # Preview環境用（Lambda本体管理）
+│   ├── lambda-alias/       # Production環境用（エイリアス管理）
 │   ├── cloudflare-pages/
 │   └── monitoring/
 ├── backend.tf
@@ -39,7 +40,8 @@ terraform {
   backend "s3" {
     # 動的設定（terraform init時に指定）
     # bucket  = "terraform-state-bucket"
-    # key     = "production/terraform.tfstate"  
+    # key     = "production/terraform.tfstate" (production環境)
+    # key     = "preview/terraform.tfstate" (preview環境)  
     # region  = "ap-northeast-1"
     # encrypt = true
     # kms_key_id = "arn:aws:kms:ap-northeast-1:123456789012:key/xxxxx"
@@ -71,10 +73,10 @@ provider "aws" {
   
   default_tags {
     tags = {
-      Project     = "hoxt-backlog"
+      Project     = var.project_name  # REQ-402準拠: ハードコード除去
       Environment = var.environment
       ManagedBy   = "Terraform"
-      Repository  = "hoxt-backlog"
+      Repository  = var.repository_name  # REQ-402準拠: ハードコード除去
     }
   }
 }
@@ -89,13 +91,14 @@ provider "cloudflare" {
 ### environments/production/main.tf
 ```hcl
 locals {
-  project_name = "hoxt-backlog"
-  environment  = "production"
+  project_name = var.project_name  # REQ-402準拠: ハードコード除去
+  environment  = var.environment
   
   common_tags = {
     Project     = local.project_name
     Environment = local.environment
     ManagedBy   = "Terraform"
+    Repository  = var.repository_name  # REQ-402準拠: ハードコード除去
   }
 }
 
@@ -105,10 +108,10 @@ module "github_oidc" {
   
   project_name = local.project_name
   environment  = local.environment
-  repository   = "rimane/hoxt-backlog"
+  repository   = var.repository_name
   
   lambda_function_arn = module.lambda.function_arn
-  s3_bucket_arn      = aws_s3_bucket.terraform_state.arn
+  s3_bucket_arn      = data.aws_s3_bucket.terraform_state.arn
   
   tags = local.common_tags
 }
@@ -119,9 +122,9 @@ module "lambda" {
   
   project_name    = local.project_name
   environment     = local.environment
-  function_name   = "${local.project_name}-api-${local.environment}"
+  function_name   = "${local.project_name}-api"  # REQ-101準拠: 単一関数名
   
-  runtime         = "nodejs20.x"
+  runtime         = "nodejs22.x"
   handler         = "index.handler"  # Hono Lambda adapter 固定
   memory_size     = 512
   timeout         = 30
@@ -129,8 +132,9 @@ module "lambda" {
   environment_variables = {
     NODE_ENV                = "production"
     SUPABASE_URL           = var.supabase_url
-    SUPABASE_SERVICE_KEY   = var.supabase_service_key
+    SUPABASE_ACCESS_TOKEN  = var.supabase_access_token  # ワークフローとの統一
     JWT_SECRET             = var.jwt_secret
+    TABLE_PREFIX           = var.base_table_prefix  # production環境: ベースプレフィックスをそのまま使用
   }
   
   tags = local.common_tags
@@ -138,7 +142,7 @@ module "lambda" {
 
 # API Gateway
 resource "aws_apigatewayv2_api" "main" {
-  name          = "${local.project_name}-api-${local.environment}"
+  name          = "${local.project_name}-api"  # REQ-101準拠: 単一API Gateway
   protocol_type = "HTTP"
   
   cors_configuration {
@@ -229,6 +233,205 @@ module "monitoring" {
 }
 ```
 
+## Preview環境（REQ-405準拠: 片方向管理）
+
+### environments/preview/main.tf
+```hcl
+locals {
+  project_name = var.project_name
+  environment  = "preview"
+  
+  common_tags = {
+    Project     = local.project_name
+    Environment = local.environment
+    ManagedBy   = "Terraform"
+    Repository  = var.repository_name
+  }
+}
+
+# Lambda Function（Preview環境がLambda本体を管理）
+module "lambda" {
+  source = "../../modules/lambda-function"
+  
+  project_name    = local.project_name
+  environment     = local.environment
+  function_name   = "${local.project_name}-api"
+  
+  runtime         = "nodejs22.x"
+  handler         = "index.handler"
+  memory_size     = 512
+  timeout         = 30
+  
+  environment_variables = {
+    NODE_ENV                = "development"
+    SUPABASE_URL           = var.supabase_url
+    SUPABASE_ACCESS_TOKEN  = var.supabase_access_token
+    JWT_SECRET             = var.jwt_secret
+    TABLE_PREFIX           = "${var.base_table_prefix}_dev"  # preview環境: ベースプレフィックス + _dev
+  }
+  
+  tags = local.common_tags
+}
+
+# Preview Alias（$LATEST使用）
+resource "aws_lambda_alias" "preview" {
+  name             = "preview"
+  description      = "Preview environment alias using $LATEST"
+  function_name    = module.lambda.function_name
+  function_version = "$LATEST"
+  
+  depends_on = [module.lambda]
+}
+
+# API Gateway（Preview用）
+resource "aws_apigatewayv2_api" "preview" {
+  name          = "${local.project_name}-api-preview"
+  protocol_type = "HTTP"
+  
+  cors_configuration {
+    allow_credentials = false
+    allow_headers     = ["content-type", "x-amz-date", "authorization"]
+    allow_methods     = ["*"]
+    allow_origins     = ["*"]  # Preview環境は制限緩和
+    expose_headers    = ["date", "keep-alive"]
+    max_age          = 86400
+  }
+  
+  tags = local.common_tags
+}
+
+resource "aws_apigatewayv2_stage" "preview" {
+  api_id = aws_apigatewayv2_api.preview.id
+  name   = "$default"
+  
+  auto_deploy = true
+  
+  default_route_settings {
+    throttling_burst_limit   = 50   # Preview環境は制限軽減
+    throttling_rate_limit    = 25
+  }
+  
+  tags = local.common_tags
+}
+
+resource "aws_apigatewayv2_integration" "lambda_preview" {
+  api_id = aws_apigatewayv2_api.preview.id
+  
+  integration_uri    = "${module.lambda.invoke_arn}:preview"
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+}
+
+resource "aws_apigatewayv2_route" "preview_default" {
+  api_id    = aws_apigatewayv2_api.preview.id
+  route_key = "$default"
+  
+  target = "integrations/${aws_apigatewayv2_integration.lambda_preview.id}"
+}
+
+# Lambda Permission for API Gateway Preview
+resource "aws_lambda_permission" "api_gateway_preview" {
+  statement_id  = "AllowExecutionFromAPIGatewayPreview"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = aws_lambda_alias.preview.name
+  
+  source_arn = "${aws_apigatewayv2_api.preview.execution_arn}/*/*"
+}
+```
+
+## Production環境（REQ-405準拠: エイリアス管理のみ）
+
+### environments/production/main.tf
+```hcl
+locals {
+  project_name = var.project_name
+  environment  = "production"
+  
+  common_tags = {
+    Project     = local.project_name
+    Environment = local.environment
+    ManagedBy   = "Terraform"
+    Repository  = var.repository_name
+  }
+}
+
+# Lambda Function参照（Preview環境で管理済み）
+data "aws_lambda_function" "api" {
+  function_name = "${local.project_name}-api"
+}
+
+# Production Alias管理
+module "lambda_alias" {
+  source = "../../modules/lambda-alias"
+  
+  function_name    = data.aws_lambda_function.api.function_name
+  alias_name       = "stable"
+  description      = "Production stable version"
+  function_version = var.promoted_version  # CI/CDから注入
+  
+  tags = local.common_tags
+}
+
+# API Gateway（Production用）
+resource "aws_apigatewayv2_api" "production" {
+  name          = "${local.project_name}-api"
+  protocol_type = "HTTP"
+  
+  cors_configuration {
+    allow_credentials = false
+    allow_headers     = ["content-type", "x-amz-date", "authorization"]
+    allow_methods     = ["*"]
+    allow_origins     = [var.frontend_domain]  # Production用制限
+    expose_headers    = ["date", "keep-alive"]
+    max_age          = 86400
+  }
+  
+  tags = local.common_tags
+}
+
+resource "aws_apigatewayv2_stage" "production" {
+  api_id = aws_apigatewayv2_api.production.id
+  name   = "$default"
+  
+  auto_deploy = true
+  
+  default_route_settings {
+    throttling_burst_limit   = 100
+    throttling_rate_limit    = 50
+  }
+  
+  tags = local.common_tags
+}
+
+resource "aws_apigatewayv2_integration" "lambda_production" {
+  api_id = aws_apigatewayv2_api.production.id
+  
+  integration_uri    = "${data.aws_lambda_function.api.invoke_arn}:stable"
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+}
+
+resource "aws_apigatewayv2_route" "production_default" {
+  api_id    = aws_apigatewayv2_api.production.id
+  route_key = "$default"
+  
+  target = "integrations/${aws_apigatewayv2_integration.lambda_production.id}"
+}
+
+# Lambda Permission for API Gateway Production
+resource "aws_lambda_permission" "api_gateway_production" {
+  statement_id  = "AllowExecutionFromAPIGatewayProduction"
+  action        = "lambda:InvokeFunction"
+  function_name = data.aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = module.lambda_alias.alias_name
+  
+  source_arn = "${aws_apigatewayv2_api.production.execution_arn}/*/*"
+}
+```
+
 ### environments/production/variables.tf
 ```hcl
 variable "aws_region" {
@@ -253,8 +456,18 @@ variable "frontend_domain" {
   type        = string
 }
 
-variable "terraform_state_bucket" {
-  description = "S3 bucket for Terraform state"
+variable "project_name" {
+  description = "Project name for resource prefixes"
+  type        = string
+}
+
+variable "repository_name" {
+  description = "Repository name for IAM and tags"
+  type        = string
+}
+
+variable "base_table_prefix" {
+  description = "Base table prefix for database tables"
   type        = string
 }
 
@@ -264,8 +477,8 @@ variable "supabase_url" {
   sensitive   = true
 }
 
-variable "supabase_service_key" {
-  description = "Supabase service role key"  
+variable "supabase_access_token" {
+  description = "Supabase access token"  
   type        = string
   sensitive   = true
 }
@@ -275,20 +488,27 @@ variable "jwt_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "promoted_version" {
+  description = "Lambda function version to promote to stable alias"
+  type        = string
+  default     = "1"
+}
 ```
 
 ### environments/production/terraform.tfvars
 ```hcl
-aws_region     = "ap-northeast-1"
-environment    = "production"
-domain_name    = "hoxt-backlog.com"
-frontend_domain = "https://hoxt-backlog.com"
+aws_region         = "ap-northeast-1"
+environment        = "production"
+domain_name        = "your-domain.com"
+frontend_domain    = "https://your-domain.com"
+project_name       = "your-project"
+repository_name    = "owner/your-repo"
+base_table_prefix  = "hoxtbl"
 
-terraform_state_bucket = "hoxt-backlog-terraform-state"
-
-# Sensitive variables are set via GitHub Secrets
+# Sensitive variables are set via GitHub Secrets or environment variables
 # supabase_url = "https://xxxxx.supabase.co"
-# supabase_service_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+# supabase_access_token = "sbp_xxxxxxxxxxxxx"
 # jwt_secret = "your-jwt-secret"
 ```
 
@@ -389,7 +609,10 @@ resource "aws_iam_policy" "terraform_state" {
           "s3:PutObject",
           "s3:DeleteObject"
         ]
-        Resource = "${var.s3_bucket_arn}/production/terraform.tfstate"
+        Resource = [
+          "${var.s3_bucket_arn}/production/terraform.tfstate",
+          "${var.s3_bucket_arn}/preview/terraform.tfstate"
+        ]
       },
       {
         Effect = "Allow"
@@ -495,13 +718,16 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Lambda Alias for stable deployments
+# Lambda Aliases for environment separation (REQ-101準拠)
 resource "aws_lambda_alias" "stable" {
   name             = "stable"
-  description      = "Stable version of the function"
+  description      = "Production stable version"
   function_name    = aws_lambda_function.this.function_name
   function_version = aws_lambda_function.this.version
 }
+
+# Note: Preview environment uses $LATEST directly (no alias needed)
+# This allows immediate deployment for preview while maintaining stable production
 ```
 
 ## CloudFlare Pages モジュール
@@ -601,24 +827,110 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
 }
 ```
 
+## Lambda Alias モジュール（Production環境用）
+
+### modules/lambda-alias/main.tf
+```hcl
+# Production Lambda Alias（Version管理）
+resource "aws_lambda_alias" "this" {
+  name             = var.alias_name
+  description      = var.description
+  function_name    = var.function_name
+  function_version = var.function_version
+  
+  tags = var.tags
+}
+
+# Provisioned Concurrency（必要に応じて）
+resource "aws_lambda_provisioned_concurrency_config" "this" {
+  count                     = var.provisioned_concurrency_enabled ? 1 : 0
+  function_name             = var.function_name
+  provisioned_concurrent_executions = var.provisioned_concurrency
+  qualifier                 = aws_lambda_alias.this.name
+  
+  depends_on = [aws_lambda_alias.this]
+}
+```
+
+### modules/lambda-alias/variables.tf
+```hcl
+variable "function_name" {
+  description = "Lambda function name"
+  type        = string
+}
+
+variable "alias_name" {
+  description = "Alias name"
+  type        = string
+}
+
+variable "description" {
+  description = "Alias description"
+  type        = string
+  default     = ""
+}
+
+variable "function_version" {
+  description = "Lambda function version to point to"
+  type        = string
+}
+
+variable "provisioned_concurrency_enabled" {
+  description = "Enable provisioned concurrency"
+  type        = bool
+  default     = false
+}
+
+variable "provisioned_concurrency" {
+  description = "Number of provisioned concurrent executions"
+  type        = number
+  default     = 0
+}
+
+variable "tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+```
+
+### modules/lambda-alias/outputs.tf
+```hcl
+output "alias_name" {
+  description = "Lambda alias name"
+  value       = aws_lambda_alias.this.name
+}
+
+output "alias_arn" {
+  description = "Lambda alias ARN"
+  value       = aws_lambda_alias.this.arn
+}
+
+output "invoke_arn" {
+  description = "Lambda alias invoke ARN"
+  value       = aws_lambda_alias.this.invoke_arn
+}
+```
+
 ## State管理とセキュリティ
 
 ### Terraform State S3 Bucket (事前作成)
 ```hcl
 # 手動作成が必要なリソース
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "hoxt-backlog-terraform-state"
+# State管理リソースは別途作成・管理（REQ-402準拠）
+data "aws_s3_bucket" "terraform_state" {
+  bucket = var.terraform_state_bucket
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+  bucket = data.aws_s3_bucket.terraform_state.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_bucket_encryption" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+  bucket = data.aws_s3_bucket.terraform_state.id
   
   server_side_encryption_configuration {
     rule {

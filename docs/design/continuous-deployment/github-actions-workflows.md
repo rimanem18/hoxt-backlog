@@ -5,9 +5,11 @@
 
 ## ワークフロー概要
 
-継続的デプロイメントシステムのGitHub Actionsワークフロー設計。mainブランチへのpushでの本番デプロイと、PRでのプレビュー環境構築を自動化する。
+継続的デプロイメントシステムのGitHub Actionsワークフロー設計：
+- **PR作成・更新** → Preview環境自動反映（Lambda $LATEST + CloudFlare Preview）
+- **mainマージ** → Production環境自動更新（Lambda stable alias昇格 + CloudFlare Production）
 
-## メインデプロイワークフロー
+## メインデプロイワークフロー（Production）
 
 ### ファイルパス
 `.github/workflows/deploy.yml`
@@ -15,18 +17,12 @@
 ### 基本設定
 
 ```yaml
-name: Continuous Deployment
+name: Production Deployment
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      force_terraform_apply:
-        description: 'Force apply Terraform changes without approval'
-        required: false
-        default: false
-        type: boolean
+    branches: [main]    # REQ-104準拠: mainマージでproduction更新
+  workflow_dispatch: {}  # REQ-102準拠: 強制適用オプション削除
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -69,7 +65,7 @@ terraform:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
     
     - name: Terraform Init
-      working-directory: ./infrastructure
+      working-directory: ./terraform/environments/production
       run: |
         terraform init \
           -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
@@ -78,7 +74,7 @@ terraform:
     
     - name: Terraform Plan
       id: plan
-      working-directory: ./infrastructure
+      working-directory: ./terraform/environments/production
       run: |
         terraform plan -detailed-exitcode -out=tfplan
         
@@ -90,7 +86,7 @@ terraform:
         fi
     
     - name: Wait for approval (if destructive)
-      if: steps.plan.outputs.has_destructive_changes == 'true' && !inputs.force_terraform_apply
+      if: steps.plan.outputs.has_destructive_changes == 'true'  # REQ-102準拠: 承認フロー必須
       uses: trstringer/manual-approval@v1
       with:
         secret: ${{ secrets.GITHUB_TOKEN }}
@@ -105,7 +101,7 @@ terraform:
           **Actor:** ${{ github.actor }}
     
     - name: Terraform Apply
-      working-directory: ./infrastructure
+      working-directory: ./terraform/environments/production
       run: terraform apply -auto-approve tfplan
 ```
 
@@ -185,10 +181,19 @@ backend:
           --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
           --zip-file fileb://app/server/lambda-deployment.zip
         
-        aws lambda update-alias \
-          --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
-          --name stable \
-          --function-version $LATEST
+        # Publish new version for promotion (REQ-104準拠: mainマージでproduction更新)
+        VERSION=$(aws lambda publish-version --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} --query 'Version' --output text)
+        echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Published Lambda version: $VERSION"
+        
+      - name: Promote to Production
+        working-directory: ./terraform/environments/production
+        env:
+          TF_VAR_promoted_version: ${{ steps.lambda-deploy.outputs.PROMOTED_VERSION }}
+        run: |
+          terraform plan -var="promoted_version=$TF_VAR_promoted_version" -out=tfplan-promote
+          terraform apply -auto-approve tfplan-promote
+          echo "Successfully promoted Lambda version $TF_VAR_promoted_version to production stable alias"
 ```
 
 #### 4. Frontend Deploy
@@ -238,9 +243,9 @@ name: Preview Environment
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize]  # REQ-101準拠: PR作成・更新でpreview反映
   pull_request_target:
-    types: [closed]
+    types: [closed]               # プレビュー環境クリーンアップ
 
 concurrency:
   group: preview-${{ github.event.number }}
@@ -266,26 +271,33 @@ jobs:
           echo "PR_NUMBER=${{ github.event.number }}" >> $GITHUB_ENV
           echo "PREVIEW_SUBDOMAIN=pr-${{ github.event.number }}" >> $GITHUB_ENV
       
-      - name: Terraform Plan (Read-only)
-        working-directory: ./infrastructure
+      - name: Deploy Preview Infrastructure
+        working-directory: ./terraform/environments/preview
         run: |
-          terraform init
-          terraform plan -var="environment=preview" -var="pr_number=$PR_NUMBER"
+          terraform init \
+            -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
+            -backend-config="key=preview/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+          
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+      
+      - name: Set Table Prefix for Preview
+        run: |
+          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
       
       - name: Deploy Supabase Preview Migration
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
-          TABLE_PREFIX: ${{ vars.TABLE_PREFIX }}
+          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
         run: |
           cd app/server
-          # Set preview table prefix: TABLE_PREFIX_dev_*
-          export PREVIEW_TABLE_PREFIX="${TABLE_PREFIX}_dev"
           supabase db push --project-ref $SUPABASE_PROJECT_ID
       
       - name: Build and Deploy Lambda Version
         env:
-          TABLE_PREFIX: ${{ vars.TABLE_PREFIX }}
+          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
         run: |
           cd app/server
           bun install --frozen-lockfile
@@ -298,14 +310,16 @@ jobs:
           cd lambda-dist && bun install --production
           zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
           
-          # Deploy to $LATEST version for preview with dev table prefix
-          aws lambda update-function-configuration \
-            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
-            --environment "Variables={TABLE_PREFIX=${TABLE_PREFIX}_dev}"
-          
+          # Update Lambda function code to $LATEST (REQ-101準拠: PR更新でpreview反映)
           aws lambda update-function-code \
             --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://lambda-deployment.zip
+          
+          aws lambda update-function-configuration \
+            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+            --environment "Variables={TABLE_PREFIX=${TABLE_PREFIX},NODE_ENV=development}"
+          
+          # Preview environment uses $LATEST directly (no versioning needed)
       
       - name: Deploy CloudFlare Preview
         uses: cloudflare/pages-action@v1
@@ -325,7 +339,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Database:** Supabase tables with prefix \`${{ vars.TABLE_PREFIX }}_dev_*\``
+              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Lambda:** $LATEST (real-time updates)\n\n**Database:** Supabase tables with prefix \`${{ env.TABLE_PREFIX }}_*\``
             });
 
   cleanup-preview:
@@ -335,16 +349,20 @@ jobs:
     environment: preview
     
     steps:
+      - name: Set Table Prefix for Cleanup
+        run: |
+          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
+      
       - name: Cleanup Supabase Preview Tables
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
-          TABLE_PREFIX: ${{ vars.TABLE_PREFIX }}
+          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
         run: |
           cd app/server
-          # Drop all tables with dev prefix: TABLE_PREFIX_dev_*
+          # Drop all tables with dev prefix
           supabase db reset --project-ref $SUPABASE_PROJECT_ID --db-url "postgresql://..." \
-            --sql "DROP TABLE IF EXISTS ${TABLE_PREFIX}_dev_users CASCADE; DROP TABLE IF EXISTS ${TABLE_PREFIX}_dev_projects CASCADE;"
+            --sql "DROP TABLE IF EXISTS ${TABLE_PREFIX}_users CASCADE; DROP TABLE IF EXISTS ${TABLE_PREFIX}_projects CASCADE;"
       
       - name: Delete CloudFlare Preview
         run: |
@@ -407,13 +425,13 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Production
   TERRAFORM_STATE_BUCKET: your-terraform-state-bucket
   TERRAFORM_APPROVERS: admin1,admin2
-  LAMBDA_FUNCTION_NAME: hoxt-backlog-api-production  
+  LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  TABLE_PREFIX: hoxtbl
+  BASE_TABLE_PREFIX: hoxtbl  # ベーステーブルプレフィックス
   CLOUDFLARE_ACCOUNT_ID: your-account-id
-  CLOUDFLARE_PROJECT_NAME: hoxt-backlog-production
-  CLOUDFLARE_DOMAIN: hoxt-backlog.com
-  API_URL: https://api.hoxt-backlog.com
+  CLOUDFLARE_PROJECT_NAME: your-project-production
+  CLOUDFLARE_DOMAIN: your-domain.com
+  API_URL: https://api.your-domain.com
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
@@ -424,12 +442,12 @@ Secrets:
 ```yaml  
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
-  LAMBDA_FUNCTION_NAME: hoxt-backlog-api-preview
+  LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  # REQ-101準拠: 単一関数+$LATEST使用
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # Same as production
-  TABLE_PREFIX: hoxtbl  # Same as production (dev prefix applied in runtime)
+  BASE_TABLE_PREFIX: hoxtbl  # ベーステーブルプレフィックス（runtime時に_dev付与）
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
-  CLOUDFLARE_PROJECT_NAME: hoxt-backlog-preview
-  CLOUDFLARE_DOMAIN: preview.hoxt-backlog.com
+  CLOUDFLARE_PROJECT_NAME: your-project-production  # REQ-101準拠: 単一プロジェクト使用
+  CLOUDFLARE_DOMAIN: preview.your-domain.com
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_preview_token
