@@ -1,2 +1,25 @@
 .env
 cache
+dist
+
+# Terraform関連
+terraform/backend.tfvars
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
+terraform/**/terraform.tfvars.backup
+terraform/**/override.tf
+terraform/**/override.tf.json
+terraform/**/*_override.tf
+terraform/**/*_override.tf.json
+terraform/**/lambda.zip
+terraform/**/lambda-*.zip
+terraform/**/.terraformrc
+
+# Lambda関連ビルド成果物
+app/server/dist/
+app/server/lambda-dist/
+app/server/lambda-deployment.zip
+*.zip
+

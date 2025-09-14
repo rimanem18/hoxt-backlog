@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server client e2e db sql ps logs fmt amend restart init
+.PHONY: build up down server client e2e db iac iac-init iac-plan iac-apply sql ps logs fmt amend restart init
 
 up:
 	docker compose up -d
@@ -20,6 +20,16 @@ e2e:
 	docker compose exec e2e npx playwright test
 db:
 	docker compose exec db ash
+iac:
+	@echo "Terraformロールを引き受けて、iacコンテナに入ります..."
+	@docker compose exec iac bash -c '\
+		echo "=== AWS認証情報を設定中 ==="; \
+		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
+		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
+		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
+		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
+		echo "✅ 認証完了: $$(aws sts get-caller-identity --query Arn --output text)"; \
+		exec bash'
 sql:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}
 ps:
