@@ -24,5 +24,4 @@ terraform/**/plan-output.md
 app/server/dist/
 app/server/lambda-dist/
 app/server/lambda-deployment.zip
-*.zip
-
+terraform/modules/lambda/lambda.*

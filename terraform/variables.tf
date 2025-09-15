@@ -47,6 +47,12 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "database_url" {
+  description = "Database connection URL"
+  type        = string
+  sensitive   = true
+}
+
 
 
 

@@ -26,7 +26,7 @@ module "github_oidc" {
 
 # 統合Lambda Function（Production/Preview両対応）
 module "lambda_unified" {
-  source = "./modules/lambda-unified"
+  source = "./modules/lambda"
 
   project_name    = local.project_name
   function_name   = "${local.project_name}-api"
@@ -42,6 +42,7 @@ module "lambda_unified" {
     SUPABASE_ACCESS_TOKEN  = var.supabase_access_token
     JWT_SECRET             = var.jwt_secret
     BASE_TABLE_PREFIX      = var.base_table_prefix
+    DATABASE_URL           = var.database_url
   }
 
   tags = local.common_tags

@@ -18,7 +18,7 @@ terraform/
 ├── outputs.tf
 ├── modules/
 │   ├── iam-oidc/           # 統合OIDC認証
-│   ├── lambda-unified/     # 統合Lambda関数管理
+│   ├── lambda/     # 統合Lambda関数管理
 │   ├── cloudflare-pages/
 │   └── monitoring/
 ├── backend.tf
@@ -109,7 +109,7 @@ module "github_oidc" {
 
 # 統合Lambda Function（Production/Preview両対応）
 module "lambda_unified" {
-  source = "./modules/lambda-unified"
+  source = "./modules/lambda"
   
   project_name    = local.project_name
   function_name   = "${local.project_name}-api"  # 単一関数名
@@ -270,7 +270,7 @@ module "monitoring" {
 
 ## 統合Lambda関数モジュール
 
-### modules/lambda-unified/main.tf
+### modules/lambda/main.tf
 ```hcl
 # 統合Lambda Function（Production/Preview両対応）
 resource "aws_lambda_function" "this" {

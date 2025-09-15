@@ -44,6 +44,9 @@ iac-init:
 			-backend-config="region=${AWS_REGION}"'
 iac-plan-save:
 	@echo "統合Terraform計画をファイルに保存..."
+	@docker compose exec server bun run build:lambda
+	@cp app/server/dist/lambda.js terraform/modules/lambda/lambda.js || echo "Warning: lambda.js not found, using fallback"
+	@echo "lambda.jsをterraform/modules/lambdaにコピーしました。"
 	@docker compose exec iac bash -c '\
 		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
 		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
@@ -52,7 +55,8 @@ iac-plan-save:
 		export TF_VAR_supabase_url="${SUPABASE_URL}"; \
 		export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN}"; \
 		export TF_VAR_jwt_secret="${SUPABASE_JWT_SECRET}"; \
-		rm plan-output.* && terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
+		export TF_VAR_database_url="${DATABASE_URL}"; \
+		rm -f plan-output.* && terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
 iac-apply:
 	@echo "統合Terraform適用を実行..."
 	@docker compose exec iac bash -c '\
@@ -63,6 +67,7 @@ iac-apply:
 		export TF_VAR_supabase_url="${SUPABASE_URL}"; \
 		export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN}"; \
 		export TF_VAR_jwt_secret="${SUPABASE_JWT_SECRET}"; \
+		export TF_VAR_database_url="${DATABASE_URL}"; \
 		terraform apply terraform.tfplan'
 sql:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}

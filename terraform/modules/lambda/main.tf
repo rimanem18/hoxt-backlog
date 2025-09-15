@@ -33,29 +33,47 @@ resource "aws_lambda_alias" "stable" {
   }
 }
 
-# Temporary Lambda package for initial creation
+# Lambda package from build output
+# Makefileでbun run build:lambdaを実行してterraform/lambda/lambda.jsにコピー
+locals {
+  lambda_js_path = "${path.root}/lambda/lambda.js"
+}
+
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda.zip"
   
-  source {
-    content = <<-EOT
-      // Temporary Hono Lambda handler for initial deployment
-      export const handler = async (event, context) => {
-        return {
-          statusCode: 200,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: "Hello from Unified Hono Lambda",
-            environment: process.env.NODE_ENV || "development",
-            version: context.functionVersion
-          })
+  # 実際のビルド成果物が存在する場合はそれを使用
+  dynamic "source" {
+    for_each = fileexists(local.lambda_js_path) ? [1] : []
+    content {
+      content  = file(local.lambda_js_path)
+      filename = "index.js"
+    }
+  }
+  
+  # フォールバック用の仮ファイル（ビルド成果物が存在しない場合）
+  dynamic "source" {
+    for_each = fileexists(local.lambda_js_path) ? [] : [1]
+    content {
+      content = <<-EOT
+        // Temporary Hono Lambda handler for initial deployment
+        export const handler = async (event, context) => {
+          return {
+            statusCode: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: "Hello from Unified Hono Lambda - Temporary Handler",
+              environment: process.env.NODE_ENV || "development",
+              version: context.functionVersion
+            })
+          };
         };
-      };
-    EOT
-    filename = "index.js"
+      EOT
+      filename = "index.js"
+    }
   }
 }
 

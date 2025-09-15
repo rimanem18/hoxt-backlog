@@ -23,7 +23,7 @@ terraform/
 ├── versions.tf             # Provider設定
 ├── modules/                # 統合モジュール
 │   ├── iam-oidc/          # 統合GitHub OIDC認証
-│   ├── lambda-unified/     # 統合Lambda関数管理
+│   ├── lambda/     # 統合Lambda関数管理
 │   ├── cloudflare-pages/   # CloudFlare Pages
 │   └── monitoring/         # CloudWatch監視
 ├── state-management.tf     # State管理リソース（既存）
