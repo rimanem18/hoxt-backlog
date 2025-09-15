@@ -1,34 +1,35 @@
 /**
- * Terraformとプロバイダーのバージョン制約定義
+ * Terraform Provider設定
+ * 統合リソース設計用
  */
-terraform {
-  required_version = ">= 1.5"
 
+terraform {
+  required_version = ">= 1.6.0"
+  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.4"
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"  
     }
   }
 }
 
-/**
- * AWS プロバイダー設定
- * デフォルトタグを全リソースに適用
- */
 provider "aws" {
   region = var.aws_region
-
+  
   default_tags {
     tags = {
-      Project     = "your-project"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-      CreatedAt   = formatdate("YYYY-MM-DD", timestamp())
+      Project     = var.project_name
+      ManagedBy   = "Terraform"
+      Repository  = var.repository_name
     }
   }
+}
+
+provider "cloudflare" {
+  # API tokenは環境変数 CLOUDFLARE_API_TOKEN で設定
 }

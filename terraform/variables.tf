@@ -1,33 +1,58 @@
 /**
- * Terraform設定用変数定義
+ * 統合Terraform設定用変数定義
+ * AWS リソース統合対応
  */
 
-variable "aws_region" {
-  description = "AWS リージョン"
-  type        = string
-  default     = "ap-northeast-1"
-}
-
-variable "environment" {
-  description = "環境名（dev, staging, production）"
-  type        = string
-  default     = "production"
-}
 
 variable "project_name" {
-  description = "プロジェクト名"
+  description = "Project name for resource prefixes"
   type        = string
-  default     = "your-project"
 }
 
-variable "state_bucket_name" {
-  description = "Terraform state用S3バケット名"
+variable "repository_name" {
+  description = "Repository name for IAM and tags (owner/repo format)"
   type        = string
-  default     = ""
 }
 
-variable "lock_table_name" {
-  description = "Terraform state lock用DynamoDBテーブル名"
+variable "domain_name" {
+  description = "Domain name for the application"
   type        = string
-  default     = ""
+}
+
+variable "frontend_domain" {
+  description = "Frontend domain for CORS"
+  type        = string
+}
+
+variable "base_table_prefix" {
+  description = "Base table prefix for database tables"
+  type        = string
+}
+
+variable "supabase_url" {
+  description = "Supabase project URL"
+  type        = string
+  sensitive   = true
+}
+
+variable "supabase_access_token" {
+  description = "Supabase access token"  
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_secret" {
+  description = "JWT signing secret"
+  type        = string
+  sensitive   = true
+}
+
+
+
+
+
+variable "aws_region" {
+  description = "AWS region for resources"
+  type        = string
+  default     = "ap-northeast-1"
 }
