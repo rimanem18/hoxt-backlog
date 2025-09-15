@@ -16,8 +16,9 @@ terraform/**/*_override.tf.json
 terraform/**/lambda.zip
 terraform/**/lambda-*.zip
 terraform/**/.terraformrc
-terraform/**/terraform.tfplan
+terraform/**/*.tfplan
 terraform/**/plan-output.txt
+terraform/**/plan-output.md
 
 # Lambda関連ビルド成果物
 app/server/dist/
