@@ -1,7 +1,8 @@
 # 継続的デプロイメントシステム アーキテクチャ設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月12日
+最終更新: 2025年09月14日
+
 
 ## システム概要
 
@@ -58,11 +59,11 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### バックエンド
 - **フレームワーク**: Hono 4 + AWS Lambda adapter
-- **プラットフォーム**: AWS Lambda (Node.js 20.x)
+- **プラットフォーム**: AWS Lambda (Node.js 20.x) - 単一関数で環境管理
 - **ビルド**: `bun run build:lambda` で lambda.js 生成
 - **デプロイ**: Terraform + Lambda ZIP package
-- **環境管理**: Lambda エイリアス（$LATEST / stable）
-- **API Gateway**: AWS API Gateway v2 (HTTP API)
+- **環境管理**: 統合Lambda関数（$LATEST + alias戦略: Preview→$LATEST、Production→versioned alias）
+- **API Gateway**: AWS API Gateway v2 (HTTP API) - 環境別ステージ分離（Preview/Production）
 
 ### データベース
 - **サービス**: Supabase（無料版）
@@ -73,8 +74,8 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **セキュリティ**: Row-Level Security (RLS) 必須
 
 ### セキュリティ
-- **認証**: GitHub OIDC による一元認証
-- **権限管理**: AWS IAM 最小権限原則
+- **認証**: 単一GitHub OIDC 統合ロールによる一元認証
+- **権限管理**: GitHub Environment条件による最小権限制御（Production/Preview共通ロール）
 - **シークレット管理**: GitHub Environment Secrets
 - **監査**: CloudTrail + GitHub Actions logs
 
@@ -145,6 +146,6 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### アクセス制御
 - **GitHub**: Organization owner / Repository admin
-- **AWS**: Terraform 専用 IAM role（OIDC条件付き）
+- **AWS**: 単一GitHub OIDC 統合 IAM role（Environment条件による最小権限制御）
 - **CloudFlare**: API token（ページ管理権限のみ）
 - **Supabase**: Service role（マイグレーション権限）
