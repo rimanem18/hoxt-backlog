@@ -31,37 +31,39 @@ iac:
 		echo "✅ 認証完了: $$(aws sts get-caller-identity --query Arn --output text)"; \
 		exec bash'
 iac-init:
-	@echo "Terraform初期化を実行..."
+	@echo "統合Terraform初期化を実行..."
 	@docker compose exec iac bash -c '\
 		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
 		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
 		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
 		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform init'
-iac-plan:
-	@echo "Terraform計画を表示..."
-	@docker compose exec iac bash -c '\
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform plan -out=terraform.tfplan'
+		terraform init -reconfigure \
+			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
+			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks" \
+			-backend-config="key=${PROJECT_NAME}/${ENVIRONMENT}/terraform.tfstate" \
+			-backend-config="region=${AWS_REGION}"'
 iac-plan-save:
-	@echo "Terraform計画をファイルに保存..."
+	@echo "統合Terraform計画をファイルに保存..."
 	@docker compose exec iac bash -c '\
 		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
 		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
 		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
 		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
+		export TF_VAR_supabase_url="${SUPABASE_URL}"; \
+		export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN}"; \
+		export TF_VAR_jwt_secret="${SUPABASE_JWT_SECRET}"; \
+		rm plan-output.* && terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
 iac-apply:
-	@echo "Terraform適用を実行..."
+	@echo "統合Terraform適用を実行..."
 	@docker compose exec iac bash -c '\
 		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
 		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
 		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
 		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform apply'
+		export TF_VAR_supabase_url="${SUPABASE_URL}"; \
+		export TF_VAR_supabase_access_token="${SUPABASE_ACCESS_TOKEN}"; \
+		export TF_VAR_jwt_secret="${SUPABASE_JWT_SECRET}"; \
+		terraform apply terraform.tfplan'
 sql:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}
 ps:

@@ -19,7 +19,7 @@ RUN wget -O- https://apt.releases.hashicorp.com/gpg | \
     https://apt.releases.hashicorp.com jammy main" | \
     tee /etc/apt/sources.list.d/hashicorp.list \
     && apt-get update \
-    && apt-get install -y terraform=1.5.7-1 \
+    && apt-get install -y terraform=1.6.6-1 \
     && rm -rf /var/lib/apt/lists/*
 
 # AWS CLI v2インストール
