@@ -19,7 +19,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 // テーブルプレフィックスを環境変数から直接取得
-const tablePrefix = process.env.DB_TABLE_PREFIX || '';
+const tablePrefix = process.env.BASE_TABLE_PREFIX || '';
 
 /**
  * 認証プロバイダー種別のenum定義

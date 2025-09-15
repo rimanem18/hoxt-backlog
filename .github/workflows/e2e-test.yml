@@ -100,7 +100,7 @@ jobs:
           DB_NAME=postgres \
           DB_USER=postgres \
           DB_PASSWORD=test_password \
-          DB_TABLE_PREFIX=test_ \
+          BASE_TABLE_PREFIX=test_ \
           DATABASE_URL=postgresql://postgres:test_password@localhost:5432/postgres \
           npm run start:node &
           SERVER_PID=$!

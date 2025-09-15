@@ -10,7 +10,7 @@ import {
 describe('DatabaseConnection', () => {
   beforeAll(async () => {
     // テスト用環境変数を設定（既存の値があれば優先）
-    process.env.DB_TABLE_PREFIX = process.env.DB_TABLE_PREFIX || 'test_';
+    process.env.BASE_TABLE_PREFIX = process.env.BASE_TABLE_PREFIX || 'test_';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';

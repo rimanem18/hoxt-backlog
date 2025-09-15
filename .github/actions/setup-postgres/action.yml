@@ -41,4 +41,4 @@ runs:
         echo "DB_NAME=${{ inputs.db-name }}" >> $GITHUB_ENV
         echo "DB_USER=${{ inputs.db-user }}" >> $GITHUB_ENV
         echo "DB_PASSWORD=${{ inputs.db-password }}" >> $GITHUB_ENV
-        echo "DB_TABLE_PREFIX=${{ inputs.table-prefix }}" >> $GITHUB_ENV
+        echo "BASE_TABLE_PREFIX=${{ inputs.table-prefix }}" >> $GITHUB_ENV

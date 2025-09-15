@@ -70,7 +70,7 @@ iac-apply:
 		export TF_VAR_database_url="${DATABASE_URL}"; \
 		terraform apply terraform.tfplan'
 sql:
-	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}
+	docker compose exec db psql -U postgres -d postgres -h db -p 5432
 ps:
 	docker compose ps
 logs:

@@ -21,7 +21,7 @@ services:
       - DB_NAME=postgres
       - DB_USER=postgres
       - DB_PASSWORD=test_password
-      - DB_TABLE_PREFIX=test_
+      - BASE_TABLE_PREFIX=test_
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
     depends_on:
       db:
@@ -101,7 +101,7 @@ services:
       - TF_VAR_cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}
       - TF_VAR_frontend_domain=${FRONTEND_DOMAIN}
       - TF_VAR_domain_name=${DOMAIN_NAME}
-      - TF_VAR_table_prefix=${DB_TABLE_PREFIX}
+      - TF_VAR_table_prefix=${BASE_TABLE_PREFIX}
       - TF_VAR_supabase_access_token=${SUPABASE_ACCESS_TOKEN}
       - TF_VAR_repository_name=${REPOSITORY_NAME}
       - TF_VAR_base_table_prefix=${BASE_TABLE_PREFIX}

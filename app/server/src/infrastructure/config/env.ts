@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 const databaseConfigSchema = z.object({
   url: z.string().min(1, 'DATABASE_URL環境変数が設定されていません'),
-  tablePrefix: z.string().min(1, 'DB_TABLE_PREFIX環境変数が設定されていません'),
+  tablePrefix: z.string().min(1, 'BASE_TABLE_PREFIX環境変数が設定されていません'),
 });
 
 /**
@@ -25,7 +25,7 @@ export type DatabaseConfig = z.infer<typeof databaseConfigSchema>;
 export function getDatabaseConfig(): DatabaseConfig {
   const rawConfig = {
     url: process.env.DATABASE_URL,
-    tablePrefix: process.env.DB_TABLE_PREFIX,
+    tablePrefix: process.env.BASE_TABLE_PREFIX,
   };
 
   try {
