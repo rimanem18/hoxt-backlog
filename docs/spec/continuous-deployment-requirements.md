@@ -1,7 +1,8 @@
 # 継続的デプロイフロー 要件定義書
 
 作成日：2025年09月12日  
-最終更新：2025年09月12日
+最終更新：2025年09月14日  
+
 
 ## 概要
 
@@ -40,10 +41,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### 条件付き要件
 
-- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda $LATEST + Supabase $TABLE_PREFIX）を自動生成・更新しなければならない
+- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + API Gateway Preview ステージ + Lambda $LATEST + Supabase $TABLE_PREFIX）を自動生成・更新しなければならない
 - REQ-102: Terraform plan で破壊的変更が検出された場合、システムは 承認フローを必須とし自動適用を停止しなければならない
 - REQ-103: マイグレーション実行時にDBロックが発生した場合、システムは タイムアウト設定に従って処理を中止しなければならない
-- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda stable alias + Supabase production）を自動更新しなければならない
+- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + API Gateway Production ステージ + Lambda stable alias + Supabase production）を自動更新しなければならない
 
 ### 状態要件
 
@@ -55,24 +56,26 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### 制約要件
 
-- REQ-401: システムは AWS IAM最小権限原則に従ったロール設計を実装しなければならない
+- REQ-401: システムは GitHub OIDC統合ロール設計（単一ロールでProduction/Preview両対応）を実装し、GitHub Environment条件による最小権限制御を行わなければならない
 - REQ-402: システムは シークレット情報をソースコードに含めてはならない
 - REQ-403: システムは データベースマイグレーションでのロールバック非対応（Forward-onlyポリシー）を遵守しなければならない
-- REQ-404: システムは Terraform state を環境別（production/preview）に分離管理しなければならない
-- REQ-405: システムは Lambda関数の片方向管理（Preview→本体管理、Production→エイリアス管理）を実装しなければならない
+- REQ-404: システムは Terraform state を単一ファイルで管理し、環境はworkspace機能で分離しなければならない
+- REQ-405: システムは 単一Lambda関数で環境管理（Preview→$LATEST、Production→versioned alias）を実装し、$LATEST + alias戦略による環境分離を行わなければならない
+- REQ-406: システムは API Gateway環境別分離（Preview/Production別ステージ）を実装し、Lambdaエイリアスとの適切な連携による完全な環境分離を行わなければならない
 
 ## 非機能要件
 
 ### セキュリティ
 
-- NFR-001: GitHub OIDC + IAM条件付きロールによる認証を実装すること
+- NFR-001: GitHub OIDC + 単一IAM統合ロール（GitHub Environment条件による最小権限制御）による認証を実装すること
 - NFR-002: Terraform state ファイルを暗号化ストレージ（S3+KMS）に保存すること  
 - NFR-003: Supabase RLS（Row-Level Security）を必須とすること
 - NFR-004: Secret Scanning を有効化し機密情報漏洩を防止すること
+- NFR-005: Fork リポジトリからのプルリクエストでは Preview 環境を生成・更新してはならない
 
 ### 監査・ログ
 
-- NFR-005: デプロイ操作の基本ログ（実行者・日時・対象）を記録すること
+- NFR-006: デプロイ操作の基本ログ（実行者・日時・対象）を記録すること
 
 ## Edgeケース
 
@@ -94,16 +97,16 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 ### 基盤構築テスト
 
 - [ ] Terraform による AWS、CloudFlare リソース作成が成功すること
-- [ ] GitHub OIDC認証でAWS/CloudFlare/Supabaseアクセスが成功すること
-- [ ] IAM ロール最小権限設定が適切に機能すること
+- [ ] 単一GitHub OIDC統合ロール認証でAWS/CloudFlare/Supabaseアクセスが成功すること
+- [ ] GitHub Environment条件による最小権限制御が適切に機能すること
 - [ ] Secrets 管理が GitHub Environment 単位で動作すること
 
 ### デプロイフローテスト
 
 - [ ] main ブランチマージ（プッシュ）でProduction環境が自動更新されること
 - [ ] プルリクエスト作成・更新でPreview環境が自動反映されること  
-- [ ] Lambda stable alias昇格がmainマージで正常動作すること
-- [ ] Lambda $LATEST更新がPR更新で即座に反映されること
+- [ ] API Gateway Preview ステージ経由でLambda $LATEST更新がPR更新で即座に反映されること  
+- [ ] API Gateway Production ステージ経由でLambda stable alias昇格がmainマージで正常動作すること
 - [ ] マイグレーション時DBロック発生でタイムアウト処理が動作すること
 
 ### 品質保証テスト
@@ -117,6 +120,11 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - [ ] デプロイ操作の基本ログ（実行者・日時・対象）が記録されること
 - [ ] Secret Scanning でのソースコード機密情報検出が動作すること
 
+### セキュリティテスト
+
+- [ ] Fork リポジトリからのプルリクエストで Preview 環境が生成されないこと
+- [ ] Fork リポジトリからのプルリクエストでシークレット情報にアクセスできないこと
+
 ### エラーハンドリングテスト
 
 - [ ] AWS API制限超過時の指数バックオフ再試行が動作すること
@@ -126,6 +134,6 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### セキュリティテスト
 
-- [ ] シークレットレス認証（GitHub OIDC）が全サービスで動作すること
+- [ ] シークレットレス認証（単一GitHub OIDC統合ロール）が全サービスで動作すること
 - [ ] Terraform state の暗号化保存が実装されること
 - [ ] Supabase RLS が適切に設定されること

@@ -1,9 +1,12 @@
 # 継続的デプロイメント 実装タスク
 
+**最終更新**: 2025年9月14日  
+
+
 ## 概要
 
 全タスク数: 18タスク
-推定作業時間: 40時間
+推定作業時間: 40時間（統合ロール採用により設定工数削減）
 クリティカルパス: TASK-501 → TASK-502 → TASK-503 → TASK-504 → TASK-505 → TASK-601 → TASK-602 → TASK-603 → TASK-604
 
 ## タスク一覧
@@ -32,42 +35,45 @@
 
 #### TASK-502: GitHub OIDC認証設定
 
-- [ ] **タスク完了**
-- **タスクタイプ**: TDD
+- [x] **タスク完了**
+- **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-006, NFR-001, REQ-401
 - **依存タスク**: TASK-501
 - **実装詳細**:
   - AWS IAMでGitHub OIDC Provider設定
-  - 最小権限のIAMロール・ポリシー作成
-  - GitHub Actions用条件付きロール設定
-  - Terraform用IAMポリシー作成
+  - Production/Preview統合IAMロール・ポリシー作成
+  - GitHub Environment条件による環境分離設定
+  - Terraform用統合IAMポリシー作成
 - **テスト要件**:
-  - [ ] 単体テスト: IAMロール信頼関係検証
-  - [ ] 統合テスト: GitHub ActionsからのAWS認証
-  - [ ] セキュリティテスト: 不正なリポジトリからのアクセス拒否
+  - [x] 単体テスト: 統合IAMロール信頼関係検証（Environment条件）
+  - [x] 統合テスト: GitHub ActionsからのAWS認証（統合ロール）
+  - [x] セキュリティテスト: GitHub Environment条件による環境分離確認
 - **エラーハンドリング**:
-  - [ ] OIDC Provider重複エラー
-  - [ ] 条件付きロール設定ミス
-  - [ ] 権限不足エラー
+  - [x] OIDC Provider重複エラー
+  - [x] 統合ロールEnvironment条件設定ミス
+  - [x] 権限不足エラー
 - **完了条件**:
-  - [ ] IAMロール作成完了
-  - [ ] OIDC Provider設定完了
-  - [ ] GitHub Actionsテスト実行成功
+  - [x] 統合IAMロール作成完了
+  - [x] OIDC Provider設定完了
+  - [x] GitHub Actions統合ロールテスト実行成功
 
 #### TASK-503: AWS Lambda基盤構築
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: REQ-004
+- **タスクタイプ**: DIRECT
+- **要件リンク**: REQ-004, REQ-405, REQ-406, NFR-005
 - **依存タスク**: TASK-502
 - **実装詳細**:
   - Hono Lambda adapter対応関数作成
-  - API Gateway v2 HTTP API設定
+  - API Gateway v2 HTTP API設定（環境別ステージ分離）
   - Lambda実行ロール・ポリシー設定
   - Lambdaエイリアス（stable）設定
+  - $LATEST + alias戦略による環境管理
+  - Preview/Production環境別Lambda統合設定
 - **テスト要件**:
   - [ ] 単体テスト: Lambda関数基本動作
-  - [ ] 統合テスト: API Gateway連携
+  - [ ] 統合テスト: API Gateway Preview/Productionステージ連携
+  - [ ] セキュリティテスト: Lambda alias分離動作確認
   - [ ] パフォーマンステスト: 応答時間測定
 - **UI/UX要件**:
   - [ ] ヘルスチェックエンドポイント実装
@@ -79,13 +85,14 @@
   - [ ] CORS設定不備
 - **完了条件**:
   - [ ] Lambda関数デプロイ完了
-  - [ ] API Gatewayエンドポイント動作確認
+  - [ ] API Gateway Preview/Productionステージ動作確認
+  - [ ] Lambda $LATEST/stable alias分離動作確認
   - [ ] ヘルスチェック正常レスポンス
 
 #### TASK-504: CloudFlare Pages設定
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
+- **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-005
 - **依存タスク**: TASK-503
 - **実装詳細**:
@@ -134,7 +141,7 @@
 #### TASK-601: メインデプロイワークフロー
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
+- **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-001, REQ-002, REQ-003, REQ-004, REQ-005
 - **依存タスク**: TASK-505
 - **実装詳細**:
@@ -162,17 +169,20 @@
 #### TASK-602: プレビュー環境ワークフロー
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: REQ-101
+- **タスクタイプ**: DIRECT
+- **要件リンク**: REQ-101, REQ-406, NFR-005
 - **依存タスク**: TASK-601
 - **実装詳細**:
   - .github/workflows/preview.yml作成
-  - PR作成・更新でのプレビューデプロイ
+  - PR作成・更新でのプレビューデプロイ（Fork制限実装）
   - PR終了時のリソースクリーンアップ
   - Lambda $LATEST環境変数切り替え
+  - API Gateway Previewステージ連携
 - **テスト要件**:
   - [ ] 単体テスト: プレビュー環境作成
   - [ ] 統合テスト: PRライフサイクル連携
+  - [ ] セキュリティテスト: Fork制限動作確認
+  - [ ] API Gateway Previewステージテスト
   - [ ] リソースクリーンアップテスト
 - **UI/UX要件**:
   - [ ] プレビューURL自動コメント
@@ -190,17 +200,19 @@
 #### TASK-603: セキュリティスキャンワークフロー
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: NFR-004
+- **タスクタイプ**: DIRECT
+- **要件リンク**: NFR-004, NFR-005
 - **依存タスク**: TASK-601
 - **実装詳細**:
   - .github/workflows/security.yml作成
   - TruffleHog Secret Scanning実装
   - Semgrep SAST（Static Analysis）実装
+  - Fork制限セキュリティ検証
   - 重要度別エラーハンドリング
 - **テスト要件**:
   - [ ] 単体テスト: シークレット検出機能
   - [ ] 統合テスト: SAST脆弱性検出
+  - [ ] セキュリティテスト: Fork制限検証
   - [ ] 偽陽性テスト: 正常コードの通過確認
 - **エラーハンドリング**:
   - [ ] 高・致命的脆弱性でのデプロイブロック
@@ -241,7 +253,7 @@
 
 - [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
-- **要件リンク**: NFR-005
+- **要件リンク**: NFR-006
 - **依存タスク**: TASK-604
 - **実装詳細**:
   - CloudWatch Logs設定
@@ -384,16 +396,16 @@ gantt
 ### GitHub Environment: production
 ```yaml
 Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Production
+  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール
   TERRAFORM_STATE_BUCKET: your-project-terraform-state
   TERRAFORM_APPROVERS: admin1,admin2
-  LAMBDA_FUNCTION_NAME: your-project-api-production  
+  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop
   TABLE_PREFIX: prefix
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-project.com
-  API_URL: https://api.your-project.com
+  API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # terraform output で取得
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
@@ -403,12 +415,13 @@ Secrets:
 ### GitHub Environment: preview
 ```yaml  
 Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
-  LAMBDA_FUNCTION_NAME: your-project-api-production  # 同じ関数を$LATESTで使用
+  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール（同一）
+  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名（$LATESTで使用）
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
   TABLE_PREFIX: prefix  # dev prefixは実行時に付与
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
   CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview
+  API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # 本番と同じベースURL
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx  # 本番と同じトークン
