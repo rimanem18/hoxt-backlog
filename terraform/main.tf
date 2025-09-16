@@ -4,10 +4,16 @@
 locals {
   project_name = var.project_name
 
+  # 環境別のテーブルプレフィックス設定
+  # preview: extbl_dev_ (base_table_prefix + preview_table_prefix_suffix)
+  # production: extbl_ (base_table_prefix のみ)
+  table_prefix = var.environment == "preview" ? "${var.base_table_prefix}${var.preview_table_prefix_suffix}" : var.base_table_prefix
+
   common_tags = {
     Project     = local.project_name
     ManagedBy   = "Terraform"
     Repository  = var.repository_name
+    Environment = var.environment
   }
 }
 
@@ -37,12 +43,14 @@ module "lambda_unified" {
   timeout         = 30
 
   # 環境変数は実行時にGitHub Actionsから注入
+  # BASE_TABLE_PREFIXは環境別に動的設定
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
     SUPABASE_ACCESS_TOKEN  = var.supabase_access_token
     JWT_SECRET             = var.jwt_secret
-    BASE_TABLE_PREFIX      = var.base_table_prefix
+    BASE_TABLE_PREFIX      = local.table_prefix
     DATABASE_URL           = var.database_url
+    NODE_ENV              = var.environment == "production" ? "production" : "development"
   }
 
   tags = local.common_tags

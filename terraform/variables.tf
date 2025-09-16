@@ -24,9 +24,26 @@ variable "frontend_domain" {
   type        = string
 }
 
+variable "environment" {
+  description = "Deployment environment (preview or production)"
+  type        = string
+  default     = "preview"
+  
+  validation {
+    condition     = contains(["preview", "production"], var.environment)
+    error_message = "Environment must be either 'preview' or 'production'."
+  }
+}
+
 variable "base_table_prefix" {
   description = "Base table prefix for database tables"
   type        = string
+}
+
+variable "preview_table_prefix_suffix" {
+  description = "Additional suffix for preview environment table prefix"
+  type        = string
+  default     = "dev_"
 }
 
 variable "supabase_url" {
