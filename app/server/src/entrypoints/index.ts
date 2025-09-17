@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { errorHandlerMiddleware } from '../middleware';
-import corsMiddleware from '../middleware/corsMiddleware';
-import { auth, greet, health, user } from '../routes';
+import { errorHandlerMiddleware } from '@/presentation/http/middleware';
+import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
+import { auth, greet, health, user } from '@/presentation/http/routes';
 
 /**
  * Hono アプリケーションサーバーを作成する（設計仕様準拠）
