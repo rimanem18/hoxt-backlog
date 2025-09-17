@@ -19,16 +19,12 @@ variable "domain_name" {
   type        = string
 }
 
-variable "frontend_domain" {
-  description = "Frontend domain for CORS"
-  type        = string
-}
 
 variable "environment" {
   description = "Deployment environment (preview or production)"
   type        = string
   default     = "preview"
-  
+
   validation {
     condition     = contains(["preview", "production"], var.environment)
     error_message = "Environment must be either 'preview' or 'production'."
@@ -52,11 +48,6 @@ variable "supabase_url" {
   sensitive   = true
 }
 
-variable "supabase_access_token" {
-  description = "Supabase access token"  
-  type        = string
-  sensitive   = true
-}
 
 variable "jwt_secret" {
   description = "JWT signing secret"
@@ -70,9 +61,22 @@ variable "database_url" {
   sensitive   = true
 }
 
+variable "access_allow_origin" {
+  description = "CORS Access-Control-Allow-Origin value"
+  type        = string
+  default     = "https://localhost.example.com"
+}
 
-
-
+variable "access_allow_methods" {
+  description = "CORS Access-Control-Allow-Methods value"
+  type        = list(string)
+  default     = ["GET", "POST", "OPTIONS"]
+}
+variable "access_allow_headers" {
+  description = "CORS Access-Control-Allow-Headers value"
+  type        = list(string)
+  default     = ["content-type", "authorization"]
+}
 
 variable "aws_region" {
   description = "AWS region for resources"

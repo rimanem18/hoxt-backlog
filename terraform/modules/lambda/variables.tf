@@ -1,4 +1,4 @@
-# 統合Lambda Function変数定義
+# 環境別Lambda Function変数定義
 
 variable "project_name" {
   description = "Project name"
@@ -10,10 +10,15 @@ variable "function_name" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment name (production or preview)"
+  type        = string
+}
+
 variable "runtime" {
   description = "Lambda runtime"
   type        = string
-  default     = "nodejs20.x"
+  default     = "nodejs22.x"
 }
 
 variable "handler" {
@@ -38,6 +43,12 @@ variable "base_environment_variables" {
   description = "Base environment variables for Lambda function"
   type        = map(string)
   default     = {}
+}
+
+variable "cors_allow_origin" {
+  description = "CORS allow origin for Function URL"
+  type        = string
+  default     = "*"
 }
 
 variable "tags" {

@@ -6,7 +6,6 @@
 # repository_name は環境変数 TF_VAR_repository_name で設定 (compose.yaml経由)
 # base_table_prefix は環境変数 TF_VAR_base_table_prefix で設定 (compose.yaml経由)
 # domain_name        = "your-domain.com"
-# frontend_domain    = "https://your-domain.com"
 
 # State management
 # S3バケット名は ${PROJECT_NAME}-terraform-state で自動生成

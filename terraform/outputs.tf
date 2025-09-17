@@ -1,23 +1,25 @@
 # 統合Terraform設定出力値
 
-output "lambda_function_name" {
-  description = "Lambda function name"
-  value       = module.lambda_unified.function_name
+# Lambda Function URL出力（環境別）
+output "function_url_production" {
+  description = "Production Lambda Function URL"
+  value       = module.lambda_production.function_url
 }
 
-output "lambda_function_arn" {
-  description = "Lambda function ARN"
-  value       = module.lambda_unified.function_arn
+output "function_url_preview" {
+  description = "Preview Lambda Function URL"
+  value       = module.lambda_preview.function_url
 }
 
-output "api_gateway_production_url" {
-  description = "API Gateway Production URL"
-  value       = "${aws_apigatewayv2_api.main.api_endpoint}/production"
+# Lambda Function出力（参考情報）
+output "lambda_production_function_name" {
+  description = "Production Lambda function name"
+  value       = module.lambda_production.function_name
 }
 
-output "api_gateway_preview_url" {
-  description = "API Gateway Preview URL"
-  value       = "${aws_apigatewayv2_api.main.api_endpoint}/preview"
+output "lambda_preview_function_name" {
+  description = "Preview Lambda function name"
+  value       = module.lambda_preview.function_name
 }
 
 output "github_actions_role_arn" {

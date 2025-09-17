@@ -1,4 +1,4 @@
-# 統合Lambda Function出力値
+# 環境別Lambda Function出力値
 
 output "function_name" {
   description = "Lambda function name"
@@ -15,12 +15,12 @@ output "invoke_arn" {
   value       = aws_lambda_function.this.invoke_arn
 }
 
-output "stable_alias_arn" {
-  description = "Lambda stable alias ARN"
-  value       = aws_lambda_alias.stable.arn
+output "function_url" {
+  description = "Lambda Function URL"
+  value       = aws_lambda_function_url.this.function_url
 }
 
-output "stable_alias_invoke_arn" {
-  description = "Lambda stable alias invoke ARN"
-  value       = aws_lambda_alias.stable.invoke_arn
+output "function_url_id" {
+  description = "Lambda Function URL configuration ID"
+  value       = aws_lambda_function_url.this.function_url
 }
