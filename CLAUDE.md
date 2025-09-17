@@ -148,3 +148,10 @@ make iac-init
 make iac-plan-save
 ```
 
+aws コマンドも iac コンテナの中で利用できます。
+
+```bash
+# example
+docker compose exec iac -c 'source ./scripts/create-session.sh && aws ...'
+```
+
