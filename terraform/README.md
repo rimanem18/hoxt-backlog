@@ -79,7 +79,7 @@ make iac-apply
 
 - `unified/terraform.tfstate`
 - 単一stateで環境統合管理
-- IAMロール・Lambda・API Gateway（環境別ステージ）統合
+- IAMロール・Lambda統合
 
 ## GitHub OIDC認証設定
 
@@ -103,7 +103,6 @@ SUPABASE_PROJECT_ID: xxxxx
 BASE_TABLE_PREFIX: yourprefix
 CLOUDFLARE_ACCOUNT_ID: your-account-id
 CLOUDFLARE_PROJECT_NAME: your-project
-API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # terraform output で取得
 
 # Production Secrets
 SUPABASE_URL: https://xxxxx.supabase.co
@@ -112,7 +111,6 @@ JWT_SECRET: your-jwt-secret
 CLOUDFLARE_API_TOKEN: your-cloudflare-token
 
 # Preview Environment（同一設定＋Preview固有）
-API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # 本番と同じベースURL
 ```
 
 ## 運用コマンド
@@ -141,7 +139,7 @@ API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  #
 
 ## 統合設計の利点
 
-1. **コスト効率**: IAMロール66%削減、単一Lambda・API Gateway（環境別ステージ分離）
+1. **コスト効率**: IAMロール66%削減、単一Lambda設計
 2. **学習効率**: 設定項目簡素化、理解しやすい構成
 3. **運用効率**: 単一state管理、統一ワークフロー
 4. **セキュリティ向上**: 権限の一元管理、最小権限徹底、環境完全分離

@@ -11,12 +11,6 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   tags = var.tags
 }
 
-resource "aws_cloudwatch_log_group" "api_gateway_logs" {
-  name              = "/aws/apigateway/${var.api_gateway_id}"  
-  retention_in_days = 7
-  
-  tags = var.tags
-}
 
 # CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {

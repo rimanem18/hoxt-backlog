@@ -51,6 +51,11 @@ variable "cors_allow_origin" {
   default     = "*"
 }
 
+variable "lambda_role_arn" {
+  description = "Lambda execution role ARN"
+  type        = string
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

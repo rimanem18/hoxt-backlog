@@ -7,10 +7,6 @@ output "lambda_log_group_name" {
   value       = aws_cloudwatch_log_group.lambda_logs.name
 }
 
-output "api_gateway_log_group_name" {
-  description = "API Gateway CloudWatch log group name"
-  value       = aws_cloudwatch_log_group.api_gateway_logs.name
-}
 
 output "lambda_error_alarm_arn" {
   description = "Lambda error alarm ARN"

@@ -17,10 +17,6 @@ variable "lambda_function_name" {
   type        = string
 }
 
-variable "api_gateway_id" {
-  description = "API Gateway ID to monitor"
-  type        = string
-}
 
 variable "tags" {
   description = "Resource tags"

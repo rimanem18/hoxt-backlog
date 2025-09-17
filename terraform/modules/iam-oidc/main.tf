@@ -84,22 +84,6 @@ resource "aws_iam_policy" "github_actions_policy" {
           "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
         ]
       },
-      # API Gateway関連の最小権限
-      {
-        Effect = "Allow"
-        Action = [
-          "apigateway:GET",
-          "apigateway:PUT",
-          "apigateway:POST",
-          "apigateway:PATCH"
-        ]
-        Resource = "arn:aws:apigateway:${var.aws_region}:*"
-        Condition = {
-          StringLike = {
-            "aws:ResourceTag/Project" = var.project_name
-          }
-        }
-      },
       # CloudWatch Logs（監視・デバッグ用）
       {
         Effect = "Allow"

@@ -2,7 +2,7 @@
 
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
-  role         = aws_iam_role.lambda_exec.arn
+  role         = var.lambda_role_arn
 
   runtime     = var.runtime
   handler     = var.handler
@@ -80,28 +80,3 @@ data "archive_file" "lambda_zip" {
   }
 }
 
-# Lambda Execution Role
-resource "aws_iam_role" "lambda_exec" {
-  name = "${var.function_name}-exec-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = var.tags
-}
-
-# Lambda Basic Execution Policy
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
