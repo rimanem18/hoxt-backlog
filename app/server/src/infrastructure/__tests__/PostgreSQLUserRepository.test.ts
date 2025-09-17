@@ -37,12 +37,7 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 
   beforeAll(async () => {
     // テスト用環境変数を設定（既存の値があれば優先）
-    process.env.DB_HOST = process.env.DB_HOST || 'db';
-    process.env.DB_PORT = process.env.DB_PORT || '5432';
-    process.env.DB_NAME = process.env.DB_NAME || 'postgres';
-    process.env.DB_USER = process.env.DB_USER || 'postgres';
-    process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'test_password';
-    process.env.DB_TABLE_PREFIX = process.env.DB_TABLE_PREFIX || 'test_';
+    process.env.BASE_TABLE_PREFIX = process.env.BASE_TABLE_PREFIX || 'test_';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';

@@ -134,3 +134,24 @@ docker compose exec server bun run dev
 - **禁止**: `var` の使用
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
+
+# IaC
+
+インフラは Terraform によって構築されます。
+
+terraform コマンドは、iac コンテナの中で実行してください。
+
+```bash
+# example
+make iac
+make iac-init
+make iac-plan-save
+```
+
+aws コマンドも iac コンテナの中で利用できます。
+
+```bash
+# example
+docker compose exec iac -c 'source ./scripts/create-session.sh && aws ...'
+```
+

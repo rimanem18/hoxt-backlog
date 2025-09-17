@@ -62,7 +62,7 @@ jobs:
           DB_NAME: postgres
           DB_USER: postgres
           DB_PASSWORD: test_password
-          DB_TABLE_PREFIX: test_
+          BASE_TABLE_PREFIX: test_
           DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
         run: |
           echo "=== Environment Variables ==="
@@ -70,7 +70,7 @@ jobs:
           echo "DB_PORT: $DB_PORT"
           echo "DB_NAME: $DB_NAME"
           echo "DB_USER: $DB_USER"
-          echo "DB_TABLE_PREFIX: $DB_TABLE_PREFIX"
+          echo "BASE_TABLE_PREFIX: $BASE_TABLE_PREFIX"
           echo "DATABASE_URL: $DATABASE_URL"
           
           echo "=== Testing PostgreSQL connection ==="
@@ -101,7 +101,7 @@ jobs:
           DB_NAME: postgres
           DB_USER: postgres
           DB_PASSWORD: test_password
-          DB_TABLE_PREFIX: test_
+          BASE_TABLE_PREFIX: test_
           DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
           # Supabase test environment variables (mocked)
           SUPABASE_URL: http://localhost:54321

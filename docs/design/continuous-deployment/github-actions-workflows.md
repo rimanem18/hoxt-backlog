@@ -1,13 +1,18 @@
 # GitHub Actions ワークフロー設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月12日
+最終更新: 2025年09月16日
+
 
 ## ワークフロー概要
 
 継続的デプロイメントシステムのGitHub Actionsワークフロー設計：
 - **PR作成・更新** → Preview環境自動反映（Lambda $LATEST + CloudFlare Preview）
 - **mainマージ** → Production環境自動更新（Lambda stable alias昇格 + CloudFlare Production）
+
+### セキュリティ制限
+- **Fork制限（NFR-005）**: Fork リポジトリからのPRではPreview環境を生成・更新しない
+- **Environment制限**: GitHub Environment によるシークレット・変数の保護
 
 ## メインデプロイワークフロー（Production）
 
@@ -55,8 +60,8 @@ terraform:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        role-session-name: GitHubActions-Terraform
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}  # 統合ロール使用
+        role-session-name: GitHubActions-Production-Terraform
         aws-region: ${{ env.AWS_REGION }}
     
     - name: Setup Terraform
@@ -65,16 +70,16 @@ terraform:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
     
     - name: Terraform Init
-      working-directory: ./terraform/environments/production
+      working-directory: ./terraform
       run: |
         terraform init \
           -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
-          -backend-config="key=production/terraform.tfstate" \
+          -backend-config="key=unified/terraform.tfstate" \
           -backend-config="region=${{ env.AWS_REGION }}"
     
     - name: Terraform Plan
       id: plan
-      working-directory: ./terraform/environments/production
+      working-directory: ./terraform
       run: |
         terraform plan -detailed-exitcode -out=tfplan
         
@@ -101,14 +106,14 @@ terraform:
           **Actor:** ${{ github.actor }}
     
     - name: Terraform Apply
-      working-directory: ./terraform/environments/production
+      working-directory: ./terraform
       run: terraform apply -auto-approve tfplan
 ```
 
-#### 2. Database Migration
+#### 2. Database Migration (drizzle-kit)
 ```yaml
 database:
-  name: Database Migration  
+  name: Database Migration (drizzle-kit)
   runs-on: ubuntu-latest
   needs: terraform
   environment: production
@@ -117,16 +122,24 @@ database:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Setup Supabase CLI
-      uses: supabase/setup-cli@v1
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
     
-    - name: Run Migrations
+    - name: Install dependencies
+      working-directory: ./app/server
+      run: bun install
+    
+    - name: Generate migration files
+      working-directory: ./app/server  
+      run: bun run db:generate
+    
+    - name: Run database migration
+      working-directory: ./app/server
       env:
-        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
-      run: |
-        cd app/server
-        supabase db push --project-ref $SUPABASE_PROJECT_ID
+        DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}  # migrate_role使用
+      run: bun run db:migrate
       timeout-minutes: 10
 ```
 
@@ -161,8 +174,8 @@ backend:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-        role-session-name: GitHubActions-Lambda
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}  # 統合ロール使用
+        role-session-name: GitHubActions-Production-Lambda
         aws-region: ${{ env.AWS_REGION }}
     
     - name: Package Lambda
@@ -181,19 +194,18 @@ backend:
           --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
           --zip-file fileb://app/server/lambda-deployment.zip
         
-        # Publish new version for promotion (REQ-104準拠: mainマージでproduction更新)
+        # Publish new version and promote to stable alias
         VERSION=$(aws lambda publish-version --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} --query 'Version' --output text)
         echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Published Lambda version: $VERSION"
         
-      - name: Promote to Production
-        working-directory: ./terraform/environments/production
-        env:
-          TF_VAR_promoted_version: ${{ steps.lambda-deploy.outputs.PROMOTED_VERSION }}
-        run: |
-          terraform plan -var="promoted_version=$TF_VAR_promoted_version" -out=tfplan-promote
-          terraform apply -auto-approve tfplan-promote
-          echo "Successfully promoted Lambda version $TF_VAR_promoted_version to production stable alias"
+        # Update stable alias to point to new version
+        aws lambda update-alias \
+          --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+          --name stable \
+          --function-version $VERSION
+        
+        echo "Successfully promoted Lambda version $VERSION to production stable alias"
 ```
 
 #### 4. Frontend Deploy
@@ -253,7 +265,7 @@ concurrency:
 
 jobs:
   deploy-preview:
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository  # NFR-005準拠: Fork制限
     name: Deploy Preview Environment
     runs-on: ubuntu-latest
     environment: preview
@@ -271,33 +283,14 @@ jobs:
           echo "PR_NUMBER=${{ github.event.number }}" >> $GITHUB_ENV
           echo "PREVIEW_SUBDOMAIN=pr-${{ github.event.number }}" >> $GITHUB_ENV
       
-      - name: Deploy Preview Infrastructure
-        working-directory: ./terraform/environments/preview
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
-            -backend-config="key=preview/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
-          
-          terraform plan -out=tfplan
-          terraform apply -auto-approve tfplan
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}  # 統合ロール使用
+          role-session-name: GitHubActions-Preview-Infrastructure
+          aws-region: ${{ env.AWS_REGION }}
       
-      - name: Set Table Prefix for Preview
-        run: |
-          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
-      
-      - name: Deploy Supabase Preview Migration
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
-          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
-        run: |
-          cd app/server
-          supabase db push --project-ref $SUPABASE_PROJECT_ID
-      
-      - name: Build and Deploy Lambda Version
-        env:
-          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
+      - name: Update Lambda for Preview
         run: |
           cd app/server
           bun install --frozen-lockfile
@@ -310,16 +303,30 @@ jobs:
           cd lambda-dist && bun install --production
           zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
           
-          # Update Lambda function code to $LATEST (REQ-101準拠: PR更新でpreview反映)
+          # Update Lambda function code to $LATEST (Preview環境)
           aws lambda update-function-code \
             --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://lambda-deployment.zip
           
+          # Update environment variables for preview
           aws lambda update-function-configuration \
             --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
-            --environment "Variables={TABLE_PREFIX=${TABLE_PREFIX},NODE_ENV=development}"
-          
-          # Preview environment uses $LATEST directly (no versioning needed)
+            --environment "Variables={TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev,NODE_ENV=development}"
+      
+      - name: Set Table Prefix for Preview
+        run: |
+          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
+      
+      - name: Deploy drizzle-kit Preview Migration
+        working-directory: ./app/server
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # app_role使用（Preview環境）
+          TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
+        run: |
+          bun install
+          bun run db:generate
+          bun run db:push  # Preview環境は push で即座反映
+      
       
       - name: Deploy CloudFlare Preview
         uses: cloudflare/pages-action@v1
@@ -339,7 +346,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Lambda:** $LATEST (real-time updates)\n\n**Database:** Supabase tables with prefix \`${{ env.TABLE_PREFIX }}_*\``
+              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Lambda:** $LATEST (real-time updates)\n\n**Database:** PostgreSQL tables with prefix \`${{ env.TABLE_PREFIX }}_*\``
             });
 
   cleanup-preview:
@@ -422,10 +429,10 @@ jobs:
 ### GitHub Environment: production
 ```yaml
 Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Production
+  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/your-project-github-actions-unified  # 統合ロール
   TERRAFORM_STATE_BUCKET: your-terraform-state-bucket
   TERRAFORM_APPROVERS: admin1,admin2
-  LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  
+  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop
   BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス
   CLOUDFLARE_ACCOUNT_ID: your-account-id
@@ -441,12 +448,12 @@ Secrets:
 ### GitHub Environment: preview
 ```yaml  
 Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Preview
-  LAMBDA_FUNCTION_NAME: your-project-api  # 単一関数名（環境なし）  # REQ-101準拠: 単一関数+$LATEST使用
+  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/your-project-github-actions-unified  # 統合ロール（同一）
+  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名（同一）
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # Same as production
   BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス（runtime時に_dev付与）
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
-  CLOUDFLARE_PROJECT_NAME: your-project-production  # REQ-101準拠: 単一プロジェクト使用
+  CLOUDFLARE_PROJECT_NAME: your-project-production  # 統合プロジェクト使用
   CLOUDFLARE_DOMAIN: preview.your-domain.com
 
 Secrets:

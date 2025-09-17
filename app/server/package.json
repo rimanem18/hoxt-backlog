@@ -1,10 +1,11 @@
 {
   "name": "server",
+  "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/presentation/http/server/bun.serve.ts",
-    "start": "bun run src/presentation/http/server/bun.serve.ts",
-    "start:node": "node --import tsx src/presentation/http/server/node.serve.ts",
-    "build:lambda": "bun build src/presentation/http/server/lambda.ts --outdir dist --target node --minify --format esm --external @aws-lambda-runtime/*",
+    "dev": "bun run --hot src/entrypoints/bun.serve.ts",
+    "start": "bun run src/entrypoints/bun.serve.ts",
+    "start:node": "node --import tsx src/entrypoints/node.serve.ts",
+    "build:lambda": "bun esbuild --bundle --minify --outfile=./dist/lambda.js --platform=node --target=node22 ./src/entrypoints/lambda.ts",
     "test": "NODE_ENV=test CI=true bun test",
     "test:local": "bun test",
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
@@ -30,6 +31,7 @@
     "@types/pg": "^8.11.0",
     "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.31.4",
+    "esbuild": "^0.25.9",
     "tsx": "^4.19.2",
     "typescript": "^5.9.2"
   }

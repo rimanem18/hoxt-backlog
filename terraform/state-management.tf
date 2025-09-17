@@ -47,7 +47,7 @@ resource "aws_kms_alias" "terraform_state" {
 
 # S3 Bucket for Terraform State
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = var.state_bucket_name != "" ? var.state_bucket_name : "${var.project_name}-terraform-state"
+  bucket = "${var.project_name}-terraform-state"
 
   # バケット削除防止
   lifecycle {
@@ -55,15 +55,7 @@ resource "aws_s3_bucket" "terraform_state" {
   }
 }
 
-# S3 Bucket Versioning - 状態ファイルのバージョン管理
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# S3 Bucket Encryption - KMSによる暗号化
+# S3 Bucket Encryption - KMSによる暗号化（セキュリティ重要）
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -76,7 +68,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
   }
 }
 
-# S3 Bucket Public Access Block - パブリックアクセス完全禁止
+# S3 Bucket Public Access Block - セキュリティ必須
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -86,32 +78,48 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
   restrict_public_buckets = true
 }
 
+# S3 Bucket Versioning - state の履歴管理
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # S3 Bucket Lifecycle Configuration - 古いバージョンの自動削除
 resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
+
+  depends_on = [aws_s3_bucket_versioning.terraform_state]
 
   rule {
     id     = "terraform_state_lifecycle"
     status = "Enabled"
 
-    # フィルター：すべてのオブジェクトに適用
+    # すべてのオブジェクトを対象とするfilter
     filter {}
 
-    # 非現行バージョンを30日後に削除
+    # 現在バージョンの保持
+    expiration {
+      days = 90
+    }
+
+    # 非現在バージョンの削除
     noncurrent_version_expiration {
       noncurrent_days = 30
     }
 
-    # 削除マーカーのクリーンアップ
-    expiration {
-      expired_object_delete_marker = true
+    # 不完全マルチパートアップロードの削除
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }
 
 # DynamoDB Table for State Locking
 resource "aws_dynamodb_table" "terraform_locks" {
-  name = var.lock_table_name != "" ? var.lock_table_name : "${var.project_name}-terraform-locks"
+  name = "${var.project_name}-terraform-locks"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 

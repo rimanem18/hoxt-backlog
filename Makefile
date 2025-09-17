@@ -22,48 +22,28 @@ db:
 	docker compose exec db ash
 iac:
 	@echo "Terraformロールを引き受けて、iacコンテナに入ります..."
-	@docker compose exec iac bash -c '\
-		echo "=== AWS認証情報を設定中 ==="; \
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		echo "✅ 認証完了: $$(aws sts get-caller-identity --query Arn --output text)"; \
-		exec bash'
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && exec bash'
 iac-init:
-	@echo "Terraform初期化を実行..."
-	@docker compose exec iac bash -c '\
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform init'
-iac-plan:
-	@echo "Terraform計画を表示..."
-	@docker compose exec iac bash -c '\
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform plan -out=terraform.tfplan'
+	@echo "統合Terraform初期化を実行..."
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		terraform init -reconfigure \
+			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
+			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks" \
+			-backend-config="key=${PROJECT_NAME}/${ENVIRONMENT}/terraform.tfstate" \
+			-backend-config="region=${AWS_REGION}"'
 iac-plan-save:
-	@echo "Terraform計画をファイルに保存..."
-	@docker compose exec iac bash -c '\
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
+	@echo "統合Terraform計画をファイルに保存..."
+	@docker compose exec server bun run build:lambda
+	@cp app/server/dist/lambda.js terraform/modules/lambda/lambda.js || echo "Warning: lambda.js not found, using fallback && exit 1"
+	@echo "lambda.jsをterraform/modules/lambdaにコピーしました。"
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		rm -f plan-output.* && terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
 iac-apply:
-	@echo "Terraform適用を実行..."
-	@docker compose exec iac bash -c '\
-		ROLE_INFO=$$(aws sts assume-role --role-arn ${AWS_ROLE_ARN} --role-session-name terraform-session --output json); \
-		export AWS_ACCESS_KEY_ID=$$(echo $$ROLE_INFO | jq -r ".Credentials.AccessKeyId"); \
-		export AWS_SECRET_ACCESS_KEY=$$(echo $$ROLE_INFO | jq -r ".Credentials.SecretAccessKey"); \
-		export AWS_SESSION_TOKEN=$$(echo $$ROLE_INFO | jq -r ".Credentials.SessionToken"); \
-		terraform apply'
+	@echo "統合Terraform適用を実行..."
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		terraform apply terraform.tfplan'
 sql:
-	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -h ${DB_HOST} -p ${DB_PORT}
+	docker compose exec db psql -U postgres -d postgres -h db -p 5432
 ps:
 	docker compose ps
 logs:

@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
 
@@ -13,7 +13,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     (state) => state.auth,
   );
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     // 認証状態復元が完了していて、未認証またはトークン期限切れの場合のみリダイレクト

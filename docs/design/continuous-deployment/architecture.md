@@ -1,11 +1,12 @@
 # 継続的デプロイメントシステム アーキテクチャ設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月12日
+最終更新: 2025年09月17日
+
 
 ## システム概要
 
-GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステム。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（Supabase）の統合デプロイメントを自動化し、セキュリティと運用効率を両立する。
+GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステム。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化し、セキュリティと運用効率を両立する。
 
 ## アーキテクチャパターン
 
@@ -20,7 +21,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 │                 │    │                  │    │                 │
 │ git push main   │───▶│ GitHub Actions   │───▶│ CloudFlare Pages│
 │ create PR       │    │ ├─ OIDC Auth     │    │ AWS Lambda      │
-└─────────────────┘    │ ├─ Terraform     │    │ Supabase        │
+└─────────────────┘    │ ├─ Terraform     │    │ PostgreSQL      │
                        │ ├─ Test & Deploy │    │                 │
                        │ └─ Approval Flow │    └─────────────────┘
                        └──────────────────┘
@@ -58,23 +59,26 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### バックエンド
 - **フレームワーク**: Hono 4 + AWS Lambda adapter
-- **プラットフォーム**: AWS Lambda (Node.js 20.x)
+- **プラットフォーム**: AWS Lambda (Node.js 22.x) - 環境別関数分離
 - **ビルド**: `bun run build:lambda` で lambda.js 生成
 - **デプロイ**: Terraform + Lambda ZIP package
-- **環境管理**: Lambda エイリアス（$LATEST / stable）
-- **API Gateway**: AWS API Gateway v2 (HTTP API)
+- **環境管理**: 環境別Lambda関数（Preview専用関数、Production専用関数による完全分離）
+- **エンドポイント**: Lambda Function URL - 直接HTTPS接続（API Gateway不使用）
 
 ### データベース
-- **サービス**: Supabase（無料版）
-- **マイグレーション**: Supabase CLI + GitHub Actions
+- **サービス**: Supabase PostgreSQL
+- **ORM**: Drizzle ORM + drizzle-kit
+- **マイグレーション**: drizzle-kit generate + PostgreSQL直接実行
+- **接続方式**: DATABASE_URL直接接続（Supabase Access Token不要）
 - **環境分離**: テーブルプレフィックスによる分離
   - Production: `${TABLE_PREFIX}_*`（例: `prefix_users`）
   - Preview: `${TABLE_PREFIX}_dev_*`（例: `prefix_dev_users`）
+- **権限分離**: app_role（CRUD）/ migrate_role（スキーマ変更）
 - **セキュリティ**: Row-Level Security (RLS) 必須
 
 ### セキュリティ
-- **認証**: GitHub OIDC による一元認証
-- **権限管理**: AWS IAM 最小権限原則
+- **認証**: 単一GitHub OIDC 統合ロールによる一元認証
+- **権限管理**: GitHub Environment条件による最小権限制御（Production/Preview共通ロール）
 - **シークレット管理**: GitHub Environment Secrets
 - **監査**: CloudTrail + GitHub Actions logs
 
@@ -85,15 +89,16 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
    - CloudFlare 設定
    - IAM ロール・ポリシー適用
 
-2. **Database (Supabase)**
-   - スキーママイグレーション
+2. **Database (drizzle-kit)**
+   - drizzle-kit generate でマイグレーションファイル生成
+   - migrate_role によるPostgreSQL直接マイグレーション実行
    - RLS ポリシー適用
    - データ整合性確認
 
 3. **Backend (AWS Lambda)**
-   - 関数コードデプロイ
-   - API Gateway 設定更新
-   - Lambda エイリアス更新
+   - 環境別Lambda関数コードデプロイ
+   - Lambda Function URL 設定更新
+   - 環境変数・権限設定更新
 
 4. **Frontend (CloudFlare Pages)**
    - 静的ファイルビルド
@@ -110,7 +115,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 ### Preview環境
 - **トリガー**: PR 作成・更新
 - **データベース**: 同一Supabaseプロジェクト内で `${TABLE_PREFIX}_dev_*` テーブル使用
-- **リソース**: CloudFlare Preview + Lambda $LATEST（PR close で自動削除）
+- **リソース**: CloudFlare Preview + Lambda Preview 関数 + Function URL（PR close で自動削除）
 - **制限**: Terraform は read-only plan のみ
 - **注意**: テーブルは上書き型（複数PRで共有、競合の可能性あり）
 
@@ -145,6 +150,6 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### アクセス制御
 - **GitHub**: Organization owner / Repository admin
-- **AWS**: Terraform 専用 IAM role（OIDC条件付き）
+- **AWS**: 単一GitHub OIDC 統合 IAM role（Environment条件による最小権限制御）
 - **CloudFlare**: API token（ページ管理権限のみ）
 - **Supabase**: Service role（マイグレーション権限）

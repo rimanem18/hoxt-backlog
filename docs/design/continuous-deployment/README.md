@@ -1,11 +1,12 @@
 # 継続的デプロイメントシステム 設計文書
 
 作成日: 2025年09月12日
-最終更新: 2025年09月12日
+最終更新: 2025年09月16日
+
 
 ## 概要
 
-GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（Supabase）の統合デプロイメントを自動化する。
+GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化する。
 
 ## 設計文書構成
 
@@ -25,7 +26,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### [interfaces.ts](./interfaces.ts)
 - TypeScript型定義一式
-- GitHub Actions、AWS、CloudFlare、Supabase関連型
+- GitHub Actions、AWS、CloudFlare、drizzle-kit関連型
 - 監査ログ・セキュリティスキャン結果型
 - API応答・設定管理型定義
 
@@ -51,8 +52,8 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 ## 主要設計ポイント
 
 ### セキュリティファースト
-- GitHub OIDC による完全シークレットレス認証
-- AWS IAM 最小権限原則の厳格適用
+- 単一GitHub OIDC 統合ロールによる完全シークレットレス認証
+- GitHub Environment条件による最小権限制御（Production/Preview共通）
 - Terraform state の S3+KMS 暗号化保存
 - Secret Scanning による機密情報漏洩防止
 
@@ -63,9 +64,10 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - 基本監査ログによる運用追跡
 
 ### コスト効率
-- Supabase無料版対応（ブランチ機能不使用）
+- AWS統合リソース（単一Lambda関数、統一API Gateway）による費用削減
+- 単一IAMロール・ポリシーによる管理コスト削減
 - テーブルプレフィックス `${TABLE_PREFIX}_dev_*` による環境分離
-- Preview環境でのリソース競合（複数PR共有）を許容
+- Preview環境でのリソース共有による運用コスト最適化
 
 ### 拡張性
 - モジュラー設計による保守性確保
@@ -75,16 +77,16 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ## 実装順序
 
-1. **基盤整備**
+1. **統合基盤整備**
    - Terraform state管理用 S3・DynamoDB 作成
-   - GitHub OIDC Provider・IAM Role 設定
+   - 単一GitHub OIDC Provider・統合IAM Role 設定
 
-2. **インフラ自動化**
-   - Terraform モジュール実装
-   - AWS Lambda・API Gateway 構築
+2. **統合インフラ自動化**
+   - 統合Terraform設定実装（単一state管理）
+   - 統合AWS Lambda・API Gateway 構築
 
-3. **CI/CD パイプライン**
-   - GitHub Actions ワークフロー実装
+3. **統合CI/CD パイプライン**
+   - GitHub Actions ワークフロー実装（統一ロール使用）
    - デプロイ順序制御・エラーハンドリング
 
 4. **監視・運用**
@@ -95,19 +97,19 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 設計された各コンポーネントは、要件定義書に記載された以下の受け入れ基準を満たします：
 
-- ✅ **基盤構築**: Terraform・GitHub OIDC・IAM設定
-- ✅ **デプロイフロー**: main push・PR プレビュー・順序制御
+- ✅ **統合基盤構築**: Terraform・単一GitHub OIDC・統合IAM設定
+- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御（単一Lambda・unified state）
 - ✅ **品質保証**: 破壊的変更承認・マイグレーション・待機キュー
 - ✅ **監査ログ**: 実行者・日時・対象記録・Secret Scanning
 - ✅ **エラーハンドリング**: 再試行・タイムアウト・アラート機能
-- ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定
+- ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定（最小権限統合ロール）
 - ⚠️ **制約対応**: Supabase無料版制約によりブランチ機能は非対応（テーブルプレフィックスで代替）
 
 ## 次ステップ
 
-1. **技術検証**: 設計内容の実装可能性検証
-2. **段階実装**: 基盤→CI/CD→監視の順で段階的実装
+1. **技術検証**: 統合設計内容の実装可能性検証
+2. **段階実装**: 統合基盤→CI/CD→監視の順で段階的実装
 3. **テスト**: 各受け入れ基準に対する動作確認
-4. **運用開始**: 本番環境での継続的デプロイメント開始
+4. **運用開始**: 統合環境での継続的デプロイメント開始
 
-本設計文書により、安全で効率的な継続的デプロイメントシステムの実装が可能になります。
+本統合設計文書により、コスト効率と学習効率を両立した継続的デプロイメントシステムの実装が可能になります。

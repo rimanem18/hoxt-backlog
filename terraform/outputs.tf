@@ -1,35 +1,38 @@
-/**
- * Terraform出力値
- * 作成されたリソースの情報を他の設定で参照可能にする
- */
+# 統合Terraform設定出力値
 
-output "terraform_state_bucket" {
-  description = "Terraform state用S3バケット名"
-  value       = aws_s3_bucket.terraform_state.bucket
+# Lambda Function URL出力（環境別）
+output "function_url_production" {
+  description = "Production Lambda Function URL"
+  value       = module.lambda_production.function_url
 }
 
-output "terraform_lock_table" {
-  description = "Terraform lock用DynamoDBテーブル名"
-  value       = aws_dynamodb_table.terraform_locks.name
+output "function_url_preview" {
+  description = "Preview Lambda Function URL"
+  value       = module.lambda_preview.function_url
 }
 
-output "kms_key_id" {
-  description = "State暗号化用KMSキーID"
-  value       = aws_kms_key.terraform_state.key_id
-  sensitive   = true
+# Lambda Function出力（参考情報）
+output "lambda_production_function_name" {
+  description = "Production Lambda function name"
+  value       = module.lambda_production.function_name
 }
 
-output "kms_key_alias" {
-  description = "State暗号化用KMSキーエイリアス"
-  value       = aws_kms_alias.terraform_state.name
+output "lambda_preview_function_name" {
+  description = "Preview Lambda function name"
+  value       = module.lambda_preview.function_name
 }
 
-output "aws_account_id" {
-  description = "現在のAWSアカウントID"
-  value       = data.aws_caller_identity.current.account_id
+output "github_actions_role_arn" {
+  description = "GitHub Actions unified IAM role ARN"
+  value       = module.github_oidc.github_actions_role_arn
 }
 
 output "aws_region" {
-  description = "使用中のAWSリージョン"
+  description = "AWS region"
   value       = var.aws_region
+}
+
+output "project_name" {
+  description = "Project name"
+  value       = var.project_name
 }

@@ -4,13 +4,10 @@ import { z } from 'zod';
  * データベース設定のスキーマ
  */
 const databaseConfigSchema = z.object({
-  host: z.string().min(1, 'DB_HOST環境変数が設定されていません'),
-  port: z.number().int().positive('DB_PORTは正の整数である必要があります'),
-  database: z.string().min(1, 'DB_NAME環境変数が設定されていません'),
-  username: z.string().min(1, 'DB_USER環境変数が設定されていません'),
-  password: z.string().min(1, 'DB_PASSWORD環境変数が設定されていません'),
-  tablePrefix: z.string().min(1, 'DB_TABLE_PREFIX環境変数が設定されていません'),
   url: z.string().min(1, 'DATABASE_URL環境変数が設定されていません'),
+  tablePrefix: z
+    .string()
+    .min(1, 'BASE_TABLE_PREFIX環境変数が設定されていません'),
 });
 
 /**
@@ -29,15 +26,8 @@ export type DatabaseConfig = z.infer<typeof databaseConfigSchema>;
  */
 export function getDatabaseConfig(): DatabaseConfig {
   const rawConfig = {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT
-      ? Number.parseInt(process.env.DB_PORT, 10)
-      : undefined,
-    database: process.env.DB_NAME,
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    tablePrefix: process.env.DB_TABLE_PREFIX,
     url: process.env.DATABASE_URL,
+    tablePrefix: process.env.BASE_TABLE_PREFIX,
   };
 
   try {
