@@ -1,12 +1,12 @@
 # 継続的デプロイフロー 要件定義書
 
 作成日：2025年09月12日  
-最終更新：2025年09月14日  
+最終更新：2025年09月17日  
 
 
 ## 概要
 
-GitHub Actions と Terraform を使用した継続的デプロイフローを構築し、フロントエンドを CloudFlare Pages、バックエンドを AWS Lambda、データベースを Supabase マイグレーションで運用する統合デプロイメントシステムを実現する。
+GitHub Actions と Terraform を使用した継続的デプロイフローを構築し、フロントエンドを CloudFlare Pages、バックエンドを AWS Lambda、データベースマイグレーションを drizzle-kit で運用する統合デプロイメントシステムを実現する。
 
 ## ユーザストーリー
 
@@ -34,17 +34,19 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - REQ-001: システムは mainブランチへのプッシュ時に自動的に継続的デプロイフローを開始しなければならない
 - REQ-002: システムは Terraform による基盤構築を最優先で実行しなければならない
-- REQ-003: システムは Supabase マイグレーションを基盤構築後に実行しなければならない
+- REQ-003: システムは drizzle-kit によるデータベースマイグレーションを基盤構築後に実行しなければならない
 - REQ-004: システムは AWS Lambda デプロイをマイグレーション完了後に実行しなければならない
 - REQ-005: システムは CloudFlare Pages デプロイを Lambda デプロイ完了後に実行しなければならない
 - REQ-006: システムは GitHub OIDC を使用したシークレットレス認証を実装しなければならない
+- REQ-007: システムは drizzle-kit generate によるマイグレーションファイル生成とPostgreSQL直接実行によるスキーマ適用を行わなければならない
+- REQ-008: システムは 開発環境では drizzle-kit push による即座反映、本番環境では権限分離された migrate_role による安全なマイグレーション実行を行わなければならない
 
 ### 条件付き要件
 
-- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + API Gateway Preview ステージ + Lambda $LATEST + Supabase $TABLE_PREFIX）を自動生成・更新しなければならない
+- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda Function URL Preview + PostgreSQL $TABLE_PREFIX）を自動生成・更新しなければならない
 - REQ-102: Terraform plan で破壊的変更が検出された場合、システムは 承認フローを必須とし自動適用を停止しなければならない
 - REQ-103: マイグレーション実行時にDBロックが発生した場合、システムは タイムアウト設定に従って処理を中止しなければならない
-- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + API Gateway Production ステージ + Lambda stable alias + Supabase production）を自動更新しなければならない
+- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda Function URL Production + PostgreSQL production）を自動更新しなければならない
 
 ### 状態要件
 
@@ -58,10 +60,12 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - REQ-401: システムは GitHub OIDC統合ロール設計（単一ロールでProduction/Preview両対応）を実装し、GitHub Environment条件による最小権限制御を行わなければならない
 - REQ-402: システムは シークレット情報をソースコードに含めてはならない
-- REQ-403: システムは データベースマイグレーションでのロールバック非対応（Forward-onlyポリシー）を遵守しなければならない
+- REQ-403: システムは drizzle-kit によるデータベースマイグレーションでのロールバック非対応（Forward-onlyポリシー）を遵守しなければならない
 - REQ-404: システムは Terraform state を単一ファイルで管理し、環境はworkspace機能で分離しなければならない
-- REQ-405: システムは 単一Lambda関数で環境管理（Preview→$LATEST、Production→versioned alias）を実装し、$LATEST + alias戦略による環境分離を行わなければならない
-- REQ-406: システムは API Gateway環境別分離（Preview/Production別ステージ）を実装し、Lambdaエイリアスとの適切な連携による完全な環境分離を行わなければならない
+- REQ-405: システムは 環境別Lambda関数による完全分離（Preview専用関数、Production専用関数）を実装し、各々にFunction URLを設定して独立したHTTPSエンドポイントによる環境分離を行わなければならない
+- REQ-406: システムは Lambda Function URL による直接HTTP接続を実装し、API Gatewayを使用せずシンプルで確実なエンドポイント提供を行わなければならない
+- REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
+- REQ-408: システムは データベース権限分離（app_role: CRUD操作、migrate_role: スキーマ変更）によるセキュリティ強化を実装しなければならない
 
 ## 非機能要件
 
@@ -69,7 +73,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - NFR-001: GitHub OIDC + 単一IAM統合ロール（GitHub Environment条件による最小権限制御）による認証を実装すること
 - NFR-002: Terraform state ファイルを暗号化ストレージ（S3+KMS）に保存すること  
-- NFR-003: Supabase RLS（Row-Level Security）を必須とすること
+- NFR-003: PostgreSQL Row-Level Security（RLS）を必須とすること
 - NFR-004: Secret Scanning を有効化し機密情報漏洩を防止すること
 - NFR-005: Fork リポジトリからのプルリクエストでは Preview 環境を生成・更新してはならない
 
@@ -97,7 +101,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 ### 基盤構築テスト
 
 - [ ] Terraform による AWS、CloudFlare リソース作成が成功すること
-- [ ] 単一GitHub OIDC統合ロール認証でAWS/CloudFlare/Supabaseアクセスが成功すること
+- [ ] 単一GitHub OIDC統合ロール認証でAWS/CloudFlareアクセスが成功すること
 - [ ] GitHub Environment条件による最小権限制御が適切に機能すること
 - [ ] Secrets 管理が GitHub Environment 単位で動作すること
 
@@ -105,8 +109,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - [ ] main ブランチマージ（プッシュ）でProduction環境が自動更新されること
 - [ ] プルリクエスト作成・更新でPreview環境が自動反映されること  
-- [ ] API Gateway Preview ステージ経由でLambda $LATEST更新がPR更新で即座に反映されること  
-- [ ] API Gateway Production ステージ経由でLambda stable alias昇格がmainマージで正常動作すること
+- [ ] Lambda Function URL Preview 経由でPreview環境Lambda関数更新がPR更新で即座に反映されること  
+- [ ] Lambda Function URL Production 経由でProduction環境Lambda関数がmainマージで正常動作すること
+- [ ] drizzle-kit generateによるマイグレーションファイル生成が正常動作すること
+- [ ] migrate_roleによるPostgreSQL直接マイグレーション実行が成功すること
 - [ ] マイグレーション時DBロック発生でタイムアウト処理が動作すること
 
 ### 品質保証テスト
@@ -136,4 +142,4 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - [ ] シークレットレス認証（単一GitHub OIDC統合ロール）が全サービスで動作すること
 - [ ] Terraform state の暗号化保存が実装されること
-- [ ] Supabase RLS が適切に設定されること
+- [ ] PostgreSQL RLS が適切に設定されること

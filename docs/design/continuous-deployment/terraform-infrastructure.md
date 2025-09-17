@@ -1,12 +1,12 @@
 # Terraform Infrastructure設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月14日
+最終更新: 2025年09月17日
 
 
 ## インフラストラクチャ概要
 
-Terraform を使用した AWS と CloudFlare のインフラ管理。GitHub OIDC 統合ロールによる認証、S3+KMS によるstate管理、GitHub Environment条件による権限制御を実装する。
+Terraform を使用した AWS と CloudFlare のインフラ管理。Lambda Function URL による環境別分離、GitHub OIDC 統合ロールによる認証、S3+KMS によるstate管理、GitHub Environment条件による権限制御を実装する。
 
 ## ディレクトリ構造
 
@@ -18,7 +18,7 @@ terraform/
 ├── outputs.tf
 ├── modules/
 │   ├── iam-oidc/           # 統合OIDC認証
-│   ├── lambda/     # 統合Lambda関数管理
+│   ├── lambda/     # 環境別Lambda関数管理
 │   ├── cloudflare-pages/
 │   └── monitoring/
 ├── backend.tf
@@ -101,135 +101,65 @@ module "github_oidc" {
   project_name = local.project_name
   repository   = var.repository_name
   
-  lambda_function_arn = module.lambda_unified.function_arn
+  lambda_function_arn = module.lambda.function_arn
   s3_bucket_arn      = data.aws_s3_bucket.terraform_state.arn
   
   tags = local.common_tags
 }
 
-# 統合Lambda Function（Production/Preview両対応）
-module "lambda_unified" {
+# 環境別Lambda Functions（完全分離）
+module "lambda_production" {
   source = "./modules/lambda"
   
   project_name    = local.project_name
-  function_name   = "${local.project_name}-api"  # 単一関数名
+  function_name   = "${local.project_name}-api-production"
+  environment     = "production"
   
   runtime         = "nodejs22.x"
   handler         = "index.handler"  # Hono Lambda adapter 固定
   memory_size     = 512
   timeout         = 30
   
-  # 環境変数は実行時にGitHub Actionsから注入
+  # Production環境変数
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
-    SUPABASE_ACCESS_TOKEN  = var.supabase_access_token
-    JWT_SECRET             = var.jwt_secret
+    SUPABASE_JWT_SECRET    = var.jwt_secret
     BASE_TABLE_PREFIX      = var.base_table_prefix
+    DATABASE_URL           = var.database_url
+    NODE_ENV              = "production"
+    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
+    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
   }
   
-  tags = local.common_tags
+  tags = merge(local.common_tags, { Environment = "production" })
 }
 
-# API Gateway
-resource "aws_apigatewayv2_api" "main" {
-  name          = "${local.project_name}-api"  # REQ-406準拠: API Gateway環境別分離
-  protocol_type = "HTTP"
+module "lambda_preview" {
+  source = "./modules/lambda"
   
-  cors_configuration {
-    allow_credentials = false
-    allow_headers     = ["content-type", "x-amz-date", "authorization"]
-    allow_methods     = ["*"]
-    allow_origins     = [var.frontend_domain]
-    expose_headers    = ["date", "keep-alive"]
-    max_age          = 86400
+  project_name    = local.project_name
+  function_name   = "${local.project_name}-api-preview"
+  environment     = "preview"
+  
+  runtime         = "nodejs22.x"
+  handler         = "index.handler"  # Hono Lambda adapter 固定
+  memory_size     = 512
+  timeout         = 30
+  
+  # Preview環境変数（dev接尾辞付き）
+  base_environment_variables = {
+    SUPABASE_URL           = var.supabase_url
+    SUPABASE_JWT_SECRET    = var.jwt_secret
+    BASE_TABLE_PREFIX      = "${var.base_table_prefix}${var.preview_table_prefix_suffix}"
+    DATABASE_URL           = var.database_url
+    NODE_ENV              = "development"
+    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
+    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
   }
   
-  tags = local.common_tags
-}
-
-# API Gateway Stages（環境別分離）
-resource "aws_apigatewayv2_stage" "preview" {
-  api_id = aws_apigatewayv2_api.main.id
-  name   = "preview"
-  
-  auto_deploy = true
-  
-  default_route_settings {
-    throttling_burst_limit   = 100
-    throttling_rate_limit    = 50
-  }
-  
-  tags = merge(local.common_tags, {
-    Environment = "preview"
-  })
-}
-
-resource "aws_apigatewayv2_stage" "production" {
-  api_id = aws_apigatewayv2_api.main.id
-  name   = "production"
-  
-  auto_deploy = true
-  
-  default_route_settings {
-    throttling_burst_limit   = 100
-    throttling_rate_limit    = 50
-  }
-  
-  tags = merge(local.common_tags, {
-    Environment = "production"
-  })
-}
-
-# Lambda Integrations（環境別エイリアス対応）
-resource "aws_apigatewayv2_integration" "lambda_preview" {
-  api_id = aws_apigatewayv2_api.main.id
-  
-  integration_uri    = module.lambda_unified.invoke_arn  # $LATEST
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
-
-resource "aws_apigatewayv2_integration" "lambda_production" {
-  api_id = aws_apigatewayv2_api.main.id
-  
-  integration_uri    = module.lambda_unified.stable_alias_invoke_arn  # stable alias
-  integration_type   = "AWS_PROXY"
-  integration_method = "POST"
-}
-
-# Routes（ステージ別設定）
-resource "aws_apigatewayv2_route" "preview" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "$default"
-  
-  target = "integrations/${aws_apigatewayv2_integration.lambda_preview.id}"
-}
-
-resource "aws_apigatewayv2_route" "production" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "$default"
-  
-  target = "integrations/${aws_apigatewayv2_integration.lambda_production.id}"
-}
-
-# Lambda Permissions for API Gateway（環境別）
-resource "aws_lambda_permission" "api_gateway_preview" {
-  statement_id  = "AllowExecutionFromAPIGatewayPreview"
-  action        = "lambda:InvokeFunction"
-  function_name = module.lambda_unified.function_name
-  principal     = "apigateway.amazonaws.com"
-  
-  source_arn = "${aws_apigatewayv2_api.main.execution_arn}/preview/*"
-}
-
-resource "aws_lambda_permission" "api_gateway_production" {
-  statement_id  = "AllowExecutionFromAPIGatewayProduction"
-  action        = "lambda:InvokeFunction"
-  function_name = module.lambda_unified.function_name
-  qualifier     = "stable"  # alias指定
-  principal     = "apigateway.amazonaws.com"
-  
-  source_arn = "${aws_apigatewayv2_api.main.execution_arn}/production/*"
+  tags = merge(local.common_tags, { Environment = "preview" })
 }
 
 # CloudFlare Pages（統合管理）
@@ -244,9 +174,10 @@ module "cloudflare_pages" {
   output_directory  = "out"
   
   environment_variables = {
-    API_GATEWAY_BASE_URL = aws_apigatewayv2_api.main.api_endpoint
-    NODE_ENV            = "production"
-    # 注記: アプリケーション内で ${API_GATEWAY_BASE_URL}/${ENVIRONMENT} として動的構築
+    LAMBDA_FUNCTION_URL_PRODUCTION = module.lambda_production.function_url
+    LAMBDA_FUNCTION_URL_PREVIEW    = module.lambda_preview.function_url
+    NODE_ENV                      = "production"
+    # 注記: アプリケーション内で環境に応じたFunction URLを選択
   }
 }
 
@@ -261,18 +192,20 @@ module "monitoring" {
   
   project_name = local.project_name
   
-  lambda_function_name = module.lambda_unified.function_name
-  api_gateway_id       = aws_apigatewayv2_api.main.id
+  lambda_function_names = [
+    module.lambda_production.function_name,
+    module.lambda_preview.function_name
+  ]
   
   tags = local.common_tags
 }
 ```
 
-## 統合Lambda関数モジュール
+## 環境別Lambda関数モジュール
 
 ### modules/lambda/main.tf
 ```hcl
-# 統合Lambda Function（Production/Preview両対応）
+# 環境別Lambda Function
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
   role         = aws_iam_role.lambda_exec.arn
@@ -292,12 +225,19 @@ resource "aws_lambda_function" "this" {
   tags = var.tags
 }
 
-# Lambda Aliases for environment management
-resource "aws_lambda_alias" "stable" {
-  name             = "stable"
-  description      = "Production stable version"
-  function_name    = aws_lambda_function.this.function_name
-  function_version = "1"  # GitHub Actionsから更新
+# Lambda Function URL（環境別に独立したHTTPSエンドポイント）
+resource "aws_lambda_function_url" "this" {
+  function_name      = aws_lambda_function.this.function_name
+  authorization_type = "NONE"
+  
+  cors {
+    allow_credentials = false
+    allow_headers     = ["content-type", "authorization"]
+    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_origins     = [var.cors_allow_origin]
+    expose_headers    = ["date", "keep-alive"]
+    max_age          = 86400
+  }
 }
 
 # Temporary Lambda package for initial creation
@@ -312,7 +252,11 @@ data "archive_file" "lambda_zip" {
       import { handle } from 'hono/aws-lambda';
       
       const app = new Hono();
-      app.get('/', (c) => c.json({ message: 'Hello from Unified Hono Lambda' }));
+      app.get('/', (c) => c.json({ 
+        message: 'Hello from ${var.environment} Hono Lambda',
+        environment: '${var.environment}',
+        timestamp: new Date().toISOString()
+      }));
       
       export const handler = handle(app);
     EOT
@@ -381,6 +325,36 @@ variable "repository_name" {
   type        = string
 }
 
+variable "preview_table_prefix_suffix" {
+  description = "Suffix for preview environment table prefix"
+  type        = string
+  default     = "_dev"
+}
+
+variable "access_allow_origin" {
+  description = "CORS allow origin"
+  type        = string
+  default     = "http://localhost:3000"
+}
+
+variable "access_allow_methods" {
+  description = "CORS allow methods list"
+  type        = list(string)
+  default     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}
+
+variable "access_allow_headers" {
+  description = "CORS allow headers list"
+  type        = list(string)
+  default     = ["Content-Type", "Authorization"]
+}
+
+variable "database_url" {
+  description = "Database connection URL"
+  type        = string
+  sensitive   = true
+}
+
 variable "base_table_prefix" {
   description = "Base table prefix for database tables"
   type        = string
@@ -388,12 +362,6 @@ variable "base_table_prefix" {
 
 variable "supabase_url" {
   description = "Supabase project URL"
-  type        = string
-  sensitive   = true
-}
-
-variable "supabase_access_token" {
-  description = "Supabase access token"  
   type        = string
   sensitive   = true
 }

@@ -1,12 +1,12 @@
 # 継続的デプロイメント 実装タスク
 
-**最終更新**: 2025年9月14日  
+**最終更新**: 2025年9月17日  
 
 
 ## 概要
 
 全タスク数: 18タスク
-推定作業時間: 40時間（統合ロール採用により設定工数削減）
+推定作業時間: 38時間（drizzle-kit採用によりマイグレーション工数削減、統合ロール採用により設定工数削減）
 クリティカルパス: TASK-501 → TASK-502 → TASK-503 → TASK-504 → TASK-505 → TASK-601 → TASK-602 → TASK-603 → TASK-604
 
 ## タスク一覧
@@ -59,35 +59,35 @@
 
 #### TASK-503: AWS Lambda基盤構築
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-004, REQ-405, REQ-406, NFR-005
 - **依存タスク**: TASK-502
 - **実装詳細**:
-  - Hono Lambda adapter対応関数作成
-  - API Gateway v2 HTTP API設定（環境別ステージ分離）
+  - Hono Lambda adapter対応関数作成（環境別分離）
+  - Lambda Function URL設定（Production/Preview独立）
   - Lambda実行ロール・ポリシー設定
-  - Lambdaエイリアス（stable）設定
-  - $LATEST + alias戦略による環境管理
-  - Preview/Production環境別Lambda統合設定
+  - 環境別Lambda関数による完全分離
+  - 環境別環境変数設定
+  - CORS設定をFunction URLで実装
 - **テスト要件**:
-  - [ ] 単体テスト: Lambda関数基本動作
-  - [ ] 統合テスト: API Gateway Preview/Productionステージ連携
-  - [ ] セキュリティテスト: Lambda alias分離動作確認
-  - [ ] パフォーマンステスト: 応答時間測定
+  - [x] 単体テスト: Lambda関数基本動作
+  - [x] 統合テスト: Function URL直接アクセス
+  - [x] セキュリティテスト: 環境分離動作確認
+  - [x] パフォーマンステスト: 応答時間測定
 - **UI/UX要件**:
-  - [ ] ヘルスチェックエンドポイント実装
-  - [ ] エラーレスポンス統一
-  - [ ] CORS設定適用
+  - [x] ヘルスチェックエンドポイント実装
+  - [x] エラーレスポンス統一
+  - [x] CORS設定適用
 - **エラーハンドリング**:
-  - [ ] Lambda関数作成エラー
-  - [ ] API Gateway設定失敗
-  - [ ] CORS設定不備
+  - [x] Lambda関数作成エラー
+  - [x] Function URL設定失敗
+  - [x] CORS設定不備
 - **完了条件**:
-  - [ ] Lambda関数デプロイ完了
-  - [ ] API Gateway Preview/Productionステージ動作確認
-  - [ ] Lambda $LATEST/stable alias分離動作確認
-  - [ ] ヘルスチェック正常レスポンス
+  - [x] 環境別Lambda関数デプロイ完了
+  - [x] Function URL動作確認
+  - [x] 環境分離動作確認
+  - [x] ヘルスチェック正常レスポンス
 
 #### TASK-504: CloudFlare Pages設定
 
@@ -117,23 +117,27 @@
   - [ ] DNS設定完了
   - [ ] テストデプロイ成功
 
-#### TASK-505: Supabaseマイグレーション設定
+#### TASK-505: drizzle-kitマイグレーション設定
 
 - [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
-- **要件リンク**: REQ-003, REQ-403
+- **要件リンク**: REQ-003, REQ-007, REQ-008, REQ-403, REQ-407, REQ-408
 - **依存タスク**: TASK-501
 - **実装詳細**:
-  - Supabase CLI設定とプロジェクト接続
-  - テーブルプレフィックス戦略実装
-  - Preview環境用dev prefix設定
+  - drizzle-kit設定でDATABASE_URL直接接続
+  - データベース権限分離（app_role/migrate_role）実装
+  - テーブルプレフィックス戦略実装（PostgreSQL）
+  - 開発環境：drizzle-kit push、本番環境：generate + migrate
   - RLS（Row-Level Security）適用
 - **テスト要件**:
-  - [ ] マイグレーション実行テスト
+  - [ ] drizzle-kit generate実行テスト
+  - [ ] migrate_roleによるマイグレーション実行テスト
   - [ ] テーブルプレフィックス動作確認
   - [ ] RLSポリシー検証
 - **完了条件**:
-  - [ ] マイグレーションファイル作成
+  - [ ] drizzle.config.ts設定完了
+  - [ ] マイグレーションスクリプト作成（package.json）
+  - [ ] 権限分離設定完了
   - [ ] 本番・preview環境分離設定完了
 
 ### フェーズ2: GitHub Actions ワークフロー実装
@@ -142,11 +146,11 @@
 
 - [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
-- **要件リンク**: REQ-001, REQ-002, REQ-003, REQ-004, REQ-005
+- **要件リンク**: REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-007, REQ-008
 - **依存タスク**: TASK-505
 - **実装詳細**:
   - .github/workflows/deploy.yml作成
-  - 4段階デプロイフロー（インフラ→DB→API→フロント）
+  - 4段階デプロイフロー（インフラ→drizzle-kit DB→API→フロント）
   - 並行制御とconcurrency group設定
   - Terraformプラン承認フロー実装
 - **テスト要件**:
@@ -176,13 +180,13 @@
   - .github/workflows/preview.yml作成
   - PR作成・更新でのプレビューデプロイ（Fork制限実装）
   - PR終了時のリソースクリーンアップ
-  - Lambda $LATEST環境変数切り替え
-  - API Gateway Previewステージ連携
+  - Preview専用Lambda関数環境変数切り替え
+  - Lambda Function URL Preview連携
 - **テスト要件**:
   - [ ] 単体テスト: プレビュー環境作成
   - [ ] 統合テスト: PRライフサイクル連携
   - [ ] セキュリティテスト: Fork制限動作確認
-  - [ ] API Gateway Previewステージテスト
+  - [ ] Function URL Previewテスト
   - [ ] リソースクリーンアップテスト
 - **UI/UX要件**:
   - [ ] プレビューURL自動コメント
@@ -399,13 +403,14 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール
   TERRAFORM_STATE_BUCKET: your-project-terraform-state
   TERRAFORM_APPROVERS: admin1,admin2
-  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名
+  LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
+  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop
   TABLE_PREFIX: prefix
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-project.com
-  API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # terraform output で取得
+  LAMBDA_FUNCTION_URL_PRODUCTION: https://unique-id.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
@@ -416,12 +421,13 @@ Secrets:
 ```yaml  
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール（同一）
-  LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名（$LATESTで使用）
+  LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
+  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
   TABLE_PREFIX: prefix  # dev prefixは実行時に付与
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
   CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview
-  API_GATEWAY_BASE_URL: https://api-id.execute-api.ap-northeast-1.amazonaws.com  # 本番と同じベースURL
+  LAMBDA_FUNCTION_URL_PREVIEW: https://unique-id-preview.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx  # 本番と同じトークン

@@ -1,12 +1,12 @@
 # 継続的デプロイメントシステム 設計文書
 
 作成日: 2025年09月12日
-最終更新: 2025年09月14日
+最終更新: 2025年09月16日
 
 
 ## 概要
 
-GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（Supabase）の統合デプロイメントを自動化する。
+GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化する。
 
 ## 設計文書構成
 
@@ -26,7 +26,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### [interfaces.ts](./interfaces.ts)
 - TypeScript型定義一式
-- GitHub Actions、AWS、CloudFlare、Supabase関連型
+- GitHub Actions、AWS、CloudFlare、drizzle-kit関連型
 - 監査ログ・セキュリティスキャン結果型
 - API応答・設定管理型定義
 

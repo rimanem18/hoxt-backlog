@@ -1,7 +1,7 @@
 # GitHub Actions ワークフロー設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月14日
+最終更新: 2025年09月16日
 
 
 ## ワークフロー概要
@@ -110,10 +110,10 @@ terraform:
       run: terraform apply -auto-approve tfplan
 ```
 
-#### 2. Database Migration
+#### 2. Database Migration (drizzle-kit)
 ```yaml
 database:
-  name: Database Migration  
+  name: Database Migration (drizzle-kit)
   runs-on: ubuntu-latest
   needs: terraform
   environment: production
@@ -122,16 +122,24 @@ database:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Setup Supabase CLI
-      uses: supabase/setup-cli@v1
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
     
-    - name: Run Migrations
+    - name: Install dependencies
+      working-directory: ./app/server
+      run: bun install
+    
+    - name: Generate migration files
+      working-directory: ./app/server  
+      run: bun run db:generate
+    
+    - name: Run database migration
+      working-directory: ./app/server
       env:
-        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
-      run: |
-        cd app/server
-        supabase db push --project-ref $SUPABASE_PROJECT_ID
+        DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}  # migrate_role使用
+      run: bun run db:migrate
       timeout-minutes: 10
 ```
 
@@ -309,14 +317,15 @@ jobs:
         run: |
           echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
       
-      - name: Deploy Supabase Preview Migration
+      - name: Deploy drizzle-kit Preview Migration
+        working-directory: ./app/server
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # app_role使用（Preview環境）
           TABLE_PREFIX: ${{ env.TABLE_PREFIX }}
         run: |
-          cd app/server
-          supabase db push --project-ref $SUPABASE_PROJECT_ID
+          bun install
+          bun run db:generate
+          bun run db:push  # Preview環境は push で即座反映
       
       
       - name: Deploy CloudFlare Preview
@@ -337,7 +346,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Lambda:** $LATEST (real-time updates)\n\n**Database:** Supabase tables with prefix \`${{ env.TABLE_PREFIX }}_*\``
+              body: `🚀 Preview environment deployed!\n\n**Preview URL:** ${previewUrl}\n\n**Lambda:** $LATEST (real-time updates)\n\n**Database:** PostgreSQL tables with prefix \`${{ env.TABLE_PREFIX }}_*\``
             });
 
   cleanup-preview:
