@@ -16,11 +16,6 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       # テスト用のローカルDB設定
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=postgres
-      - DB_USER=postgres
-      - DB_PASSWORD=test_password
       - BASE_TABLE_PREFIX=test_
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
     depends_on:
@@ -92,18 +87,21 @@ services:
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - TF_VAR_environment=${ENVIRONMENT:-preview}
       - TF_VAR_project_name=${PROJECT_NAME}
+      - TF_VAR_repository_name=${REPOSITORY_NAME}
+      - TF_VAR_environment=${ENVIRONMENT:-preview}
       - TF_VAR_aws_region=${AWS_REGION}
       - TF_VAR_aws_oidc_role_arn=${AWS_OIDC_ROLE_ARN}
       - TF_VAR_database_url=${DATABASE_URL}
       - TF_VAR_cloudflare_api_token=${CLOUDFLARE_API_TOKEN}
       - TF_VAR_cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}
-      - TF_VAR_frontend_domain=${FRONTEND_DOMAIN}
+      - TF_VAR_access_allow_origin=https://localhost.example.com
+      - TF_VAR_access_allow_methods=${ACCESS_ALLOW_METHODS}
+      - TF_VAR_access_allow_headers=${ACCESS_ALLOW_HEADERS}
       - TF_VAR_domain_name=${DOMAIN_NAME}
-      - TF_VAR_table_prefix=${BASE_TABLE_PREFIX}
-      - TF_VAR_supabase_access_token=${SUPABASE_ACCESS_TOKEN}
-      - TF_VAR_repository_name=${REPOSITORY_NAME}
+      - TF_VAR_supabase_url=${SUPABASE_URL}
+      - TF_VAR_jwt_secret=${SUPABASE_JWT_SECRET}
+      - TF_VAR_database_url=${DATABASE_URL}
       - TF_VAR_base_table_prefix=${BASE_TABLE_PREFIX}
     command: tail -f /dev/null
 

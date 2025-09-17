@@ -43,7 +43,7 @@ description: terraform plan を実行し、出力されたファイルを人間�
 
 ## 関連性
 
-{関連性を mermaid で図示}
+{関連性を mermaid で図示。変更の図示ではなく、最終的にどういった状態になるのかを表示}
 
 ## 出力名（known after apply）
 
@@ -61,3 +61,4 @@ description: terraform plan を実行し、出力されたファイルを人間�
 - 出力されたファイルは `.gitignore` によって除外されている
 - `@docs/spec/continuous-deployment-requirements.md` にのっとった仕様になっていることを確認
 - `@docs/design/continuous-deployment/` にのっとった設計になっていることを確認
+- 権限不足などのエラーがある場合、必要な権限と設定 JSON をユーザに例示
