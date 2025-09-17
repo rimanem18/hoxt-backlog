@@ -13,8 +13,8 @@ import {
   test,
 } from 'bun:test';
 import type { Hono } from 'hono';
+import serverApp from '@/entrypoints';
 import { generateTestJWT } from '@/presentation/http/middleware';
-import serverApp from '@/presentation/http/server';
 
 describe('GET /api/user/profile 統合テスト', () => {
   let app: Hono;
