@@ -36,3 +36,19 @@ output "project_name" {
   description = "Project name"
   value       = var.project_name
 }
+
+# CloudFlare Pages出力
+output "cloudflare_pages_subdomain" {
+  description = "CloudFlare Pages subdomain"
+  value       = module.cloudflare_pages.subdomain
+}
+
+output "cloudflare_pages_production_url" {
+  description = "CloudFlare Pages production URL"
+  value       = module.cloudflare_pages.production_url
+}
+
+output "cloudflare_pages_preview_url" {
+  description = "CloudFlare Pages preview URL"
+  value       = module.cloudflare_pages.preview_url
+}

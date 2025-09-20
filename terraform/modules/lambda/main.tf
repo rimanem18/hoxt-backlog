@@ -24,14 +24,15 @@ resource "aws_lambda_function_url" "this" {
   function_name      = aws_lambda_function.this.function_name
   authorization_type = "NONE"
 
-  cors {
-    allow_credentials = false
-    allow_headers     = ["content-type", "authorization"]
-    allow_methods     = ["*"]
-    allow_origins     = [var.cors_allow_origin]
-    expose_headers    = ["date", "keep-alive"]
-    max_age          = 86400
-  }
+  # CORS設定をアプリケーション側で制御するため無効化
+  # cors {
+  #   allow_credentials = false
+  #   allow_headers     = ["content-type", "authorization"]
+  #   allow_methods     = ["*"]
+  #   allow_origins     = [var.cors_allow_origin]
+  #   expose_headers    = ["date", "keep-alive"]
+  #   max_age          = 86400
+  # }
 }
 
 # Lambda package from build output

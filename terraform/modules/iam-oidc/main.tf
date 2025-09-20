@@ -3,6 +3,7 @@
  *
  * GitHub ActionsからAWSリソースへの安全なアクセスを提供
  * セキュリティベストプラクティスに従い最小権限の原則を適用
+ * ブランチ制限により mainブランチ・PR のみアクセス許可
  */
 
 # GitHub OIDC Provider設定
@@ -46,9 +47,12 @@ resource "aws_iam_role" "github_actions" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # リポジトリを制限（ブランチ・PR両対応）
+          # リポジトリ・ブランチ制限（mainブランチ・PR両対応）
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.repository_name}:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.repository_name}:ref:refs/heads/main",
+              "repo:${var.repository_name}:pull_request"
+            ]
           }
         }
       }

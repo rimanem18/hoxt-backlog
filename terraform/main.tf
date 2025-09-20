@@ -60,28 +60,28 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 module "lambda_production" {
   source = "./modules/lambda"
 
-  project_name    = local.project_name
-  function_name   = "${local.project_name}-api-production"
-  environment     = "production"
+  project_name  = local.project_name
+  function_name = "${local.project_name}-api-production"
+  environment   = "production"
 
-  runtime         = "nodejs22.x"
-  handler         = "index.handler"
-  memory_size     = 512
-  timeout         = 30
+  runtime     = "nodejs22.x"
+  handler     = "index.handler"
+  memory_size = 512
+  timeout     = 30
 
   # Production環境変数
   base_environment_variables = {
-    SUPABASE_URL           = var.supabase_url
-    SUPABASE_JWT_SECRET    = var.jwt_secret
-    BASE_TABLE_PREFIX      = var.base_table_prefix
-    DATABASE_URL           = var.database_url
-    NODE_ENV              = "production"
-    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
-    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
-    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
+    SUPABASE_URL         = var.supabase_url
+    SUPABASE_JWT_SECRET  = var.jwt_secret
+    BASE_TABLE_PREFIX    = var.base_table_prefix
+    DATABASE_URL         = var.database_url
+    NODE_ENV             = "production"
+    ACCESS_ALLOW_ORIGIN  = "https://${var.domain_name}"
+    ACCESS_ALLOW_METHODS = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS = join(", ", var.access_allow_headers)
   }
 
-  cors_allow_origin = var.access_allow_origin
+  cors_allow_origin = "https://${var.domain_name}"
   lambda_role_arn   = aws_iam_role.lambda_exec.arn
 
   tags = merge(local.common_tags, { Environment = "production" })
@@ -90,50 +90,58 @@ module "lambda_production" {
 module "lambda_preview" {
   source = "./modules/lambda"
 
-  project_name    = local.project_name
-  function_name   = "${local.project_name}-api-preview"
-  environment     = "preview"
+  project_name  = local.project_name
+  function_name = "${local.project_name}-api-preview"
+  environment   = "preview"
 
-  runtime         = "nodejs22.x"
-  handler         = "index.handler"
-  memory_size     = 512
-  timeout         = 30
+  runtime     = "nodejs22.x"
+  handler     = "index.handler"
+  memory_size = 512
+  timeout     = 30
 
   # Preview環境変数（dev接尾辞付き）
   base_environment_variables = {
-    SUPABASE_URL           = var.supabase_url
-    SUPABASE_JWT_SECRET    = var.jwt_secret
-    BASE_TABLE_PREFIX      = "${var.base_table_prefix}${var.preview_table_prefix_suffix}"
-    DATABASE_URL           = var.database_url
-    NODE_ENV              = "development"
-    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
-    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
-    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
+    SUPABASE_URL         = var.supabase_url
+    SUPABASE_JWT_SECRET  = var.jwt_secret
+    BASE_TABLE_PREFIX    = "${var.base_table_prefix}${var.preview_table_prefix_suffix}"
+    DATABASE_URL         = var.database_url
+    NODE_ENV             = "development"
+    ACCESS_ALLOW_ORIGIN  = "https://preview.${local.project_name}${var.preview_domain_suffix}"
+    ACCESS_ALLOW_METHODS = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS = join(", ", var.access_allow_headers)
   }
 
-  cors_allow_origin = var.access_allow_origin
+  cors_allow_origin = "https://preview.${local.project_name}${var.preview_domain_suffix}"
   lambda_role_arn   = aws_iam_role.lambda_exec.arn
 
   tags = merge(local.common_tags, { Environment = "preview" })
 }
 
 
-# CloudFlare Pages（統合管理）
-# TODO: CloudFlareプロバイダー設定修正後に有効化
-# module "cloudflare_pages" {
-#   source = "./modules/cloudflare-pages"
-#
-#   project_name     = local.project_name
-#   domain           = var.domain_name
-#
-#   production_branch = "main"
-#   build_command     = "bun run build"
-#   output_directory  = "out"
-#
-#   environment_variables = {
-#     NODE_ENV = "production"
-#   }
-# }
+# CloudFlare Pages（統合1プロジェクト方式）
+module "cloudflare_pages" {
+  source = "./modules/cloudflare-pages"
+
+  account_id        = var.cloudflare_account_id
+  project_name      = local.project_name
+  zone_id           = var.cloudflare_zone_id
+  production_domain = var.domain_name  # app.your-domain.com として設定予定
+  preview_subdomain = "preview"       # preview.app.your-domain.com として設定予定
+  preview_domain_suffix = var.preview_domain_suffix
+
+  production_branch = "main"
+  build_command     = "bun run build"
+  output_directory  = "out"
+  root_directory    = "app/client"
+
+  # Lambda Function URL連携
+  production_api_url = module.lambda_production.function_url
+  preview_api_url    = module.lambda_preview.function_url
+
+  base_environment_variables = {
+    NEXT_PUBLIC_SUPABASE_URL = var.supabase_url
+  }
+}
 
 # Terraform State Bucket (参照用)
 data "aws_s3_bucket" "terraform_state" {
