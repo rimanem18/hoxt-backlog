@@ -42,6 +42,21 @@ iac-apply:
 	@echo "統合Terraform適用を実行..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
 		terraform apply terraform.tfplan'
+frontend-deploy-preview:
+	@echo "ビルドします..."
+	@docker compose exec client ash -c ' \
+	export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} && \
+	export NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} && \
+	export NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS} && \
+	bun run build'
+	@echo "フロントエンドをCloudflareにデプロイします..."
+	@docker compose exec client ash -c ' \
+		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
+		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
+		npx --yes wrangler@latest pages deploy ./out \
+		--project-name ${PROJECT_NAME} \
+		--branch preview \
+		--commit-dirty=true'
 sql:
 	docker compose exec db psql -U postgres -d postgres -h db -p 5432
 ps:
