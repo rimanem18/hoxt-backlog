@@ -3,7 +3,7 @@ cache
 dist
 
 # Terraform関連
-terraform/backend.tfvars
+terraform/backend.*
 terraform/**/*.tfstate
 terraform/**/*.tfstate.*
 terraform/**/.terraform/

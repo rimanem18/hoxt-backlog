@@ -26,11 +26,12 @@ iac:
 iac-init:
 	@echo "統合Terraform初期化を実行..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		terraform init -reconfigure \
+		terraform init --migrate-state \
 			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
-			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks" \
 			-backend-config="key=${PROJECT_NAME}/${ENVIRONMENT}/terraform.tfstate" \
-			-backend-config="region=${AWS_REGION}"'
+			-backend-config="region=${AWS_REGION}" \
+			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks" \
+			-backend-config="encrypt=true"'
 iac-plan-save:
 	@echo "統合Terraform計画をファイルに保存..."
 	@docker compose exec server bun run build:lambda
