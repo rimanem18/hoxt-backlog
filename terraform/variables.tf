@@ -83,3 +83,22 @@ variable "aws_region" {
   type        = string
   default     = "ap-northeast-1"
 }
+
+# CloudFlare Pages settings
+variable "cloudflare_account_id" {
+  description = "CloudFlare account ID"
+  type        = string
+  default     = ""
+}
+
+variable "cloudflare_zone_id" {
+  description = "CloudFlare zone ID for DNS management"
+  type        = string
+  default     = ""
+}
+
+variable "preview_domain_suffix" {
+  description = "Preview domain suffix for CloudFlare Pages (typically .pages.dev)"
+  type        = string
+  default     = ".pages.dev"
+}
