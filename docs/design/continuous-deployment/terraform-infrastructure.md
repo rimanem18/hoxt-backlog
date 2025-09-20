@@ -94,13 +94,15 @@ locals {
   }
 }
 
-# GitHub OIDC Provider & 統合IAM Role
+# GitHub OIDC Provider & 統合IAM Role（ブランチ制限付き）
 module "github_oidc" {
   source = "./modules/iam-oidc"
   
   project_name = local.project_name
   repository   = var.repository_name
   
+  # ブランチ制限: mainブランチ・PR のみアクセス許可
+  # feature/develop等のブランチからは実行不可
   lambda_function_arn = module.lambda.function_arn
   s3_bucket_arn      = data.aws_s3_bucket.terraform_state.arn
   

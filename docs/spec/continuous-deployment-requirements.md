@@ -1,7 +1,7 @@
 # 継続的デプロイフロー 要件定義書
 
 作成日：2025年09月12日  
-最終更新：2025年09月17日  
+最終更新：2025年09月18日  
 
 
 ## 概要
@@ -58,10 +58,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### 制約要件
 
-- REQ-401: システムは GitHub OIDC統合ロール設計（単一ロールでProduction/Preview両対応）を実装し、GitHub Environment条件による最小権限制御を行わなければならない
+- REQ-401: システムは GitHub OIDC統合ロール設計（単一ロールでProduction/Preview両対応）を実装し、環境別アクセス制御による最小権限制御を行わなければならない
 - REQ-402: システムは シークレット情報をソースコードに含めてはならない
 - REQ-403: システムは drizzle-kit によるデータベースマイグレーションでのロールバック非対応（Forward-onlyポリシー）を遵守しなければならない
-- REQ-404: システムは Terraform state を単一ファイルで管理し、環境はworkspace機能で分離しなければならない
+- REQ-404: システムは Terraform state を単一ファイルで管理し、環境は変数による論理分離を実装しなければならない
 - REQ-405: システムは 環境別Lambda関数による完全分離（Preview専用関数、Production専用関数）を実装し、各々にFunction URLを設定して独立したHTTPSエンドポイントによる環境分離を行わなければならない
 - REQ-406: システムは Lambda Function URL による直接HTTP接続を実装し、API Gatewayを使用せずシンプルで確実なエンドポイント提供を行わなければならない
 - REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
@@ -71,7 +71,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### セキュリティ
 
-- NFR-001: GitHub OIDC + 単一IAM統合ロール（GitHub Environment条件による最小権限制御）による認証を実装すること
+- NFR-001: GitHub OIDC + 単一IAM統合ロール（環境別アクセス制御による最小権限制御）による認証を実装すること
 - NFR-002: Terraform state ファイルを暗号化ストレージ（S3+KMS）に保存すること  
 - NFR-003: PostgreSQL Row-Level Security（RLS）を必須とすること
 - NFR-004: Secret Scanning を有効化し機密情報漏洩を防止すること
@@ -102,8 +102,8 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 - [ ] Terraform による AWS、CloudFlare リソース作成が成功すること
 - [ ] 単一GitHub OIDC統合ロール認証でAWS/CloudFlareアクセスが成功すること
-- [ ] GitHub Environment条件による最小権限制御が適切に機能すること
-- [ ] Secrets 管理が GitHub Environment 単位で動作すること
+- [ ] 環境別アクセス制御による最小権限制御が適切に機能すること
+- [ ] Secrets 管理が Repository-level で環境分離されて動作すること
 
 ### デプロイフローテスト
 

@@ -78,8 +78,9 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### セキュリティ
 - **認証**: 単一GitHub OIDC 統合ロールによる一元認証
-- **権限管理**: GitHub Environment条件による最小権限制御（Production/Preview共通ロール）
-- **シークレット管理**: GitHub Environment Secrets
+- **ブランチ制限**: mainブランチ・PR のみアクセス許可（feature/develop等ブランチ無効化）
+- **権限管理**: Repository-level Secrets + 環境別アクセス制御による最小権限制御（Production/Preview共通ロール）
+- **シークレット管理**: Repository Secrets + 共通設定統合による管理負荷軽減
 - **監査**: CloudTrail + GitHub Actions logs
 
 ## デプロイメント順序
