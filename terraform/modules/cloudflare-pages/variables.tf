@@ -1,5 +1,6 @@
 /**
- * CloudFlare Pagesモジュール変数定義
+ * CloudFlare Pages統合モジュール変数定義
+ * 1プロジェクト方式対応
  */
 
 variable "account_id" {
@@ -8,17 +9,7 @@ variable "account_id" {
 }
 
 variable "project_name" {
-  description = "Project name for resource prefixes"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
-
-variable "domain" {
-  description = "Domain name for the application"
+  description = "Project name for unified Pages project"
   type        = string
 }
 
@@ -26,6 +17,18 @@ variable "zone_id" {
   description = "CloudFlare zone ID"
   type        = string
   default     = ""
+}
+
+variable "production_domain" {
+  description = "Production domain name"
+  type        = string
+  default     = ""
+}
+
+variable "preview_subdomain" {
+  description = "Preview subdomain name"
+  type        = string
+  default     = "preview"
 }
 
 variable "production_branch" {
@@ -65,8 +68,24 @@ variable "web_analytics_token" {
   sensitive   = true
 }
 
-variable "environment_variables" {
-  description = "Environment variables for deployment"
+variable "base_environment_variables" {
+  description = "Base environment variables for deployment"
   type        = map(string)
   default     = {}
+}
+
+variable "production_api_url" {
+  description = "Production Lambda Function URL"
+  type        = string
+}
+
+variable "preview_api_url" {
+  description = "Preview Lambda Function URL"
+  type        = string
+}
+
+variable "preview_domain_suffix" {
+  description = "Preview domain suffix for CloudFlare Pages (typically .pages.dev)"
+  type        = string
+  default     = ".pages.dev"
 }
