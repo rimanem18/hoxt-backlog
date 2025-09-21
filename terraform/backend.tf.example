@@ -1,0 +1,14 @@
+/**
+ * Terraform Backend設定
+ * 統合State管理
+ */
+
+terraform {
+  backend "s3" {
+    # bucket         = "project-name-terraform-state"
+    # key            = "project-name-terraform.tfstate"
+    # region         = "ap-northeast-1"
+    # dynamodb_table = "project-name-terraform-locks"
+    encrypt        = true
+  }
+}
