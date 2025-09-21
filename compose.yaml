@@ -34,10 +34,11 @@ services:
       - ./app/packages:/home/bun/app/packages
     environment:
       - CLIENT_PORT=${CLIENT_PORT}
-      - NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS}
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - NEXT_PUBLIC_TRUSTED_DOMAINS=http://localhost:${CLIENT_PORT},http://localhost:${SERVER_PORT}
+      - NEXT_PUBLIC_SITE_URL=http://localhost:${CLIENT_PORT}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:${SERVER_PORT}
     depends_on:
       - server
     tty: true
@@ -93,7 +94,8 @@ services:
       - TF_VAR_aws_region=${AWS_REGION}
       - TF_VAR_aws_oidc_role_arn=${AWS_OIDC_ROLE_ARN}
       - TF_VAR_database_url=${DATABASE_URL}
-      - TF_VAR_cloudflare_api_token=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - TF_VAR_cloudflare_account_id=${CLOUDFLARE_ACCOUNT_ID}
       - TF_VAR_cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}
       - TF_VAR_access_allow_origin=https://localhost.example.com
       - TF_VAR_access_allow_methods=${ACCESS_ALLOW_METHODS}

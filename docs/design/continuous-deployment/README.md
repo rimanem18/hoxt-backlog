@@ -1,7 +1,7 @@
 # 継続的デプロイメントシステム 設計文書
 
 作成日: 2025年09月12日
-最終更新: 2025年09月16日
+最終更新: 2025年09月18日
 
 
 ## 概要
@@ -42,6 +42,12 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - GitHub OIDC・IAMロール設計
 - モジュール構成とstate管理
 
+### [cloudflare-pages-environment-strategy.md](./cloudflare-pages-environment-strategy.md)
+- CloudFlare Pages 環境分割戦略
+- 1プロジェクト方式による実装設計
+- ブランチベースデプロイメント設計
+- Direct Upload実装とセキュリティ設計
+
 ### [deployment-api-specs.md](./deployment-api-specs.md)
 - 各サービスAPI仕様
 - 認証方式・エンドポイント定義
@@ -53,7 +59,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### セキュリティファースト
 - 単一GitHub OIDC 統合ロールによる完全シークレットレス認証
-- GitHub Environment条件による最小権限制御（Production/Preview共通）
+- Repository-level Secrets + 環境別アクセス制御による最小権限制御（Production/Preview共通）
 - Terraform state の S3+KMS 暗号化保存
 - Secret Scanning による機密情報漏洩防止
 
@@ -98,12 +104,12 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 設計された各コンポーネントは、要件定義書に記載された以下の受け入れ基準を満たします：
 
 - ✅ **統合基盤構築**: Terraform・単一GitHub OIDC・統合IAM設定
-- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御（単一Lambda・unified state）
+- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御（Lambda完全分離・unified state）
 - ✅ **品質保証**: 破壊的変更承認・マイグレーション・待機キュー
 - ✅ **監査ログ**: 実行者・日時・対象記録・Secret Scanning
 - ✅ **エラーハンドリング**: 再試行・タイムアウト・アラート機能
 - ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定（最小権限統合ロール）
-- ⚠️ **制約対応**: Supabase無料版制約によりブランチ機能は非対応（テーブルプレフィックスで代替）
+- ✅ **環境分離**: Lambda完全分離 + CloudFlare Pages統合プロジェクト + テーブルプレフィックス方式
 
 ## 次ステップ
 

@@ -12,7 +12,7 @@
 
 ### セキュリティ制限
 - **Fork制限（NFR-005）**: Fork リポジトリからのPRではPreview環境を生成・更新しない
-- **Environment制限**: GitHub Environment によるシークレット・変数の保護
+- **Repository Secrets**: 共通設定統合 + 必要最小限の環境別分離による管理負荷軽減
 
 ## メインデプロイワークフロー（Production）
 
@@ -425,6 +425,38 @@ jobs:
 ```
 
 ## 環境変数・シークレット設定
+
+### 🔧 共通設定統合方式（推奨）
+
+管理負荷軽減のため、共通設定は統合し、必要最小限のみ環境別分離：
+
+#### Repository Variables（共通）
+```yaml
+PROJECT_NAME: your-project
+PRODUCTION_DOMAIN: your-domain.com
+BASE_TABLE_PREFIX: prefix
+SUPABASE_PROJECT_ID: abcdefghijklmnop
+```
+
+#### Repository Secrets（統合設計）
+```yaml
+# 共通Secrets（PROD/PREVIEW共通）
+CLOUDFLARE_API_TOKEN: your-api-token
+CLOUDFLARE_ACCOUNT_ID: your-account-id
+SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
+
+# 統合OIDC認証（ブランチ制限付き）
+AWS_ROLE_ARN: arn:aws:iam::123456789012:role/your-project-github-actions
+# 注記: mainブランチ・PRのみアクセス許可、feature/develop等ブランチ無効化
+```
+
+#### 📈 管理負荷軽減効果
+- **設定項目**: 10個 → 4個（60%削減）
+- **重複管理**: なし（完全統合による効率化）
+- **運用効率**: 更新時1箇所のみ修正で済む
+- **セキュリティ**: ブランチ制限により意図しないアクセスを完全ブロック
+
+## 環境変数・シークレット設定（従来参考）
 
 ### GitHub Environment: production
 ```yaml

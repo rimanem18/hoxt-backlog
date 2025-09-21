@@ -12,12 +12,33 @@ output "pages_project_name" {
   value       = cloudflare_pages_project.this.name
 }
 
-output "pages_subdomain" {
+output "subdomain" {
   description = "CloudFlare Pages subdomain"
   value       = cloudflare_pages_project.this.subdomain
 }
 
-output "dns_record_id" {
-  description = "CloudFlare DNS record ID"
-  value       = length(cloudflare_record.main) > 0 ? cloudflare_record.main[0].id : ""
+output "production_url" {
+  description = "Production URL"
+  value       = var.production_domain != "" ? "https://${var.production_domain}" : "https://${cloudflare_pages_project.this.subdomain}"
+}
+
+output "preview_url" {
+  description = "Preview URL"
+  value       = var.preview_subdomain != "" && var.production_domain != "" ? "https://${var.preview_subdomain}.${var.production_domain}" : "https://${cloudflare_pages_project.this.subdomain}"
+}
+
+# DNS Record出力（手動設定のためコメントアウト）
+# output "dns_record_production_id" {
+#   description = "CloudFlare DNS record ID for production"
+#   value       = length(cloudflare_record.production) > 0 ? cloudflare_record.production[0].id : ""
+# }
+
+# output "dns_record_preview_id" {
+#   description = "CloudFlare DNS record ID for preview"
+#   value       = length(cloudflare_record.preview) > 0 ? cloudflare_record.preview[0].id : ""
+# }
+
+output "pages_subdomain_for_dns" {
+  description = "CloudFlare Pages subdomain for manual DNS CNAME setting"
+  value       = cloudflare_pages_project.this.subdomain
 }
