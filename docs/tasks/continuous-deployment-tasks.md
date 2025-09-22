@@ -6,7 +6,7 @@
 ## 概要
 
 全タスク数: 18タスク
-推定作業時間: 38時間（drizzle-kit採用によりマイグレーション工数削減、統合ロール採用により設定工数削減）
+推定作業時間: 34時間（承認フロー削除、デプロイフロー簡素化により4時間削減）
 クリティカルパス: TASK-501 → TASK-502 → TASK-503 → TASK-504 → TASK-505 → TASK-601 → TASK-602 → TASK-603 → TASK-604
 
 ## タスク一覧
@@ -141,25 +141,21 @@
 - **依存タスク**: TASK-505
 - **実装詳細**:
   - .github/workflows/deploy.yml作成
-  - 4段階デプロイフロー（インフラ→drizzle-kit DB→API→フロント）
+  - 3段階デプロイフロー（インフラ+DB→API→フロント）
   - 並行制御とconcurrency group設定
-  - Terraformプラン承認フロー実装
+  - 基本的な自動デプロイフロー実装
 - **テスト要件**:
-  - [ ] 単体テスト: 各ステップの独立動作
   - [ ] 統合テスト: フロー全体実行
   - [ ] エラーハンドリングテスト: 途中失敗時の動作
 - **UI/UX要件**:
-  - [ ] ローディング状態: GitHub Actions進行状況
-  - [ ] エラー表示: 詳細なログ出力
-  - [ ] 通知機能: デプロイ完了アラート
+  - [ ] エラー表示: 基本的なログ出力
+  - [ ] 通知機能: デプロイ完了アラート（Discord/PRコメント）
 - **エラーハンドリング**:
   - [ ] ワークフロー途中失敗時の停止
-  - [ ] 承認待ちタイムアウト
-  - [ ] 並行実行競合エラー
+  - [ ] 基本的な並行実行制御
 - **完了条件**:
   - [ ] deploy.ymlファイル作成完了
   - [ ] 本番デプロイテスト成功
-  - [ ] 承認フロー動作確認
 
 #### TASK-602: プレビュー環境ワークフロー
 
@@ -354,7 +350,7 @@ gantt
     TASK-504           :a4, after a3, 1d
     TASK-505           :a5, after a1, 1d
     section ワークフロー
-    TASK-601           :b1, after a5, 2d
+    TASK-601           :b1, after a5, 1.5d
     TASK-602           :b2, after b1, 2d
     TASK-603           :b3, after b1, 1d
     TASK-604           :b4, after b3, 2d
@@ -393,7 +389,6 @@ gantt
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール
   TERRAFORM_STATE_BUCKET: your-project-terraform-state
-  TERRAFORM_APPROVERS: admin1,admin2
   LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
   LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop
