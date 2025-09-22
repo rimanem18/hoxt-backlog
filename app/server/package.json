@@ -10,26 +10,22 @@
     "test:local": "bun test",
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:push": "drizzle-kit push",
+    "db:setup": "bun scripts/setup-database-schema.js"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",
-    "@supabase/supabase-js": "^2.44.4",
     "drizzle-orm": "^0.44.4",
-    "drizzle-zod": "^0.8.3",
     "hono": "^4.9.0",
     "jose": "^6.1.0",
     "pg": "^8.12.0",
     "postgres": "^3.4.7",
-    "uuid": "^11.1.0",
     "zod": "^4.0.17"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
-    "@types/bun": "^1.2.20",
-    "@types/node": "^24.3.0",
     "@types/pg": "^8.11.0",
-    "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.9",
     "tsx": "^4.19.2",
