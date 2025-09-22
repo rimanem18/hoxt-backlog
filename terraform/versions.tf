@@ -31,5 +31,5 @@ provider "aws" {
 }
 
 provider "cloudflare" {
-  # API tokenは環境変数 CLOUDFLARE_API_TOKEN で設定
+  api_token = var.cloudflare_api_token
 }

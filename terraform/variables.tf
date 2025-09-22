@@ -77,6 +77,12 @@ variable "cloudflare_zone_id" {
   default     = ""
 }
 
+variable "cloudflare_api_token" {
+  description = "CloudFlare API token for authentication"
+  type        = string
+  sensitive   = true
+}
+
 variable "preview_domain_suffix" {
   description = "Preview domain suffix for CloudFlare Pages (typically .pages.dev)"
   type        = string
