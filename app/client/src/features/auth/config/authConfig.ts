@@ -47,10 +47,11 @@ export const AUTH_TIMING_CONFIG = {
  */
 const getBaseUrl = (): string => {
   // 環境変数が優先、次に実行時origin、最後にlocalhost
-  const url = process.env.NEXT_PUBLIC_SITE_URL || 
-              (typeof window !== 'undefined' ? window.location.origin : '') ||
-              'http://localhost:3000';
-  
+  const url =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '') ||
+    'http://localhost:3000';
+
   // 末尾スラッシュを正規化
   return url.endsWith('/') ? url.slice(0, -1) : url;
 };
@@ -72,7 +73,7 @@ export const AUTH_REDIRECT_CONFIG = {
 export const createSecureRedirectUrl = (): string => {
   // getBaseUrl()で環境別のベースURLを取得
   const baseUrl = getBaseUrl();
-  
+
   // コールバックURLを構築
   return `${baseUrl}${AUTH_REDIRECT_CONFIG.CALLBACK_PATH}`;
 };

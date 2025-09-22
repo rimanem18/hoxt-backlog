@@ -328,7 +328,7 @@ async function cleanupTestData() {
   if (!schema) {
     throw new Error('BASE_SCHEMA environment variable is not set');
   }
-  
+
   try {
     // test_で始まるexternal_idを持つレコードを削除
     await client.query(
