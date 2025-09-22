@@ -9,8 +9,8 @@ import {
 
 describe('DatabaseConnection', () => {
   beforeAll(async () => {
-    // テスト用環境変数を設定（既存の値があれば優先）
-    process.env.BASE_TABLE_PREFIX = process.env.BASE_TABLE_PREFIX || 'test_';
+    // テスト用環境変数を設定
+    process.env.BASE_SCHEMA = process.env.BASE_SCHEMA || 'app_test';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';
@@ -39,11 +39,11 @@ describe('DatabaseConnection', () => {
     });
 
     test('無効なデータベース設定でエラーが発生すること', async () => {
-      // Given: 無効なデータベース設定
+      // Given: 無効なデータベース設定（ローカルホストで無効なポート）
       const originalUrl = process.env.DATABASE_URL;
       await closePool(); // 既存プールをクローズ
       process.env.DATABASE_URL =
-        'postgresql://invalid:invalid@invalid-host:9999/invalid_db';
+        'postgresql://invalid:invalid@localhost:9999/invalid_db';
       resetPoolForTesting(); // プールをリセット
 
       // When & Then: 接続エラーが発生
@@ -68,11 +68,11 @@ describe('DatabaseConnection', () => {
     });
 
     test('データベース接続が無効な場合にfalseを返すこと', async () => {
-      // Given: 無効なデータベース設定
+      // Given: 無効なデータベース設定（ローカルホストで無効なポート）
       const originalUrl = process.env.DATABASE_URL;
       await closePool(); // 既存プールをクローズ
       process.env.DATABASE_URL =
-        'postgresql://invalid:invalid@invalid-host:9999/invalid_db';
+        'postgresql://invalid:invalid@localhost:9999/invalid_db';
       resetPoolForTesting(); // プールをリセット
 
       // When: ヘルスチェックを実行

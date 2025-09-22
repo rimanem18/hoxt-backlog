@@ -62,7 +62,7 @@ jobs:
           DB_NAME: postgres
           DB_USER: postgres
           DB_PASSWORD: test_password
-          BASE_TABLE_PREFIX: test_
+          BASE_SCHEMA: test_schema
           DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
         run: |
           echo "=== Environment Variables ==="
@@ -70,7 +70,7 @@ jobs:
           echo "DB_PORT: $DB_PORT"
           echo "DB_NAME: $DB_NAME"
           echo "DB_USER: $DB_USER"
-          echo "BASE_TABLE_PREFIX: $BASE_TABLE_PREFIX"
+          echo "BASE_SCHEMA: $BASE_SCHEMA"
           echo "DATABASE_URL: $DATABASE_URL"
           
           echo "=== Testing PostgreSQL connection ==="
@@ -85,11 +85,11 @@ jobs:
           echo "=== Drizzle generate ==="
           bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
           
-          echo "=== Drizzle push schema ==="
-          bunx drizzle-kit push --config=drizzle.config.ts --force
+          echo "=== Database schema setup ==="
+          bun run db:setup
           
           echo "=== Verify table creation ==="
-          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\dt test_*" || echo "No test tables found"
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\dt test_schema.*" || echo "No test schema tables found"
 
       - name: Run tests
         working-directory: ${{ inputs.working-directory }}
@@ -101,7 +101,7 @@ jobs:
           DB_NAME: postgres
           DB_USER: postgres
           DB_PASSWORD: test_password
-          BASE_TABLE_PREFIX: test_
+          BASE_SCHEMA: test_schema
           DATABASE_URL: postgresql://postgres:test_password@localhost:5432/postgres
           # Supabase test environment variables (mocked)
           SUPABASE_URL: http://localhost:54321

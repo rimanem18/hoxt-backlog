@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server client e2e db iac iac-init iac-plan iac-apply sql ps logs fmt amend restart init
+.PHONY: build up down server client e2e db iac iac-init iac-plan iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production
 
 up:
 	docker compose up -d
@@ -58,6 +58,22 @@ frontend-deploy-preview:
 		--project-name ${PROJECT_NAME} \
 		--branch preview \
 		--commit-dirty=true'
+db-migrate-preview:
+	@echo "プレビュー環境のデータベースマイグレーションを実行します..."
+	@docker compose exec server ash -c ' \
+		export ENVIRONMENT=preview && \
+		export BASE_SCHEMA=app_${PROJECT_NAME}_preview && \
+		export DATABASE_URL=${DATABASE_URL} && \
+		bun run db:setup'
+	@echo "プレビュー環境のデータベースマイグレーションが完了しました。"
+db-migrate-production:
+	@echo "本番環境のデータベースマイグレーションを実行します..."
+	@docker compose exec server ash -c ' \
+		export ENVIRONMENT=production && \
+		export BASE_SCHEMA=app_${PROJECT_NAME} && \
+		export DATABASE_URL=${DATABASE_URL} && \
+		bun run db:setup'
+	@echo "本番環境のデータベースマイグレーションが完了しました。"
 sql:
 	docker compose exec db psql -U postgres -d postgres -h db -p 5432
 ps:
