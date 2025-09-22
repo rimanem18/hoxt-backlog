@@ -51,6 +51,7 @@ resource "aws_iam_role" "github_actions" {
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.repository_name}:ref:refs/heads/main",
+              "repo:${var.repository_name}:ref:refs/heads/HOXBL-27-main-deploy-workflow",
               "repo:${var.repository_name}:pull_request"
             ]
           }
