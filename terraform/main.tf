@@ -75,8 +75,6 @@ module "lambda_production" {
     DATABASE_URL         = var.database_url
     NODE_ENV             = "production"
     ACCESS_ALLOW_ORIGIN  = "https://${var.domain_name}"
-    ACCESS_ALLOW_METHODS = join(", ", var.access_allow_methods)
-    ACCESS_ALLOW_HEADERS = join(", ", var.access_allow_headers)
   }
 
   cors_allow_origin = "https://${var.domain_name}"
@@ -105,8 +103,6 @@ module "lambda_preview" {
     DATABASE_URL         = var.database_url
     NODE_ENV             = "development"
     ACCESS_ALLOW_ORIGIN  = "https://preview.${local.project_name}.pages.dev"
-    ACCESS_ALLOW_METHODS = join(", ", var.access_allow_methods)
-    ACCESS_ALLOW_HEADERS = join(", ", var.access_allow_headers)
   }
 
   cors_allow_origin = "https://preview.${local.project_name}.pages.dev"

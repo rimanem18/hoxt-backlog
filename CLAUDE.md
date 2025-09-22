@@ -93,6 +93,7 @@ docker compose exec e2e npx playwright test
 - **バックエンド**: Hono 4 API + PostgreSQL
   - **認証**: Supabase
   - **パッケージ管理**: Bun
+  - **本番環境ランタイム**: Node.js 22.x
   - **テスト**: Bun 標準
   - **フォーマット**: Biome + TypeScript
   - **型チェック**: TypeScript + Zod 実行時検証（client 側とスキーマシェア）

@@ -52,3 +52,9 @@ output "cloudflare_pages_preview_url" {
   description = "CloudFlare Pages preview URL"
   value       = module.cloudflare_pages.preview_url
 }
+
+# CORS設定用出力（サーバービルド時に使用）
+output "access_allow_origin_production" {
+  description = "Production CORS Allow Origin URL"
+  value       = "https://${var.domain_name}"
+}
