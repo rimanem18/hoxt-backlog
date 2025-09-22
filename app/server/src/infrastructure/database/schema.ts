@@ -9,8 +9,7 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
-  pgEnum,
-  pgTable,
+  pgSchema,
   text,
   timestamp,
   uniqueIndex,
@@ -18,14 +17,23 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-// テーブルプレフィックスを環境変数から直接取得
-const tablePrefix = process.env.BASE_TABLE_PREFIX || '';
+/**
+ * PostgreSQLスキーマの取得
+ *
+ * 外部から渡されたBASE_SCHEMAをそのまま使用
+ * - Production: projectname
+ * - Preview: projectname_preview
+ * 環境別の分離は外部（Terraform/GitHub Actions等）で制御される
+ */
+const schemaName = process.env.BASE_SCHEMA || 'public';
+const schema = pgSchema(schemaName);
 
 /**
  * 認証プロバイダー種別のenum定義
  * 将来的な拡張を考慮した設計
+ * スキーマ内に定義することで環境分離を実現
  */
-export const authProviderType = pgEnum('auth_provider_type', [
+export const authProviderType = schema.enum('auth_provider_type', [
   'google',
   'apple',
   'microsoft',
@@ -38,8 +46,8 @@ export const authProviderType = pgEnum('auth_provider_type', [
  * ユーザーテーブル
  * DDD User Entityに対応するメインテーブル
  */
-export const users = pgTable(
-  `${tablePrefix}users`,
+export const users = schema.table(
+  'users',
   {
     // プライマリキー（UUID v4）
     id: uuid('id').primaryKey().defaultRandom(),
@@ -121,3 +129,39 @@ export type NewUser = typeof users.$inferInsert;
  * enum値の型安全性を確保
  */
 export type AuthProvider = (typeof authProviderType.enumValues)[number];
+
+/**
+ * Row-Level Security (RLS) ポリシー定義
+ *
+ * Supabaseの認証システムと連携してテーブルレベルのセキュリティを実現
+ */
+export const rlsPolicies = {
+  /**
+   * usersテーブル用RLSポリシー
+   * 認証済みユーザーのみアクセス可能
+   */
+  enableUsersRLS: sql`
+    -- usersテーブルのRLSを有効化
+    ALTER TABLE ${users} ENABLE ROW LEVEL SECURITY;
+    
+    -- 認証済みユーザーのみアクセス可能なポリシー
+    CREATE POLICY "authenticated_users_policy" ON ${users}
+      FOR ALL USING (auth.uid() IS NOT NULL);
+    
+    -- 自分のレコードのみアクセス可能なポリシー（将来的な拡張用）
+    CREATE POLICY "users_own_records_policy" ON ${users}
+      FOR ALL USING (auth.uid()::text = id::text);
+  `,
+
+  /**
+   * RLSポリシーの無効化（開発・テスト用）
+   */
+  disableUsersRLS: sql`
+    -- usersテーブルのポリシーを削除
+    DROP POLICY IF EXISTS "authenticated_users_policy" ON ${users};
+    DROP POLICY IF EXISTS "users_own_records_policy" ON ${users};
+    
+    -- RLSを無効化
+    ALTER TABLE ${users} DISABLE ROW LEVEL SECURITY;
+  `,
+};

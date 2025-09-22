@@ -19,10 +19,10 @@ inputs:
   db-password:
     description: 'Database password'
     required: true
-  table-prefix:
-    description: 'Table prefix for testing'
+  schema-name:
+    description: 'Schema name for testing'
     required: false
-    default: 'test_'
+    default: 'test_schema'
 
 outputs:
   database-url:
@@ -41,4 +41,4 @@ runs:
         echo "DB_NAME=${{ inputs.db-name }}" >> $GITHUB_ENV
         echo "DB_USER=${{ inputs.db-user }}" >> $GITHUB_ENV
         echo "DB_PASSWORD=${{ inputs.db-password }}" >> $GITHUB_ENV
-        echo "BASE_TABLE_PREFIX=${{ inputs.table-prefix }}" >> $GITHUB_ENV
+        echo "BASE_SCHEMA=${{ inputs.schema-name }}" >> $GITHUB_ENV

@@ -100,7 +100,7 @@ AWS_ROLE_ARN: arn:aws:iam::ACCOUNT:role/your-project-github-actions-unified
 TERRAFORM_STATE_BUCKET: your-project-terraform-state  # 自動生成
 LAMBDA_FUNCTION_NAME: your-project-api  # 自動生成
 SUPABASE_PROJECT_ID: xxxxx
-BASE_TABLE_PREFIX: yourprefix
+BASE_SCHEMA: yourproject
 CLOUDFLARE_ACCOUNT_ID: your-account-id
 CLOUDFLARE_PROJECT_NAME: your-project
 

@@ -65,7 +65,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-405: システムは 環境別Lambda関数による完全分離（Preview専用関数、Production専用関数）を実装し、各々にFunction URLを設定して独立したHTTPSエンドポイントによる環境分離を行わなければならない
 - REQ-406: システムは Lambda Function URL による直接HTTP接続を実装し、API Gatewayを使用せずシンプルで確実なエンドポイント提供を行わなければならない
 - REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
-- REQ-408: システムは データベース権限分離（app_role: CRUD操作、migrate_role: スキーマ変更）によるセキュリティ強化を実装しなければならない
+- REQ-408: システムは PostgreSQLスキーマ分離による環境分離を実装し、BASE_SCHEMA環境変数（production: projectname、preview: projectname_preview）によるスキーマベース環境分離を行わなければならない
 
 ## 非機能要件
 

@@ -12,19 +12,18 @@ jobs:
     timeout-minutes: 15
     
     services:
-      postgres:
+      db:
         image: postgres:15-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
           POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
+          --health-cmd "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 5s
 
     container:
       image: mcr.microsoft.com/playwright:v1.55.0-jammy
@@ -58,6 +57,7 @@ jobs:
       - name: Setup PostgreSQL Environment
         uses: ./.github/actions/setup-postgres
         with:
+          db-host: db
           db-name: postgres
           db-user: postgres
           db-password: test_password
@@ -87,6 +87,20 @@ jobs:
         run: |
           set -e
           
+          echo "--- Installing PostgreSQL client ---"
+          apt-get update && apt-get install -y postgresql-client
+          
+          echo "--- Waiting for PostgreSQL to be ready ---"
+          # Wait for PostgreSQL to be accessible via service name
+          for i in $(seq 1 30); do
+            if pg_isready -h db -p 5432 -U postgres; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... (attempt $i/30)"
+            sleep 2
+          done
+          
           echo "--- Starting server in background (Node.js runtime) ---"
           cd ./app/server
           SERVER_PORT=3001 \
@@ -95,13 +109,16 @@ jobs:
           ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
           SUPABASE_URL=http://localhost:54321 \
           SUPABASE_JWT_SECRET=test_jwt_secret \
-          DB_HOST=localhost \
+          DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \
           DB_USER=postgres \
           DB_PASSWORD=test_password \
-          BASE_TABLE_PREFIX=test_ \
-          DATABASE_URL=postgresql://postgres:test_password@localhost:5432/postgres \
+          BASE_SCHEMA=test_schema \
+          DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres \
+          DB_CONNECT_TIMEOUT_SECONDS=3 \
+          DB_IDLE_TIMEOUT_SECONDS=10 \
+          DB_MAX_CONNECTIONS=5 \
           npm run start:node &
           SERVER_PID=$!
           cd ../..

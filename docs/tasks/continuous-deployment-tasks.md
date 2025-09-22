@@ -118,20 +118,18 @@
 - **依存タスク**: TASK-501
 - **実装詳細**:
   - drizzle-kit設定でDATABASE_URL直接接続
-  - データベース権限分離（app_role/migrate_role）実装
-  - テーブルプレフィックス戦略実装（PostgreSQL）
+  - PostgreSQLスキーマ分離戦略実装（BASE_SCHEMA環境変数使用）
   - 開発環境：drizzle-kit push、本番環境：generate + migrate
   - RLS（Row-Level Security）適用
 - **テスト要件**:
   - [ ] drizzle-kit generate実行テスト
-  - [ ] migrate_roleによるマイグレーション実行テスト
-  - [ ] テーブルプレフィックス動作確認
+  - [ ] PostgreSQLスキーマ分離動作確認
   - [ ] RLSポリシー検証
 - **完了条件**:
   - [ ] drizzle.config.ts設定完了
   - [ ] マイグレーションスクリプト作成（package.json）
-  - [ ] 権限分離設定完了
-  - [ ] 本番・preview環境分離設定完了
+  - [ ] 本番・preview環境スキーマ分離設定完了
+  - [ ] Terraform連携によるBASE_SCHEMA環境変数設定完了
 
 ### フェーズ2: GitHub Actions ワークフロー実装
 

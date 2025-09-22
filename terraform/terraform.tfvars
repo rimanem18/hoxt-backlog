@@ -4,7 +4,7 @@
 # aws_region         = "ap-northeast-1"
 # project_name は環境変数 TF_VAR_project_name で設定 (compose.yaml経由)
 # repository_name は環境変数 TF_VAR_repository_name で設定 (compose.yaml経由)
-# base_table_prefix は環境変数 TF_VAR_base_table_prefix で設定 (compose.yaml経由)
+# base_schema は環境変数 TF_VAR_base_schema で設定 (compose.yaml経由)
 # domain_name        = "your-domain.com"
 
 # CloudFlare Pages設定

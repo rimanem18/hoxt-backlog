@@ -16,7 +16,8 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       # テスト用のローカルDB設定
-      - BASE_TABLE_PREFIX=test_
+      - ENVIRONMENT=preview
+      - BASE_SCHEMA=app_test
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
     depends_on:
       db:
@@ -104,7 +105,7 @@ services:
       - TF_VAR_supabase_url=${SUPABASE_URL}
       - TF_VAR_jwt_secret=${SUPABASE_JWT_SECRET}
       - TF_VAR_database_url=${DATABASE_URL}
-      - TF_VAR_base_table_prefix=${BASE_TABLE_PREFIX}
+      - TF_VAR_base_schema=${BASE_SCHEMA}
     command: tail -f /dev/null
 
 volumes:

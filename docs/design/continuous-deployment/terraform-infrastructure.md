@@ -126,7 +126,7 @@ module "lambda_production" {
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
     SUPABASE_JWT_SECRET    = var.jwt_secret
-    BASE_TABLE_PREFIX      = var.base_table_prefix
+    BASE_SCHEMA           = var.project_name
     DATABASE_URL           = var.database_url
     NODE_ENV              = "production"
     ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
@@ -153,7 +153,7 @@ module "lambda_preview" {
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
     SUPABASE_JWT_SECRET    = var.jwt_secret
-    BASE_TABLE_PREFIX      = "${var.base_table_prefix}${var.preview_table_prefix_suffix}"
+    BASE_SCHEMA           = "${var.project_name}_preview"
     DATABASE_URL           = var.database_url
     NODE_ENV              = "development"
     ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
@@ -357,8 +357,8 @@ variable "database_url" {
   sensitive   = true
 }
 
-variable "base_table_prefix" {
-  description = "Base table prefix for database tables"
+variable "base_schema" {
+  description = "Base PostgreSQL schema name for database environment separation"
   type        = string
 }
 
@@ -389,7 +389,7 @@ domain_name        = "your-domain.com"
 frontend_domain    = "https://your-domain.com"
 project_name       = "your-project"
 repository_name    = "owner/your-repo"
-base_table_prefix  = "prefix"
+base_schema       = "projectname"
 
 # Sensitive variables are set via GitHub Secrets or environment variables
 # supabase_url = "https://xxxxx.supabase.co"

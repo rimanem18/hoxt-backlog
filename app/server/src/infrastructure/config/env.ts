@@ -5,9 +5,28 @@ import { z } from 'zod';
  */
 const databaseConfigSchema = z.object({
   url: z.string().min(1, 'DATABASE_URL環境変数が設定されていません'),
-  tablePrefix: z
+  schema: z.string().min(1, 'BASE_SCHEMA環境変数が設定されていません'),
+  connectTimeoutSeconds: z
     .string()
-    .min(1, 'BASE_TABLE_PREFIX環境変数が設定されていません'),
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 10))
+    .refine(
+      (val) => val > 0,
+      'DB_CONNECT_TIMEOUT_SECONDSは正の数である必要があります',
+    ),
+  idleTimeoutSeconds: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .refine(
+      (val) => val > 0,
+      'DB_IDLE_TIMEOUT_SECONDSは正の数である必要があります',
+    ),
+  maxConnections: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .refine((val) => val > 0, 'DB_MAX_CONNECTIONSは正の数である必要があります'),
 });
 
 /**
@@ -27,7 +46,10 @@ export type DatabaseConfig = z.infer<typeof databaseConfigSchema>;
 export function getDatabaseConfig(): DatabaseConfig {
   const rawConfig = {
     url: process.env.DATABASE_URL,
-    tablePrefix: process.env.BASE_TABLE_PREFIX,
+    schema: process.env.BASE_SCHEMA,
+    connectTimeoutSeconds: process.env.DB_CONNECT_TIMEOUT_SECONDS,
+    idleTimeoutSeconds: process.env.DB_IDLE_TIMEOUT_SECONDS,
+    maxConnections: process.env.DB_MAX_CONNECTIONS,
   };
 
   try {

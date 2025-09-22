@@ -4,14 +4,14 @@ import { getDatabaseConfig, validateConfig } from '../config/env';
 describe('EnvironmentConfig', () => {
   // 各テスト前に環境変数をクリア
   beforeEach(() => {
-    delete process.env.BASE_TABLE_PREFIX;
+    delete process.env.BASE_SCHEMA;
     delete process.env.DATABASE_URL;
   });
 
   describe('getDatabaseConfig', () => {
     test('正常なデータベース設定が取得できること', () => {
       // Given: 有効な環境変数設定
-      process.env.BASE_TABLE_PREFIX = 'test_';
+      process.env.BASE_SCHEMA = 'test_schema';
       process.env.DATABASE_URL =
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
@@ -19,7 +19,7 @@ describe('EnvironmentConfig', () => {
       const config = getDatabaseConfig();
 
       // Then: 設定値が正しい
-      expect(config.tablePrefix).toBe('test_');
+      expect(config.schema).toBe('test_schema');
       expect(config.url).toBe(
         'postgresql://test_user:test_password@localhost:5432/test_db',
       );
@@ -27,14 +27,14 @@ describe('EnvironmentConfig', () => {
 
     test('必須環境変数が不足している場合にエラーが発生すること - DATABASE_URL', () => {
       // Given: DATABASE_URLが不足
-      process.env.BASE_TABLE_PREFIX = 'test_';
+      process.env.BASE_SCHEMA = 'test_schema';
 
       // When & Then: 設定エラーが発生
       expect(() => getDatabaseConfig()).toThrow('環境変数設定エラー');
     });
 
-    test('必須環境変数が不足している場合にエラーが発生すること - BASE_TABLE_PREFIX', () => {
-      // Given: BASE_TABLE_PREFIXが不足
+    test('必須環境変数が不足している場合にエラーが発生すること - BASE_SCHEMA', () => {
+      // Given: BASE_SCHEMAが不足
       process.env.DATABASE_URL =
         'postgresql://test_user:test_password@localhost:5432/test_db';
 
@@ -46,7 +46,7 @@ describe('EnvironmentConfig', () => {
   describe('validateConfig', () => {
     test('有効な設定で検証が通過すること', () => {
       // Given: 有効な環境変数設定
-      process.env.BASE_TABLE_PREFIX = 'test_';
+      process.env.BASE_SCHEMA = 'test_schema';
       process.env.DATABASE_URL =
         'postgresql://test_user:test_password@localhost:5432/test_db';
 

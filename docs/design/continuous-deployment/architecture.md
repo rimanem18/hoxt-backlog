@@ -70,10 +70,10 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **ORM**: Drizzle ORM + drizzle-kit
 - **マイグレーション**: drizzle-kit generate + PostgreSQL直接実行
 - **接続方式**: DATABASE_URL直接接続（Supabase Access Token不要）
-- **環境分離**: テーブルプレフィックスによる分離
-  - Production: `${TABLE_PREFIX}_*`（例: `prefix_users`）
-  - Preview: `${TABLE_PREFIX}_dev_*`（例: `prefix_dev_users`）
-- **権限分離**: app_role（CRUD）/ migrate_role（スキーマ変更）
+- **環境分離**: PostgreSQLスキーマによる分離
+  - Production: `${BASE_SCHEMA}`（例: `projectname`）
+  - Preview: `${BASE_SCHEMA}_preview`（例: `projectname_preview`）
+  - Terraform連携: Terraformがスキーマ名を環境変数として設定
 - **セキュリティ**: Row-Level Security (RLS) 必須
 
 ### セキュリティ
@@ -91,8 +91,8 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
    - IAM ロール・ポリシー適用
 
 2. **Database (drizzle-kit)**
-   - drizzle-kit generate でマイグレーションファイル生成
-   - migrate_role によるPostgreSQL直接マイグレーション実行
+   - drizzle-kit generate でマイグレーションファイル生成（本番環境）
+   - drizzle-kit push による直接適用（開発・プレビュー環境）
    - RLS ポリシー適用
    - データ整合性確認
 

@@ -36,8 +36,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
   let repository: PostgreSQLUserRepository;
 
   beforeAll(async () => {
-    // テスト用環境変数を設定（既存の値があれば優先）
-    process.env.BASE_TABLE_PREFIX = process.env.BASE_TABLE_PREFIX || 'test_';
+    // テスト用環境変数を設定
+    process.env.BASE_SCHEMA = process.env.BASE_SCHEMA || 'app_test';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';
@@ -324,13 +324,22 @@ describe('PostgreSQLUserRepository統合テスト', () => {
 // テストデータクリーンアップ関数
 async function cleanupTestData() {
   const client = await getConnection();
+  const schema = process.env.BASE_SCHEMA;
+  if (!schema) {
+    throw new Error('BASE_SCHEMA environment variable is not set');
+  }
+
   try {
     // test_で始まるexternal_idを持つレコードを削除
     await client.query(
-      "DELETE FROM test_users WHERE external_id LIKE 'test_%' OR email LIKE '%@example.com'",
+      `DELETE FROM "${schema}".users WHERE external_id LIKE 'test_%' OR email LIKE '%@example.com'`,
     );
-  } catch (_error) {
-    // テーブルが存在しない場合などのエラーは無視
+  } catch (error) {
+    // テーブルが存在しない場合は無視、その他のエラーはログ出力
+    if (error instanceof Error && !error.message.includes('does not exist')) {
+      console.warn('Cleanup warning:', error.message);
+    }
+  } finally {
+    client.release();
   }
-  client.release();
 }
