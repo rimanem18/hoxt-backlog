@@ -31,16 +31,11 @@ variable "environment" {
   }
 }
 
-variable "base_table_prefix" {
-  description = "Base table prefix for database tables"
+variable "base_schema" {
+  description = "Base PostgreSQL schema name for database environment separation"
   type        = string
 }
 
-variable "preview_table_prefix_suffix" {
-  description = "Additional suffix for preview environment table prefix"
-  type        = string
-  default     = "dev_"
-}
 
 variable "supabase_url" {
   description = "Supabase project URL"

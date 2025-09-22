@@ -311,11 +311,11 @@ jobs:
           # Update environment variables for preview
           aws lambda update-function-configuration \
             --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
-            --environment "Variables={TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev,NODE_ENV=development}"
+            --environment "Variables={BASE_SCHEMA=${{ vars.PROJECT_NAME }}_preview,NODE_ENV=development}"
       
-      - name: Set Table Prefix for Preview
+      - name: Set Schema for Preview
         run: |
-          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
+          echo "BASE_SCHEMA=${{ vars.PROJECT_NAME }}_preview" >> $GITHUB_ENV
       
       - name: Deploy drizzle-kit Preview Migration
         working-directory: ./app/server
@@ -358,7 +358,7 @@ jobs:
     steps:
       - name: Set Table Prefix for Cleanup
         run: |
-          echo "TABLE_PREFIX=${{ vars.BASE_TABLE_PREFIX }}_dev" >> $GITHUB_ENV
+          echo "BASE_SCHEMA=${{ vars.PROJECT_NAME }}_preview" >> $GITHUB_ENV
       
       - name: Cleanup Supabase Preview Tables
         env:
@@ -434,7 +434,7 @@ jobs:
 ```yaml
 PROJECT_NAME: your-project
 PRODUCTION_DOMAIN: your-domain.com
-BASE_TABLE_PREFIX: prefix
+PROJECT_NAME: myproject
 SUPABASE_PROJECT_ID: abcdefghijklmnop
 ```
 
@@ -466,7 +466,7 @@ Variables:
   TERRAFORM_APPROVERS: admin1,admin2
   LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス
+  PROJECT_NAME: myproject  # プロジェクト名（スキーマベース）
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-domain.com
@@ -483,7 +483,7 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/your-project-github-actions-unified  # 統合ロール（同一）
   LAMBDA_FUNCTION_NAME: your-project-api  # 統合関数名（同一）
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # Same as production
-  BASE_TABLE_PREFIX: prefix  # ベーステーブルプレフィックス（runtime時に_dev付与）
+  PROJECT_NAME: myproject  # プロジェクト名（スキーマベース）（runtime時に_dev付与）
   CLOUDFLARE_ACCOUNT_ID: your-account-id  
   CLOUDFLARE_PROJECT_NAME: your-project-production  # 統合プロジェクト使用
   CLOUDFLARE_DOMAIN: preview.your-domain.com

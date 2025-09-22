@@ -24,7 +24,7 @@ output "production_url" {
 
 output "preview_url" {
   description = "Preview URL"
-  value       = var.preview_subdomain != "" && var.production_domain != "" ? "https://${var.preview_subdomain}.${var.production_domain}" : "https://${cloudflare_pages_project.this.subdomain}"
+  value       = "https://preview.${var.project_name}.pages.dev"
 }
 
 # DNS Record出力（手動設定のためコメントアウト）

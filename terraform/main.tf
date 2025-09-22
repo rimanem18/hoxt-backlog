@@ -4,10 +4,8 @@
 locals {
   project_name = var.project_name
 
-  # 環境別のテーブルプレフィックス設定
-  # preview: extbl_dev_ (base_table_prefix + preview_table_prefix_suffix)
-  # production: extbl_ (base_table_prefix のみ)
-  table_prefix = var.environment == "preview" ? "${var.base_table_prefix}${var.preview_table_prefix_suffix}" : var.base_table_prefix
+  # プロジェクト名の設定
+  # 各Lambda関数で環境別スキーマ名を直接指定
 
   common_tags = {
     Project     = local.project_name
@@ -73,7 +71,7 @@ module "lambda_production" {
   base_environment_variables = {
     SUPABASE_URL         = var.supabase_url
     SUPABASE_JWT_SECRET  = var.jwt_secret
-    BASE_TABLE_PREFIX    = var.base_table_prefix
+    BASE_SCHEMA          = "app_${var.project_name}"
     DATABASE_URL         = var.database_url
     NODE_ENV             = "production"
     ACCESS_ALLOW_ORIGIN  = "https://${var.domain_name}"
@@ -103,15 +101,15 @@ module "lambda_preview" {
   base_environment_variables = {
     SUPABASE_URL         = var.supabase_url
     SUPABASE_JWT_SECRET  = var.jwt_secret
-    BASE_TABLE_PREFIX    = "${var.base_table_prefix}${var.preview_table_prefix_suffix}"
+    BASE_SCHEMA          = "app_${var.project_name}_preview"
     DATABASE_URL         = var.database_url
     NODE_ENV             = "development"
-    ACCESS_ALLOW_ORIGIN  = "https://preview.${local.project_name}${var.preview_domain_suffix}"
+    ACCESS_ALLOW_ORIGIN  = "https://preview.${local.project_name}.pages.dev"
     ACCESS_ALLOW_METHODS = join(", ", var.access_allow_methods)
     ACCESS_ALLOW_HEADERS = join(", ", var.access_allow_headers)
   }
 
-  cors_allow_origin = "https://preview.${local.project_name}${var.preview_domain_suffix}"
+  cors_allow_origin = "https://preview.${local.project_name}.pages.dev"
   lambda_role_arn   = aws_iam_role.lambda_exec.arn
 
   tags = merge(local.common_tags, { Environment = "preview" })
@@ -126,7 +124,7 @@ module "cloudflare_pages" {
   project_name      = local.project_name
   zone_id           = var.cloudflare_zone_id
   production_domain = var.domain_name  # app.your-domain.com として設定予定
-  preview_subdomain = "preview"       # preview.app.your-domain.com として設定予定
+  preview_subdomain = "preview"       # 使用せず、preview.project.pages.dev を使用
   preview_domain_suffix = var.preview_domain_suffix
 
   production_branch = "main"

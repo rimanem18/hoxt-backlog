@@ -40,7 +40,7 @@ resource "cloudflare_pages_project" "this" {
       environment_variables = merge(var.base_environment_variables, {
         API_URL = var.preview_api_url
         NODE_ENV = "development"
-        NEXT_PUBLIC_SITE_URL = "https://preview.${var.project_name}${var.preview_domain_suffix}"
+        NEXT_PUBLIC_SITE_URL = "https://preview.${var.project_name}.pages.dev"
       })
     }
   }
