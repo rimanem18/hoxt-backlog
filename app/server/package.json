@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
+    "@types/bun": "^1.2.22",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.9",
