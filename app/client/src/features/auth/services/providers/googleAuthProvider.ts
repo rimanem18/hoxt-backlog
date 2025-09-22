@@ -115,10 +115,9 @@ export class GoogleAuthProvider extends BaseAuthProvider {
    * @returns 認証結果
    */
   async signIn(options?: { redirectTo?: string }): Promise<AuthResult> {
-    const redirectTo =
-      options?.redirectTo ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      window.location.origin;
+    // createSecureRedirectUrl()を使用して環境別の適切なリダイレクト先を取得
+    const { createSecureRedirectUrl } = await import('../../config/authConfig');
+    const redirectTo = options?.redirectTo || createSecureRedirectUrl();
 
     try {
       // オープンリダイレクト脆弱性対策の厳密なリダイレクト検証

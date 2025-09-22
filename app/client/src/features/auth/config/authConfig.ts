@@ -42,36 +42,39 @@ export const AUTH_TIMING_CONFIG = {
 } as const;
 
 /**
+ * 環境別ベースURL取得
+ * CloudFlare Pages環境変数または実行時originから適切なベースURLを取得
+ */
+const getBaseUrl = (): string => {
+  // 環境変数が優先、次に実行時origin、最後にlocalhost
+  const url = process.env.NEXT_PUBLIC_SITE_URL || 
+              (typeof window !== 'undefined' ? window.location.origin : '') ||
+              'http://localhost:3000';
+  
+  // 末尾スラッシュを正規化
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
+/**
  * OAuth認証後のリダイレクト設定
  */
 export const AUTH_REDIRECT_CONFIG = {
-  /** 許可されたリダイレクト先ドメイン */
-  ALLOWED_ORIGINS:
-    process.env.NODE_ENV === 'production'
-      ? [process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000']
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   /** OAuth認証完了後のリダイレクトパス */
   CALLBACK_PATH: '/auth/callback',
 } as const;
 
 /**
  * 安全なリダイレクトURLを生成
+ * 実行時の環境に基づいて適切なコールバックURLを構築
  *
  * @returns セキュアなリダイレクトURL
  */
 export const createSecureRedirectUrl = (): string => {
-  // 現在のOriginを取得し許可リストと照合
-  const currentOrigin =
-    typeof window !== 'undefined' ? window.location.origin : '';
-  const allowedOrigins = AUTH_REDIRECT_CONFIG.ALLOWED_ORIGINS;
-
-  // 許可されたOriginのみを使用
-  const safeOrigin = allowedOrigins.includes(currentOrigin)
-    ? currentOrigin
-    : allowedOrigins[0];
-
-  // セキュアなリダイレクトURLを構築
-  return `${safeOrigin}${AUTH_REDIRECT_CONFIG.CALLBACK_PATH}`;
+  // getBaseUrl()で環境別のベースURLを取得
+  const baseUrl = getBaseUrl();
+  
+  // コールバックURLを構築
+  return `${baseUrl}${AUTH_REDIRECT_CONFIG.CALLBACK_PATH}`;
 };
 
 /**
