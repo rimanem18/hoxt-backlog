@@ -58,3 +58,35 @@ output "access_allow_origin_production" {
   description = "Production CORS Allow Origin URL"
   value       = "https://${var.domain_name}"
 }
+
+# Next.js環境変数用出力 - Production環境
+output "next_public_api_base_url_production" {
+  description = "Next.js API Base URL for Production (Lambda Function URL)"
+  value       = module.lambda_production.function_url
+}
+
+output "next_public_site_url_production" {
+  description = "Next.js Site URL for Production (CloudFlare Pages Production URL)"
+  value       = module.cloudflare_pages.production_url
+}
+
+output "next_public_trusted_domains_production" {
+  description = "Next.js Trusted Domains for Production (CloudFlare + Lambda URLs)"
+  value       = "${module.cloudflare_pages.production_url},${module.lambda_production.function_url}"
+}
+
+# Next.js環境変数用出力 - Preview環境
+output "next_public_api_base_url_preview" {
+  description = "Next.js API Base URL for Preview (Lambda Function URL)"
+  value       = module.lambda_preview.function_url
+}
+
+output "next_public_site_url_preview" {
+  description = "Next.js Site URL for Preview (CloudFlare Pages Preview URL)"
+  value       = module.cloudflare_pages.preview_url
+}
+
+output "next_public_trusted_domains_preview" {
+  description = "Next.js Trusted Domains for Preview (CloudFlare + Lambda URLs)"
+  value       = "${module.cloudflare_pages.preview_url},${module.lambda_preview.function_url}"
+}
