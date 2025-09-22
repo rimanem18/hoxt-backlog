@@ -48,23 +48,8 @@ async function setupDatabaseSchema() {
     await client.query(`GRANT CREATE ON SCHEMA "${BASE_SCHEMA}" TO PUBLIC`);
     console.log(`スキーマ '${BASE_SCHEMA}' 作成完了`);
 
-    // 既存のenumを削除（スキーマ移行のため）
-    console.log('=== 既存enum削除（スキーマ移行） ===');
-    try {
-      // publicスキーマのenumを削除
-      await client.query('DROP TYPE IF EXISTS auth_provider_type CASCADE');
-      console.log('publicスキーマのenumを削除しました');
-    } catch (error) {
-      console.log('publicスキーマのenumは存在しませんでした');
-    }
-    
-    try {
-      // 対象スキーマのenumを削除
-      await client.query(`DROP TYPE IF EXISTS "${BASE_SCHEMA}".auth_provider_type CASCADE`);
-      console.log(`${BASE_SCHEMA}スキーマのenumを削除しました`);
-    } catch (error) {
-      console.log(`${BASE_SCHEMA}スキーマのenumは存在しませんでした`);
-    }
+    // 現在のスキーマでのみ動作（移行処理は行わない）
+    console.log(`=== ${BASE_SCHEMA} スキーマでの操作のみ実行 ===`);
 
     await client.end();
 
@@ -74,6 +59,43 @@ async function setupDatabaseSchema() {
       stdio: 'inherit',
       cwd: process.cwd()
     });
+
+    // RLSポリシー適用
+    console.log('=== RLSポリシー適用 ===');
+    const rlsClient = new Client({
+      connectionString: DATABASE_URL,
+    });
+    
+    await rlsClient.connect();
+    
+    try {
+      // usersテーブルのRLSを有効化
+      console.log('usersテーブルのRLSを有効化中...');
+      await rlsClient.query(`ALTER TABLE "${BASE_SCHEMA}".users ENABLE ROW LEVEL SECURITY`);
+      
+      // 既存のポリシーを削除（再実行対応）
+      await rlsClient.query(`DROP POLICY IF EXISTS "authenticated_users_policy" ON "${BASE_SCHEMA}".users`);
+      await rlsClient.query(`DROP POLICY IF EXISTS "users_own_records_policy" ON "${BASE_SCHEMA}".users`);
+      
+      // 認証済みユーザーのみアクセス可能なポリシー
+      await rlsClient.query(`
+        CREATE POLICY "authenticated_users_policy" ON "${BASE_SCHEMA}".users
+          FOR ALL USING (auth.uid() IS NOT NULL)
+      `);
+      
+      // 自分のレコードのみアクセス可能なポリシー（将来的な拡張用）
+      await rlsClient.query(`
+        CREATE POLICY "users_own_records_policy" ON "${BASE_SCHEMA}".users
+          FOR ALL USING (auth.uid()::text = id::text)
+      `);
+      
+      console.log('RLSポリシー適用完了');
+    } catch (error) {
+      console.log('RLSポリシー適用でエラーが発生しました:', error.message);
+      console.log('注意: Supabase認証が必要な環境では、auth.uid()関数が利用できない場合があります');
+    }
+    
+    await rlsClient.end();
 
     // スキーマ確認（再接続）
     console.log('=== スキーマ確認 ===');
