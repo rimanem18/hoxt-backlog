@@ -2,7 +2,9 @@ name: Production Deployment
 
 on:
   push:
-    branches: [main]    # REQ-104準拠: mainマージでproduction更新
+    branches: 
+      - main    # REQ-104準拠: mainマージでproduction更新
+      - HOXBL-27-main-deploy-workflow  # テスト用: ブランチで直接テスト
   workflow_dispatch: {}  # 手動実行オプション
 
 concurrency:
