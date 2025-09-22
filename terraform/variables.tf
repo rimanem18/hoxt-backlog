@@ -56,22 +56,7 @@ variable "database_url" {
   sensitive   = true
 }
 
-variable "access_allow_origin" {
-  description = "CORS Access-Control-Allow-Origin value"
-  type        = string
-  default     = "https://localhost.example.com"
-}
-
-variable "access_allow_methods" {
-  description = "CORS Access-Control-Allow-Methods value"
-  type        = list(string)
-  default     = ["GET", "POST", "OPTIONS"]
-}
-variable "access_allow_headers" {
-  description = "CORS Access-Control-Allow-Headers value"
-  type        = list(string)
-  default     = ["content-type", "authorization"]
-}
+# CORS 設定は各Lambda環境変数で直接定義（サーバーサイドCORS処理）
 
 variable "aws_region" {
   description = "AWS region for resources"

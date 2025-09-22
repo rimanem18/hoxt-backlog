@@ -47,7 +47,7 @@ resource "aws_iam_role" "github_actions" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # リポジトリ・ブランチ制限（mainブランチ・PR両対応）
+          # リポジトリ・ブランチ・Environment制限
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.repository_name}:ref:refs/heads/main",
