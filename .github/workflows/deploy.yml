@@ -152,6 +152,10 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install shared-schemas dependencies
+        working-directory: ./app/packages/shared-schemas
+        run: bun install --frozen-lockfile
+
       - name: Install dependencies
         working-directory: ./app/server
         run: bun install --frozen-lockfile
@@ -179,6 +183,10 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+
+      - name: Install shared-schemas dependencies
+        working-directory: ./app/packages/shared-schemas
+        run: bun install --frozen-lockfile
 
       - name: Install dependencies
         working-directory: ./app/server
@@ -266,6 +274,10 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+
+      - name: Install shared-schemas dependencies
+        working-directory: ./app/packages/shared-schemas
+        run: bun install --frozen-lockfile
 
       - name: Install dependencies
         working-directory: ./app/client
