@@ -114,29 +114,12 @@ module "lambda_preview" {
 }
 
 
-# CloudFlare Pages（統合1プロジェクト方式）
+# CloudFlare Pages（既存プロジェクト参照方式）
 module "cloudflare_pages" {
   source = "./modules/cloudflare-pages"
 
-  account_id        = var.cloudflare_account_id
-  project_name      = local.project_name
-  zone_id           = var.cloudflare_zone_id
-  production_domain = var.domain_name  # app.your-domain.com として設定予定
-  preview_subdomain = "preview"       # 使用せず、preview.project.pages.dev を使用
-  preview_domain_suffix = var.preview_domain_suffix
-
-  production_branch = "main"
-  build_command     = "bun run build"
-  output_directory  = "out"
-  root_directory    = "app/client"
-
-  # Lambda Function URL連携
-  production_api_url = module.lambda_production.function_url
-  preview_api_url    = module.lambda_preview.function_url
-
-  base_environment_variables = {
-    NEXT_PUBLIC_SUPABASE_URL = var.supabase_url
-  }
+  account_id   = var.cloudflare_account_id
+  project_name = local.project_name
 }
 
 # Terraform State Bucket (参照用)
