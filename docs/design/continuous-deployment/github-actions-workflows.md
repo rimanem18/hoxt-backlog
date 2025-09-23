@@ -122,16 +122,12 @@ database:
     - name: Install dependencies
       working-directory: ./app/server
       run: bun install
-    
-    - name: Generate migration files
-      working-directory: ./app/server  
-      run: bun run db:generate
-    
+
     - name: Run database migration
       working-directory: ./app/server
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}  # migrate_role使用
-      run: bun run db:migrate
+        DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}  
+      run: bun run db:push
       timeout-minutes: 10
 ```
 
