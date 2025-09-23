@@ -141,7 +141,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
         ]
         Resource = var.terraform_locks_table_arn
       },
-      # IAM関連の権限（作成・更新含む）
+      # IAM関連の権限（読み取り・アタッチのみ）
       {
         Effect = "Allow"
         Action = [
@@ -150,63 +150,30 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "iam:GetPolicyVersion",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
-          "iam:CreateRole",
-          "iam:CreatePolicy",
-          "iam:CreateOpenIDConnectProvider",
           "iam:AttachRolePolicy",
-          "iam:PassRole",
-          "iam:TagRole",
-          "iam:TagPolicy",
-          "iam:TagOpenIDConnectProvider"
+          "iam:PassRole"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role",
+          "arn:aws:iam::*:role/${var.project_name}-github-actions"
+        ]
       },
-      # Lambda関連の権限（作成・更新含む）
+      # Lambda関数の権限（アプリケーション関数のみ）
       {
         Effect = "Allow"
         Action = [
           "lambda:GetFunction",
           "lambda:ListFunctions",
           "lambda:CreateFunction",
-          "lambda:CreateAlias",
           "lambda:TagResource"
         ]
         Resource = "*"
+        Condition = {
+          StringLike = {
+            "lambda:FunctionArn" = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
+          }
+        }
       },
-      # S3関連の権限（バケット作成含む）
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:CreateBucket",
-          "s3:PutBucketTagging",
-          "s3:PutBucketVersioning",
-          "s3:PutBucketPublicAccessBlock",
-          "s3:GetBucketVersioning",
-          "s3:GetBucketPublicAccessBlock"
-        ]
-        Resource = "arn:aws:s3:::${var.project_name}-*"
-      },
-      # KMS関連の権限（キー作成含む）
-      {
-        Effect = "Allow"
-        Action = [
-          "kms:CreateKey",
-          "kms:CreateAlias",
-          "kms:TagResource",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      },
-      # DynamoDB関連の権限（テーブル作成含む）
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:CreateTable",
-          "dynamodb:DescribeTable",
-          "dynamodb:TagResource"
-        ]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/${var.project_name}-*"
-      }
     ]
   })
 

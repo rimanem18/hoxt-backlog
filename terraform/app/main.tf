@@ -17,33 +17,14 @@ locals {
 # Current AWS Account ID
 data "aws_caller_identity" "current" {}
 
-# 共通Lambda Execution Role
-resource "aws_iam_role" "lambda_exec" {
+# 既存Lambda Execution Roleを参照（競合回避のためdata source使用）
+data "aws_iam_role" "lambda_exec" {
   name = "${local.project_name}-lambda-exec-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.common_tags
-
-  lifecycle {
-    ignore_changes = [tags]
-  }
 }
 
 # Lambda Basic Execution Policy
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_exec.name
+  role       = data.aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
@@ -71,7 +52,7 @@ module "lambda_production" {
   }
 
   cors_allow_origin = "https://${var.domain_name}"
-  lambda_role_arn   = aws_iam_role.lambda_exec.arn
+  lambda_role_arn   = data.aws_iam_role.lambda_exec.arn
 
   tags = merge(local.common_tags, { Environment = "production" })
 }
@@ -99,7 +80,7 @@ module "lambda_preview" {
   }
 
   cors_allow_origin = "https://preview.${local.project_name}.pages.dev"
-  lambda_role_arn   = aws_iam_role.lambda_exec.arn
+  lambda_role_arn   = data.aws_iam_role.lambda_exec.arn
 
   tags = merge(local.common_tags, { Environment = "preview" })
 }
