@@ -166,7 +166,8 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "lambda:GetFunctionConfiguration",
           "lambda:ListFunctions",
           "lambda:ListVersionsByFunction",
-          "lambda:GetFunctionUrlConfig"
+          "lambda:GetFunctionUrlConfig",
+          "lambda:GetFunctionCodeSigningConfig"
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
       },
