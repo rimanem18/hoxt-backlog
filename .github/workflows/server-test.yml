@@ -107,7 +107,6 @@ jobs:
           SUPABASE_URL: http://localhost:54321
           SUPABASE_ANON_KEY: test_anon_key
           SUPABASE_SERVICE_ROLE_KEY: test_service_key
-          SUPABASE_JWT_SECRET: test_jwt_secret
           # CORS test environment variables
           ACCESS_ALLOW_ORIGIN: http://localhost:3000
           ACCESS_ALLOW_METHODS: GET,POST,PUT,DELETE,OPTIONS

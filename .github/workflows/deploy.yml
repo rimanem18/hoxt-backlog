@@ -73,7 +73,6 @@ jobs:
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_jwt_secret: ${{ secrets.SUPABASE_JWT_SECRET }}
           TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
           TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
@@ -105,7 +104,6 @@ jobs:
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_jwt_secret: ${{ secrets.SUPABASE_JWT_SECRET }}
           TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
           TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
@@ -192,6 +190,10 @@ jobs:
           ACCESS_ALLOW_ORIGIN: ${{ needs.terraform.outputs.access_allow_origin_production }}
           ACCESS_ALLOW_METHODS: ${{ vars.ACCESS_ALLOW_METHODS }}
           ACCESS_ALLOW_HEADERS: ${{ vars.ACCESS_ALLOW_HEADERS }}
+          # JWKS検証設定（本番環境）
+          USE_JWKS_VERIFIER: 'true'
+          ENABLE_JWKS_VERIFICATION: 'true'
+          ENABLE_HS256_FALLBACK: 'false'
         run: bun run build:lambda
 
       - name: Configure AWS credentials
@@ -218,7 +220,7 @@ jobs:
             --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
             --zip-file fileb://app/server/lambda-deployment.zip \
             --output text > /dev/null
-          
+
           echo "✅ Function code updated successfully"
 
           # Wait for function update to complete before publishing version

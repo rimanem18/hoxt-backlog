@@ -108,7 +108,6 @@ jobs:
           ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
           ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
           SUPABASE_URL=http://localhost:54321 \
-          SUPABASE_JWT_SECRET=test_jwt_secret \
           DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \
