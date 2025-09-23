@@ -233,12 +233,23 @@ jobs:
           echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Published Lambda version: $VERSION"
 
-          # Update stable alias to point to new version
-          aws lambda update-alias \
-            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
-            --name stable \
-            --function-version $VERSION \
-            --output text > /dev/null
+          # Check if stable alias exists, create or update accordingly
+          if aws lambda get-alias --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} --name stable >/dev/null 2>&1; then
+            echo "Updating existing stable alias to version $VERSION"
+            aws lambda update-alias \
+              --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+              --name stable \
+              --function-version $VERSION \
+              --output text > /dev/null
+          else
+            echo "Creating new stable alias for version $VERSION"
+            aws lambda create-alias \
+              --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+              --name stable \
+              --function-version $VERSION \
+              --description "Production stable deployment alias" \
+              --output text > /dev/null
+          fi
 
           echo "Successfully promoted Lambda version $VERSION to production stable alias"
 
