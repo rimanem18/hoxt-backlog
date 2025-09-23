@@ -46,6 +46,10 @@ resource "aws_iam_role" "lambda_exec" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
 }
 
 # Lambda Basic Execution Policy
@@ -140,6 +144,7 @@ module "cloudflare_pages" {
 # Terraform State Bucket (参照用)
 data "aws_s3_bucket" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.bucket
+  depends_on = [aws_s3_bucket.terraform_state]
 }
 
 # Monitoring & Logging

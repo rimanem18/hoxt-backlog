@@ -46,7 +46,8 @@ resource "aws_kms_key" "terraform_state" {
           "kms:DescribeKey",
           "kms:Encrypt",
           "kms:GenerateDataKey*",
-          "kms:ReEncrypt*"
+          "kms:ReEncrypt*",
+          "kms:PutKeyPolicy"
         ]
         Resource = "*"
       }

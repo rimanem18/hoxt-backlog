@@ -156,7 +156,8 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "iam:AttachRolePolicy",
           "iam:PassRole",
           "iam:TagRole",
-          "iam:TagPolicy"
+          "iam:TagPolicy",
+          "iam:TagOpenIDConnectProvider"
         ]
         Resource = "*"
       },
