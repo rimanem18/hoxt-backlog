@@ -1,5 +1,6 @@
 import { HealthCheckUseCase } from '@/application/usecases/HealthCheckUseCase';
-import { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import { SupabaseJwtVerifier } from '@/infrastructure/auth/SupabaseJwtVerifier';
 import { HealthCheckService } from '@/infrastructure/config/HealthCheckService';
 import type { Logger } from '@/shared/logging/Logger';
 
@@ -12,7 +13,7 @@ import type { Logger } from '@/shared/logging/Logger';
 export class HealthDIContainer {
   private static healthCheckUseCaseInstance: HealthCheckUseCase | null = null;
   private static healthCheckServiceInstance: HealthCheckService | null = null;
-  private static authProviderInstance: SupabaseAuthProvider | null = null;
+  private static authProviderInstance: IAuthProvider | null = null;
   private static loggerInstance: Logger | null = null;
 
   /**
@@ -51,13 +52,13 @@ export class HealthDIContainer {
   }
 
   /**
-   * ヘルスチェック用SupabaseAuthProviderのシングルトンインスタンスを取得する
+   * ヘルスチェック用JWKSAuthProviderのシングルトンインスタンスを取得する
    *
-   * @returns SupabaseAuthProviderインスタンス
+   * @returns IAuthProviderインスタンス
    */
-  private static getAuthProvider(): SupabaseAuthProvider {
+  private static getAuthProvider(): IAuthProvider {
     if (!HealthDIContainer.authProviderInstance) {
-      HealthDIContainer.authProviderInstance = new SupabaseAuthProvider();
+      HealthDIContainer.authProviderInstance = new SupabaseJwtVerifier();
     }
 
     return HealthDIContainer.authProviderInstance;
