@@ -1,7 +1,7 @@
 # Terraform Infrastructure設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月17日
+最終更新: 2025年09月23日
 
 
 ## インフラストラクチャ概要
@@ -125,7 +125,6 @@ module "lambda_production" {
   # Production環境変数
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
-    SUPABASE_JWT_SECRET    = var.jwt_secret
     BASE_SCHEMA           = var.project_name
     DATABASE_URL           = var.database_url
     NODE_ENV              = "production"
@@ -152,7 +151,6 @@ module "lambda_preview" {
   # Preview環境変数（dev接尾辞付き）
   base_environment_variables = {
     SUPABASE_URL           = var.supabase_url
-    SUPABASE_JWT_SECRET    = var.jwt_secret
     BASE_SCHEMA           = "${var.project_name}_preview"
     DATABASE_URL           = var.database_url
     NODE_ENV              = "development"
@@ -368,11 +366,6 @@ variable "supabase_url" {
   sensitive   = true
 }
 
-variable "jwt_secret" {
-  description = "JWT signing secret"
-  type        = string
-  sensitive   = true
-}
 
 variable "promoted_version" {
   description = "Lambda function version to promote to stable alias"
@@ -394,7 +387,6 @@ base_schema       = "projectname"
 # Sensitive variables are set via GitHub Secrets or environment variables
 # supabase_url = "https://xxxxx.supabase.co"
 # supabase_access_token = "sbp_xxxxxxxxxxxxx"
-# jwt_secret = "your-jwt-secret"
 ```
 
 ## 統合IAM OIDC モジュール
