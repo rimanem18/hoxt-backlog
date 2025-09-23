@@ -47,8 +47,8 @@ output "access_allow_origin_production" {
 
 # Next.js環境変数用出力 - Production環境
 output "next_public_api_base_url_production" {
-  description = "Next.js API Base URL for Production (手動で設定)"
-  value       = "https://LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
+  description = "Next.js API Base URL for Production (自動取得)"
+  value       = data.aws_lambda_function_url.production.function_url
 }
 
 output "next_public_site_url_production" {
@@ -58,13 +58,13 @@ output "next_public_site_url_production" {
 
 output "next_public_trusted_domains_production" {
   description = "Next.js Trusted Domains for Production (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.production_url},LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
+  value       = "${module.cloudflare_pages.production_url},${data.aws_lambda_function_url.production.function_url}"
 }
 
 # Next.js環境変数用出力 - Preview環境
 output "next_public_api_base_url_preview" {
-  description = "Next.js API Base URL for Preview (手動で設定)"
-  value       = "https://LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
+  description = "Next.js API Base URL for Preview (自動取得)"
+  value       = data.aws_lambda_function_url.preview.function_url
 }
 
 output "next_public_site_url_preview" {
@@ -74,5 +74,5 @@ output "next_public_site_url_preview" {
 
 output "next_public_trusted_domains_preview" {
   description = "Next.js Trusted Domains for Preview (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.preview_url},LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
+  value       = "${module.cloudflare_pages.preview_url},${data.aws_lambda_function_url.preview.function_url}"
 }

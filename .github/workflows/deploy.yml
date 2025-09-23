@@ -28,7 +28,7 @@ jobs:
       lambda_function_name_production: ${{ steps.tf_outputs.outputs.lambda_function_name_production }}
       lambda_function_url_production: ${{ steps.tf_outputs.outputs.lambda_function_url_production }}
       cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      cloudflare_project_name: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
+      cloudflare_project_name: ${{ steps.tf_outputs.outputs.project_name }}
       aws_role_arn: ${{ steps.tf_outputs.outputs.aws_role_arn }}
       access_allow_origin_production: ${{ steps.tf_outputs.outputs.access_allow_origin_production }}
       next_public_api_base_url_production: ${{ steps.tf_outputs.outputs.next_public_api_base_url_production }}
@@ -117,7 +117,7 @@ jobs:
         working-directory: ./terraform/app
         run: |
           echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
-          echo "lambda_function_url_production=$(terraform output -raw function_url_production)" >> $GITHUB_OUTPUT
+          echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
           echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
           echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
           echo "access_allow_origin_production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
@@ -131,9 +131,9 @@ jobs:
           # デバッグ用ログ出力
           echo "🔧 Terraform Outputs extracted:"
           echo "  Lambda Function: $(terraform output -raw lambda_production_function_name)"
-          echo "  Function URL: $(terraform output -raw function_url_production)"
+          echo "  Function URL: $(terraform output -raw next_public_api_base_url_production)"
           echo "  CloudFlare Account: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
-          echo "  CloudFlare Project: ${{ vars.CLOUDFLARE_PROJECT_NAME }}"
+          echo "  CloudFlare Project: $(terraform output -raw project_name)"
           echo "  CORS Origin: $(terraform output -raw access_allow_origin_production)"
           echo "  Next.js Production API: $(terraform output -raw next_public_api_base_url_production)"
           echo "  Next.js Production Site: $(terraform output -raw next_public_site_url_production)"

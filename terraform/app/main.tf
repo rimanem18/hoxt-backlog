@@ -37,6 +37,15 @@ data "aws_lambda_function" "preview" {
   function_name = "${local.project_name}-api-preview"
 }
 
+# Lambda Function URLを取得
+data "aws_lambda_function_url" "production" {
+  function_name = data.aws_lambda_function.production.function_name
+}
+
+data "aws_lambda_function_url" "preview" {
+  function_name = data.aws_lambda_function.preview.function_name
+}
+
 # CloudFlare Pages（統合1プロジェクト方式）
 module "cloudflare_pages" {
   source = "../modules/cloudflare-pages"
@@ -53,9 +62,9 @@ module "cloudflare_pages" {
   output_directory  = "out"
   root_directory    = "app/client"
 
-  # Lambda Function URL連携（プレースホルダー）
-  production_api_url = "https://LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
-  preview_api_url    = "https://LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
+  # Lambda Function URL連携（自動取得）
+  production_api_url = data.aws_lambda_function_url.production.function_url
+  preview_api_url    = data.aws_lambda_function_url.preview.function_url
 
   base_environment_variables = {
     NEXT_PUBLIC_SUPABASE_URL = var.supabase_url
