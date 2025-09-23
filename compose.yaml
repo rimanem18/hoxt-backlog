@@ -95,7 +95,7 @@ services:
       - TF_VAR_aws_region=${AWS_REGION}
       - TF_VAR_aws_oidc_role_arn=${AWS_OIDC_ROLE_ARN}
       - TF_VAR_database_url=${DATABASE_URL}
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - TF_VAR_cloudflare_api_token=${CLOUDFLARE_API_TOKEN}
       - TF_VAR_cloudflare_account_id=${CLOUDFLARE_ACCOUNT_ID}
       - TF_VAR_cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}
       - TF_VAR_access_allow_origin=https://localhost.example.com
