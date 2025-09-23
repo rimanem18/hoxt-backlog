@@ -23,20 +23,20 @@ output "lambda_preview_arn" {
   value       = data.aws_lambda_function.preview.arn
 }
 
-# CloudFlare Pages出力
+# CloudFlare Pages出力（固定値）
 output "cloudflare_pages_subdomain" {
   description = "CloudFlare Pages subdomain"
-  value       = module.cloudflare_pages.subdomain
+  value       = "${local.project_name}.pages.dev"
 }
 
 output "cloudflare_pages_production_url" {
   description = "CloudFlare Pages production URL"
-  value       = module.cloudflare_pages.production_url
+  value       = "https://${var.domain_name}"
 }
 
 output "cloudflare_pages_preview_url" {
   description = "CloudFlare Pages preview URL"
-  value       = module.cloudflare_pages.preview_url
+  value       = "https://preview.${local.project_name}.pages.dev"
 }
 
 # CORS設定用出力（サーバービルド時に使用）
@@ -53,12 +53,12 @@ output "next_public_api_base_url_production" {
 
 output "next_public_site_url_production" {
   description = "Next.js Site URL for Production (CloudFlare Pages Production URL)"
-  value       = module.cloudflare_pages.production_url
+  value       = "https://${var.domain_name}"
 }
 
 output "next_public_trusted_domains_production" {
   description = "Next.js Trusted Domains for Production (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.production_url},${data.aws_lambda_function_url.production.function_url}"
+  value       = "https://${var.domain_name},${data.aws_lambda_function_url.production.function_url}"
 }
 
 # Next.js環境変数用出力 - Preview環境
@@ -69,10 +69,10 @@ output "next_public_api_base_url_preview" {
 
 output "next_public_site_url_preview" {
   description = "Next.js Site URL for Preview (CloudFlare Pages Preview URL)"
-  value       = module.cloudflare_pages.preview_url
+  value       = "https://preview.${local.project_name}.pages.dev"
 }
 
 output "next_public_trusted_domains_preview" {
   description = "Next.js Trusted Domains for Preview (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.preview_url},${data.aws_lambda_function_url.preview.function_url}"
+  value       = "https://preview.${local.project_name}.pages.dev,${data.aws_lambda_function_url.preview.function_url}"
 }

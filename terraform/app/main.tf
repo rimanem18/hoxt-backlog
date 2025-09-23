@@ -46,10 +46,6 @@ data "aws_lambda_function_url" "preview" {
   function_name = data.aws_lambda_function.preview.function_name
 }
 
-# CloudFlare Pages（既存プロジェクト参照）
-module "cloudflare_pages" {
-  source = "../modules/cloudflare-pages"
-
-  account_id   = var.cloudflare_account_id
-  project_name = local.project_name
-}
+# CloudFlare Pages（GitHub Actionsで直接管理）
+# 既存プロジェクトとの競合を避けるため、Terraformでは管理せず
+# GitHub ActionsのCloudFlare Pages Actionで直接デプロイ

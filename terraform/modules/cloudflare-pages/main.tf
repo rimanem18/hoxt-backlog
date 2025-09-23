@@ -13,10 +13,18 @@ terraform {
   }
 }
 
-# 既存CloudFlare Pages Projectを参照（CI/CDはUpdate系のみ実行）
-data "cloudflare_pages_project" "this" {
-  account_id = var.account_id
-  name       = var.project_name
+# 既存CloudFlare Pages Project（import済みリソース管理）
+resource "cloudflare_pages_project" "this" {
+  account_id        = var.account_id
+  name             = var.project_name
+  production_branch = "main"
+  
+  # 最小設定のみ（環境変数はGitHub Actionsで直接設定）
+  build_config {
+    build_command   = "bun run build"
+    destination_dir = "out"
+    root_dir       = "app/client"
+  }
 }
 
 # CloudFlare DNS Record（Production用）
