@@ -21,10 +21,25 @@ resource "aws_kms_key" "terraform_state" {
         Resource = "*"
       },
       {
-        Sid    = "Allow Terraform access"
+        Sid    = "Allow Terraform access (local)"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-TerraformRole"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*",
+          "kms:ReEncrypt*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow GitHub Actions access"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-github-actions"
         }
         Action = [
           "kms:Decrypt",
