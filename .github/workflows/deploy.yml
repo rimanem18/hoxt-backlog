@@ -55,17 +55,17 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Init
-        working-directory: ./terraform/app
+        working-directory: ./terraform
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
-            -backend-config="key=app/terraform.tfstate" \
+            -backend-config="key=terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ vars.TERRAFORM_LOCKS_TABLE }}"
 
       - name: Terraform Plan
         id: plan
-        working-directory: ./terraform/app
+        working-directory: ./terraform
         env:
           TF_VAR_repository_name: ${{ github.repository }}
           TF_VAR_supabase_url: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
@@ -93,10 +93,10 @@ jobs:
           echo "⚠️ Destructive changes detected in Terraform plan"
           echo "Changes will be applied automatically for individual development"
           terraform show -json tfplan | jq '.resource_changes[] | select(.change.actions[] | contains("delete"))'
-        working-directory: ./terraform/app
+        working-directory: ./terraform
 
       - name: Terraform Apply
-        working-directory: ./terraform/app
+        working-directory: ./terraform
         env:
           TF_VAR_repository_name: ${{ github.repository }}
           TF_VAR_supabase_url: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: Extract Terraform Outputs
         id: tf_outputs
-        working-directory: ./terraform/app
+        working-directory: ./terraform
         run: |
           echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
           echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
