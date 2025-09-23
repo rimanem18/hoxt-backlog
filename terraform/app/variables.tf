@@ -38,12 +38,6 @@ variable "supabase_url" {
   sensitive   = true
 }
 
-variable "jwt_secret" {
-  description = "JWT signing secret"
-  type        = string
-  sensitive   = true
-}
-
 variable "database_url" {
   description = "Database connection URL"
   type        = string
@@ -80,4 +74,17 @@ variable "preview_domain_suffix" {
   description = "Preview domain suffix for CloudFlare Pages (typically .pages.dev)"
   type        = string
   default     = ".pages.dev"
+}
+
+# JWKS設定（オプション - 将来拡張用）
+variable "enable_jwks_verification" {
+  description = "Enable JWKS verification for JWT tokens"
+  type        = bool
+  default     = true
+}
+
+variable "enable_hs256_fallback" {
+  description = "Enable HS256 fallback during JWKS migration"
+  type        = bool
+  default     = false
 }

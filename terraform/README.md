@@ -115,7 +115,6 @@ make iac-init
 # 環境変数で機密情報を設定
 export TF_VAR_supabase_url="https://xxxxx.supabase.co"
 export TF_VAR_supabase_access_token="sbp_xxxxxxxxxxxxx"  
-export TF_VAR_jwt_secret="your-jwt-secret"
 
 # 統合インフラ計画・適用
 make iac-plan-save
@@ -181,7 +180,6 @@ CLOUDFLARE_PROJECT_NAME: your-project
 # Production Secrets
 SUPABASE_URL: https://xxxxx.supabase.co
 SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
-JWT_SECRET: your-jwt-secret
 CLOUDFLARE_API_TOKEN: your-cloudflare-token
 
 # Preview Environment（同一設定＋Preview固有）

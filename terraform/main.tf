@@ -74,7 +74,6 @@ module "lambda_production" {
   # Production環境変数
   base_environment_variables = {
     SUPABASE_URL         = var.supabase_url
-    SUPABASE_JWT_SECRET  = var.jwt_secret
     BASE_SCHEMA          = "app_${var.project_name}"
     DATABASE_URL         = var.database_url
     NODE_ENV             = "production"
@@ -102,7 +101,6 @@ module "lambda_preview" {
   # Preview環境変数（dev接尾辞付き）
   base_environment_variables = {
     SUPABASE_URL         = var.supabase_url
-    SUPABASE_JWT_SECRET  = var.jwt_secret
     BASE_SCHEMA          = "app_${var.project_name}_preview"
     DATABASE_URL         = var.database_url
     NODE_ENV             = "development"

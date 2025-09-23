@@ -43,13 +43,6 @@ variable "supabase_url" {
   sensitive   = true
 }
 
-
-variable "jwt_secret" {
-  description = "JWT signing secret"
-  type        = string
-  sensitive   = true
-}
-
 variable "database_url" {
   description = "Database connection URL"
   type        = string
