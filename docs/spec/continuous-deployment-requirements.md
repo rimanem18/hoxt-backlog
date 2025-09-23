@@ -1,12 +1,12 @@
 # 継続的デプロイフロー 要件定義書
 
 作成日：2025年09月12日  
-最終更新：2025年09月18日  
+最終更新：2025年09月23日  
 
 
 ## 概要
 
-GitHub Actions と Terraform を使用した継続的デプロイフローを構築し、フロントエンドを CloudFlare Pages、バックエンドを AWS Lambda、データベースマイグレーションを drizzle-kit で運用する統合デプロイメントシステムを実現する。
+GitHub Actions と Terraform を使用した継続的デプロイフローを構築し、フロントエンドを CloudFlare Pages、バックエンドを AWS Lambda Function URL、データベースマイグレーションを drizzle-kit で運用する統合デプロイメントシステムを実現する。
 
 ## ユーザストーリー
 
@@ -35,18 +35,18 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-001: システムは mainブランチへのプッシュ時に自動的に継続的デプロイフローを開始しなければならない
 - REQ-002: システムは Terraform による基盤構築を最優先で実行しなければならない
 - REQ-003: システムは drizzle-kit によるデータベースマイグレーションを基盤構築後に実行しなければならない
-- REQ-004: システムは AWS Lambda デプロイをマイグレーション完了後に実行しなければならない
+- REQ-004: システムは AWS Lambda Function URL デプロイをマイグレーション完了後に実行しなければならない
 - REQ-005: システムは CloudFlare Pages デプロイを Lambda デプロイ完了後に実行しなければならない
 - REQ-006: システムは GitHub OIDC を使用したシークレットレス認証を実装しなければならない
-- REQ-007: システムは drizzle-kit generate によるマイグレーションファイル生成とPostgreSQL直接実行によるスキーマ適用を行わなければならない
-- REQ-008: システムは 開発環境では drizzle-kit push による即座反映、本番環境では権限分離された migrate_role による安全なマイグレーション実行を行わなければならない
+- REQ-007: システムは drizzle-kit push によるマイグレーション実行（production環境）を行わなければならない
+- REQ-008: システムは 本番環境では drizzle-kit push による直接スキーマ適用を行わなければならない
 
 ### 条件付き要件
 
-- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda Function URL Preview + PostgreSQL $TABLE_PREFIX）を自動生成・更新しなければならない
+- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda Function URL Preview + PostgreSQL preview schema）を自動生成・更新しなければならない
 - REQ-102: Terraform plan で破壊的変更が検出された場合、システムは 詳細ログ出力と確認ステップを実行し、自動継続しなければならない
 - REQ-103: マイグレーション実行時にDBロックが発生した場合、システムは タイムアウト設定に従って処理を中止しなければならない
-- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda Function URL Production + PostgreSQL production）を自動更新しなければならない
+- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda Function URL Production + PostgreSQL production schema）を自動更新しなければならない
 
 ### 状態要件
 
@@ -66,6 +66,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-406: システムは Lambda Function URL による直接HTTP接続を実装し、API Gatewayを使用せずシンプルで確実なエンドポイント提供を行わなければならない
 - REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
 - REQ-408: システムは PostgreSQLスキーマ分離による環境分離を実装し、BASE_SCHEMA環境変数（production: projectname、preview: projectname_preview）によるスキーマベース環境分離を行わなければならない
+- REQ-409: システムは JWKS (JSON Web Key Set) による非対称鍵暗号認証を実装し、HS256共有秘密鍵に依存しない高セキュリティ認証を行わなければならない
 
 ## 非機能要件
 
@@ -76,10 +77,11 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - NFR-003: PostgreSQL Row-Level Security（RLS）を必須とすること
 - NFR-004: Secret Scanning を有効化し機密情報漏洩を防止すること
 - NFR-005: Fork リポジトリからのプルリクエストでは Preview 環境を生成・更新してはならない
+- NFR-006: JWT検証は JWKS エンドポイントからの動的公開鍵取得による RS256/ES256 非対称鍵暗号を使用し、共有秘密鍵に依存しないセキュアな認証を実装すること
 
 ### 監査・ログ
 
-- NFR-006: デプロイ操作の基本ログ（実行者・日時・対象）を記録すること
+- NFR-007: デプロイ操作の基本ログ（実行者・日時・対象）を記録すること
 
 ## Edgeケース
 
