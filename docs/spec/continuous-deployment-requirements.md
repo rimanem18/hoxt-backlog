@@ -67,6 +67,9 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
 - REQ-408: システムは PostgreSQLスキーマ分離による環境分離を実装し、BASE_SCHEMA環境変数（production: projectname、preview: projectname_preview）によるスキーマベース環境分離を行わなければならない
 - REQ-409: システムは JWKS (JSON Web Key Set) による非対称鍵暗号認証を実装し、HS256共有秘密鍵に依存しない高セキュリティ認証を行わなければならない
+- REQ-410: システムは Lambda関数のstableエイリアス自動管理を実装し、エイリアス存在確認による冪等なデプロイを行わなければならない
+- REQ-411: システムは monorepo構成でのshared-schemas依存関係を適切に管理し、ビルド時の依存関係不足を防止しなければならない
+- REQ-412: システムは IAMポリシーによる最小権限制御を実装し、Lambda関数のバージョン・エイリアス管理に必要な権限のみを付与しなければならない
 
 ## 非機能要件
 

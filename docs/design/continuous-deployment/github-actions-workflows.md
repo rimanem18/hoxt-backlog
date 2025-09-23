@@ -78,17 +78,17 @@ terraform:
         terraform_version: ${{ env.TERRAFORM_VERSION }}
     
     - name: Terraform Init
-      working-directory: ./terraform/app
+      working-directory: ./terraform
       run: |
         terraform init \
           -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
-          -backend-config="key=app/terraform.tfstate" \
+          -backend-config="key=terraform.tfstate" \
           -backend-config="region=${{ env.AWS_REGION }}" \
           -backend-config="dynamodb_table=${{ vars.TERRAFORM_LOCKS_TABLE }}"
     
     - name: Terraform Plan
       id: plan
-      working-directory: ./terraform/app
+      working-directory: ./terraform
       env:
         TF_VAR_repository_name: ${{ github.repository }}
         TF_VAR_supabase_url: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
@@ -112,14 +112,14 @@ terraform:
     
     - name: Log destructive changes (if detected)
       if: steps.plan.outputs.has_destructive_changes == 'true'
-      working-directory: ./terraform/app
+      working-directory: ./terraform
       run: |
         echo "⚠️ Destructive changes detected in Terraform plan"
         echo "Changes will be applied automatically for individual development"
         terraform show -json tfplan | jq '.resource_changes[] | select(.change.actions[] | contains("delete"))'
     
     - name: Terraform Apply
-      working-directory: ./terraform/app
+      working-directory: ./terraform
       env:
         TF_VAR_repository_name: ${{ github.repository }}
         TF_VAR_supabase_url: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
@@ -151,9 +151,13 @@ database:
       with:
         bun-version: latest
     
+    - name: Install shared-schemas dependencies
+      working-directory: ./app/packages/shared-schemas
+      run: bun install --frozen-lockfile
+
     - name: Install dependencies
       working-directory: ./app/server
-      run: bun install
+      run: bun install --frozen-lockfile
 
     - name: Run database migration
       working-directory: ./app/server
@@ -183,6 +187,10 @@ backend:
       with:
         bun-version: latest
     
+    - name: Install shared-schemas dependencies
+      working-directory: ./app/packages/shared-schemas
+      run: bun install --frozen-lockfile
+
     - name: Install dependencies
       working-directory: ./app/server
       run: bun install --frozen-lockfile
@@ -236,12 +244,23 @@ backend:
         echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Published Lambda version: $VERSION"
 
-        # Update stable alias to point to new version
-        aws lambda update-alias \
-          --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
-          --name stable \
-          --function-version $VERSION \
-          --output text > /dev/null
+        # Check if stable alias exists, create or update accordingly
+        if aws lambda get-alias --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} --name stable >/dev/null 2>&1; then
+          echo "Updating existing stable alias to version $VERSION"
+          aws lambda update-alias \
+            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+            --name stable \
+            --function-version $VERSION \
+            --output text > /dev/null
+        else
+          echo "Creating new stable alias for version $VERSION"
+          aws lambda create-alias \
+            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+            --name stable \
+            --function-version $VERSION \
+            --description "Production stable deployment alias" \
+            --output text > /dev/null
+        fi
 
         echo "Successfully promoted Lambda version $VERSION to production stable alias"
 ```
