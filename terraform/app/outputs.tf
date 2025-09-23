@@ -1,26 +1,26 @@
 # Terraformアプリケーションリソース出力値
 # GitHub ActionsやNext.jsビルドで使用される値
 
-# Lambda Function URL出力（環境別）
-output "function_url_production" {
-  description = "Production Lambda Function URL"
-  value       = module.lambda_production.function_url
-}
-
-output "function_url_preview" {
-  description = "Preview Lambda Function URL"
-  value       = module.lambda_preview.function_url
-}
-
-# Lambda Function出力（参考情報）
+# Lambda Function出力（data sourceから取得）
 output "lambda_production_function_name" {
   description = "Production Lambda function name"
-  value       = module.lambda_production.function_name
+  value       = data.aws_lambda_function.production.function_name
 }
 
 output "lambda_preview_function_name" {
   description = "Preview Lambda function name"
-  value       = module.lambda_preview.function_name
+  value       = data.aws_lambda_function.preview.function_name
+}
+
+# Lambda Function ARN出力
+output "lambda_production_arn" {
+  description = "Production Lambda function ARN"
+  value       = data.aws_lambda_function.production.arn
+}
+
+output "lambda_preview_arn" {
+  description = "Preview Lambda function ARN"  
+  value       = data.aws_lambda_function.preview.arn
 }
 
 # CloudFlare Pages出力
@@ -47,8 +47,8 @@ output "access_allow_origin_production" {
 
 # Next.js環境変数用出力 - Production環境
 output "next_public_api_base_url_production" {
-  description = "Next.js API Base URL for Production (Lambda Function URL)"
-  value       = module.lambda_production.function_url
+  description = "Next.js API Base URL for Production (手動で設定)"
+  value       = "https://LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
 }
 
 output "next_public_site_url_production" {
@@ -58,13 +58,13 @@ output "next_public_site_url_production" {
 
 output "next_public_trusted_domains_production" {
   description = "Next.js Trusted Domains for Production (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.production_url},${module.lambda_production.function_url}"
+  value       = "${module.cloudflare_pages.production_url},LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
 }
 
 # Next.js環境変数用出力 - Preview環境
 output "next_public_api_base_url_preview" {
-  description = "Next.js API Base URL for Preview (Lambda Function URL)"
-  value       = module.lambda_preview.function_url
+  description = "Next.js API Base URL for Preview (手動で設定)"
+  value       = "https://LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
 }
 
 output "next_public_site_url_preview" {
@@ -74,5 +74,5 @@ output "next_public_site_url_preview" {
 
 output "next_public_trusted_domains_preview" {
   description = "Next.js Trusted Domains for Preview (CloudFlare + Lambda URLs)"
-  value       = "${module.cloudflare_pages.preview_url},${module.lambda_preview.function_url}"
+  value       = "${module.cloudflare_pages.preview_url},LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
 }

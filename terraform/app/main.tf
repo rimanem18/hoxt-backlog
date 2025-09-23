@@ -28,61 +28,13 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# 環境別Lambda Functions（共通ロール使用）
-module "lambda_production" {
-  source = "../modules/lambda"
-
-  project_name  = local.project_name
+# 既存Lambda関数を参照（CI/CDはUpdate系のみ実行）
+data "aws_lambda_function" "production" {
   function_name = "${local.project_name}-api-production"
-  environment   = "production"
-
-  runtime     = "nodejs22.x"
-  handler     = "index.handler"
-  memory_size = 512
-  timeout     = 30
-
-  # Production環境変数
-  base_environment_variables = {
-    SUPABASE_URL         = var.supabase_url
-    SUPABASE_JWT_SECRET  = var.jwt_secret
-    BASE_SCHEMA          = "app_${var.project_name}"
-    DATABASE_URL         = var.database_url
-    NODE_ENV             = "production"
-    ACCESS_ALLOW_ORIGIN  = "https://${var.domain_name}"
-  }
-
-  cors_allow_origin = "https://${var.domain_name}"
-  lambda_role_arn   = data.aws_iam_role.lambda_exec.arn
-
-  tags = merge(local.common_tags, { Environment = "production" })
 }
 
-module "lambda_preview" {
-  source = "../modules/lambda"
-
-  project_name  = local.project_name
+data "aws_lambda_function" "preview" {
   function_name = "${local.project_name}-api-preview"
-  environment   = "preview"
-
-  runtime     = "nodejs22.x"
-  handler     = "index.handler"
-  memory_size = 512
-  timeout     = 30
-
-  # Preview環境変数（dev接尾辞付き）
-  base_environment_variables = {
-    SUPABASE_URL         = var.supabase_url
-    SUPABASE_JWT_SECRET  = var.jwt_secret
-    BASE_SCHEMA          = "app_${var.project_name}_preview"
-    DATABASE_URL         = var.database_url
-    NODE_ENV             = "development"
-    ACCESS_ALLOW_ORIGIN  = "https://preview.${local.project_name}.pages.dev"
-  }
-
-  cors_allow_origin = "https://preview.${local.project_name}.pages.dev"
-  lambda_role_arn   = data.aws_iam_role.lambda_exec.arn
-
-  tags = merge(local.common_tags, { Environment = "preview" })
 }
 
 # CloudFlare Pages（統合1プロジェクト方式）
@@ -101,9 +53,9 @@ module "cloudflare_pages" {
   output_directory  = "out"
   root_directory    = "app/client"
 
-  # Lambda Function URL連携
-  production_api_url = module.lambda_production.function_url
-  preview_api_url    = module.lambda_preview.function_url
+  # Lambda Function URL連携（プレースホルダー）
+  production_api_url = "https://LAMBDA_FUNCTION_URL_PRODUCTION_PLACEHOLDER"
+  preview_api_url    = "https://LAMBDA_FUNCTION_URL_PREVIEW_PLACEHOLDER"
 
   base_environment_variables = {
     NEXT_PUBLIC_SUPABASE_URL = var.supabase_url

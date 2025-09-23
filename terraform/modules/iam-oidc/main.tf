@@ -158,21 +158,15 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "arn:aws:iam::*:role/${var.project_name}-github-actions"
         ]
       },
-      # Lambda関数の権限（アプリケーション関数のみ）
+      # Lambda関数の権限（Update系のみ、Create権限なし）
       {
         Effect = "Allow"
         Action = [
           "lambda:GetFunction",
-          "lambda:ListFunctions",
-          "lambda:CreateFunction",
-          "lambda:TagResource"
+          "lambda:GetFunctionConfiguration",
+          "lambda:ListFunctions"
         ]
-        Resource = "*"
-        Condition = {
-          StringLike = {
-            "lambda:FunctionArn" = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
-          }
-        }
+        Resource = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
       },
     ]
   })
