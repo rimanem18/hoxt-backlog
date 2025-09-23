@@ -28,7 +28,7 @@ jobs:
       lambda_function_name_production: ${{ steps.tf_outputs.outputs.lambda_function_name_production }}
       lambda_function_url_production: ${{ steps.tf_outputs.outputs.lambda_function_url_production }}
       cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      cloudflare_project_name: ${{ steps.tf_outputs.outputs.project_name }}
+      cloudflare_project_name: ${{ vars.PROJECT_NAME }}
       aws_role_arn: ${{ steps.tf_outputs.outputs.aws_role_arn }}
       access_allow_origin_production: ${{ steps.tf_outputs.outputs.access_allow_origin_production }}
       next_public_api_base_url_production: ${{ steps.tf_outputs.outputs.next_public_api_base_url_production }}
@@ -213,9 +213,18 @@ jobs:
 
       - name: Deploy Lambda
         run: |
+          # Update function code (suppress output to prevent secret exposure)
           aws lambda update-function-code \
             --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
-            --zip-file fileb://app/server/lambda-deployment.zip
+            --zip-file fileb://app/server/lambda-deployment.zip \
+            --output text > /dev/null
+          
+          echo "✅ Function code updated successfully"
+
+          # Wait for function update to complete before publishing version
+          echo "Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }}
 
           # Publish new version and promote to stable alias
           VERSION=$(aws lambda publish-version --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} --query 'Version' --output text)
@@ -226,7 +235,8 @@ jobs:
           aws lambda update-alias \
             --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
             --name stable \
-            --function-version $VERSION
+            --function-version $VERSION \
+            --output text > /dev/null
 
           echo "Successfully promoted Lambda version $VERSION to production stable alias"
 
@@ -262,8 +272,8 @@ jobs:
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ needs.terraform.outputs.cloudflare_account_id }}
-          projectName: ${{ needs.terraform.outputs.cloudflare_project_name }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ vars.PROJECT_NAME }}
           directory: ./app/client/out
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
