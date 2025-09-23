@@ -13,37 +13,10 @@ terraform {
   }
 }
 
-# CloudFlare Pages Project（統合方式）
-resource "cloudflare_pages_project" "this" {
-  account_id        = var.account_id
-  name             = var.project_name  # 環境suffix削除
-  production_branch = var.production_branch
-  
-  build_config {
-    build_command       = var.build_command
-    destination_dir     = var.output_directory
-    root_dir           = var.root_directory
-    web_analytics_tag  = var.web_analytics_tag
-    web_analytics_token = var.web_analytics_token
-  }
-  
-  deployment_configs {
-    production {
-      environment_variables = merge(var.base_environment_variables, {
-        API_URL = var.production_api_url
-        NODE_ENV = "production"
-        NEXT_PUBLIC_SITE_URL = "https://${var.production_domain}"
-      })
-    }
-    
-    preview {
-      environment_variables = merge(var.base_environment_variables, {
-        API_URL = var.preview_api_url
-        NODE_ENV = "development"
-        NEXT_PUBLIC_SITE_URL = "https://preview.${var.project_name}.pages.dev"
-      })
-    }
-  }
+# 既存CloudFlare Pages Projectを参照（CI/CDはUpdate系のみ実行）
+data "cloudflare_pages_project" "this" {
+  account_id = var.account_id
+  name       = var.project_name
 }
 
 # CloudFlare DNS Record（Production用）
