@@ -171,7 +171,7 @@ backend:
       run: |
         # bun run build:lambda で生成されたindex.jsとnode_modulesをzip化
         mkdir -p lambda-dist
-        cp dist/index.js lambda-dist/
+        cp dist/lambda.js lambda-dist/
         cp package.json lambda-dist/
         cd lambda-dist && bun install --production
         zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
@@ -286,7 +286,7 @@ jobs:
           
           # Package Lambda for preview
           mkdir -p lambda-dist
-          cp dist/index.js lambda-dist/
+          cp dist/lambda.js lambda-dist/
           cp package.json lambda-dist/
           cd lambda-dist && bun install --production
           zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
