@@ -1,15 +1,10 @@
 terraform {
-  # S3 Backend設定（GitHub Actionsで動的設定）
-  backend "s3" {
-    # 動的設定（terraform init時に指定）
-    # bucket         = "project-terraform-state"
-    # key            = "app/terraform.tfstate"
-    # region         = "ap-northeast-1"
-    # dynamodb_table = "project-terraform-locks"
-    # encrypt        = true
-  }
-  
   required_version = ">= 1.6.0"
+  
+  # Remote backend configuration
+  backend "s3" {
+    # Configuration provided via -backend-config in Makefile
+  }
   
   required_providers {
     aws = {
@@ -19,6 +14,10 @@ terraform {
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
     }
   }
 }
@@ -31,7 +30,7 @@ provider "aws" {
       Project     = var.project_name
       ManagedBy   = "Terraform"
       Repository  = var.repository_name
-      Layer       = "Application"
+      Layer       = "Bootstrap"
     }
   }
 }

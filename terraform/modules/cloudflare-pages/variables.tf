@@ -12,3 +12,8 @@ variable "project_name" {
   description = "Project name for existing Pages project"
   type        = string
 }
+
+variable "domain_name" {
+  description = "Production domain name"
+  type        = string
+}

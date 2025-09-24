@@ -18,11 +18,11 @@ output "subdomain" {
 }
 
 output "production_url" {
-  description = "Production URL（固定値）"
-  value       = "https://hoxbl.rimane.net"
+  description = "Production URL"
+  value       = "https://${var.domain_name}"
 }
 
 output "preview_url" {
   description = "Preview URL"
-  value       = "https://preview.hoxbl.pages.dev"
+  value       = "https://preview.${var.project_name}.pages.dev"
 }
