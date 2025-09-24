@@ -26,6 +26,7 @@ jobs:
     outputs:
       has_destructive_changes: ${{ steps.plan.outputs.has_destructive_changes }}
       lambda_function_name_production: ${{ steps.tf_outputs.outputs.lambda_function_name_production }}
+      lambda_function_name_preview: ${{ steps.tf_outputs.outputs.lambda_function_name_preview }}
       lambda_function_url_production: ${{ steps.tf_outputs.outputs.lambda_function_url_production }}
       cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       cloudflare_project_name: ${{ vars.PROJECT_NAME }}
@@ -101,6 +102,7 @@ jobs:
         working-directory: ./terraform/app
         run: |
           echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
+          echo "lambda_function_name_preview=$(terraform output -raw lambda_preview_function_name)" >> $GITHUB_OUTPUT
           echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
           echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
           echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
@@ -181,7 +183,8 @@ jobs:
       - name: Build for Lambda
         working-directory: ./app/server
         env:
-          ACCESS_ALLOW_ORIGIN: ${{ needs.terraform.outputs.access_allow_origin_production }}
+          # ブランチに応じてProduction/Preview CORS設定を自動選択
+          ACCESS_ALLOW_ORIGIN: ${{ github.ref_name == 'main' && needs.terraform.outputs.access_allow_origin_production || needs.terraform.outputs.access_allow_origin_preview }}
           ACCESS_ALLOW_METHODS: ${{ vars.ACCESS_ALLOW_METHODS }}
           ACCESS_ALLOW_HEADERS: ${{ vars.ACCESS_ALLOW_HEADERS }}
           # JWKS検証設定（本番環境）
@@ -211,7 +214,7 @@ jobs:
         run: |
           # Update function code (suppress output to prevent secret exposure)
           aws lambda update-function-code \
-            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} \
             --zip-file fileb://app/server/lambda-deployment.zip \
             --output text > /dev/null
 
@@ -220,17 +223,17 @@ jobs:
           # Wait for function update to complete before publishing version
           echo "Waiting for function update to complete..."
           aws lambda wait function-updated \
-            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }}
+            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }}
 
           # Publish new version and promote to stable alias
-          VERSION=$(aws lambda publish-version --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} --query 'Version' --output text)
+          VERSION=$(aws lambda publish-version --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} --query 'Version' --output text)
           echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Published Lambda version: $VERSION"
 
           # Update stable alias to new version (stable alias pre-created in bootstrap)
           echo "Updating stable alias to version $VERSION"
           aws lambda update-alias \
-            --function-name ${{ needs.terraform.outputs.lambda_function_name_production }} \
+            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} \
             --name stable \
             --function-version $VERSION \
             --output text > /dev/null
