@@ -262,9 +262,10 @@ jobs:
       - name: Build
         working-directory: ./app/client
         env:
-          NEXT_PUBLIC_API_BASE_URL: ${{ needs.terraform.outputs.next_public_api_base_url_production }}
-          NEXT_PUBLIC_SITE_URL: ${{ needs.terraform.outputs.next_public_site_url_production }}
-          NEXT_PUBLIC_TRUSTED_DOMAINS: ${{ needs.terraform.outputs.next_public_trusted_domains_production }}
+          # ブランチに応じてProduction/Preview環境変数を自動選択
+          NEXT_PUBLIC_API_BASE_URL: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_api_base_url_production || needs.terraform.outputs.next_public_api_base_url_preview }}
+          NEXT_PUBLIC_SITE_URL: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_site_url_production || needs.terraform.outputs.next_public_site_url_preview }}
+          NEXT_PUBLIC_TRUSTED_DOMAINS: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_trusted_domains_production || needs.terraform.outputs.next_public_trusted_domains_preview }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: bun run build
