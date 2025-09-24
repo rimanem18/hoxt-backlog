@@ -25,3 +25,4 @@ app/server/dist/
 app/server/lambda-dist/
 app/server/lambda-deployment.zip
 terraform/modules/lambda/lambda.*
+*.zip

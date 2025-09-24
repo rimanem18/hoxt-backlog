@@ -186,11 +186,6 @@ resource "aws_iam_policy" "terraform_management_policy" {
         Resource = [
           "arn:aws:kms:${var.aws_region}:*:key/*"
         ]
-        Condition = {
-          StringEquals = {
-            "kms:ViaService" = "s3.${var.aws_region}.amazonaws.com"
-          }
-        }
       },
     ]
   })
