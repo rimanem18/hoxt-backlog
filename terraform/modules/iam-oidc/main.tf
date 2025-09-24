@@ -173,6 +173,25 @@ resource "aws_iam_policy" "terraform_management_policy" {
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
       },
+      # KMS（Terraformステート暗号化用）
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = [
+          "arn:aws:kms:${var.aws_region}:*:key/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "s3.${var.aws_region}.amazonaws.com"
+          }
+        }
+      },
     ]
   })
 
