@@ -63,6 +63,11 @@ output "access_allow_origin_production" {
   value       = data.terraform_remote_state.bootstrap.outputs.access_allow_origin_production
 }
 
+output "access_allow_origin_preview" {
+  description = "Preview CORS Allow Origin URL with wildcard"
+  value       = data.terraform_remote_state.bootstrap.outputs.access_allow_origin_preview
+}
+
 # Next.js環境変数用出力 - Production環境
 output "next_public_api_base_url_production" {
   description = "Next.js API Base URL for Production"

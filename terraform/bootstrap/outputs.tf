@@ -103,3 +103,8 @@ output "access_allow_origin_production" {
   description = "Production CORS Allow Origin URL"
   value       = "https://${var.domain_name}"
 }
+
+output "access_allow_origin_preview" {
+  description = "Preview CORS Allow Origin URL with wildcard"
+  value       = "https://*.${local.project_name}.pages.dev"
+}

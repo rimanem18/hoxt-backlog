@@ -1,11 +1,11 @@
 terraform {
   required_version = ">= 1.6.0"
-  
+
   # Remote backend configuration
   backend "s3" {
     # Configuration provided via -backend-config in Makefile
   }
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -24,13 +24,13 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
-      Project     = var.project_name
-      ManagedBy   = "Terraform"
-      Repository  = var.repository_name
-      Layer       = "Bootstrap"
+      Project    = var.project_name
+      ManagedBy  = "Terraform"
+      Repository = var.repository_name
+      Layer      = "Bootstrap"
     }
   }
 }
