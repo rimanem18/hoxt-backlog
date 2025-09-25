@@ -211,7 +211,10 @@ jobs:
           # bun run build:lambda で生成されたindex.jsとnode_modulesをzip化
           mkdir -p lambda-dist
           cp dist/index.js lambda-dist/
-          cp package.json lambda-dist/
+          
+          # CommonJS用のpackage.jsonを生成（"type": "module"を除去）
+          jq 'del(.type) | del(.scripts) | {name, dependencies}' package.json > lambda-dist/package.json
+          
           cd lambda-dist && bun install --production
           zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
 
