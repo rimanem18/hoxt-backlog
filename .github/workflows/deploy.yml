@@ -284,6 +284,7 @@ jobs:
           npx --yes wrangler@latest pages deploy out \
             --project-name "${{ vars.PROJECT_NAME }}" \
             --branch "${{ github.ref_name }}" \
+            --commit-message "" \
             --commit-dirty=true
 
   notify-success:
