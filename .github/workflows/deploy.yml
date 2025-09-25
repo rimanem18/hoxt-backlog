@@ -273,15 +273,80 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: bun run build
 
+      - name: Prepare CloudFlare commit metadata
+        id: cf_commit
+        run: |
+          # コミットメッセージをUTF-8で安全に取得・検証
+          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_MSG_RAW=$(git log -1 --encoding=UTF-8 --pretty=%s 2>/dev/null || echo "")
+          
+          # UTF-8検証と384バイト制限対応
+          if echo "$COMMIT_MSG_RAW" | python3 -c "
+          import sys, os
+          try:
+              msg = sys.stdin.read().strip()
+              # UTF-8検証
+              msg.encode('utf-8').decode('utf-8')
+              # 384バイト制限チェック（安全マージン80バイト）
+              if len(msg.encode('utf-8')) <= 300:
+                  print(msg)
+              else:
+                  # コードポイント境界で安全に切り詰め
+                  truncated = msg.encode('utf-8')[:300].decode('utf-8', errors='ignore')
+                  print(f'{truncated}...')
+          except:
+              # フォールバック: プロジェクトキー + SHA
+              branch = os.environ.get('GITHUB_REF_NAME', 'unknown')
+              if 'HOXBL' in branch:
+                  ticket = branch.split('-')[1] + '-' + branch.split('-')[2] if len(branch.split('-')) >= 3 else 'HOXBL'
+                  print(f'deploy {ticket} ({os.environ.get('GITHUB_SHA', 'unknown')[:7]})')
+              else:
+                  print(f'deploy ({os.environ.get('GITHUB_SHA', 'unknown')[:7]})')
+          " 2>/dev/null; then
+            SAFE_MSG=$(echo "$COMMIT_MSG_RAW" | python3 -c "
+            import sys, os
+            try:
+                msg = sys.stdin.read().strip()
+                msg.encode('utf-8').decode('utf-8')
+                if len(msg.encode('utf-8')) <= 300:
+                    print(msg)
+                else:
+                    truncated = msg.encode('utf-8')[:300].decode('utf-8', errors='ignore')
+                    print(f'{truncated}...')
+            except:
+                branch = os.environ.get('GITHUB_REF_NAME', 'unknown')
+                if 'HOXBL' in branch:
+                    ticket = branch.split('-')[1] + '-' + branch.split('-')[2] if len(branch.split('-')) >= 3 else 'HOXBL'
+                    print(f'deploy {ticket} ({os.environ.get('GITHUB_SHA', 'unknown')[:7]})')
+                else:
+                    print(f'deploy ({os.environ.get('GITHUB_SHA', 'unknown')[:7]})')
+            ")
+          else
+            # Python処理失敗時のフォールバック
+            if [[ "${{ github.ref_name }}" =~ HOXBL-([0-9]+) ]]; then
+              SAFE_MSG="deploy HOXBL-${BASH_REMATCH[1]} (${COMMIT_SHA:0:7})"
+            else
+              SAFE_MSG="deploy (${COMMIT_SHA:0:7})"
+            fi
+          fi
+          
+          echo "sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "message=${SAFE_MSG}" >> $GITHUB_OUTPUT
+          echo "✅ CloudFlare commit metadata: ${SAFE_MSG}"
+
       - name: Deploy to CloudFlare Pages
         working-directory: ./app/client
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく読み取り
+          LANG: C.UTF-8
         run: |
           npx --yes wrangler@latest pages deploy out \
             --project-name "${{ vars.PROJECT_NAME }}" \
             --branch "${{ github.ref_name }}" \
+            --commit-message "${{ steps.cf_commit.outputs.message }}" \
+            --commit-hash "${{ steps.cf_commit.outputs.sha }}" \
             --commit-dirty=true
 
   notify-success:
