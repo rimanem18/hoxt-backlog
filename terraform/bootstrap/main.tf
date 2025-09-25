@@ -65,13 +65,20 @@ resource "aws_lambda_function" "production" {
   timeout       = 30
   memory_size   = 512
 
-  # Placeholder code - will be updated by CI/CD
-  filename         = "placeholder.zip"
-  source_code_hash = data.archive_file.placeholder.output_base64sha256
+  # Actual application code
+  filename         = "../modules/lambda/lambda.zip"
+  source_code_hash = filebase64sha256("../modules/lambda/lambda.zip")
 
   environment {
     variables = {
-      NODE_ENV = "production"
+      NODE_ENV                = "production"
+      BASE_SCHEMA             = "app_${local.project_name}"
+      DATABASE_URL            = var.database_url
+      ACCESS_ALLOW_ORIGIN     = "https://${var.domain_name}"
+      ACCESS_ALLOW_METHODS    = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
+      ACCESS_ALLOW_HEADERS    = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      USE_JWKS_VERIFIER       = "true"
+      ENABLE_JWKS_VERIFICATION = "true"
     }
   }
 
@@ -87,13 +94,20 @@ resource "aws_lambda_function" "preview" {
   timeout       = 30
   memory_size   = 512
 
-  # Placeholder code - will be updated by CI/CD
-  filename         = "placeholder.zip"
-  source_code_hash = data.archive_file.placeholder.output_base64sha256
+  # Actual application code
+  filename         = "../modules/lambda/lambda.zip"
+  source_code_hash = filebase64sha256("../modules/lambda/lambda.zip")
 
   environment {
     variables = {
-      NODE_ENV = "development"
+      NODE_ENV                = "development"
+      BASE_SCHEMA             = "app_${local.project_name}_preview"
+      DATABASE_URL            = var.database_url
+      ACCESS_ALLOW_ORIGIN     = "https://*.${local.project_name}.pages.dev"
+      ACCESS_ALLOW_METHODS    = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
+      ACCESS_ALLOW_HEADERS    = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      USE_JWKS_VERIFIER       = "true"
+      ENABLE_JWKS_VERIFICATION = "true"
     }
   }
 
@@ -146,14 +160,14 @@ resource "aws_lambda_alias" "production_stable" {
   name             = "stable"
   description      = "Production stable deployment alias"
   function_name    = aws_lambda_function.production.function_name
-  function_version = aws_lambda_function.production.version
+  function_version = "$LATEST"
 }
 
 resource "aws_lambda_alias" "preview_stable" {
   name             = "stable"
   description      = "Preview stable deployment alias"
   function_name    = aws_lambda_function.preview.function_name
-  function_version = aws_lambda_function.preview.version
+  function_version = "$LATEST"
 }
 
 # CloudFlare Pages
