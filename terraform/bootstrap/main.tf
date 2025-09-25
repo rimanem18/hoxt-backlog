@@ -113,6 +113,7 @@ data "archive_file" "placeholder" {
 # Lambda Function URLs
 resource "aws_lambda_function_url" "production" {
   function_name      = aws_lambda_function.production.function_name
+  qualifier          = "stable"
   authorization_type = "NONE"
 
   cors {
@@ -127,6 +128,7 @@ resource "aws_lambda_function_url" "production" {
 
 resource "aws_lambda_function_url" "preview" {
   function_name      = aws_lambda_function.preview.function_name
+  qualifier          = "stable"
   authorization_type = "NONE"
 
   cors {

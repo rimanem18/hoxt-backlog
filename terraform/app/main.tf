@@ -57,10 +57,12 @@ data "aws_lambda_function" "preview" {
 # Lambda Function URLを取得
 data "aws_lambda_function_url" "production" {
   function_name = data.aws_lambda_function.production.function_name
+  qualifier     = "stable"
 }
 
 data "aws_lambda_function_url" "preview" {
   function_name = data.aws_lambda_function.preview.function_name
+  qualifier     = "stable"
 }
 
 # 既存Lambda stableエイリアスを参照（bootstrap/で作成済み）
