@@ -71,6 +71,7 @@ jobs:
           TF_VAR_repository_name: ${{ github.repository }}
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
         run: |
           terraform plan -detailed-exitcode -out=tfplan
 
@@ -95,6 +96,7 @@ jobs:
           TF_VAR_repository_name: ${{ github.repository }}
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
         run: terraform apply -auto-approve tfplan
 
       - name: Extract Terraform Outputs
@@ -183,6 +185,9 @@ jobs:
       - name: Build for Lambda
         working-directory: ./app/server
         env:
+          # データベーススキーマ設定（ブランチ別）
+          BASE_SCHEMA: ${{ github.ref_name == 'main' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           # ブランチに応じてProduction/Preview CORS設定を自動選択
           ACCESS_ALLOW_ORIGIN: ${{ github.ref_name == 'main' && needs.terraform.outputs.access_allow_origin_production || needs.terraform.outputs.access_allow_origin_preview }}
           ACCESS_ALLOW_METHODS: ${{ vars.ACCESS_ALLOW_METHODS }}
