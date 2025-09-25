@@ -45,6 +45,11 @@ output "lambda_production_stable_alias" {
   value       = aws_lambda_alias.production_stable.name
 }
 
+output "lambda_preview_stable_alias" {
+  description = "Preview stable alias name"
+  value       = aws_lambda_alias.preview_stable.name
+}
+
 # Terraform State管理情報
 output "terraform_state_bucket" {
   description = "Terraform state S3 bucket name"

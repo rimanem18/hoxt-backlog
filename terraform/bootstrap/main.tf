@@ -147,6 +147,13 @@ resource "aws_lambda_alias" "production_stable" {
   function_version = aws_lambda_function.production.version
 }
 
+resource "aws_lambda_alias" "preview_stable" {
+  name             = "stable"
+  description      = "Preview stable deployment alias"
+  function_name    = aws_lambda_function.preview.function_name
+  function_version = aws_lambda_function.preview.version
+}
+
 # CloudFlare Pages
 module "cloudflare_pages" {
   source = "../modules/cloudflare-pages"
