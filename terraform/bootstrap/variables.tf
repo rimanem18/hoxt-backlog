@@ -25,3 +25,9 @@ variable "aws_region" {
   type        = string
   default     = "ap-northeast-1"
 }
+
+variable "database_url" {
+  description = "Database connection URL"
+  type        = string
+  sensitive   = true
+}

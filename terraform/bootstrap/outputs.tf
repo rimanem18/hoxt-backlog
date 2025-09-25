@@ -113,3 +113,13 @@ output "access_allow_origin_preview" {
   description = "Preview CORS Allow Origin URL with wildcard"
   value       = "https://*.${local.project_name}.pages.dev"
 }
+
+output "access_allow_methods" {
+  description = "CORS Allow Methods"
+  value       = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
+}
+
+output "access_allow_headers" {
+  description = "CORS Allow Headers"
+  value       = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+}

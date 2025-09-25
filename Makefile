@@ -37,6 +37,7 @@ iac-init:
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
 		export PROJECT_NAME=${PROJECT_NAME} && \
 		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
 		cd bootstrap && \
 		terraform init \
 			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
@@ -67,6 +68,7 @@ iac-plan-save:
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
 		export PROJECT_NAME=${PROJECT_NAME} && \
 		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
@@ -89,6 +91,7 @@ iac-bootstrap-apply:
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
 		export PROJECT_NAME=${PROJECT_NAME} && \
 		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
 		cd bootstrap && \
 		terraform apply terraform.tfplan'
 	@echo "✅ Bootstrap構成の適用が完了しました。"
