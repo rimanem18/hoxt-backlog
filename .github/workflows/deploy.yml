@@ -58,6 +58,9 @@ jobs:
   deploy-backend:
     name: Deploy Backend
     needs: [deploy-infrastructure, deploy-database]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.lambda-function-name-production || needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
