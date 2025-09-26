@@ -38,8 +38,8 @@ jobs:
     needs: [log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
-      terraform-version: ${{ env.TERRAFORM_VERSION }}
-      aws-region: ${{ env.AWS_REGION }}
+      terraform-version: ${{ vars.TERRAFORM_VERSION }}
+      aws-region: ${{ vars.AWS_REGION }}
     secrets: inherit
 
   # Phase 2: データベースマイグレーション
@@ -59,7 +59,7 @@ jobs:
     with:
       lambda-function-name: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.lambda-function-name-production || needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
       environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
-      aws-region: ${{ env.AWS_REGION }}
+      aws-region: ${{ vars.AWS_REGION }}
       cors-allow-origin: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
     secrets: inherit
 
