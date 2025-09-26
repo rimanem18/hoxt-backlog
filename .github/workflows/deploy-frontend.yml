@@ -78,20 +78,13 @@ jobs:
           fi
 
           echo "CloudFlare Pagesにデプロイ中..."
-          DEPLOYMENT_OUTPUT=$(npx --yes wrangler@latest pages deploy out \
+          npx --yes wrangler@latest pages deploy out \
             --project-name "$PROJECT_NAME" \
             --branch "${{ github.ref_name }}" \
             --commit-message "" \
-            --commit-dirty=true \
-            --output json 2>&1)
+            --commit-dirty=true
 
-          # デプロイ結果を解析してURLを抽出
-          if echo "$DEPLOYMENT_OUTPUT" | grep -q "deployment_url"; then
-            DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.deployment_url')
-            echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-            echo "✅ CloudFlare Pages デプロイが正常に完了しました"
-            echo "📱 デプロイURL: $DEPLOYMENT_URL"
-          else
-            echo "⚠️ デプロイは完了しましたが、URLの取得に失敗しました"
-            echo "deployment_url=https://$PROJECT_NAME.pages.dev" >> $GITHUB_OUTPUT
-          fi
+          # フォールバック URL を設定
+          echo "deployment_url=https://$PROJECT_NAME.pages.dev" >> $GITHUB_OUTPUT
+          echo "✅ CloudFlare Pages デプロイが正常に完了しました"
+          echo "📱 デプロイURL: https://$PROJECT_NAME.pages.dev"
