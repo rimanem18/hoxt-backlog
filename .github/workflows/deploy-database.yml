@@ -1,0 +1,76 @@
+name: Deploy Database
+
+on:
+  workflow_call:
+    inputs:
+      timeout-minutes:
+        description: 'Timeout for database migration in minutes'
+        required: false
+        type: number
+        default: 10
+      database-url:
+        description: 'Database URL for migration'
+        required: false
+        type: string
+    outputs:
+      migration-status:
+        description: 'Database migration status'
+        value: ${{ jobs.migrate-database.outputs.migration-status }}
+
+jobs:
+  migrate-database:
+    name: Database Migration (drizzle-kit)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      migration-status: ${{ steps.migrate.outputs.status }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Workspace
+        uses: ./.github/actions/setup-bun-workspace
+        with:
+          working-directory: './app/server'
+          cache-key-suffix: 'database'
+
+      - name: Run Database Migration
+        id: migrate
+        working-directory: ./app/server
+        timeout-minutes: ${{ inputs.timeout-minutes }}
+        env:
+          DATABASE_URL: ${{ inputs.database-url || secrets.DATABASE_URL_MIGRATE }}
+        run: |
+          echo "データベースマイグレーションを開始します..."
+          
+          # drizzle-kit pushによるマイグレーション実行（要件REQ-007, REQ-008準拠）
+          echo "drizzle-kit pushによるスキーマ適用を実行中..."
+          
+          # タイムアウト設定付きでマイグレーション実行
+          if timeout ${{ inputs.timeout-minutes }}m bun run db:push; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "✅ データベースマイグレーションが正常に完了しました"
+          else
+            EXIT_CODE=$?
+            echo "status=failed" >> $GITHUB_OUTPUT
+            
+            if [ $EXIT_CODE -eq 124 ]; then
+              echo "❌ データベースマイグレーションがタイムアウトしました（${{ inputs.timeout-minutes }}分）"
+              echo "💡 ヒント: 長時間ブロッキングトランザクションが発生している可能性があります"
+              echo "💡 対処法: データベース管理者に連絡してロック状況を確認してください"
+            else
+              echo "❌ データベースマイグレーションが失敗しました（終了コード: $EXIT_CODE）"
+            fi
+            
+            exit $EXIT_CODE
+          fi
+
+      - name: Migration Completion Log
+        if: steps.migrate.outputs.status == 'success'
+        shell: bash
+        run: |
+          echo "🎯 データベースマイグレーションが正常に完了しました"
+          echo "✅ drizzle-kit pushによるスキーマ適用が完了"
