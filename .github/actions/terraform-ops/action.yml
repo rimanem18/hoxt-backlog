@@ -91,6 +91,15 @@ runs:
         # JSON形式でTerraform出力を取得
         terraform output -json > tf_outputs.json
         
+        echo "🔍 Terraform Outputs Debug:"
+        echo "Available outputs:"
+        terraform output
+        echo ""
+        echo "🔗 Lambda Function URLs:"
+        echo "Production: $(terraform output -raw lambda_production_function_url 2>/dev/null || echo 'NOT_FOUND')"
+        echo "Preview: $(terraform output -raw lambda_preview_function_url 2>/dev/null || echo 'NOT_FOUND')"
+        echo ""
+        
         # GitHub Outputsに個別の値を設定（既存ワークフロー互換性のため）
         echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
         echo "lambda_function_name_preview=$(terraform output -raw lambda_preview_function_name)" >> $GITHUB_OUTPUT

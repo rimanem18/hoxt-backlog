@@ -69,10 +69,34 @@ jobs:
       cors-allow-origin: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
     secrets: inherit
 
+  # Debug: インフラ出力確認
+  debug-infrastructure-outputs:
+    name: Debug Infrastructure Outputs
+    needs: [deploy-infrastructure]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug Infrastructure Outputs
+        run: |
+          echo "🔍 Infrastructure Outputs Debug:"
+          echo "Environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo ""
+          echo "📋 Production Outputs:"
+          echo "next-public-api-base-url-production: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-production }}"
+          echo "next-public-site-url-production: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-production }}"
+          echo ""
+          echo "📋 Preview Outputs:"
+          echo "next-public-api-base-url-preview: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
+          echo "next-public-site-url-preview: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
+          echo ""
+          echo "✅ Selected Values:"
+          echo "next-public-api-base-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
+          echo "next-public-site-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
+
   # Phase 4: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure]
+    needs: [deploy-infrastructure, debug-infrastructure-outputs]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}

@@ -50,6 +50,15 @@ jobs:
           working-directory: './app/client'
           cache-key-suffix: 'frontend'
 
+      - name: Debug Environment Variables
+        working-directory: ./app/client
+        run: |
+          echo "🔍 Frontend Environment Variables Debug:"
+          echo "Input next-public-api-base-url: ${{ inputs.next-public-api-base-url }}"
+          echo "Input next-public-site-url: ${{ inputs.next-public-site-url }}"
+          echo "Input next-public-trusted-domains: ${{ inputs.next-public-trusted-domains }}"
+          echo "Environment type: ${{ inputs.environment-type }}"
+
       - name: Build Frontend Application
         working-directory: ./app/client
         env:
@@ -60,7 +69,14 @@ jobs:
           # Supabase設定
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: bun run build
+        run: |
+          echo "🔍 Build-time Environment Variables:"
+          echo "NEXT_PUBLIC_API_BASE_URL: $NEXT_PUBLIC_API_BASE_URL"
+          echo "NEXT_PUBLIC_SITE_URL: $NEXT_PUBLIC_SITE_URL"
+          echo "NEXT_PUBLIC_TRUSTED_DOMAINS: $NEXT_PUBLIC_TRUSTED_DOMAINS"
+          echo ""
+          echo "🚀 Starting Next.js build..."
+          bun run build
 
       - name: Deploy to CloudFlare Pages
         id: deploy
