@@ -54,10 +54,10 @@ jobs:
       timeout-minutes: 10
     secrets: inherit
 
-  # Phase 3: バックエンドデプロイ（本番環境/プレビュー環境を自動選択）
+  # Phase 3: バックエンドデプロイ（database完了後、frontendと並行実行）
   deploy-backend:
     name: Deploy Backend
-    needs: [deploy-infrastructure, deploy-database]
+    needs: [deploy-database]
     permissions:
       id-token: write
       contents: read
@@ -69,10 +69,10 @@ jobs:
       cors-allow-origin: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
     secrets: inherit
 
-  # Phase 4: フロントエンドデプロイ（バックエンド完了後）
+  # Phase 4: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure, deploy-backend]
+    needs: [deploy-infrastructure]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
