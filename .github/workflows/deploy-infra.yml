@@ -67,14 +67,14 @@ jobs:
       lambda-function-name-production: ${{ steps.terraform-ops.outputs.lambda_function_name_production }}
       lambda-function-name-preview: ${{ steps.terraform-ops.outputs.lambda_function_name_preview }}
       lambda-function-url-production: ${{ steps.terraform-ops.outputs.lambda_function_url_production }}
-      access-allow-origin-production: ${{ steps.terraform-ops.outputs.access_allow_origin_production }}
-      access-allow-origin-preview: ${{ steps.terraform-ops.outputs.access_allow_origin_preview }}
-      next-public-api-base-url-production: ${{ steps.terraform-ops.outputs.next_public_api_base_url_production }}
-      next-public-site-url-production: ${{ steps.terraform-ops.outputs.next_public_site_url_production }}
-      next-public-trusted-domains-production: ${{ steps.terraform-ops.outputs.next_public_trusted_domains_production }}
-      next-public-api-base-url-preview: ${{ steps.terraform-ops.outputs.next_public_api_base_url_preview }}
-      next-public-site-url-preview: ${{ steps.terraform-ops.outputs.next_public_site_url_preview }}
-      next-public-trusted-domains-preview: ${{ steps.terraform-ops.outputs.next_public_trusted_domains_preview }}
+      access-allow-origin-production: ${{ steps.terraform-ops.outputs.access-allow-origin-production }}
+      access-allow-origin-preview: ${{ steps.terraform-ops.outputs.access-allow-origin-preview }}
+      next-public-api-base-url-production: ${{ steps.terraform-ops.outputs.next-public-api-base-url-production }}
+      next-public-site-url-production: ${{ steps.terraform-ops.outputs.next-public-site-url-production }}
+      next-public-trusted-domains-production: ${{ steps.terraform-ops.outputs.next-public-trusted-domains-production }}
+      next-public-api-base-url-preview: ${{ steps.terraform-ops.outputs.next-public-api-base-url-preview }}
+      next-public-site-url-preview: ${{ steps.terraform-ops.outputs.next-public-site-url-preview }}
+      next-public-trusted-domains-preview: ${{ steps.terraform-ops.outputs.next-public-trusted-domains-preview }}
       terraform-outputs: ${{ steps.terraform-ops.outputs.terraform-outputs }}
 
     steps:

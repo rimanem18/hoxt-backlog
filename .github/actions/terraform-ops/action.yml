@@ -107,14 +107,14 @@ runs:
         echo "lambda_function_url_preview=$(terraform output -raw lambda_preview_function_url)" >> $GITHUB_OUTPUT
         echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
         echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
-        echo "access_allow_origin_production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
-        echo "access_allow_origin_preview=$(terraform output -raw access_allow_origin_preview)" >> $GITHUB_OUTPUT
-        echo "next_public_api_base_url_production=$(terraform output -raw lambda_production_function_url)" >> $GITHUB_OUTPUT
-        echo "next_public_site_url_production=$(terraform output -raw next_public_site_url_production)" >> $GITHUB_OUTPUT
-        echo "next_public_trusted_domains_production=$(terraform output -raw next_public_trusted_domains_production)" >> $GITHUB_OUTPUT
-        echo "next_public_api_base_url_preview=$(terraform output -raw lambda_preview_function_url)" >> $GITHUB_OUTPUT
-        echo "next_public_site_url_preview=$(terraform output -raw next_public_site_url_preview)" >> $GITHUB_OUTPUT
-        echo "next_public_trusted_domains_preview=$(terraform output -raw next_public_trusted_domains_preview)" >> $GITHUB_OUTPUT
+        echo "access-allow-origin-production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
+        echo "access-allow-origin-preview=$(terraform output -raw access_allow_origin_preview)" >> $GITHUB_OUTPUT
+        echo "next-public-api-base-url-production=$(terraform output -raw lambda_production_function_url)" >> $GITHUB_OUTPUT
+        echo "next-public-site-url-production=$(terraform output -raw next_public_site_url_production)" >> $GITHUB_OUTPUT
+        echo "next-public-trusted-domains-production=$(terraform output -raw next_public_trusted_domains_production)" >> $GITHUB_OUTPUT
+        echo "next-public-api-base-url-preview=$(terraform output -raw lambda_preview_function_url)" >> $GITHUB_OUTPUT
+        echo "next-public-site-url-preview=$(terraform output -raw next_public_site_url_preview)" >> $GITHUB_OUTPUT
+        echo "next-public-trusted-domains-preview=$(terraform output -raw next_public_trusted_domains_preview)" >> $GITHUB_OUTPUT
         
         # JSON出力をアクションアウトプットに設定
         echo "terraform_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
