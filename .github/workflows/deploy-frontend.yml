@@ -80,11 +80,5 @@ jobs:
           echo "CloudFlare Pagesにデプロイ中..."
           npx --yes wrangler@latest pages deploy out \
             --project-name "$PROJECT_NAME" \
-            --branch "${{ github.ref_name }}" \
-            --commit-message "" \
+            --branch "${{ github.ref_name == 'main' && 'main' || 'preview' }}" \
             --commit-dirty=true
-
-          # フォールバック URL を設定
-          echo "deployment_url=https://$PROJECT_NAME.pages.dev" >> $GITHUB_OUTPUT
-          echo "✅ CloudFlare Pages デプロイが正常に完了しました"
-          echo "📱 デプロイURL: https://$PROJECT_NAME.pages.dev"
