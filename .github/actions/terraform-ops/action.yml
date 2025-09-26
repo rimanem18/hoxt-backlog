@@ -28,6 +28,12 @@ outputs:
   has-destructive-changes:
     description: 'Whether destructive changes were detected'
     value: ${{ steps.plan.outputs.has_destructive_changes }}
+  lambda-production-function-url:
+    description: 'Production Lambda Function URL'
+    value: ${{ steps.outputs.lambda_function_url_production }}
+  lambda-preview-function-url:
+    description: 'Preview Lambda Function URL'
+    value: ${{ steps.outputs.lambda_function_url_preview }}
   terraform-outputs:
     description: 'JSON string of all Terraform outputs'
     value: ${{ steps.outputs.terraform_outputs }}
@@ -88,15 +94,16 @@ runs:
         # GitHub Outputsに個別の値を設定（既存ワークフロー互換性のため）
         echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
         echo "lambda_function_name_preview=$(terraform output -raw lambda_preview_function_name)" >> $GITHUB_OUTPUT
-        echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
+        echo "lambda_function_url_production=$(terraform output -raw lambda_production_function_url)" >> $GITHUB_OUTPUT
+        echo "lambda_function_url_preview=$(terraform output -raw lambda_preview_function_url)" >> $GITHUB_OUTPUT
         echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
         echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
         echo "access_allow_origin_production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
         echo "access_allow_origin_preview=$(terraform output -raw access_allow_origin_preview)" >> $GITHUB_OUTPUT
-        echo "next_public_api_base_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
+        echo "next_public_api_base_url_production=$(terraform output -raw lambda_production_function_url)" >> $GITHUB_OUTPUT
         echo "next_public_site_url_production=$(terraform output -raw next_public_site_url_production)" >> $GITHUB_OUTPUT
         echo "next_public_trusted_domains_production=$(terraform output -raw next_public_trusted_domains_production)" >> $GITHUB_OUTPUT
-        echo "next_public_api_base_url_preview=$(terraform output -raw next_public_api_base_url_preview)" >> $GITHUB_OUTPUT
+        echo "next_public_api_base_url_preview=$(terraform output -raw lambda_preview_function_url)" >> $GITHUB_OUTPUT
         echo "next_public_site_url_preview=$(terraform output -raw next_public_site_url_preview)" >> $GITHUB_OUTPUT
         echo "next_public_trusted_domains_preview=$(terraform output -raw next_public_trusted_domains_preview)" >> $GITHUB_OUTPUT
         

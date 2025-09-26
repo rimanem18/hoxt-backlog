@@ -68,10 +68,21 @@ output "access_allow_origin_preview" {
   value       = data.terraform_remote_state.bootstrap.outputs.access_allow_origin_preview
 }
 
+# Lambda Function URL出力（実際のデプロイ後URL）
+output "lambda_production_function_url" {
+  description = "Production Lambda Function URL"
+  value       = data.aws_lambda_function_url.production.function_url
+}
+
+output "lambda_preview_function_url" {
+  description = "Preview Lambda Function URL"
+  value       = data.aws_lambda_function_url.preview.function_url
+}
+
 # Next.js環境変数用出力 - Production環境
 output "next_public_api_base_url_production" {
   description = "Next.js API Base URL for Production"
-  value       = data.terraform_remote_state.bootstrap.outputs.next_public_api_base_url_production
+  value       = data.aws_lambda_function_url.production.function_url
 }
 
 output "next_public_site_url_production" {
@@ -87,7 +98,7 @@ output "next_public_trusted_domains_production" {
 # Next.js環境変数用出力 - Preview環境
 output "next_public_api_base_url_preview" {
   description = "Next.js API Base URL for Preview"
-  value       = data.terraform_remote_state.bootstrap.outputs.next_public_api_base_url_preview
+  value       = data.aws_lambda_function_url.preview.function_url
 }
 
 output "next_public_site_url_preview" {
