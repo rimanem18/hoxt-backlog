@@ -1,0 +1,54 @@
+name: 'Setup Bun Workspace'
+description: 'Setup Bun environment with dependency installation and caching for monorepo workspace'
+
+inputs:
+  working-directory:
+    description: 'Working directory for the workspace component'
+    required: true
+  bun-version:
+    description: 'Bun version to install'
+    required: false
+    default: 'latest'
+  cache-key-suffix:
+    description: 'Additional suffix for cache key'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: Cache Bun dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.bun
+          ${{ inputs.working-directory }}/node_modules
+        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-${{ inputs.cache-key-suffix }}
+        restore-keys: |
+          bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-
+          bun-${{ runner.os }}-
+
+    - name: Install shared-schemas dependencies
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 5
+        max_attempts: 3
+        retry_on: error
+        command: |
+          cd ./app/packages/shared-schemas
+          bun install --frozen-lockfile
+
+    - name: Install workspace dependencies
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: |
+          cd ${{ inputs.working-directory }}
+          bun install --frozen-lockfile

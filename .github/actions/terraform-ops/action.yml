@@ -1,0 +1,108 @@
+name: 'Terraform Operations'
+description: 'Comprehensive Terraform initialization, planning, and application with destructive change detection'
+
+inputs:
+  working-directory:
+    description: 'Working directory containing Terraform configuration'
+    required: true
+    default: './terraform/app'
+  terraform-version:
+    description: 'Terraform version to install'
+    required: false
+    default: '1.6.0'
+  backend-bucket:
+    description: 'S3 bucket for Terraform state'
+    required: true
+  backend-key:
+    description: 'S3 key for Terraform state'
+    required: false
+    default: 'app/terraform.tfstate'
+  backend-region:
+    description: 'AWS region for Terraform state'
+    required: true
+  dynamodb-table:
+    description: 'DynamoDB table for Terraform state locking'
+    required: true
+
+outputs:
+  has-destructive-changes:
+    description: 'Whether destructive changes were detected'
+    value: ${{ steps.plan.outputs.has_destructive_changes }}
+  terraform-outputs:
+    description: 'JSON string of all Terraform outputs'
+    value: ${{ steps.outputs.terraform_outputs }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+
+    - name: Terraform Init
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ inputs.backend-bucket }}" \
+          -backend-config="key=${{ inputs.backend-key }}" \
+          -backend-config="region=${{ inputs.backend-region }}" \
+          -backend-config="dynamodb_table=${{ inputs.dynamodb-table }}"
+
+    - name: Terraform Plan
+      id: plan
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        terraform plan -detailed-exitcode -out=tfplan
+
+        # 破壊的変更の検出（要件REQ-102準拠）
+        if terraform show -json tfplan | jq -e '.resource_changes[]? | select(.change.actions[] | contains("delete"))' > /dev/null; then
+          echo "has_destructive_changes=true" >> $GITHUB_OUTPUT
+          echo "⚠️ 破壊的変更が検出されました（要件に従い自動継続）"
+          terraform show -json tfplan | jq '.resource_changes[] | select(.change.actions[] | contains("delete"))'
+        else
+          echo "has_destructive_changes=false" >> $GITHUB_OUTPUT
+          echo "✅ 破壊的変更は検出されませんでした"
+        fi
+
+    - name: Terraform Apply
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        retry_on: error
+        command: |
+          cd ${{ inputs.working-directory }}
+          terraform apply -auto-approve tfplan
+
+    - name: Extract Terraform Outputs
+      id: outputs
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # JSON形式でTerraform出力を取得
+        terraform output -json > tf_outputs.json
+        
+        # GitHub Outputsに個別の値を設定（既存ワークフロー互換性のため）
+        echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
+        echo "lambda_function_name_preview=$(terraform output -raw lambda_preview_function_name)" >> $GITHUB_OUTPUT
+        echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
+        echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
+        echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
+        echo "access_allow_origin_production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
+        echo "access_allow_origin_preview=$(terraform output -raw access_allow_origin_preview)" >> $GITHUB_OUTPUT
+        echo "next_public_api_base_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
+        echo "next_public_site_url_production=$(terraform output -raw next_public_site_url_production)" >> $GITHUB_OUTPUT
+        echo "next_public_trusted_domains_production=$(terraform output -raw next_public_trusted_domains_production)" >> $GITHUB_OUTPUT
+        echo "next_public_api_base_url_preview=$(terraform output -raw next_public_api_base_url_preview)" >> $GITHUB_OUTPUT
+        echo "next_public_site_url_preview=$(terraform output -raw next_public_site_url_preview)" >> $GITHUB_OUTPUT
+        echo "next_public_trusted_domains_preview=$(terraform output -raw next_public_trusted_domains_preview)" >> $GITHUB_OUTPUT
+        
+        # JSON出力をアクションアウトプットに設定
+        echo "terraform_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
+
+        # セキュリティ改善：詳細ログ出力を最小化
+        echo "🔧 Terraform操作が正常に完了しました"
+        echo "  出力値数: $(terraform output -json | jq 'keys | length')"
