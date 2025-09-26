@@ -36,6 +36,9 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     needs: [log-deployment-start]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: ${{ vars.TERRAFORM_VERSION }}
