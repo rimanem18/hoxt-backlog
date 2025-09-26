@@ -64,6 +64,6 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: deployment-log-${{ github.run_id }}-${{ inputs.component }}
+        name: deployment-log-${{ github.run_id }}-${{ inputs.component }}-${{ inputs.event-type }}
         path: deployment.log
         retention-days: 90
