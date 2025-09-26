@@ -14,339 +14,136 @@ concurrency:
 env:
   AWS_REGION: ap-northeast-1
   TERRAFORM_VERSION: 1.6.0
-  NODE_VERSION: 22
 
 jobs:
-  terraform:
+  # Phase 0: デプロイ開始記録
+  log-deployment-start:
+    name: Log Deployment Start
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Record Deployment Start
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'start'
+          component: 'full-stack'
+          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          details: 'Starting full stack deployment'
+
+  # Phase 1: インフラストラクチャデプロイ
+  deploy-infrastructure:
     name: Deploy Infrastructure
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    outputs:
-      has_destructive_changes: ${{ steps.plan.outputs.has_destructive_changes }}
-      lambda_function_name_production: ${{ steps.tf_outputs.outputs.lambda_function_name_production }}
-      lambda_function_name_preview: ${{ steps.tf_outputs.outputs.lambda_function_name_preview }}
-      lambda_function_url_production: ${{ steps.tf_outputs.outputs.lambda_function_url_production }}
-      cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      cloudflare_project_name: ${{ vars.PROJECT_NAME }}
-      aws_role_arn: ${{ steps.tf_outputs.outputs.aws_role_arn }}
-      access_allow_origin_production: ${{ steps.tf_outputs.outputs.access_allow_origin_production }}
-      next_public_api_base_url_production: ${{ steps.tf_outputs.outputs.next_public_api_base_url_production }}
-      next_public_site_url_production: ${{ steps.tf_outputs.outputs.next_public_site_url_production }}
-      next_public_trusted_domains_production: ${{ steps.tf_outputs.outputs.next_public_trusted_domains_production }}
-      next_public_api_base_url_preview: ${{ steps.tf_outputs.outputs.next_public_api_base_url_preview }}
-      next_public_site_url_preview: ${{ steps.tf_outputs.outputs.next_public_site_url_preview }}
-      next_public_trusted_domains_preview: ${{ steps.tf_outputs.outputs.next_public_trusted_domains_preview }}
+    needs: [log-deployment-start]
+    uses: ./.github/workflows/deploy-infra.yml
+    with:
+      terraform-version: ${{ env.TERRAFORM_VERSION }}
+      aws-region: ${{ env.AWS_REGION }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # Phase 2: データベースマイグレーション
+  deploy-database:
+    name: Deploy Database
+    needs: [deploy-infrastructure]
+    uses: ./.github/workflows/deploy-database.yml
+    with:
+      timeout-minutes: 10
+    secrets: inherit
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          role-session-name: GitHubActions-Production-Terraform
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Terraform Init
-        working-directory: ./terraform/app
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TERRAFORM_STATE_BUCKET }}" \
-            -backend-config="key=app/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ vars.TERRAFORM_LOCKS_TABLE }}"
-
-      - name: Terraform Plan
-        id: plan
-        working-directory: ./terraform/app
-        env:
-          TF_VAR_repository_name: ${{ github.repository }}
-          TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
-          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-        run: |
-          terraform plan -detailed-exitcode -out=tfplan
-
-          # Check for destructive changes
-          if terraform show -json tfplan | jq -e '.resource_changes[]? | select(.change.actions[] | contains("delete"))' > /dev/null; then
-            echo "has_destructive_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_destructive_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Log destructive changes (if detected)
-        if: steps.plan.outputs.has_destructive_changes == 'true'
-        run: |
-          echo "⚠️ Destructive changes detected in Terraform plan"
-          echo "Changes will be applied automatically for individual development"
-          terraform show -json tfplan | jq '.resource_changes[] | select(.change.actions[] | contains("delete"))'
-        working-directory: ./terraform/app
-
-      - name: Terraform Apply
-        working-directory: ./terraform/app
-        env:
-          TF_VAR_repository_name: ${{ github.repository }}
-          TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
-          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
-        run: terraform apply -auto-approve tfplan
-
-      - name: Extract Terraform Outputs
-        id: tf_outputs
-        working-directory: ./terraform/app
-        run: |
-          echo "lambda_function_name_production=$(terraform output -raw lambda_production_function_name)" >> $GITHUB_OUTPUT
-          echo "lambda_function_name_preview=$(terraform output -raw lambda_preview_function_name)" >> $GITHUB_OUTPUT
-          echo "lambda_function_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
-          echo "aws_role_arn=$(terraform output -raw github_actions_role_arn)" >> $GITHUB_OUTPUT
-          echo "project_name=$(terraform output -raw project_name)" >> $GITHUB_OUTPUT
-          echo "access_allow_origin_production=$(terraform output -raw access_allow_origin_production)" >> $GITHUB_OUTPUT
-          echo "next_public_api_base_url_production=$(terraform output -raw next_public_api_base_url_production)" >> $GITHUB_OUTPUT
-          echo "next_public_site_url_production=$(terraform output -raw next_public_site_url_production)" >> $GITHUB_OUTPUT
-          echo "next_public_trusted_domains_production=$(terraform output -raw next_public_trusted_domains_production)" >> $GITHUB_OUTPUT
-          echo "next_public_api_base_url_preview=$(terraform output -raw next_public_api_base_url_preview)" >> $GITHUB_OUTPUT
-          echo "next_public_site_url_preview=$(terraform output -raw next_public_site_url_preview)" >> $GITHUB_OUTPUT
-          echo "next_public_trusted_domains_preview=$(terraform output -raw next_public_trusted_domains_preview)" >> $GITHUB_OUTPUT
-
-          # デバッグ用ログ出力
-          echo "🔧 Terraform Outputs extracted:"
-          echo "  Lambda Function: $(terraform output -raw lambda_production_function_name)"
-          echo "  Function URL: $(terraform output -raw next_public_api_base_url_production)"
-          echo "  CloudFlare Account: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
-          echo "  CloudFlare Project: $(terraform output -raw project_name)"
-          echo "  CORS Origin: $(terraform output -raw access_allow_origin_production)"
-          echo "  Next.js Production API: $(terraform output -raw next_public_api_base_url_production)"
-          echo "  Next.js Production Site: $(terraform output -raw next_public_site_url_production)"
-          echo "  Next.js Preview API: $(terraform output -raw next_public_api_base_url_preview)"
-          echo "  Next.js Preview Site: $(terraform output -raw next_public_site_url_preview)"
-
-  database:
-    name: Database Migration (drizzle-kit)
-    runs-on: ubuntu-latest
-    needs: terraform
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install shared-schemas dependencies
-        working-directory: ./app/packages/shared-schemas
-        run: bun install --frozen-lockfile
-
-      - name: Install dependencies
-        working-directory: ./app/server
-        run: bun install --frozen-lockfile
-
-      - name: Run database migration
-        working-directory: ./app/server
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_MIGRATE }}
-        run: bun run db:push
-        timeout-minutes: 10
-
-  backend:
+  # Phase 3: バックエンドデプロイ（本番環境/プレビュー環境を自動選択）
+  deploy-backend:
     name: Deploy Backend
-    runs-on: ubuntu-latest
-    needs: [terraform, database]
-    permissions:
-      id-token: write
-      contents: read
+    needs: [deploy-infrastructure, deploy-database]
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      lambda-function-name: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.lambda-function-name-production || needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
+      environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      aws-region: ${{ env.AWS_REGION }}
+      cors-allow-origin: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install shared-schemas dependencies
-        working-directory: ./app/packages/shared-schemas
-        run: bun install --frozen-lockfile
-
-      - name: Install dependencies
-        working-directory: ./app/server
-        run: bun install --frozen-lockfile
-
-      - name: Build for Lambda
-        working-directory: ./app/server
-        env:
-          # データベーススキーマ設定（ブランチ別）
-          BASE_SCHEMA: ${{ github.ref_name == 'main' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # ブランチに応じてProduction/Preview CORS設定を自動選択
-          ACCESS_ALLOW_ORIGIN: ${{ github.ref_name == 'main' && needs.terraform.outputs.access_allow_origin_production || needs.terraform.outputs.access_allow_origin_preview }}
-          ACCESS_ALLOW_METHODS: ${{ vars.ACCESS_ALLOW_METHODS }}
-          ACCESS_ALLOW_HEADERS: ${{ vars.ACCESS_ALLOW_HEADERS }}
-          # JWKS検証設定（本番環境）
-          USE_JWKS_VERIFIER: 'true'
-          ENABLE_JWKS_VERIFICATION: 'true'
-          ENABLE_HS256_FALLBACK: 'false'
-        run: bun run build:lambda
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          role-session-name: GitHubActions-Production-Lambda
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Package Lambda
-        working-directory: ./app/server
-        run: |
-          # bun run build:lambda で生成されたindex.jsとnode_modulesをzip化
-          mkdir -p lambda-dist
-          cp dist/index.js lambda-dist/
-          
-          # CommonJS用のpackage.jsonを生成（"type": "module"を除去）
-          jq 'del(.type) | del(.scripts) | {name, dependencies}' package.json > lambda-dist/package.json
-          
-          cd lambda-dist && bun install --production
-          zip -r ../lambda-deployment.zip . -x "*.map" "*.test.*" "*.dev.*"
-
-      - name: Deploy Lambda
-        run: |
-          # Update function code (suppress output to prevent secret exposure)
-          aws lambda update-function-code \
-            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} \
-            --zip-file fileb://app/server/lambda-deployment.zip \
-            --output text > /dev/null
-
-          echo "✅ Function code updated successfully"
-
-          # Wait for function update to complete before publishing version
-          echo "Waiting for function update to complete..."
-          aws lambda wait function-updated \
-            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }}
-
-          # Publish new version and promote to stable alias
-          VERSION=$(aws lambda publish-version --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} --query 'Version' --output text)
-          echo "PROMOTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Published Lambda version: $VERSION"
-
-          # Update stable alias to new version (stable alias pre-created in bootstrap)
-          echo "Updating stable alias to version $VERSION"
-          aws lambda update-alias \
-            --function-name ${{ github.ref_name == 'main' && needs.terraform.outputs.lambda_function_name_production || needs.terraform.outputs.lambda_function_name_preview }} \
-            --name stable \
-            --function-version $VERSION \
-            --output text > /dev/null
-
-          echo "Successfully promoted Lambda version $VERSION to production stable alias"
-
-  frontend:
+  # Phase 4: フロントエンドデプロイ（バックエンド完了後）
+  deploy-frontend:
     name: Deploy Frontend
-    runs-on: ubuntu-latest
-    needs: [terraform, backend]
+    needs: [deploy-infrastructure, deploy-backend]
+    uses: ./.github/workflows/deploy-frontend.yml
+    with:
+      environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      next-public-api-base-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+      next-public-site-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
+      next-public-trusted-domains: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-trusted-domains-production || needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
+      cloudflare-project-name: ${{ vars.PROJECT_NAME }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install shared-schemas dependencies
-        working-directory: ./app/packages/shared-schemas
-        run: bun install --frozen-lockfile
-
-      - name: Install dependencies
-        working-directory: ./app/client
-        run: bun install --frozen-lockfile
-
-      - name: Build
-        working-directory: ./app/client
-        env:
-          # ブランチに応じてProduction/Preview環境変数を自動選択
-          NEXT_PUBLIC_API_BASE_URL: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_api_base_url_production || needs.terraform.outputs.next_public_api_base_url_preview }}
-          NEXT_PUBLIC_SITE_URL: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_site_url_production || needs.terraform.outputs.next_public_site_url_preview }}
-          NEXT_PUBLIC_TRUSTED_DOMAINS: ${{ github.ref_name == 'main' && needs.terraform.outputs.next_public_trusted_domains_production || needs.terraform.outputs.next_public_trusted_domains_preview }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: bun run build
-
-      - name: Deploy to CloudFlare Pages
-        working-directory: ./app/client
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく読み取り
-          LANG: C.UTF-8
-        run: |
-          npx --yes wrangler@latest pages deploy out \
-            --project-name "${{ vars.PROJECT_NAME }}" \
-            --branch "${{ github.ref_name }}" \
-            --commit-message "" \
-            --commit-dirty=true
-
+  # Phase 5: デプロイ成功通知
   notify-success:
     name: Notify Deployment Success
-    runs-on: ubuntu-latest
-    needs: [terraform, database, backend, frontend]
     if: success()
-
+    needs: [deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
     steps:
-      - name: Send Discord notification (Success)
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -H "Content-Type: application/json" \
-               -d '{
-                 "embeds": [{
-                   "title": "🚀 Production Deployment Completed Successfully!",
-                   "color": 65280,
-                   "fields": [
-                     {"name": "Commit", "value": "${{ github.sha }}", "inline": true},
-                     {"name": "Branch", "value": "${{ github.ref_name }}", "inline": true},
-                     {"name": "Actor", "value": "${{ github.actor }}", "inline": true},
-                     {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
-                     {"name": "Components Deployed", "value": "✅ Infrastructure (Terraform)\n✅ Database (drizzle-kit)\n✅ Backend (AWS Lambda)\n✅ Frontend (CloudFlare Pages)", "inline": false}
-                   ],
-                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
-                 }]
-               }' \
-               "$DISCORD_WEBHOOK_URL"
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Record Deployment Success
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'success'
+          component: 'full-stack'
+          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          details: 'All components deployed successfully'
+
+      - name: Generate Deployment Summary
+        uses: ./.github/actions/deployment-summary
+        with:
+          environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          lambda-function-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+          cloudflare-deployment-url: ${{ needs.deploy-frontend.outputs.deployment-url }}
+          lambda-version: ${{ needs.deploy-backend.outputs.deployed-version }}
+          terraform-outputs: ${{ needs.deploy-infrastructure.outputs.terraform-outputs }}
+          commit-sha: ${{ github.sha }}
+          branch-name: ${{ github.ref_name }}
+
+      - name: Send Success Notification
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: 'success'
+          title: '🚀 Production Deployment Completed Successfully!'
+          components: '✅ Infrastructure (Terraform)\n✅ Database (drizzle-kit)\n✅ Backend (AWS Lambda)\n✅ Frontend (CloudFlare Pages)'
+          commit-sha: ${{ github.sha }}
+          branch-name: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+
+  # Phase 6: デプロイ失敗通知
   notify-failure:
     name: Notify Deployment Failure
-    runs-on: ubuntu-latest
-    needs: [terraform, database, backend, frontend]
     if: failure()
-
+    needs: [deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
     steps:
-      - name: Send Discord notification (Failure)
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -H "Content-Type: application/json" \
-               -d '{
-                 "embeds": [{
-                   "title": "❌ Production Deployment Failed!",
-                   "color": 16711680,
-                   "fields": [
-                     {"name": "Commit", "value": "${{ github.sha }}", "inline": true},
-                     {"name": "Branch", "value": "${{ github.ref_name }}", "inline": true},
-                     {"name": "Actor", "value": "${{ github.actor }}", "inline": true},
-                     {"name": "Repository", "value": "${{ github.repository }}", "inline": false},
-                     {"name": "Action", "value": "Please check the [job logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details and retry the deployment.", "inline": false}
-                   ],
-                   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
-                 }]
-               }' \
-               "$DISCORD_WEBHOOK_URL"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Record Deployment Failure
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'failure'
+          component: 'full-stack'
+          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          details: 'Deployment failed - check logs for details'
+
+      - name: Send Failure Notification
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: 'failure'
+          title: '❌ Production Deployment Failed!'
+          commit-sha: ${{ github.sha }}
+          branch-name: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
