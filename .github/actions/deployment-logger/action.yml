@@ -29,12 +29,10 @@ runs:
       run: |
         # デプロイ記録の基本情報
         TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
-        COMMIT_SHORT=$(echo "${{ inputs.version }}" | cut -c1-8)
         
         # ログエントリを生成
         LOG_ENTRY="[$TIMESTAMP] ${{ inputs.event-type }} - ${{ inputs.component }} deployment"
         LOG_ENTRY="$LOG_ENTRY | Actor: ${{ github.actor }}"
-        LOG_ENTRY="$LOG_ENTRY | Commit: $COMMIT_SHORT"
         LOG_ENTRY="$LOG_ENTRY | Environment: ${{ inputs.environment }}"
         LOG_ENTRY="$LOG_ENTRY | Branch: ${{ github.ref_name }}"
         

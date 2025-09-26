@@ -34,63 +34,54 @@ runs:
       run: |
         # デプロイサマリーファイルを作成
         SUMMARY_FILE="deployment-summary-$(date +%Y%m%d-%H%M%S).md"
-        COMMIT_SHORT=$(echo "${{ inputs.commit-sha }}" | cut -c1-8)
-        
+        CURRENT_TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
         # マークダウン形式でサマリーを生成
-        cat > "$SUMMARY_FILE" << 'EOF'
+        cat > "$SUMMARY_FILE" << EOF
         # 🚀 Deployment Summary
-        
+
         ## 📋 Basic Information
         - **Environment**: ${{ inputs.environment-type }}
-        - **Commit**: ${{ inputs.commit-sha }} (`$COMMIT_SHORT`)
+        - **Commit**: ${{ inputs.commit-sha }}
         - **Branch**: ${{ inputs.branch-name }}
-        - **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        - **Timestamp**: $CURRENT_TIMESTAMP
         - **Actor**: ${{ github.actor }}
-        
+
         ## 🌐 Deployment URLs
         EOF
-        
+
         # Lambda URL情報を追加
         if [ -n "${{ inputs.lambda-function-url }}" ]; then
           echo "- **🔗 API Endpoint**: ${{ inputs.lambda-function-url }}" >> "$SUMMARY_FILE"
         fi
-        
-        # CloudFlare URL情報を追加  
-        if [ -n "${{ inputs.cloudflare-deployment-url }}" ]; then
-          echo "- **📱 Frontend URL**: ${{ inputs.cloudflare-deployment-url }}" >> "$SUMMARY_FILE"
-        fi
-        
+
         # Lambda バージョン情報を追加
         if [ -n "${{ inputs.lambda-version }}" ]; then
           echo "" >> "$SUMMARY_FILE"
           echo "## ⚙️ Technical Details" >> "$SUMMARY_FILE"
           echo "- **Lambda Version**: ${{ inputs.lambda-version }}" >> "$SUMMARY_FILE"
         fi
-        
+
         # Terraform出力情報を追加
         if [ -n "${{ inputs.terraform-outputs }}" ]; then
           echo "- **Infrastructure**: Updated via Terraform" >> "$SUMMARY_FILE"
         fi
-        
+
         # GitHub Actionsサマリーに表示
         echo "## 🎯 ${{ inputs.environment-type }} Deployment Completed Successfully!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         cat "$SUMMARY_FILE" >> $GITHUB_STEP_SUMMARY
-        
+
         # 追加の便利情報
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 🔧 Quick Actions" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ -n "${{ inputs.lambda-function-url }}" ]; then
           echo "- [🧪 Test API Endpoint](${{ inputs.lambda-function-url }}/health)" >> $GITHUB_STEP_SUMMARY
         fi
-        
-        if [ -n "${{ inputs.cloudflare-deployment-url }}" ]; then
-          echo "- [👀 View Frontend](${{ inputs.cloudflare-deployment-url }})" >> $GITHUB_STEP_SUMMARY
-        fi
-        
+
         echo "- [📊 View Deployment Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
-        
+
         echo "✅ Deployment summary generated: $SUMMARY_FILE"
 
     - name: Upload Deployment Summary
