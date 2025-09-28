@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: 'ap-northeast-1'
+      environment-type:
+        description: 'Environment type (production or preview)'
+        required: false
+        type: string
+        default: 'production'
     outputs:
       has-destructive-changes:
         description: 'Whether destructive changes were detected'
@@ -103,3 +108,4 @@ jobs:
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
           TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+          TF_VAR_environment_type: ${{ inputs.environment-type }}

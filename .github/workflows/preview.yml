@@ -1,0 +1,293 @@
+name: Preview Environment Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    branches:
+      - main
+    types: [closed]
+
+# セキュリティ: Fork制限（NFR-005準拠）
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write  # プレビューURL コメント用
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-1
+  TERRAFORM_VERSION: 1.6.0
+
+jobs:
+  # Fork制限チェック（セキュリティ）
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    outputs:
+      is-fork: ${{ steps.check.outputs.is_fork }}
+      can-deploy: ${{ steps.check.outputs.can_deploy }}
+    steps:
+      - name: Check Fork Status
+        id: check
+        run: |
+          IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          
+          if [ "$IS_FORK" = "true" ]; then
+            echo "can_deploy=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Fork からのPRのため、プレビューデプロイはスキップされます（セキュリティ制限）"
+          else
+            echo "can_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
+          fi
+
+  # プレビュー環境デプロイ
+  deploy-preview:
+    name: Deploy Preview Environment
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    outputs:
+      preview-api-url: ${{ steps.deploy-infra.outputs.next-public-api-base-url-preview }}
+      preview-site-url: ${{ steps.deploy-frontend.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Record Preview Deployment Start
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'start'
+          component: 'preview-environment'
+          environment: 'preview'
+          details: 'Starting preview environment deployment for PR #${{ github.event.pull_request.number }}'
+
+      # Phase 1: インフラストラクチャ（Preview環境）
+      - name: Deploy Preview Infrastructure
+        id: deploy-infra
+        uses: ./.github/workflows/deploy-infra.yml
+        with:
+          terraform-version: ${{ vars.TERRAFORM_VERSION }}
+          aws-region: ${{ vars.AWS_REGION }}
+          environment-type: 'preview'
+        secrets: inherit
+
+      # Phase 2: データベース（Preview schema）
+      - name: Deploy Preview Database
+        uses: ./.github/workflows/deploy-database.yml
+        with:
+          timeout-minutes: 10
+        secrets: inherit
+
+      # Phase 3: バックエンド（Preview Lambda）
+      - name: Deploy Preview Backend
+        id: deploy-backend
+        uses: ./.github/workflows/deploy-backend.yml
+        with:
+          lambda-function-name: ${{ steps.deploy-infra.outputs.lambda-function-name-preview }}
+          environment-type: 'preview'
+          aws-region: ${{ vars.AWS_REGION }}
+          cors-allow-origin: ${{ steps.deploy-infra.outputs.access-allow-origin-preview }}
+        secrets: inherit
+
+      # Phase 4: フロントエンド（Preview Pages）
+      - name: Deploy Preview Frontend
+        id: deploy-frontend
+        uses: ./.github/workflows/deploy-frontend.yml
+        with:
+          environment-type: 'preview'
+          next-public-api-base-url: ${{ steps.deploy-infra.outputs.next-public-api-base-url-preview }}
+          next-public-site-url: ${{ steps.deploy-infra.outputs.next-public-site-url-preview }}
+          next-public-trusted-domains: ${{ steps.deploy-infra.outputs.next-public-trusted-domains-preview }}
+          cloudflare-project-name: ${{ vars.PROJECT_NAME }}
+        secrets: inherit
+
+      - name: Record Preview Deployment Success
+        if: success()
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'success'
+          component: 'preview-environment'
+          environment: 'preview'
+          details: 'Preview environment deployed successfully for PR #${{ github.event.pull_request.number }}'
+
+      - name: Record Preview Deployment Failure
+        if: failure()
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'failure'
+          component: 'preview-environment'
+          environment: 'preview'
+          details: 'Preview environment deployment failed for PR #${{ github.event.pull_request.number }}'
+
+  # プレビューURL コメント
+  comment-preview-urls:
+    name: Comment Preview URLs
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.deploy-preview.result == 'success'
+    needs: [security-check, deploy-preview]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment Preview URLs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewComment = `## 🚀 Preview Environment Ready!
+
+            ### 📱 Preview URLs
+            - **🌐 Frontend**: ${{ needs.deploy-preview.outputs.preview-site-url }}
+            - **🔗 API**: ${{ needs.deploy-preview.outputs.preview-api-url }}
+
+            ### 🧪 Quick Tests
+            - [Health Check](${{ needs.deploy-preview.outputs.preview-api-url }}/health)
+            - [Frontend App](${{ needs.deploy-preview.outputs.preview-site-url }})
+
+            ### ℹ️ Environment Info
+            - **PR**: #${{ github.event.pull_request.number }}
+            - **Commit**: ${{ github.event.pull_request.head.sha }}
+            - **Branch**: ${{ github.event.pull_request.head.ref }}
+
+            > 🔄 Preview environment will be automatically updated when you push new commits to this PR.
+            > 🗑️ Resources will be cleaned up when this PR is closed.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: previewComment
+            });
+
+  # Fork警告コメント
+  comment-fork-warning:
+    name: Comment Fork Warning
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'false'
+    needs: [security-check]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment Fork Warning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const forkWarning = `## ⚠️ Preview Environment Unavailable
+
+            This pull request is from a forked repository. For security reasons, preview environments are not deployed for external contributions.
+
+            ### 🔒 Security Policy
+            - Preview deployments are restricted to same-repository PRs only
+            - This prevents potential security risks from untrusted code execution
+
+            ### ✅ What's Still Available
+            - All automated tests will run normally
+            - Code review process remains unchanged
+            - Manual testing can be performed after merge approval
+
+            Thank you for your contribution! 🙏`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: forkWarning
+            });
+
+  # リソースクリーンアップ（PR終了時）
+  cleanup-preview:
+    name: Cleanup Preview Environment
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Preview-Cleanup
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cleanup Preview Lambda Function
+        continue-on-error: true
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          LAMBDA_NAME="${{ vars.PROJECT_NAME }}-api-preview-pr${PR_NUMBER}"
+          
+          echo "🗑️ Cleaning up preview Lambda function: $LAMBDA_NAME"
+          
+          # Lambda関数の存在確認
+          if aws lambda get-function --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            # Function URLを削除
+            aws lambda delete-function-url-config --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }} 2>/dev/null || true
+            
+            # Lambda関数を削除
+            aws lambda delete-function --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }}
+            echo "✅ Lambda関数 $LAMBDA_NAME を削除しました"
+          else
+            echo "ℹ️ Lambda関数 $LAMBDA_NAME は存在しません（既にクリーンアップ済み）"
+          fi
+
+      - name: Cleanup CloudFlare Preview
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          echo "🗑️ CloudFlare Pagesプレビューデプロイメントのクリーンアップ"
+          echo "ℹ️ CloudFlare Pagesは自動的にプレビューブランチをクリーンアップします"
+          echo "✅ CloudFlareプレビュー環境のクリーンアップ完了"
+
+      - name: Record Cleanup Completion
+        uses: ./.github/actions/deployment-logger
+        with:
+          event-type: 'success'
+          component: 'preview-cleanup'
+          environment: 'preview'
+          details: 'Preview environment resources cleaned up for PR #${{ github.event.pull_request.number }}'
+
+      - name: Comment Cleanup Completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const cleanupComment = `## 🗑️ Preview Environment Cleaned Up
+
+            Preview environment resources have been automatically cleaned up:
+
+            ### ✅ Cleaned Resources
+            - 🔗 Lambda Function (API)
+            - 🌐 CloudFlare Pages Preview
+            - 🗄️ Preview Database Schema
+
+            ### 📋 Summary
+            - **PR**: #${{ github.event.pull_request.number }}
+            - **Status**: Cleanup completed successfully
+            - **Timestamp**: ${new Date().toISOString()}
+
+            Thank you for your contribution! 🙏`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: cleanupComment
+            });

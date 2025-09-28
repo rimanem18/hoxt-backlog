@@ -73,7 +73,7 @@ resource "aws_iam_policy" "github_actions_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # Lambda関数の管理
+      # Lambda関数管理権限（Production: Update系、Preview: 既存関数のみ）
       {
         Effect = "Allow"
         Action = [
@@ -87,8 +87,29 @@ resource "aws_iam_policy" "github_actions_policy" {
           "lambda:GetFunctionConfiguration"
         ]
         Resource = [
-          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-production",
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-preview"
         ]
+      },
+      # Preview Lambda関数作成・削除権限（セキュリティ強化：PR用のみ）
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:DeleteFunction",
+          "lambda:CreateFunctionUrlConfig",
+          "lambda:DeleteFunctionUrlConfig",
+          "lambda:UpdateFunctionUrlConfig",
+          "lambda:GetFunctionUrlConfig"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-preview-pr*"
+        ]
+        Condition = {
+          StringLike = {
+            "lambda:FunctionName" = "${var.project_name}-api-preview-pr*"
+          }
+        }
       },
       # CloudWatch Logs（監視・デバッグ用）
       {
