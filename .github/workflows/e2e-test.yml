@@ -2,6 +2,16 @@ name: E2E Test
 
 on:
   workflow_call:
+    inputs:
+      concurrency_suffix:
+        description: 'Concurrency group suffix from parent'
+        required: false
+        type: string
+      cancel_in_progress:
+        description: 'Cancel in progress runs'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -33,8 +43,8 @@ jobs:
         HOME: /root  # Fix Firefox launch issue in GitHub Actions
 
     concurrency:
-      group: e2e-${{ github.ref }}
-      cancel-in-progress: true
+      group: ${{ inputs.concurrency_suffix && format('e2e-{0}', inputs.concurrency_suffix) || format('e2e-{0}', github.ref) }}
+      cancel-in-progress: ${{ inputs.cancel_in_progress }}
 
     steps:
       - name: Checkout repository

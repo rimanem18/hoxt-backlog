@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_call' && inputs.concurrency_suffix || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'workflow_call' && inputs.cancel_in_progress != null && inputs.cancel_in_progress || true }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' || inputs.cancel_in_progress != false }}
 
 env:
   # CI最適化設定
@@ -49,3 +49,15 @@ jobs:
     # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
     # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
+    with:
+      concurrency_suffix: ${{ inputs.concurrency_suffix }}
+      cancel_in_progress: ${{ inputs.cancel_in_progress }}
+
+  # 全テスト成功の明示的チェック
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [client-test, server-test, e2e-test]
+    steps:
+      - name: Check all tests passed
+        run: echo "✅ All tests (client, server, e2e) passed successfully"
