@@ -170,7 +170,7 @@ jobs:
             // URL正規化処理
             const frontendUrl = '${{ needs.deploy-frontend.outputs.deployment-url }}' || '(取得中...)';
             const apiUrl = '${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}';
-            const healthUrl = apiUrl.replace(/\/$/, '') + '/health'; // 末尾スラッシュ除去して追加
+            const healthUrl = apiUrl.replace(/\/$/, '') + '/api/health'; // 正しいAPIエンドポイントパス
             
             const previewComment = `## 🚀 Preview Environment Ready!
 
