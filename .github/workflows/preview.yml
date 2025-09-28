@@ -48,25 +48,16 @@ jobs:
             echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
           fi
 
-  # プレビュー環境デプロイ
-  deploy-preview:
-    name: Deploy Preview Environment
+  # デプロイ開始ログ
+  log-deployment-start:
+    name: Log Preview Deployment Start
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
-
-    outputs:
-      preview-api-url: ${{ steps.deploy-infra.outputs.next-public-api-base-url-preview }}
-      preview-site-url: ${{ steps.deploy-frontend.outputs.deployment-url }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      
       - name: Record Preview Deployment Start
         uses: ./.github/actions/deployment-logger
         with:
@@ -75,48 +66,67 @@ jobs:
           environment: 'preview'
           details: 'Starting preview environment deployment for PR #${{ github.event.pull_request.number }}'
 
-      # Phase 1: インフラストラクチャ（Preview環境）
-      - name: Deploy Preview Infrastructure
-        id: deploy-infra
-        uses: ./.github/workflows/deploy-infra.yml
-        with:
-          terraform-version: ${{ vars.TERRAFORM_VERSION }}
-          aws-region: ${{ vars.AWS_REGION }}
-          environment-type: 'preview'
-        secrets: inherit
+  # Phase 1: インフラストラクチャ（Preview環境）
+  deploy-infrastructure:
+    name: Deploy Preview Infrastructure
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check, log-deployment-start]
+    uses: ./.github/workflows/deploy-infra.yml
+    with:
+      terraform-version: 1.6.0
+      aws-region: ap-northeast-1
+      environment-type: 'preview'
+    secrets: inherit
 
-      # Phase 2: データベース（Preview schema）
-      - name: Deploy Preview Database
-        uses: ./.github/workflows/deploy-database.yml
-        with:
-          timeout-minutes: 10
-        secrets: inherit
+  # Phase 2: データベース（Preview schema）
+  deploy-database:
+    name: Deploy Preview Database
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check, deploy-infrastructure]
+    uses: ./.github/workflows/deploy-database.yml
+    with:
+      timeout-minutes: 10
+    secrets: inherit
 
-      # Phase 3: バックエンド（Preview Lambda）
-      - name: Deploy Preview Backend
-        id: deploy-backend
-        uses: ./.github/workflows/deploy-backend.yml
-        with:
-          lambda-function-name: ${{ steps.deploy-infra.outputs.lambda-function-name-preview }}
-          environment-type: 'preview'
-          aws-region: ${{ vars.AWS_REGION }}
-          cors-allow-origin: ${{ steps.deploy-infra.outputs.access-allow-origin-preview }}
-        secrets: inherit
+  # Phase 3: バックエンド（Preview Lambda）
+  deploy-backend:
+    name: Deploy Preview Backend
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check, deploy-infrastructure, deploy-database]
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
+      environment-type: 'preview'
+      aws-region: ap-northeast-1
+      cors-allow-origin: ${{ needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
+    secrets: inherit
 
-      # Phase 4: フロントエンド（Preview Pages）
-      - name: Deploy Preview Frontend
-        id: deploy-frontend
-        uses: ./.github/workflows/deploy-frontend.yml
-        with:
-          environment-type: 'preview'
-          next-public-api-base-url: ${{ steps.deploy-infra.outputs.next-public-api-base-url-preview }}
-          next-public-site-url: ${{ steps.deploy-infra.outputs.next-public-site-url-preview }}
-          next-public-trusted-domains: ${{ steps.deploy-infra.outputs.next-public-trusted-domains-preview }}
-          cloudflare-project-name: ${{ vars.PROJECT_NAME }}
-        secrets: inherit
+  # Phase 4: フロントエンド（Preview Pages）
+  deploy-frontend:
+    name: Deploy Preview Frontend
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check, deploy-infrastructure, deploy-backend]
+    uses: ./.github/workflows/deploy-frontend.yml
+    with:
+      environment-type: 'preview'
+      next-public-api-base-url: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+      next-public-site-url: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
+      next-public-trusted-domains: ${{ needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
+      cloudflare-project-name: ${{ vars.PROJECT_NAME }}
+    secrets: inherit
 
+  # デプロイ完了ログ
+  log-deployment-result:
+    name: Log Preview Deployment Result
+    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
       - name: Record Preview Deployment Success
-        if: success()
+        if: needs.deploy-frontend.result == 'success'
         uses: ./.github/actions/deployment-logger
         with:
           event-type: 'success'
@@ -125,7 +135,7 @@ jobs:
           details: 'Preview environment deployed successfully for PR #${{ github.event.pull_request.number }}'
 
       - name: Record Preview Deployment Failure
-        if: failure()
+        if: needs.deploy-frontend.result == 'failure' || needs.deploy-backend.result == 'failure' || needs.deploy-database.result == 'failure' || needs.deploy-infrastructure.result == 'failure'
         uses: ./.github/actions/deployment-logger
         with:
           event-type: 'failure'
@@ -136,8 +146,8 @@ jobs:
   # プレビューURL コメント
   comment-preview-urls:
     name: Comment Preview URLs
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.deploy-preview.result == 'success'
-    needs: [security-check, deploy-preview]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.deploy-frontend.result == 'success'
+    needs: [security-check, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -146,15 +156,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const previewComment = `## 🚀 Preview Environment Ready!
+            const previewComment = \`## 🚀 Preview Environment Ready!
 
             ### 📱 Preview URLs
-            - **🌐 Frontend**: ${{ needs.deploy-preview.outputs.preview-site-url }}
-            - **🔗 API**: ${{ needs.deploy-preview.outputs.preview-api-url }}
+            - **🌐 Frontend**: ${{ needs.deploy-frontend.outputs.deployment-url }}
+            - **🔗 API**: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
 
             ### 🧪 Quick Tests
-            - [Health Check](${{ needs.deploy-preview.outputs.preview-api-url }}/health)
-            - [Frontend App](${{ needs.deploy-preview.outputs.preview-site-url }})
+            - [Health Check](${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}/health)
+            - [Frontend App](${{ needs.deploy-frontend.outputs.deployment-url }})
 
             ### ℹ️ Environment Info
             - **PR**: #${{ github.event.pull_request.number }}
@@ -162,7 +172,7 @@ jobs:
             - **Branch**: ${{ github.event.pull_request.head.ref }}
 
             > 🔄 Preview environment will be automatically updated when you push new commits to this PR.
-            > 🗑️ Resources will be cleaned up when this PR is closed.`;
+            > 🗑️ Resources will be cleaned up when this PR is closed.\`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
