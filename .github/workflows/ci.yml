@@ -50,8 +50,8 @@ jobs:
     # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
     with:
-      concurrency_suffix: ${{ inputs.concurrency_suffix }}
-      cancel_in_progress: ${{ inputs.cancel_in_progress }}
+      concurrency_suffix: ${{ inputs.concurrency_suffix || '' }}
+      cancel_in_progress: ${{ inputs.cancel_in_progress != null && inputs.cancel_in_progress || inputs.cancel_in_progress == null }}
 
   # 全テスト成功の明示的チェック
   all-tests-passed:
