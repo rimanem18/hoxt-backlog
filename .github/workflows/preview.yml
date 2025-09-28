@@ -48,11 +48,19 @@ jobs:
             echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
           fi
 
+  # テスト実行（デプロイ前の必須チェック）
+  run-tests:
+    name: Run Tests Before Preview Deploy
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check]
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   # デプロイ開始ログ
   log-deployment-start:
     name: Log Preview Deployment Start
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check]
+    needs: [security-check, run-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -64,13 +72,13 @@ jobs:
           event-type: 'start'
           component: 'preview-environment'
           environment: 'preview'
-          details: 'Starting preview environment deployment for PR #${{ github.event.pull_request.number }}'
+          details: 'Starting preview environment deployment for PR #${{ github.event.pull_request.number }} (tests passed)'
 
   # Phase 1: インフラストラクチャ（Preview環境）
   deploy-infrastructure:
     name: Deploy Preview Infrastructure
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check, log-deployment-start]
+    needs: [security-check, run-tests, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: 1.6.0
@@ -82,7 +90,7 @@ jobs:
   deploy-database:
     name: Deploy Preview Database
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check, deploy-infrastructure]
+    needs: [security-check, run-tests, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -92,7 +100,7 @@ jobs:
   deploy-backend:
     name: Deploy Preview Backend
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check, deploy-infrastructure, deploy-database]
+    needs: [security-check, run-tests, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
@@ -105,7 +113,7 @@ jobs:
   deploy-frontend:
     name: Deploy Preview Frontend
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check, deploy-infrastructure, deploy-backend]
+    needs: [security-check, run-tests, deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -119,7 +127,7 @@ jobs:
   log-deployment-result:
     name: Log Preview Deployment Result
     if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
-    needs: [security-check, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [security-check, run-tests, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -147,7 +155,7 @@ jobs:
   comment-preview-urls:
     name: Comment Preview URLs
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.deploy-frontend.result == 'success'
-    needs: [security-check, deploy-infrastructure, deploy-frontend]
+    needs: [security-check, run-tests, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -156,15 +164,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // URL正規化処理
+            const frontendUrl = '${{ needs.deploy-frontend.outputs.deployment-url }}' || '(取得中...)';
+            const apiUrl = '${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}';
+            const healthUrl = apiUrl.replace(/\/$/, '') + '/health'; // 末尾スラッシュ除去して追加
+            
             const previewComment = `## 🚀 Preview Environment Ready!
 
             ### 📱 Preview URLs
-            - **🌐 Frontend**: ${{ needs.deploy-frontend.outputs.deployment-url }}
-            - **🔗 API**: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+            - **🌐 Frontend**: ${frontendUrl}
+            - **🔗 API**: ${apiUrl}
 
             ### 🧪 Quick Tests
-            - [Health Check](${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}/health)
-            - [Frontend App](${{ needs.deploy-frontend.outputs.deployment-url }})
+            - [Health Check](${healthUrl})
+            - [Frontend App](${frontendUrl})
 
             ### ℹ️ Environment Info
             - **PR**: #${{ github.event.pull_request.number }}
