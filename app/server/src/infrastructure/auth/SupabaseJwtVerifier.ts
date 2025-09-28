@@ -261,7 +261,11 @@ export class SupabaseJwtVerifier implements IAuthProvider {
     const aud = josePayload.aud;
     if (typeof aud === 'string') {
       result.aud = aud;
-    } else if (Array.isArray(aud) && aud.length > 0 && typeof aud[0] === 'string') {
+    } else if (
+      Array.isArray(aud) &&
+      aud.length > 0 &&
+      typeof aud[0] === 'string'
+    ) {
       result.aud = aud[0];
     }
 

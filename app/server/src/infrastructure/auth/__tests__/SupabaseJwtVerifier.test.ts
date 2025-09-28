@@ -179,7 +179,11 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       // Given: sub（ユーザーID）が不足したペイロード
       const payloadMissingSub: Partial<JwtPayload> = {
         email: 'test@example.com',
-        user_metadata: { name: 'Test User', email: 'test@example.com', full_name: 'Test User' },
+        user_metadata: {
+          name: 'Test User',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        },
         app_metadata: { provider: 'google', providers: ['google'] },
       };
 
@@ -193,7 +197,11 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       // Given: emailが不足したペイロード
       const payloadMissingEmail: Partial<JwtPayload> = {
         sub: 'google_1234567890',
-        user_metadata: { name: 'Test User', email: 'test@example.com', full_name: 'Test User' },
+        user_metadata: {
+          name: 'Test User',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        },
         app_metadata: { provider: 'google', providers: ['google'] },
       };
 
@@ -208,7 +216,11 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       const payloadMissingName: Partial<JwtPayload> = {
         sub: 'google_1234567890',
         email: 'test@example.com',
-        user_metadata: { name: '', email: 'test@example.com', full_name: 'Test User' }, // nameが不足
+        user_metadata: {
+          name: '',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        }, // nameが不足
         app_metadata: { provider: 'google' },
       };
 
@@ -223,7 +235,11 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       const payloadMissingProvider: Partial<JwtPayload> = {
         sub: 'google_1234567890',
         email: 'test@example.com',
-        user_metadata: { name: 'Test User', email: 'test@example.com', full_name: 'Test User' },
+        user_metadata: {
+          name: 'Test User',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        },
         app_metadata: { provider: '', providers: [] }, // providerが不足
       };
 
