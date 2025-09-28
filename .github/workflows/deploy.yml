@@ -15,7 +15,12 @@ env:
   TERRAFORM_VERSION: 1.6.0
 
 jobs:
-  # Phase 0: デプロイ開始記録
+  # Phase 0: テスト実行
+  run-tests:
+    name: Run Tests Before Deploy
+    uses: ./.github/workflows/ci.yml
+
+  # Phase 1: デプロイ開始記録
   log-deployment-start:
     name: Log Deployment Start
     runs-on: ubuntu-latest
@@ -34,7 +39,7 @@ jobs:
   # Phase 1: インフラストラクチャデプロイ
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [log-deployment-start]
+    needs: [run-tests, log-deployment-start]
     permissions:
       id-token: write
       contents: read
