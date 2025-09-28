@@ -30,13 +30,37 @@ outputs:
     value: ${{ steps.plan.outputs.has_destructive_changes }}
   lambda-production-function-url:
     description: 'Production Lambda Function URL'
-    value: ${{ steps.outputs.lambda_function_url_production }}
+    value: ${{ steps.outputs.outputs.lambda_function_url_production }}
   lambda-preview-function-url:
     description: 'Preview Lambda Function URL'
-    value: ${{ steps.outputs.lambda_function_url_preview }}
+    value: ${{ steps.outputs.outputs.lambda_function_url_preview }}
+  access-allow-origin-production:
+    description: 'Production CORS allow origin'
+    value: ${{ steps.outputs.outputs.access-allow-origin-production }}
+  access-allow-origin-preview:
+    description: 'Preview CORS allow origin'
+    value: ${{ steps.outputs.outputs.access-allow-origin-preview }}
+  next-public-api-base-url-production:
+    description: 'Production API base URL'
+    value: ${{ steps.outputs.outputs.next-public-api-base-url-production }}
+  next-public-site-url-production:
+    description: 'Production site URL'
+    value: ${{ steps.outputs.outputs.next-public-site-url-production }}
+  next-public-trusted-domains-production:
+    description: 'Production trusted domains'
+    value: ${{ steps.outputs.outputs.next-public-trusted-domains-production }}
+  next-public-api-base-url-preview:
+    description: 'Preview API base URL'
+    value: ${{ steps.outputs.outputs.next-public-api-base-url-preview }}
+  next-public-site-url-preview:
+    description: 'Preview site URL'
+    value: ${{ steps.outputs.outputs.next-public-site-url-preview }}
+  next-public-trusted-domains-preview:
+    description: 'Preview trusted domains'
+    value: ${{ steps.outputs.outputs.next-public-trusted-domains-preview }}
   terraform-outputs:
     description: 'JSON string of all Terraform outputs'
-    value: ${{ steps.outputs.terraform_outputs }}
+    value: ${{ steps.outputs.outputs.terraform_outputs }}
 
 runs:
   using: 'composite'
