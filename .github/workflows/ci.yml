@@ -4,14 +4,24 @@ on:
   pull_request:
     branches:
       - main
-  workflow_call: {}  # 他のワークフローから呼び出し可能
+  workflow_call:
+    inputs:
+      concurrency_suffix:
+        description: 'Concurrency group suffix to avoid conflicts'
+        required: false
+        type: string
+      cancel_in_progress:
+        description: 'Cancel in progress runs'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_call' && inputs.concurrency_suffix || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_call' && inputs.cancel_in_progress != null && inputs.cancel_in_progress || true }}
 
 env:
   # CI最適化設定

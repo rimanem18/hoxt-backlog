@@ -54,12 +54,15 @@ jobs:
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
     uses: ./.github/workflows/ci.yml
+    with:
+      concurrency_suffix: 'preview-${{ github.event.pull_request.number }}'
+      cancel_in_progress: false
     secrets: inherit
 
   # デプロイ開始ログ
   log-deployment-start:
     name: Log Preview Deployment Start
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests]
     runs-on: ubuntu-latest
     steps:
@@ -77,7 +80,7 @@ jobs:
   # Phase 1: インフラストラクチャ（Preview環境）
   deploy-infrastructure:
     name: Deploy Preview Infrastructure
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
@@ -89,7 +92,7 @@ jobs:
   # Phase 2: データベース（Preview schema）
   deploy-database:
     name: Deploy Preview Database
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
@@ -99,7 +102,7 @@ jobs:
   # Phase 3: バックエンド（Preview Lambda）
   deploy-backend:
     name: Deploy Preview Backend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
@@ -112,7 +115,7 @@ jobs:
   # Phase 4: フロントエンド（Preview Pages）
   deploy-frontend:
     name: Deploy Preview Frontend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests, deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
@@ -126,7 +129,7 @@ jobs:
   # デプロイ完了ログ
   log-deployment-result:
     name: Log Preview Deployment Result
-    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
     needs: [security-check, run-tests, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
@@ -154,7 +157,7 @@ jobs:
   # プレビューURL コメント
   comment-preview-urls:
     name: Comment Preview URLs
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.deploy-frontend.result == 'success'
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success' && needs.deploy-frontend.result == 'success'
     needs: [security-check, run-tests, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
