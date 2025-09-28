@@ -12,6 +12,11 @@ on:
         description: 'Database URL for migration'
         required: false
         type: string
+      environment-type:
+        description: 'Environment type (production or preview)'
+        required: false
+        type: string
+        default: 'production'
     outputs:
       migration-status:
         description: 'Database migration status'
@@ -43,6 +48,7 @@ jobs:
         timeout-minutes: ${{ inputs.timeout-minutes }}
         env:
           DATABASE_URL: ${{ inputs.database-url || secrets.DATABASE_URL_MIGRATE }}
+          BASE_SCHEMA: ${{ inputs.environment-type == 'production' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
         run: |
           echo "データベースマイグレーションを開始します..."
           

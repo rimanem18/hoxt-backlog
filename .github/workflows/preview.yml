@@ -97,6 +97,7 @@ jobs:
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
+      environment-type: 'preview'
     secrets: inherit
 
   # Phase 3: バックエンド（Preview Lambda）

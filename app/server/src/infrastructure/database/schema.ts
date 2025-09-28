@@ -21,12 +21,13 @@ import {
  * PostgreSQLスキーマの取得
  *
  * 外部から渡されたBASE_SCHEMAをそのまま使用
- * - Production: projectname
- * - Preview: projectname_preview
+ * - Production: app_projectname
+ * - Preview: app_projectname_preview
  * 環境別の分離は外部（Terraform/GitHub Actions等）で制御される
+ * drizzle-kit制約: 'public'を明示的に指定できないため、デフォルトは空文字（自動的にpublicになる）
  */
-const schemaName = process.env.BASE_SCHEMA || 'public';
-const schema = pgSchema(schemaName);
+const schemaName = process.env.BASE_SCHEMA || '';
+const schema = schemaName ? pgSchema(schemaName) : pgSchema();
 
 /**
  * 認証プロバイダー種別のenum定義
