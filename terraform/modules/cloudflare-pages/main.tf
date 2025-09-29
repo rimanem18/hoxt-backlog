@@ -13,36 +13,17 @@ terraform {
   }
 }
 
-# CloudFlare Pages Project（統合方式）
+# 既存CloudFlare Pages Project（import済みリソース管理）
 resource "cloudflare_pages_project" "this" {
   account_id        = var.account_id
-  name             = var.project_name  # 環境suffix削除
-  production_branch = var.production_branch
+  name             = var.project_name
+  production_branch = "main"
   
+  # 最小設定のみ（環境変数はGitHub Actionsで直接設定）
   build_config {
-    build_command       = var.build_command
-    destination_dir     = var.output_directory
-    root_dir           = var.root_directory
-    web_analytics_tag  = var.web_analytics_tag
-    web_analytics_token = var.web_analytics_token
-  }
-  
-  deployment_configs {
-    production {
-      environment_variables = merge(var.base_environment_variables, {
-        API_URL = var.production_api_url
-        NODE_ENV = "production"
-        NEXT_PUBLIC_SITE_URL = "https://${var.production_domain}"
-      })
-    }
-    
-    preview {
-      environment_variables = merge(var.base_environment_variables, {
-        API_URL = var.preview_api_url
-        NODE_ENV = "development"
-        NEXT_PUBLIC_SITE_URL = "https://preview.${var.project_name}.pages.dev"
-      })
-    }
+    build_command   = "bun run build"
+    destination_dir = "out"
+    root_dir       = "app/client"
   }
 }
 

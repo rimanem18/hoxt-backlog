@@ -47,7 +47,7 @@ resource "aws_iam_role" "github_actions" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # リポジトリ・ブランチ制限（mainブランチ・PR両対応）
+          # リポジトリ・ブランチ・Environment制限
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.repository_name}:ref:refs/heads/main",
@@ -73,20 +73,43 @@ resource "aws_iam_policy" "github_actions_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # Lambda関数の管理
+      # Lambda関数管理権限（Production: Update系、Preview: 既存関数のみ）
       {
         Effect = "Allow"
         Action = [
           "lambda:UpdateFunctionCode",
           "lambda:UpdateFunctionConfiguration",
           "lambda:PublishVersion",
+          "lambda:CreateAlias",
           "lambda:UpdateAlias",
+          "lambda:GetAlias",
           "lambda:GetFunction",
           "lambda:GetFunctionConfiguration"
         ]
         Resource = [
-          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-production",
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-preview"
         ]
+      },
+      # Preview Lambda関数作成・削除権限（セキュリティ強化：PR用のみ）
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:DeleteFunction",
+          "lambda:CreateFunctionUrlConfig",
+          "lambda:DeleteFunctionUrlConfig",
+          "lambda:UpdateFunctionUrlConfig",
+          "lambda:GetFunctionUrlConfig"
+        ]
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-preview-pr*"
+        ]
+        Condition = {
+          StringLike = {
+            "lambda:FunctionName" = "${var.project_name}-api-preview-pr*"
+          }
+        }
       },
       # CloudWatch Logs（監視・デバッグ用）
       {
@@ -140,7 +163,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
         ]
         Resource = var.terraform_locks_table_arn
       },
-      # IAM関連の読み取り権限（plan時の確認用）
+      # IAM関連の権限（読み取り・アタッチのみ）
       {
         Effect = "Allow"
         Action = [
@@ -148,19 +171,42 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "iam:GetPolicy",
           "iam:GetPolicyVersion",
           "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies"
+          "iam:ListAttachedRolePolicies",
+          "iam:AttachRolePolicy",
+          "iam:PassRole"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role",
+          "arn:aws:iam::*:role/${var.project_name}-github-actions"
+        ]
       },
-      # Lambda関連の読み取り権限
+      # Lambda関数の権限（Update系のみ、Create権限なし）
       {
         Effect = "Allow"
         Action = [
           "lambda:GetFunction",
-          "lambda:ListFunctions"
+          "lambda:GetFunctionConfiguration",
+          "lambda:ListFunctions",
+          "lambda:ListVersionsByFunction",
+          "lambda:GetFunctionUrlConfig",
+          "lambda:GetFunctionCodeSigningConfig"
         ]
-        Resource = "*"
-      }
+        Resource = "arn:aws:lambda:${var.aws_region}:*:function:${var.project_name}-api-*"
+      },
+      # KMS（Terraformステート暗号化用）
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = [
+          "arn:aws:kms:${var.aws_region}:*:key/*"
+        ]
+      },
     ]
   })
 

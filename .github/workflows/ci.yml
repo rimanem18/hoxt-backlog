@@ -4,12 +4,13 @@ on:
   pull_request:
     branches:
       - main
+    # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -21,6 +22,8 @@ jobs:
   # Client (Next.js) のユニットテスト
   client-test:
     name: Client Unit Tests
+    # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
+    if: github.event.pull_request.head.repo.full_name != github.repository
     uses: ./.github/workflows/client-test.yml
     with:
       working-directory: ./app/client
@@ -28,6 +31,8 @@ jobs:
   # Server (Hono) のユニット/結合テスト
   server-test:
     name: Server Unit Tests
+    # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
+    if: github.event.pull_request.head.repo.full_name != github.repository
     uses: ./.github/workflows/server-test.yml
     with:
       working-directory: ./app/server
@@ -35,6 +40,22 @@ jobs:
   # E2E (Playwright) テスト
   e2e-test:
     name: E2E Tests
+    # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
+    if: github.event.pull_request.head.repo.full_name != github.repository
     # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
     # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
+    with:
+      concurrency_suffix: 'fork-pr-${{ github.event.pull_request.number }}'
+      cancel_in_progress: true
+
+  # 全テスト成功の明示的チェック
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    needs: [client-test, server-test, e2e-test]
+    steps:
+      - name: Check all tests passed
+        run: echo "✅ All tests (client, server, e2e) passed successfully"

@@ -16,16 +16,57 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { z } from 'zod';
 
 /**
  * PostgreSQLスキーマの取得
  *
- * 外部から渡されたBASE_SCHEMAをそのまま使用
- * - Production: projectname
- * - Preview: projectname_preview
+ * BASE_SCHEMAは必須環境変数として扱う
+ * - Production: app_projectname
+ * - Preview: app_projectname_preview
+ * - Test: test_schema
  * 環境別の分離は外部（Terraform/GitHub Actions等）で制御される
+ *
+ * Zodによる型安全な環境変数検証を使用して、
+ * 未定義の場合は詳細なエラーメッセージと共に例外をスローする
+ *
+ * DATABASE_URLは不要なため、BASE_SCHEMAのみを検証
+ * （drizzle-kitなどのツールでもimport可能）
  */
-const schemaName = process.env.BASE_SCHEMA || 'public';
+const baseSchemaSchema = z.object({
+  schema: z.string().min(1, 'BASE_SCHEMA環境変数が設定されていません'),
+});
+
+export function getBaseSchema(): string {
+  const baseSchema = process.env.BASE_SCHEMA;
+
+  if (!baseSchema) {
+    throw new Error(
+      '環境変数設定エラー: BASE_SCHEMA環境変数が設定されていません',
+    );
+  }
+
+  const rawConfig = {
+    schema: baseSchema,
+  };
+
+  try {
+    const config = baseSchemaSchema.parse(rawConfig);
+    return config.schema;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.issues
+        .map((issue) => issue.message)
+        .join(', ');
+      throw new Error(`環境変数設定エラー: ${errorMessages}`);
+    }
+    throw new Error(
+      `環境変数設定エラー: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+const schemaName = getBaseSchema();
 const schema = pgSchema(schemaName);
 
 /**
@@ -143,11 +184,11 @@ export const rlsPolicies = {
   enableUsersRLS: sql`
     -- usersテーブルのRLSを有効化
     ALTER TABLE ${users} ENABLE ROW LEVEL SECURITY;
-    
+
     -- 認証済みユーザーのみアクセス可能なポリシー
     CREATE POLICY "authenticated_users_policy" ON ${users}
       FOR ALL USING (auth.uid() IS NOT NULL);
-    
+
     -- 自分のレコードのみアクセス可能なポリシー（将来的な拡張用）
     CREATE POLICY "users_own_records_policy" ON ${users}
       FOR ALL USING (auth.uid()::text = id::text);
@@ -160,7 +201,7 @@ export const rlsPolicies = {
     -- usersテーブルのポリシーを削除
     DROP POLICY IF EXISTS "authenticated_users_policy" ON ${users};
     DROP POLICY IF EXISTS "users_own_records_policy" ON ${users};
-    
+
     -- RLSを無効化
     ALTER TABLE ${users} DISABLE ROW LEVEL SECURITY;
   `,

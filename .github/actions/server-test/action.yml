@@ -1,0 +1,109 @@
+name: 'Server Test'
+description: 'Run server-side lint, type check, database setup, and unit tests'
+
+inputs:
+  working-directory:
+    description: 'Working directory for the test'
+    required: true
+  db-host:
+    description: 'Database host'
+    required: false
+    default: 'localhost'
+  db-port:
+    description: 'Database port'
+    required: false
+    default: '5432'
+  db-name:
+    description: 'Database name'
+    required: false
+    default: 'postgres'
+  db-user:
+    description: 'Database user'
+    required: false
+    default: 'postgres'
+  db-password:
+    description: 'Database password'
+    required: false
+    default: 'test_password'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun Environment
+      uses: ./.github/actions/setup-bun
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        cache-key-suffix: server
+
+    - name: Setup PostgreSQL Environment
+      uses: ./.github/actions/setup-postgres
+      with:
+        db-host: ${{ inputs.db-host }}
+        db-name: ${{ inputs.db-name }}
+        db-user: ${{ inputs.db-user }}
+        db-password: ${{ inputs.db-password }}
+
+    - name: Run lint and type check
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: bun run check
+
+    - name: Run database migrations
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      env:
+        DB_HOST: ${{ inputs.db-host }}
+        DB_PORT: ${{ inputs.db-port }}
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        BASE_SCHEMA: test_schema
+        DATABASE_URL: postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }}
+      run: |
+        echo "=== Environment Variables ==="
+        echo "DB_HOST: $DB_HOST"
+        echo "DB_PORT: $DB_PORT"
+        echo "DB_NAME: $DB_NAME"
+        echo "DB_USER: $DB_USER"
+        echo "BASE_SCHEMA: $BASE_SCHEMA"
+        echo "DATABASE_URL: $DATABASE_URL"
+        
+        echo "=== Testing PostgreSQL connection ==="
+        pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER || echo "PostgreSQL not ready"
+        
+        echo "=== Testing database access ==="
+        PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" || echo "Database connection failed"
+        
+        echo "=== Drizzle introspect ==="
+        bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
+        
+        echo "=== Drizzle generate ==="
+        bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
+        
+        echo "=== Database schema setup ==="
+        bun run db:setup
+        
+        echo "=== Verify table creation ==="
+        PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "\dt test_schema.*" || echo "No test schema tables found"
+
+    - name: Run tests
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      env:
+        NODE_ENV: test
+        DB_HOST: ${{ inputs.db-host }}
+        DB_PORT: ${{ inputs.db-port }}
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        BASE_SCHEMA: test_schema
+        DATABASE_URL: postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }}
+        # Supabase test environment variables (mocked)
+        SUPABASE_URL: http://localhost:54321
+        SUPABASE_ANON_KEY: test_anon_key
+        SUPABASE_SERVICE_ROLE_KEY: test_service_key
+        # CORS test environment variables
+        ACCESS_ALLOW_ORIGIN: http://localhost:3000
+        ACCESS_ALLOW_METHODS: GET,POST,PUT,DELETE,OPTIONS
+        ACCESS_ALLOW_HEADERS: Authorization,Content-Type
+      run: bun test

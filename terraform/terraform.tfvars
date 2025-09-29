@@ -16,7 +16,5 @@
 
 # Sensitive variables are set via GitHub Secrets or environment variables:
 # TF_VAR_supabase_url
-# TF_VAR_supabase_access_token
-# TF_VAR_jwt_secret
 # TF_VAR_database_url
 # CLOUDFLARE_API_TOKEN (環境変数)

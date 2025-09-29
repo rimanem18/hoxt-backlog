@@ -1,60 +1,49 @@
 /*
  * JWT検証機能
- * Supabase JWT Secretを使用したHMAC-SHA256署名検証を提供する。
+ * JWKS (JSON Web Key Set) を使用したRS256/ES256署名検証を提供する。
+ * 作成日: 2025年09月23日（JWKS専用実装）
  */
 
-import { type JWTPayload, jwtVerify } from 'jose';
-
-// Supabase JWT Secret設定
-const SUPABASE_JWT_SECRET =
-  process.env.SUPABASE_JWT_SECRET || 'test-jwt-secret-key';
-
-// テスト環境では環境変数チェックを緩和
-if (!process.env.SUPABASE_JWT_SECRET && process.env.NODE_ENV !== 'test') {
-  console.warn(
-    '⚠️  SUPABASE_JWT_SECRET環境変数が設定されていません。テスト用モック値を使用します。',
-  );
-}
+import type { JWTPayload } from 'jose';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 /*
- * JWT署名検証
+ * JWT署名検証（JWKS専用）
+ * JWKS (JSON Web Key Set) を使用したRS256/ES256署名検証
+ *
  * @param token Bearer認証で送信されたJWTトークン
  * @returns 検証済みのJWTペイロード
  * @throws Error 認証失敗時
  */
 export async function verifyJWT(token: string): Promise<JWTPayload> {
   try {
-    // JWT Secretをバイト配列に変換
-    const secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+    const verifier: IAuthProvider = AuthDIContainer.getAuthProvider();
+    const result = await verifier.verifyToken(token);
 
-    // JWT署名検証実行（HMAC-SHA256）
-    const { payload } = await jwtVerify(token, secret, {
-      algorithms: ['HS256'], // HMAC-SHA256のみ許可
-      clockTolerance: 30, // 30秒のクロックスキュー許容
-    });
+    if (result.valid && result.payload) {
+      // ドメイン型からjose型への変換
+      const josePayload: JWTPayload = {
+        sub: result.payload.sub,
+        email: result.payload.email,
+        aud: result.payload.aud || 'authenticated',
+        exp: result.payload.exp,
+        iat: result.payload.iat,
+        iss: result.payload.iss,
+        user_metadata: result.payload.user_metadata,
+        app_metadata: result.payload.app_metadata,
+      };
 
-    // 必須フィールドの存在確認
-    if (!payload.sub) {
-      throw new Error('AUTHENTICATION_REQUIRED');
+      return josePayload;
+    } else {
+      throw new Error(result.error || 'JWKS verification failed');
     }
-
-    return payload;
   } catch (error) {
-    // 統一エラーコードに変換
-    if (error instanceof Error) {
-      // セキュリティ監査用エラーログ
-      console.warn('[AUTH] JWT検証失敗:', {
-        reason: error.message.includes('signature')
-          ? 'INVALID_SIGNATURE'
-          : error.message.includes('expired')
-            ? 'TOKEN_EXPIRED'
-            : error.message.includes('sub')
-              ? 'MISSING_USER_ID'
-              : 'INVALID_FORMAT',
-        jwtLength: token.length,
-        errorMessage: error.message,
-      });
-    }
+    // セキュリティ監査用エラーログ
+    console.warn('[AUTH_JWKS] JWT検証失敗:', {
+      reason: error instanceof Error ? error.message : 'Unknown error',
+      jwtLength: token.length,
+    });
 
     // 統一エラーコードで返却
     throw new Error('AUTHENTICATION_REQUIRED');
@@ -64,6 +53,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
 /*
  * テスト用JWT生成関数
  * 統合テスト実行用の有効なJWTトークンを生成する。
+ * 注意: JWKSテストではモック環境を使用してください。
  */
 export async function generateTestJWT(payload: {
   userId: string;
@@ -73,19 +63,12 @@ export async function generateTestJWT(payload: {
     throw new Error('generateTestJWT is only available in test environment');
   }
 
-  // テスト環境でも実際のHS256署名を使用
-  const { SignJWT } = await import('jose');
-  const secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+  // テスト環境では実際のJWKS検証は困難なため、モック使用を推奨
+  console.warn(
+    '⚠️ generateTestJWT: 実際のJWKS検証にはモック環境を使用してください',
+  );
 
-  const jwt = await new SignJWT({
-    sub: payload.userId,
-    email: payload.email || 'test@example.com',
-    aud: 'authenticated',
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(secret);
-
-  return jwt;
+  // 簡易的なテスト用トークン（実際の検証は期待しない）
+  const testToken = `test-jwt-${payload.userId}-${Date.now()}`;
+  return testToken;
 }

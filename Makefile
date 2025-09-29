@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server client e2e db iac iac-init iac-plan iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production
+.PHONY: build up down server client e2e db iac iac-init iac-plan-save iac-bootstrap-apply iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production frontend-deploy-preview
 
 up:
 	docker compose up -d
@@ -22,27 +22,87 @@ db:
 	docker compose exec db ash
 iac:
 	@echo "Terraformロールを引き受けて、iacコンテナに入ります..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && exec bash'
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+			export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
+			export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
+			export PROJECT_NAME=${PROJECT_NAME} && \
+			export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+			exec bash'
 iac-init:
-	@echo "統合Terraform初期化を実行..."
+	@echo "Terraform初期化（Bootstrap/App両構成）..."
+	@echo ""
+	@echo "🔄 Step 1/2: Bootstrap構成の初期化..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		terraform init --migrate-state \
+		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
+		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
+		export PROJECT_NAME=${PROJECT_NAME} && \
+		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
+		cd bootstrap && \
+		terraform init \
 			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
-			-backend-config="key=${PROJECT_NAME}/${ENVIRONMENT}/terraform.tfstate" \
+			-backend-config="key=bootstrap/terraform.tfstate" \
 			-backend-config="region=${AWS_REGION}" \
-			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks" \
-			-backend-config="encrypt=true"'
+			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks"'
+	@echo ""
+	@echo "🔄 Step 2/2: App構成の初期化..."
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		cd app && \
+		terraform init \
+			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
+			-backend-config="key=app/terraform.tfstate" \
+			-backend-config="region=${AWS_REGION}" \
+			-backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks"'
+	@echo ""
+	@echo "✅ Terraform初期化が完了しました。"
+	@echo "💡 以降は 'make iac-plan-save' で計画実行が可能です。"
 iac-plan-save:
-	@echo "統合Terraform計画をファイルに保存..."
+	@echo "統合Terraform計画をファイルに保存（Bootstrap→App自動実行）..."
 	@docker compose exec server bun run build:lambda
-	@cp app/server/dist/lambda.js terraform/modules/lambda/lambda.js || echo "Warning: lambda.js not found, using fallback && exit 1"
-	@echo "lambda.jsをterraform/modules/lambdaにコピーしました。"
+	@cp app/server/dist/index.js terraform/modules/lambda/lambda.js || echo "Warning: index.js not found, using fallback && exit 1"
+	@echo "index.jsをterraform/modules/lambdaにコピーしました。"
+	@echo ""
+	@echo "🔄 Step 1/2: Bootstrap構成の計画実行..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		rm -f plan-output.* && terraform plan -out=terraform.tfplan && terraform show -no-color terraform.tfplan > plan-output.txt'
-iac-apply:
-	@echo "統合Terraform適用を実行..."
+		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
+		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
+		export PROJECT_NAME=${PROJECT_NAME} && \
+		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
+		cd bootstrap && \
+		rm -f plan-output.* && \
+		terraform plan -out=terraform.tfplan && \
+		terraform show -no-color terraform.tfplan > plan-output.txt'
+	@echo ""
+	@echo "🔄 Step 2/2: App構成の計画実行..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		cd app && \
+		rm -f plan-output.* && \
+		terraform plan -out=terraform.tfplan && \
+		terraform show -no-color terraform.tfplan > plan-output.txt'
+	@echo ""
+	@echo "✅ 統合Terraform計画が完了しました。"
+	@echo "📁 Bootstrap計画: terraform/bootstrap/plan-output.txt"
+	@echo "📁 App計画: terraform/app/plan-output.txt"
+iac-bootstrap-apply:
+	@echo "Bootstrap構成を適用（強力な権限・インフラ初期構築）..."
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
+		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
+		export PROJECT_NAME=${PROJECT_NAME} && \
+		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
+		export TF_VAR_database_url=${DATABASE_URL} && \
+		cd bootstrap && \
 		terraform apply terraform.tfplan'
+	@echo "✅ Bootstrap構成の適用が完了しました。"
+
+iac-apply:
+	@echo "App構成を適用（制限権限・日常的変更）..."
+	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		cd app && terraform apply terraform.tfplan'
+	@echo "✅ App構成の適用が完了しました。"
+
+
 frontend-deploy-preview:
 	@echo "ビルドします..."
 	@docker compose exec client ash -c ' \

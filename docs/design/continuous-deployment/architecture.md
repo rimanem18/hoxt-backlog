@@ -1,7 +1,7 @@
 # 継続的デプロイメントシステム アーキテクチャ設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月17日
+最終更新: 2025年09月23日
 
 
 ## システム概要
@@ -61,9 +61,12 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **フレームワーク**: Hono 4 + AWS Lambda adapter
 - **プラットフォーム**: AWS Lambda (Node.js 22.x) - 環境別関数分離
 - **ビルド**: `bun run build:lambda` で lambda.js 生成
-- **デプロイ**: Terraform + Lambda ZIP package
+- **デプロイ**: GitHub Actions + Lambda ZIP package
+- **認証方式**: JWKS (JSON Web Key Set) による非対称鍵暗号認証
 - **環境管理**: 環境別Lambda関数（Preview専用関数、Production専用関数による完全分離）
 - **エンドポイント**: Lambda Function URL - 直接HTTPS接続（API Gateway不使用）
+- **バージョン管理**: stableエイリアス（本番）+ $LATESTバージョン（プレビュー）
+- **依存関係**: monorepo shared-schemas パッケージ管理
 
 ### データベース
 - **サービス**: Supabase PostgreSQL
@@ -97,12 +100,16 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
    - データ整合性確認
 
 3. **Backend (AWS Lambda)**
+   - shared-schemas依存関係インストール
+   - JWKS認証設定でのビルド実行
    - 環境別Lambda関数コードデプロイ
+   - バージョン発行とstableエイリアス管理（冪等）
    - Lambda Function URL 設定更新
-   - 環境変数・権限設定更新
 
 4. **Frontend (CloudFlare Pages)**
-   - 静的ファイルビルド
+   - shared-schemas依存関係インストール
+   - Terraform出力値による環境変数設定
+   - 静的ファイルビルド（Next.js SSG）
    - CloudFlare Pages デプロイ
    - DNS 設定確認
 

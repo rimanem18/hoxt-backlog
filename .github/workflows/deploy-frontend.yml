@@ -1,0 +1,115 @@
+name: Deploy Frontend
+
+on:
+  workflow_call:
+    inputs:
+      environment-type:
+        description: 'Environment type (production or preview)'
+        required: false
+        type: string
+        default: 'production'
+      next-public-api-base-url:
+        description: 'Next.js API base URL'
+        required: true
+        type: string
+      next-public-site-url:
+        description: 'Next.js site URL'
+        required: true
+        type: string
+      next-public-trusted-domains:
+        description: 'Next.js trusted domains'
+        required: true
+        type: string
+      cloudflare-project-name:
+        description: 'CloudFlare Pages project name'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      deployment-url:
+        description: 'CloudFlare Pages deployment URL'
+        value: ${{ jobs.deploy-frontend.outputs.deployment-url }}
+
+jobs:
+  deploy-frontend:
+    name: Deploy Frontend Application
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.deployment_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Workspace
+        uses: ./.github/actions/setup-bun-workspace
+        with:
+          working-directory: './app/client'
+          cache-key-suffix: 'frontend'
+
+      - name: Debug Environment Variables
+        working-directory: ./app/client
+        run: |
+          echo "🔍 Frontend Environment Variables Debug:"
+          echo "Input next-public-api-base-url: ${{ inputs.next-public-api-base-url }}"
+          echo "Input next-public-site-url: ${{ inputs.next-public-site-url }}"
+          echo "Input next-public-trusted-domains: ${{ inputs.next-public-trusted-domains }}"
+          echo "Environment type: ${{ inputs.environment-type }}"
+
+      - name: Build Frontend Application
+        working-directory: ./app/client
+        env:
+          # 環境別Next.js設定
+          NEXT_PUBLIC_API_BASE_URL: ${{ inputs.next-public-api-base-url }}
+          NEXT_PUBLIC_SITE_URL: ${{ inputs.next-public-site-url }}
+          NEXT_PUBLIC_TRUSTED_DOMAINS: ${{ inputs.next-public-trusted-domains }}
+          # Supabase設定
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          echo "🔍 Build-time Environment Variables:"
+          echo "NEXT_PUBLIC_API_BASE_URL: $NEXT_PUBLIC_API_BASE_URL"
+          echo "NEXT_PUBLIC_SITE_URL: $NEXT_PUBLIC_SITE_URL"
+          echo "NEXT_PUBLIC_TRUSTED_DOMAINS: $NEXT_PUBLIC_TRUSTED_DOMAINS"
+          echo ""
+          echo "🚀 Starting Next.js build..."
+          bun run build
+
+      - name: Deploy to CloudFlare Pages
+        id: deploy
+        working-directory: ./app/client
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく処理
+          LANG: C.UTF-8
+        run: |
+          # プロジェクト名を決定（入力がない場合はvarsから取得）
+          PROJECT_NAME="${{ inputs.cloudflare-project-name }}"
+          if [ -z "$PROJECT_NAME" ]; then
+            PROJECT_NAME="${{ vars.PROJECT_NAME }}"
+          fi
+
+          echo "CloudFlare Pagesにデプロイ中..."
+          DEPLOYMENT_OUTPUT=$(npx --yes wrangler@latest pages deploy out \
+            --project-name "$PROJECT_NAME" \
+            --branch "${{ github.ref_name == 'main' && 'main' || 'preview' }}" \
+            --commit-dirty=true 2>&1)
+          
+          echo "$DEPLOYMENT_OUTPUT"
+          
+          # デプロイメントURLを抽出（wrangler出力から https:// で始まるURLを取得）
+          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*' | head -1)
+          
+          if [ -n "$DEPLOYMENT_URL" ]; then
+            echo "✅ デプロイメントURL: $DEPLOYMENT_URL"
+            echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ デプロイメントURLを取得できませんでした"
+            echo "デバッグ用出力:"
+            echo "$DEPLOYMENT_OUTPUT"
+            echo "deployment_url=" >> $GITHUB_OUTPUT
+          fi

@@ -20,17 +20,19 @@ export interface JwtPayload {
   sub: string;
   /** メールアドレス */
   email: string;
+  /** オーディエンス */
+  aud?: string;
   /** プロバイダー種別 */
   app_metadata: {
     provider: string;
-    providers: string[];
+    providers?: string[];
   };
   /** ユーザーメタデータ */
   user_metadata: {
     name: string;
     avatar_url?: string;
-    email: string;
-    full_name: string;
+    email?: string;
+    full_name?: string;
   };
   /** 発行者 */
   iss: string;

@@ -1,0 +1,103 @@
+name: 'Package Lambda Function'
+description: 'Build, package, and deploy Lambda function with proper CommonJS configuration'
+
+inputs:
+  working-directory:
+    description: 'Working directory containing Lambda source'
+    required: true
+    default: './app/server'
+  function-name:
+    description: 'Lambda function name for deployment'
+    required: true
+  aws-region:
+    description: 'AWS region for Lambda deployment'
+    required: false
+    default: 'ap-northeast-1'
+
+outputs:
+  package-path:
+    description: 'Path to the created Lambda deployment package'
+    value: ${{ steps.package.outputs.package_path }}
+  deployed-version:
+    description: 'Deployed Lambda version'
+    value: ${{ steps.deploy.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build Lambda Function
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun run build:lambda
+
+    - name: Package Lambda Function
+      id: package
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # Lambda配布用ディレクトリを作成
+        mkdir -p lambda-dist
+        cp dist/index.js lambda-dist/
+        
+        # CommonJS用のpackage.jsonを生成（ES Modulesを無効化）
+        jq 'del(.type) | del(.scripts) | {name, dependencies}' package.json > lambda-dist/package.json
+        
+        # 本番用依存関係をインストール
+        cd lambda-dist
+        bun install --production --frozen-lockfile
+        
+        # ZIPパッケージを作成（不要ファイルを除外）
+        zip -r ../lambda-deployment.zip . \
+          -x "*.map" "*.test.*" "*.dev.*" "*.DS_Store" \
+          -x "node_modules/.cache/*" "node_modules/*/test/*"
+        
+        echo "package_path=$(pwd)/../lambda-deployment.zip" >> $GITHUB_OUTPUT
+        echo "✅ Lambda パッケージが正常に作成されました"
+
+    - name: Deploy Lambda Function
+      id: deploy
+      uses: nick-invision/retry@v2
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_on: error
+        command: |
+          cd ${{ inputs.working-directory }}
+          
+          # Lambda関数コードを更新（出力を抑制してシークレット露出を防止）
+          echo "Lambda関数コードを更新中..."
+          aws lambda update-function-code \
+            --function-name ${{ inputs.function-name }} \
+            --zip-file fileb://lambda-deployment.zip \
+            --region ${{ inputs.aws-region }} \
+            --output text > /dev/null
+
+          echo "✅ Lambda関数コードが正常に更新されました"
+
+          # 関数更新の完了を待機
+          echo "関数更新の完了を待機中..."
+          aws lambda wait function-updated \
+            --function-name ${{ inputs.function-name }} \
+            --region ${{ inputs.aws-region }}
+
+          # 新バージョンを発行
+          echo "新しいLambdaバージョンを発行中..."
+          VERSION=$(aws lambda publish-version \
+            --function-name ${{ inputs.function-name }} \
+            --region ${{ inputs.aws-region }} \
+            --query 'Version' \
+            --output text)
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Lambda バージョン $VERSION を発行しました"
+
+          # stableエイリアスを新バージョンに更新
+          echo "stableエイリアスをバージョン $VERSION に更新中..."
+          aws lambda update-alias \
+            --function-name ${{ inputs.function-name }} \
+            --name stable \
+            --function-version $VERSION \
+            --region ${{ inputs.aws-region }} \
+            --output text > /dev/null
+
+          echo "🚀 Lambda バージョン $VERSION を本番環境（stable）に正常にデプロイしました"

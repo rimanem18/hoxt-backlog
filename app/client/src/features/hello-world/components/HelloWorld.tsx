@@ -10,10 +10,10 @@ export default function HelloWorld() {
     queryFn: () => {
       // 環境変数からAPI Base URLを取得、フォールバック値としてlocalhost:3001を使用
       const apiBaseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
-      const apiUrl = apiBaseUrl.endsWith('/api')
-        ? `${apiBaseUrl}/greet`
-        : `${apiBaseUrl}/api/greet`;
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      // 末尾のスラッシュを除去してURL重複を防止
+      const cleanBaseUrl = apiBaseUrl.replace(/\/+$/, '');
+      const apiUrl = `${cleanBaseUrl}/api/greet`;
 
       return fetch(apiUrl).then((res) => {
         return res.json();

@@ -1,26 +1,32 @@
 # データフロー図
 
 作成日: 2025年09月12日
-最終更新: 2025年09月12日
+最終更新: 2025年09月23日
 
 ## 全体デプロイフロー
 
 ```mermaid
 flowchart TD
     A[Developer Push to main] --> B[GitHub Actions Trigger]
-    B --> C{Terraform Plan}
-    C -->|Destructive Changes| D[Manual Approval Required]
+    B --> C[Terraform Plan]
+    C -->|Destructive Changes| D[Log Details & Auto Continue]
     C -->|Safe Changes| E[Auto Apply Infrastructure]
-    D --> F[Admin Approval]
-    F --> E
-    E --> G[Supabase Migration]
-    G --> H[AWS Lambda Deploy]
-    H --> I[CloudFlare Pages Deploy]
-    I --> J[Deployment Complete]
+    D --> E
+    E --> F[Extract Terraform Outputs]
+    F --> G[shared-schemas Install]
+    G --> H[Database Migration<br/>drizzle-kit push]
+    H --> I[shared-schemas Install]
+    I --> J[Lambda Build<br/>with JWKS Auth]
+    J --> K[Lambda Deploy<br/>& Version Publish]
+    K --> L[Alias Management<br/>stable → new version]
+    L --> M[shared-schemas Install]
+    M --> N[Frontend Build<br/>with TF outputs]
+    N --> O[CloudFlare Pages Deploy]
+    O --> P[Deployment Complete]
     
-    G -->|Migration Timeout| K[Alert & Manual Intervention]
-    H -->|Lambda Error| L[Rollback Triggered]
-    I -->|Pages Error| M[Retry with Exponential Backoff]
+    H -->|Migration Timeout| Q[Alert & Manual Intervention]
+    L -->|Alias Error| R[Retry with IAM Check]
+    O -->|Pages Error| S[Retry with Exponential Backoff]
 ```
 
 ## プルリクエストプレビューフロー
@@ -29,15 +35,15 @@ flowchart TD
 flowchart TD
     A[PR Created/Updated] --> B[GitHub Actions Trigger]
     B --> C[Terraform Plan Only]
-    C --> D[Supabase Preview Migration<br/>TABLE_PREFIX_dev_* tables]
-    D --> E[Lambda $LATEST Deploy<br/>with dev TABLE_PREFIX]
+    C --> D[Database Migration<br/>PostgreSQL preview schema]
+    D --> E[Lambda $LATEST Deploy<br/>with preview schema]
     E --> F[CloudFlare Preview Deploy]
     F --> G[Preview Environment Ready]
     
     H[PR Closed] --> I[Cleanup Preview Resources]
     I --> J[Delete CloudFlare Preview]
     I --> K[Delete Lambda Version]
-    I --> L[Drop TABLE_PREFIX_dev_* tables]
+    I --> L[Cleanup PostgreSQL preview schema]
 ```
 
 ## GitHub OIDC認証フロー
@@ -48,7 +54,7 @@ sequenceDiagram
     participant OIDC as GitHub OIDC
     participant STS as AWS STS
     participant CF as CloudFlare API
-    participant SUP as Supabase CLI
+    participant DB as PostgreSQL
     
     GHA->>OIDC: Request JWT Token
     OIDC-->>GHA: JWT Token (with claims)
@@ -59,8 +65,8 @@ sequenceDiagram
         GHA->>STS: Use temp credentials
     and CloudFlare Operations
         GHA->>CF: Use CF_API_TOKEN
-    and Supabase Operations
-        GHA->>SUP: Use SUPABASE_ACCESS_TOKEN
+    and Database Operations
+        GHA->>DB: Use DATABASE_URL direct connection
     end
 ```
 
@@ -74,24 +80,31 @@ graph TD
         B --> D[CloudFlare DNS Ready]
     end
     
-    subgraph "Phase 2: Database"
-        C --> E[Supabase Migration<br/>Production: TABLE_PREFIX_*<br/>Preview: TABLE_PREFIX_dev_*]
-        E --> F[Database Schema Ready]
+    subgraph "Phase 2: Dependencies"
+        C --> E[shared-schemas Install]
+        E --> F[Dependencies Ready]
     end
     
-    subgraph "Phase 3: Backend"
-        F --> G[Lambda Package Build]
-        G --> H[Lambda Deploy]
-        H --> I[API Gateway Update]
+    subgraph "Phase 3: Database"
+        F --> G[drizzle-kit Migration<br/>Production: base_schema<br/>Preview: base_schema_preview]
+        G --> H[Database Schema Ready]
     end
     
-    subgraph "Phase 4: Frontend"
-        I --> J[Next.js Build]
-        J --> K[CloudFlare Pages Deploy]
-        K --> L[DNS Propagation Check]
+    subgraph "Phase 4: Backend"
+        H --> I[shared-schemas Install]
+        I --> J[Lambda Build with JWKS]
+        J --> K[Lambda Deploy & Version]
+        K --> L[Alias Management]
     end
     
-    L --> M[Health Check All Services]
+    subgraph "Phase 5: Frontend"
+        L --> M[shared-schemas Install]
+        M --> N[Next.js Build with TF outputs]
+        N --> O[CloudFlare Pages Deploy]
+        O --> P[DNS Propagation Check]
+    end
+    
+    P --> Q[Health Check All Services]
 ```
 
 ## エラーハンドリングフロー
