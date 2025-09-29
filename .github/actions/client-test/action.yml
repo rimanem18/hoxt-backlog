@@ -1,0 +1,28 @@
+name: 'Client Test'
+description: 'Run client-side lint, type check, and unit tests'
+
+inputs:
+  working-directory:
+    description: 'Working directory for the test'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun Environment
+      uses: ./.github/actions/setup-bun
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        cache-key-suffix: client
+
+    - name: Run lint and type check
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: bun run check
+
+    - name: Run tests
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      env:
+        NODE_ENV: test
+      run: bun test

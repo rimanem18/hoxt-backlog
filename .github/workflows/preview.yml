@@ -48,22 +48,106 @@ jobs:
             echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
           fi
 
-  # テスト実行（デプロイ前の必須チェック）
-  run-tests:
-    name: Run Tests Before Preview Deploy
+  # Client テスト実行
+  client-test:
+    name: Run Client Tests
     if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
-    uses: ./.github/workflows/ci.yml
-    with:
-      concurrency_suffix: 'preview-${{ github.event.pull_request.number }}'
-      cancel_in_progress: false
-    secrets: inherit
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Client Tests
+        uses: ./.github/actions/client-test
+        with:
+          working-directory: ./app/client
+
+  # Server テスト実行
+  server-test:
+    name: Run Server Tests
+    if: github.event.action != 'closed' && needs.client-test.result == 'success'
+    needs: [client-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Server Tests
+        uses: ./.github/actions/server-test
+        with:
+          working-directory: ./app/server
+          db-host: localhost
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+  # E2E テスト実行
+  e2e-test:
+    name: Run E2E Tests
+    if: github.event.action != 'closed' && needs.server-test.result == 'success'
+    needs: [server-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    services:
+      db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 5s
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Run E2E Tests
+        uses: ./.github/actions/e2e-test
+        with:
+          client-directory: ./app/client
+          server-directory: ./app/server
+          db-host: localhost
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
 
   # デプロイ開始ログ
   log-deployment-start:
     name: Log Preview Deployment Start
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -80,8 +164,8 @@ jobs:
   # Phase 1: インフラストラクチャ（Preview環境）
   deploy-infrastructure:
     name: Deploy Preview Infrastructure
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests, log-deployment-start]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: 1.6.0
@@ -92,8 +176,8 @@ jobs:
   # Phase 2: データベース（Preview schema）
   deploy-database:
     name: Deploy Preview Database
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests, deploy-infrastructure]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -103,8 +187,8 @@ jobs:
   # Phase 3: バックエンド（Preview Lambda）
   deploy-backend:
     name: Deploy Preview Backend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests, deploy-infrastructure, deploy-database]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
@@ -116,8 +200,8 @@ jobs:
   # Phase 4: フロントエンド（Preview Pages）
   deploy-frontend:
     name: Deploy Preview Frontend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests, deploy-infrastructure, deploy-backend]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test, deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -130,8 +214,8 @@ jobs:
   # デプロイ完了ログ
   log-deployment-result:
     name: Log Preview Deployment Result
-    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success'
-    needs: [security-check, run-tests, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    needs: [security-check, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -158,8 +242,8 @@ jobs:
   # プレビューURL コメント
   comment-preview-urls:
     name: Comment Preview URLs
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.run-tests.result == 'success' && needs.deploy-frontend.result == 'success'
-    needs: [security-check, run-tests, deploy-infrastructure, deploy-frontend]
+    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success' && needs.deploy-frontend.result == 'success'
+    needs: [security-check, e2e-test, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
