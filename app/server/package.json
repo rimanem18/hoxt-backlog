@@ -5,7 +5,7 @@
     "dev": "bun run --hot src/entrypoints/bun.serve.ts",
     "start": "bun run src/entrypoints/bun.serve.ts",
     "start:node": "node --import tsx src/entrypoints/node.serve.ts",
-    "build:lambda": "bun esbuild --bundle --minify --format=cjs --outfile=./dist/index.js --platform=node --target=node22 ./src/entrypoints/lambda.ts",
+    "build:lambda": "bun esbuild --bundle --minify --outfile=./dist/lambda.js --platform=node --target=node22 ./src/entrypoints/lambda.ts",
     "test": "NODE_ENV=test CI=true bun test",
     "test:local": "bun test",
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
@@ -26,7 +26,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
     "@types/bun": "^1.2.22",
-    "@types/node": "^24.5.2",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.9",

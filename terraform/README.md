@@ -1,82 +1,8 @@
-# Terraform State分離アーキテクチャ
+# プロジェクト名 - Terraform統合インフラ設計
 
-## 📁 ディレクトリ構造
+## 概要
 
-```
-terraform/
-├── foundation/          # 基盤リソース（手動管理）
-│   ├── main.tf         # ストレージ、ロック、暗号化、認証
-│   ├── variables.tf    # 基盤用変数
-│   ├── outputs.tf      # アプリが参照する値
-│   └── versions.tf     # Provider設定
-└── app/                # アプリリソース（CI/CD自動化）
-    ├── main.tf         # 実行環境、フロントエンド
-    ├── variables.tf    # アプリ用変数
-    ├── outputs.tf      # 環境変数用出力
-    └── versions.tf     # Provider設定
-```
-
-## 🔧 実行手順
-
-### 1. 基盤リソースの初期設定（一度だけ）
-
-```bash
-# foundation用の実行
-cd terraform/foundation
-
-# 変数設定
-cp ../terraform.tfvars ./
-
-# 初期化と適用（管理者権限で）
-terraform init
-terraform plan
-terraform apply
-```
-
-### 2. アプリリソースの管理（CI/CD）
-
-```bash
-# app用の実行
-cd terraform/app
-
-# 初期化（リモートバックエンド使用）
-terraform init \
-  -backend-config="bucket=${PROJECT_NAME}-terraform-state" \
-  -backend-config="key=app/terraform.tfstate" \
-  -backend-config="region=${AWS_REGION}" \
-  -backend-config="dynamodb_table=${PROJECT_NAME}-terraform-locks"
-
-# 計画と適用
-terraform plan
-terraform apply
-```
-
-## 🎯 権限分離の効果
-
-### **Foundation（基盤）**
-- **管理者**: ローカル実行
-- **目的**: CI/CDの土台作り
-- **権限**: 認証、ストレージ、暗号化等の強力な権限
-- **頻度**: 設定変更時のみ
-
-### **App（アプリケーション）**
-- **CI/CD**: 自動実行
-- **目的**: アプリケーション運用
-- **権限**: 実行環境、フロントエンド等の必要最小限
-- **頻度**: 開発サイクルに合わせて
-
-## 🚀 移行完了後の運用
-
-1. **日常開発**: appディレクトリのみCI/CDが管理
-2. **基盤変更**: 必要時のみfoundationを手動実行
-3. **権限競合**: 解消済み（各層で独立管理）
-4. **State共有**: リモートバックエンドで一元化
-
-## ⚠️ 注意事項
-
-- foundation適用後は、app実行前に必ずリモートバックエンド設定を確認
-- 既存リソースのimportが完了してからCI/CDを有効化
-- 両ディレクトリで同じ`terraform.tfvars`を使用
+プロジェクトのAWSインフラストラクチャをTerraformで管理します。
 AWS リソース統合設計により、コスト効率と学習効率を両立します。
 
 ### 主要な特徴
@@ -115,6 +41,7 @@ make iac-init
 # 環境変数で機密情報を設定
 export TF_VAR_supabase_url="https://xxxxx.supabase.co"
 export TF_VAR_supabase_access_token="sbp_xxxxxxxxxxxxx"  
+export TF_VAR_jwt_secret="your-jwt-secret"
 
 # 統合インフラ計画・適用
 make iac-plan-save
@@ -180,6 +107,7 @@ CLOUDFLARE_PROJECT_NAME: your-project
 # Production Secrets
 SUPABASE_URL: https://xxxxx.supabase.co
 SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
+JWT_SECRET: your-jwt-secret
 CLOUDFLARE_API_TOKEN: your-cloudflare-token
 
 # Preview Environment（同一設定＋Preview固有）

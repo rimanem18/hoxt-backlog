@@ -2,7 +2,7 @@
  * 継続的デプロイメントシステム TypeScript型定義
  * 
  * 作成日: 2025年09月12日
- * 最終更新: 2025年09月23日
+ * 最終更新: 2025年09月12日
  */
 
 // ========================================
@@ -53,11 +53,9 @@ export interface DeploymentResult {
 export type DeploymentStep = 
   | 'terraform_plan'
   | 'terraform_apply'
-  | 'database_migration'
+  | 'supabase_migration' 
   | 'lambda_deploy'
-  | 'lambda_alias_management'
   | 'cloudflare_deploy'
-  | 'shared_schemas_install'
   | 'health_check';
 
 // ========================================
@@ -151,38 +149,10 @@ export interface LambdaDeployResult {
   version: string;
   /** エイリアス名 */
   alias?: string;
-  /** Function URL */
-  function_url: string;
   /** デプロイパッケージサイズ */
   package_size: number;
   /** 最終更新時刻 */
   last_modified: string;
-}
-
-/**
- * Lambda エイリアス管理設定
- */
-export interface LambdaAliasConfig {
-  /** エイリアス名 */
-  alias_name: 'stable' | '$LATEST';
-  /** 対象バージョン */
-  function_version: string;
-  /** 説明 */
-  description?: string;
-  /** 冪等性チェック */
-  idempotent: boolean;
-}
-
-/**
- * JWKS認証設定
- */
-export interface JWKSAuthConfig {
-  /** JWKS使用フラグ */
-  use_jwks_verifier: boolean;
-  /** JWKS検証有効化 */
-  enable_jwks_verification: boolean;
-  /** HS256フォールバック許可 */
-  enable_hs256_fallback: boolean;
 }
 
 // ========================================
@@ -224,83 +194,27 @@ export interface CloudFlarePagesDeployResult {
 }
 
 // ========================================
-// PostgreSQL/drizzle-kit関連型定義
+// Supabase関連型定義
 // ========================================
 
 /**
- * PostgreSQLスキーマ設定
+ * Supabaseプロジェクト設定
  */
-export interface PostgreSQLSchemaConfig {
+export interface SupabaseConfig {
+  /** プロジェクトID */
+  project_id: string;
+  /** プロジェクトURL */
+  url: string;
+  /** サービスロールキー */
+  service_role_key: string;
   /** データベースURL */
   database_url: string;
-  /** ベーススキーマ名 */
-  base_schema: string;
-  /** 実際のスキーマ名 */
-  schema_name: string;
+  /** ベーステーブルプレフィックス */
+  base_table_prefix: string;
+  /** 実際に使用するテーブルプレフィックス */
+  table_prefix: string;
   /** 環境種別 */
   environment: 'production' | 'preview';
-  /** RLS有効化 */
-  enable_rls: boolean;
-}
-
-/**
- * drizzle-kit設定
- */
-export interface DrizzleKitConfig {
-  /** スキーマファイルパス */
-  schema_files: string[];
-  /** マイグレーションディレクトリ */
-  migrations_directory: string;
-  /** データベース接続方式 */
-  connection_type: 'direct_url';
-  /** Forward-onlyマイグレーション */
-  forward_only: boolean;
-}
-
-/**
- * マイグレーション実行結果
- */
-export interface MigrationResult {
-  /** 実行方式 */
-  method: 'push' | 'generate';
-  /** 実行結果 */
-  status: 'success' | 'failure';
-  /** 適用されたマイグレーション数 */
-  applied_migrations: number;
-  /** エラーメッセージ */
-  error_message?: string;
-  /** 実行時間（秒） */
-  duration: number;
-}
-
-// ========================================
-// Monorepo/shared-schemas関連型定義
-// ========================================
-
-/**
- * shared-schemas依存関係設定
- */
-export interface SharedSchemasConfig {
-  /** パッケージパス */
-  package_path: string;
-  /** 依存するワークスペース */
-  dependent_workspaces: string[];
-  /** ビルド前依存関係インストール必須 */
-  require_install_before_build: boolean;
-}
-
-/**
- * 依存関係インストール結果
- */
-export interface DependencyInstallResult {
-  /** インストール対象パッケージ */
-  package_name: string;
-  /** インストール結果 */
-  status: 'success' | 'failure';
-  /** インストール時間（秒） */
-  duration: number;
-  /** エラーメッセージ */
-  error_message?: string;
 }
 
 /**

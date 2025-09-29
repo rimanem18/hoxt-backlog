@@ -33,6 +33,12 @@ else
     echo "TF_VAR_supabase_url: [NOT SET]"
 fi
 
+if [ -n "${TF_VAR_jwt_secret}" ]; then
+    echo "TF_VAR_jwt_secret: [SET]"
+else
+    echo "TF_VAR_jwt_secret: [NOT SET]"
+fi
+
 echo "=============================="
 
 # コマンド実行

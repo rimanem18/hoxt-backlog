@@ -1,7 +1,7 @@
 # デプロイメントAPI仕様
 
 作成日: 2025年09月12日
-最終更新: 2025年09月23日
+最終更新: 2025年09月12日
 
 ## API概要
 
@@ -374,11 +374,6 @@ app.get('/health', async (c) => {
       lambda: {
         status: "healthy", 
         response_time: 120
-      },
-      auth: {
-        status: "healthy",
-        jwks_endpoint: process.env.SUPABASE_URL + "/rest/v1/auth/jwks",
-        verification_method: "JWKS"
       }
     },
     deployment: {
@@ -405,11 +400,6 @@ export const handler = handle(app);
     "lambda": {
       "status": "healthy", 
       "response_time": 120
-    },
-    "auth": {
-      "status": "healthy",
-      "jwks_endpoint": "https://your-project.supabase.co/rest/v1/auth/jwks",
-      "verification_method": "JWKS"
     }
   },
   "deployment": {

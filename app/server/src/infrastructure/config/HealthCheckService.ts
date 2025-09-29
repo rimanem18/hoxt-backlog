@@ -1,16 +1,16 @@
-import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type { SupabaseAuthProvider } from '@/infrastructure/auth/SupabaseAuthProvider';
 import { db } from '@/infrastructure/database/drizzle-client';
 
 /**
  * システムヘルスチェックサービス実装
  *
- * データベース・JWKS認証接続確認を実行し、
+ * データベース・Supabase接続確認を実行し、
  * 各依存関係の健全性状態を判定するInfrastructure層のサービス実装。
  */
 export class HealthCheckService {
-  private authProvider: IAuthProvider;
+  private authProvider: SupabaseAuthProvider;
 
-  constructor(authProvider: IAuthProvider) {
+  constructor(authProvider: SupabaseAuthProvider) {
     this.authProvider = authProvider;
   }
 

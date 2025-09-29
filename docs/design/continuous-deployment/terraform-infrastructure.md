@@ -1,7 +1,7 @@
 # Terraform Infrastructure設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月23日
+最終更新: 2025年09月17日
 
 
 ## インフラストラクチャ概要
@@ -12,14 +12,15 @@ Terraform を使用した AWS と CloudFlare のインフラ管理。Lambda Func
 
 ```
 terraform/
-├── main.tf                 # メインモジュール呼び出し
+├── main.tf                 # 統合環境設定
 ├── variables.tf
+├── terraform.tfvars
 ├── outputs.tf
 ├── modules/
-│   ├── iam-oidc/           # GitHub OIDC認証
-│   ├── lambda-functions/   # Lambda関数管理
-│   ├── cloudflare-pages/   # CloudFlare Pages設定
-│   └── s3-backend/         # S3バックエンド管理
+│   ├── iam-oidc/           # 統合OIDC認証
+│   ├── lambda/     # 環境別Lambda関数管理
+│   ├── cloudflare-pages/
+│   └── monitoring/
 ├── backend.tf
 └── versions.tf
 ```
@@ -32,7 +33,7 @@ terraform {
   backend "s3" {
     # 動的設定（terraform init時に指定）
     # bucket  = "terraform-state-bucket"
-    # key     = "terraform.tfstate"
+    # key     = "unified/terraform.tfstate" (統合環境)
     # region  = "ap-northeast-1"
     # encrypt = true
     # kms_key_id = "arn:aws:kms:ap-northeast-1:123456789012:key/xxxxx"
@@ -108,32 +109,78 @@ module "github_oidc" {
   tags = local.common_tags
 }
 
-# GitHub OIDC統合認証モジュール
-module "github_oidc" {
-  source = "./modules/iam-oidc"
+# 環境別Lambda Functions（完全分離）
+module "lambda_production" {
+  source = "./modules/lambda"
   
-  project_name = local.project_name
-  repository   = var.repository_name
+  project_name    = local.project_name
+  function_name   = "${local.project_name}-api-production"
+  environment     = "production"
   
-  tags = local.common_tags
+  runtime         = "nodejs22.x"
+  handler         = "index.handler"  # Hono Lambda adapter 固定
+  memory_size     = 512
+  timeout         = 30
+  
+  # Production環境変数
+  base_environment_variables = {
+    SUPABASE_URL           = var.supabase_url
+    SUPABASE_JWT_SECRET    = var.jwt_secret
+    BASE_SCHEMA           = var.project_name
+    DATABASE_URL           = var.database_url
+    NODE_ENV              = "production"
+    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
+    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
+  }
+  
+  tags = merge(local.common_tags, { Environment = "production" })
 }
 
-# Lambda Functions（既存リソース参照）
-module "lambda_functions" {
-  source = "./modules/lambda-functions"
+module "lambda_preview" {
+  source = "./modules/lambda"
   
-  project_name = local.project_name
-  domain_name  = var.domain_name
+  project_name    = local.project_name
+  function_name   = "${local.project_name}-api-preview"
+  environment     = "preview"
   
-  tags = local.common_tags
+  runtime         = "nodejs22.x"
+  handler         = "index.handler"  # Hono Lambda adapter 固定
+  memory_size     = 512
+  timeout         = 30
+  
+  # Preview環境変数（dev接尾辞付き）
+  base_environment_variables = {
+    SUPABASE_URL           = var.supabase_url
+    SUPABASE_JWT_SECRET    = var.jwt_secret
+    BASE_SCHEMA           = "${var.project_name}_preview"
+    DATABASE_URL           = var.database_url
+    NODE_ENV              = "development"
+    ACCESS_ALLOW_ORIGIN   = var.access_allow_origin
+    ACCESS_ALLOW_METHODS  = join(", ", var.access_allow_methods)
+    ACCESS_ALLOW_HEADERS   = join(", ", var.access_allow_headers)
+  }
+  
+  tags = merge(local.common_tags, { Environment = "preview" })
 }
 
-# CloudFlare Pages（既存プロジェクト参照）
+# CloudFlare Pages（統合管理）
 module "cloudflare_pages" {
   source = "./modules/cloudflare-pages"
   
-  account_id   = var.cloudflare_account_id
-  project_name = local.project_name
+  project_name     = local.project_name
+  domain           = var.domain_name
+  
+  production_branch = "main"
+  build_command     = "bun run build"
+  output_directory  = "out"
+  
+  environment_variables = {
+    LAMBDA_FUNCTION_URL_PRODUCTION = module.lambda_production.function_url
+    LAMBDA_FUNCTION_URL_PREVIEW    = module.lambda_preview.function_url
+    NODE_ENV                      = "production"
+    # 注記: アプリケーション内で環境に応じたFunction URLを選択
+  }
 }
 
 # Terraform State Bucket (作成済みの想定だが参照用)
@@ -321,6 +368,11 @@ variable "supabase_url" {
   sensitive   = true
 }
 
+variable "jwt_secret" {
+  description = "JWT signing secret"
+  type        = string
+  sensitive   = true
+}
 
 variable "promoted_version" {
   description = "Lambda function version to promote to stable alias"
@@ -342,6 +394,7 @@ base_schema       = "projectname"
 # Sensitive variables are set via GitHub Secrets or environment variables
 # supabase_url = "https://xxxxx.supabase.co"
 # supabase_access_token = "sbp_xxxxxxxxxxxxx"
+# jwt_secret = "your-jwt-secret"
 ```
 
 ## 統合IAM OIDC モジュール

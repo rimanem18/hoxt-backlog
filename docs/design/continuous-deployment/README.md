@@ -1,12 +1,12 @@
 # 継続的デプロイメントシステム 設計文書
 
 作成日: 2025年09月12日
-最終更新: 2025年09月23日（現在実装に合わせて修正）
+最終更新: 2025年09月18日
 
 
 ## 概要
 
-GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda Function URL）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化する。
+GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステムの技術設計文書。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化する。
 
 ## 設計文書構成
 
@@ -70,10 +70,9 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - 基本監査ログによる運用追跡
 
 ### コスト効率
-- AWS Lambda Function URL による API Gateway回避でのコスト削減
-- 環境別Lambda関数分離による明確な責任分離
+- AWS統合リソース（単一Lambda関数、統一API Gateway）による費用削減
 - 単一IAMロール・ポリシーによる管理コスト削減
-- PostgreSQLスキーマ分離による環境分離（production/preview schema）
+- テーブルプレフィックス `${TABLE_PREFIX}_dev_*` による環境分離
 - Preview環境でのリソース共有による運用コスト最適化
 
 ### 拡張性
@@ -90,7 +89,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 2. **統合インフラ自動化**
    - 統合Terraform設定実装（単一state管理）
-   - 環境別AWS Lambda Function URL 構築
+   - 統合AWS Lambda・API Gateway 構築
 
 3. **統合CI/CD パイプライン**
    - GitHub Actions ワークフロー実装（統一ロール使用）
@@ -110,7 +109,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - ✅ **監査ログ**: 実行者・日時・対象記録・Secret Scanning
 - ✅ **エラーハンドリング**: 再試行・タイムアウト・アラート機能
 - ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定（最小権限統合ロール）
-- ✅ **環境分離**: Lambda完全分離 + CloudFlare Pages統合プロジェクト + PostgreSQLスキーマ分離方式
+- ✅ **環境分離**: Lambda完全分離 + CloudFlare Pages統合プロジェクト + テーブルプレフィックス方式
 
 ## 次ステップ
 

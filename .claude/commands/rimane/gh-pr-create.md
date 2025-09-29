@@ -13,9 +13,9 @@ description: 現在のブランチとプッシュ先のブランチの diff を�
 - ブランチ名に含まれる {大文字の英字列-数字}を Jira に紐つく {PROJECT-KEY} と認識します。
 
 ## 実行内容
-- 現在のブランチを `git push origin {現在のブランチ名}` で push
+- 現在のブランチを `git push origin {現在のブランチ名}`
 - リモートリポジトリを `git fetch`
-- `git diff` で、現在のブランチとリモートのマージ先ブランチを比較し、変更の詳細を確認
+- `git diff` で変更の詳細を確認
 - `gh pr create` でプルリクエストを作成
 
 ### Pull Request フォーマット例
