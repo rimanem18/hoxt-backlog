@@ -43,10 +43,10 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 
 ### 条件付き要件
 
-- REQ-101: プルリクエスト作成・更新時の場合、システムは プレビュー環境（CloudFlare Preview + Lambda Function URL Preview + PostgreSQL preview schema）を自動生成・更新しなければならない
+- REQ-101: プルリクエスト作成・更新時の場合、システムは 単一の共有プレビュー環境（CloudFlare Preview + Lambda Function URL Preview + PostgreSQL `app_projectname_preview` schema）を上書き更新しなければならない
 - REQ-102: Terraform plan で破壊的変更が検出された場合、システムは 詳細ログ出力と確認ステップを実行し、自動継続しなければならない
 - REQ-103: マイグレーション実行時にDBロックが発生した場合、システムは タイムアウト設定に従って処理を中止しなければならない
-- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda Function URL Production + PostgreSQL production schema）を自動更新しなければならない
+- REQ-104: mainブランチマージ時の場合、システムは プロダクション環境（CloudFlare Production + Lambda Function URL Production + PostgreSQL `app_projectname` schema）を自動更新しなければならない
 
 ### 状態要件
 
@@ -65,11 +65,13 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - REQ-405: システムは 環境別Lambda関数による完全分離（Preview専用関数、Production専用関数）を実装し、各々にFunction URLを設定して独立したHTTPSエンドポイントによる環境分離を行わなければならない
 - REQ-406: システムは Lambda Function URL による直接HTTP接続を実装し、API Gatewayを使用せずシンプルで確実なエンドポイント提供を行わなければならない
 - REQ-407: システムは drizzle-kit設定でDATABASE_URL直接接続を使用し、Supabase Access Tokenに依存しない自律的なマイグレーション実行を行わなければならない
-- REQ-408: システムは PostgreSQLスキーマ分離による環境分離を実装し、BASE_SCHEMA環境変数（production: projectname、preview: projectname_preview）によるスキーマベース環境分離を行わなければならない
+- REQ-408: システムは PostgreSQLスキーマ分離による環境分離を実装し、BASE_SCHEMA環境変数（production: `app_projectname`、preview: `app_projectname_preview`）によるスキーマベース環境分離を行い、全PRで単一のpreviewスキーマを共有・上書き更新しなければならない
 - REQ-409: システムは JWKS (JSON Web Key Set) による非対称鍵暗号認証を実装し、HS256共有秘密鍵に依存しない高セキュリティ認証を行わなければならない
 - REQ-410: システムは Lambda関数のstableエイリアス自動管理を実装し、エイリアス存在確認による冪等なデプロイを行わなければならない
 - REQ-411: システムは monorepo構成でのshared-schemas依存関係を適切に管理し、ビルド時の依存関係不足を防止しなければならない
 - REQ-412: システムは IAMポリシーによる最小権限制御を実装し、Lambda関数のバージョン・エイリアス管理に必要な権限のみを付与しなければならない
+- REQ-413: システムは プレビュー環境のリソース削除を実装してはならず、削除失敗によるリソース増殖リスクを回避するため、全PRで同一リソースを上書き利用する方針を採用しなければならない
+- REQ-414: システムは CloudFlare Pagesのpreview deployment管理をCloudFlare側の自動管理に委ねなければならない
 
 ## 非機能要件
 
@@ -113,12 +115,14 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 ### デプロイフローテスト
 
 - [ ] main ブランチマージ（プッシュ）でProduction環境が自動更新されること
-- [ ] プルリクエスト作成・更新でPreview環境が自動反映されること  
-- [ ] Lambda Function URL Preview 経由でPreview環境Lambda関数更新がPR更新で即座に反映されること  
+- [ ] プルリクエスト作成・更新で単一の共有Preview環境が上書き更新されること
+- [ ] 複数PRが同時にオープンされた場合、最後にマージされたPRのpreview環境が反映されること
+- [ ] Lambda Function URL Preview 経由でPreview環境Lambda関数更新がPR更新で即座に反映されること
 - [ ] Lambda Function URL Production 経由でProduction環境Lambda関数がmainマージで正常動作すること
 - [ ] drizzle-kit generateによるマイグレーションファイル生成が正常動作すること
 - [ ] migrate_roleによるPostgreSQL直接マイグレーション実行が成功すること
 - [ ] マイグレーション時DBロック発生でタイムアウト処理が動作すること
+- [ ] PR Close時にpreview環境リソースが削除されず、次のPRで再利用可能なこと
 
 ### 品質保証テスト
 

@@ -170,32 +170,32 @@
 
 - [ ] **タスク未完了**
 - **タスクタイプ**: DIRECT
-- **要件リンク**: REQ-101, REQ-406, NFR-005
+- **要件リンク**: REQ-101, REQ-406, REQ-408, REQ-413, REQ-414, NFR-005
 - **依存タスク**: TASK-601
 - **実装詳細**:
   - .github/workflows/preview.yml作成
-  - PR作成・更新でのプレビューデプロイ（Fork制限実装）
-  - PR終了時のリソースクリーンアップ
+  - PR作成・更新での単一共有プレビュー環境デプロイ（Fork制限実装）
+  - 全PRで同一リソースを上書き利用（`app_projectname_preview`スキーマ、Lambda Preview関数、CloudFlare Preview）
   - Preview専用Lambda関数環境変数切り替え
   - Lambda Function URL Preview連携
+  - **リソース削除は実装しない**（削除失敗リスク回避のため）
 - **テスト要件**:
-  - [ ] 単体テスト: プレビュー環境作成
-  - [ ] 統合テスト: PRライフサイクル連携
+  - [ ] 単体テスト: 共有プレビュー環境上書き更新
+  - [ ] 統合テスト: PRライフサイクル連携（最新PR反映確認）
   - [ ] セキュリティテスト: Fork制限動作確認
   - [ ] Function URL Previewテスト
-  - [ ] リソースクリーンアップテスト
+  - [ ] 複数PR同時更新での最新反映テスト
 - **UI/UX要件**:
   - [ ] プレビューURL自動コメント
-  - [ ] 環境分離状態表示
-  - [ ] クリーンアップ完了通知
+  - [ ] 共有環境状態表示（最後のPR更新が反映されることを明示）
 - **エラーハンドリング**:
-  - [ ] プレビュー環境作成失敗
-  - [ ] リソースクリーンアップ失敗
-  - [ ] 複数PR同時処理競合
+  - [ ] プレビュー環境更新失敗
+  - [ ] 複数PR同時処理での競合（GitHub concurrencyで制御）
 - **完了条件**:
   - [ ] preview.ymlファイル作成完了
-  - [ ] PRプレビュー環境テスト成功
-  - [ ] クリーンアップ動作確認
+  - [ ] PR共有プレビュー環境テスト成功
+  - [ ] 複数PR同時オープン時の最新反映確認
+  - [ ] PR Close時のリソース残存確認（削除されないこと）
 
 #### TASK-603: セキュリティスキャンワークフロー
 
@@ -399,9 +399,9 @@ Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール
   TERRAFORM_STATE_BUCKET: your-project-terraform-state
   LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
-  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名
+  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名（共有）
   SUPABASE_PROJECT_ID: abcdefghijklmnop
-  TABLE_PREFIX: prefix
+  BASE_SCHEMA: app_projectname  # Production スキーマ名
   CLOUDFLARE_ACCOUNT_ID: your-account-id
   CLOUDFLARE_PROJECT_NAME: your-project-production
   CLOUDFLARE_DOMAIN: your-project.com
@@ -413,18 +413,20 @@ Secrets:
 ```
 
 ### GitHub Environment: preview
-```yaml  
+```yaml
 Variables:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール（同一）
   LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
-  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名
+  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名（全PRで共有）
   SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
-  TABLE_PREFIX: prefix  # dev prefixは実行時に付与
-  CLOUDFLARE_ACCOUNT_ID: your-account-id  
-  CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview
-  LAMBDA_FUNCTION_URL_PREVIEW: https://unique-id-preview.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得
+  BASE_SCHEMA: app_projectname_preview  # Preview スキーマ名（全PRで共有）
+  CLOUDFLARE_ACCOUNT_ID: your-account-id
+  CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview（CloudFlareが管理）
+  LAMBDA_FUNCTION_URL_PREVIEW: https://unique-id-preview.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得（全PRで共有）
 
 Secrets:
   SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx  # 本番と同じトークン
   CLOUDFLARE_API_TOKEN: your-api-token  # 本番と同じトークン
 ```
+
+**注意**: Preview環境は全PRで同一リソースを共有・上書き利用します。最後に更新されたPRの内容が反映されます。

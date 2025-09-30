@@ -7,6 +7,19 @@
 
 継続的デプロイメントシステムで使用される各種API仕様。GitHub Actions、AWS、CloudFlare、Supabaseとの連携に必要なエンドポイント・認証・データ形式を定義する。
 
+### 技術スタックバージョン要件
+- **Terraform**: 1.6以上
+- **Node.js**: 22以上
+- **Hono**: 4以上
+- **Next.js**: 15以上
+- **GitHub Actions**: 最新版推奨
+
+### CloudFlare Pages Direct Upload 採用理由
+- **Terraform統合**: GitHub統合を使用せず、Terraformによる完全な構成管理を実現
+- **デプロイタイミング制御**: GitHub Actionsから明示的にデプロイタイミングを制御
+- **構成同期保証**: Production と Preview の設定を Terraform で一元管理
+- **個人開発最適化**: 最小構成で運用負荷を軽減
+
 ## GitHub API
 
 ### リポジトリ情報取得
@@ -293,14 +306,19 @@ Content-Type: application/json
 }
 ```
 
-### テーブルプレフィックス管理（Preview環境）
-Supabase無料版のため、ブランチ機能の代わりにテーブルプレフィックスで環境分離を実現。
+### スキーマ管理（Preview環境）
+PostgreSQLスキーマによる環境分離を実現。
 
-#### Preview環境テーブル作成
+#### Preview環境スキーマ作成
 ```sql
--- Production: prefix_users (TABLE_PREFIX = prefix)
--- Preview: prefix_dev_users (TABLE_PREFIX = prefix_dev)
-CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_users (
+-- Production: app_projectname (BASE_SCHEMA = app_projectname)
+-- Preview: app_projectname_preview (BASE_SCHEMA = app_projectname_preview)
+CREATE SCHEMA IF NOT EXISTS ${BASE_SCHEMA};
+GRANT USAGE ON SCHEMA ${BASE_SCHEMA} TO PUBLIC;
+GRANT CREATE ON SCHEMA ${BASE_SCHEMA} TO PUBLIC;
+
+-- テーブルはスキーマ内に作成
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -308,12 +326,11 @@ CREATE TABLE IF NOT EXISTS ${TABLE_PREFIX}_users (
 );
 ```
 
-#### Preview環境テーブル削除
+#### Preview環境スキーマ削除
 ```sql
--- PR終了時のcleanup (TABLE_PREFIX = prefix_dev)
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_users CASCADE;
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_projects CASCADE;
-DROP TABLE IF EXISTS ${TABLE_PREFIX}_tasks CASCADE;
+-- PR終了時のcleanup (BASE_SCHEMA = app_projectname_preview)
+-- CASCADE により全テーブル・ビュー・関数が一括削除される
+DROP SCHEMA IF EXISTS ${BASE_SCHEMA} CASCADE;
 ```
 
 ## Terraform Cloud API (State Management)
@@ -547,9 +564,84 @@ X-Amz-Target: AWSSecurityTokenServiceV20110615.AssumeRoleWithWebIdentity
 - Pages API: 1200/分
 - DNS API: 100/分
 
-### Supabase Management API  
+### Supabase Management API
 - プロジェクト操作: 60/分
 - データベース操作: 300/分
+
+## セキュリティスキャンAPI
+
+### TruffleHog Secret Scanning
+```yaml
+# GitHub Actions 使用例
+- name: Run TruffleHog
+  uses: trufflesecurity/trufflehog@main
+  with:
+    path: ./
+    base: main
+    head: HEAD
+```
+
+**検出対象**:
+- AWS Access Keys
+- API Tokens
+- Private Keys
+- Certificates
+- Database Credentials
+
+### Semgrep SAST Scanning
+```yaml
+# GitHub Actions 使用例
+- name: Run Semgrep
+  uses: returntocorp/semgrep-action@v1
+  with:
+    config: p/security-audit p/javascript
+```
+
+**スキャンルール**:
+- `p/security-audit`: 一般的なセキュリティ問題
+- `p/javascript`: JavaScript/TypeScript 固有の脆弱性
+
+## Discord Webhook API
+
+### デプロイ成功通知
+```http
+POST https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
+Content-Type: application/json
+
+{
+  "embeds": [{
+    "title": "🚀 Production Deployment Completed Successfully!",
+    "color": 65280,
+    "fields": [
+      {"name": "Commit", "value": "abc123def456", "inline": true},
+      {"name": "Branch", "value": "main", "inline": true},
+      {"name": "Actor", "value": "username", "inline": true},
+      {"name": "Components Deployed", "value": "✅ Infrastructure\n✅ Database\n✅ Backend\n✅ Frontend", "inline": false}
+    ],
+    "timestamp": "2025-09-12T10:30:00.000Z"
+  }]
+}
+```
+
+### デプロイ失敗通知
+```http
+POST https://discord.com/api/webhooks/{webhook_id}/{webhook_token}
+Content-Type: application/json
+
+{
+  "embeds": [{
+    "title": "❌ Production Deployment Failed!",
+    "color": 16711680,
+    "fields": [
+      {"name": "Commit", "value": "abc123def456", "inline": true},
+      {"name": "Branch", "value": "main", "inline": true},
+      {"name": "Actor", "value": "username", "inline": true},
+      {"name": "Action", "value": "Check job logs for details", "inline": false}
+    ],
+    "timestamp": "2025-09-12T10:30:00.000Z"
+  }]
+}
+```
 
 ## 監視・ログ形式
 

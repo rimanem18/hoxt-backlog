@@ -8,6 +8,37 @@
 
 GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロイメントシステム。フロントエンド（CloudFlare Pages）、バックエンド（AWS Lambda）、データベース（drizzle-kit + PostgreSQL）の統合デプロイメントを自動化し、セキュリティと運用効率を両立する。
 
+## 設計原則
+
+### セキュリティファースト
+- 単一GitHub OIDC 統合ロールによる完全シークレットレス認証
+- Repository-level Secrets + 環境別アクセス制御による最小権限制御
+- Terraform state の S3+KMS 暗号化保存
+- Secret Scanning による機密情報漏洩防止
+- Fork PR からのSecrets アクセス制限
+
+### 運用効率
+- インフラ変更の破壊的検出と承認フロー
+- プレビュー環境の自動構築・削除（スキーマ分離方式）
+- 依存関係順序制御による安全なデプロイ
+- 基本監査ログによる運用追跡
+- TruffleHog・Semgrep によるセキュリティスキャン自動化
+- Discord 通知による即座のデプロイ結果把握
+
+### コスト効率
+- AWS Lambda Function URL による API Gateway 回避でのコスト削減
+- 環境別Lambda関数分離による明確な責任分離
+- 単一IAMロール・ポリシーによる管理コスト削減
+- PostgreSQL スキーマ分離による環境分離（production/preview schema）
+- Preview環境でのリソース共有による運用コスト最適化
+- CloudFlare Pages 単一プロジェクト管理による構成最小化
+
+### 拡張性
+- モジュラー設計による保守性確保
+- 環境別設定の明確な分離
+- エラー処理・再試行戦略の標準化
+- 段階的機能追加に対応した設計
+
 ## アーキテクチャパターン
 
 - **パターン**: マイクロサービス指向 + Infrastructure as Code + GitOps
@@ -45,26 +76,37 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **並列制御**: job dependency + concurrency groups
 
 ### Infrastructure as Code
-- **ツール**: Terraform
+- **ツール**: Terraform 1.6以上
 - **状態管理**: AWS S3 + KMS暗号化
 - **実行制御**: plan → approval → apply の段階実行
 - **破壊的変更**: 手動承認フロー必須
+- **モジュール構成**:
+  - `iam-oidc`: GitHub OIDC Provider と統合IAM Role
+  - `lambda-functions`: 環境別Lambda関数管理
+  - `cloudflare-pages`: CloudFlare Pages 設定（単一プロジェクト管理）
+  - `monitoring`: CloudWatch アラーム・ログ収集（将来拡張）
+- **変数管理**: `preview_schema_suffix`（`_preview`）、CORS設定（`access_allow_*`）、スキーマ名（`base_schema`）を環境変数で制御
 
 ### フロントエンド
-- **フレームワーク**: Next.js 15 (SSG)
+- **フレームワーク**: Next.js 15以上 (SSG)
 - **プラットフォーム**: CloudFlare Pages
-- **デプロイ方式**: GitHub Actions ビルド + CloudFlare Pages API
-- **環境分離**: main (production) / PR (preview)
+- **デプロイ方式**: GitHub Actions ビルド + CloudFlare Pages Direct Upload API
+- **環境分離**: main (production) / PR (preview) - 単一プロジェクト内でブランチ管理
+- **単一プロジェクト戦略の理由**:
+  - Terraform による統合管理を実現（複数プロジェクトは管理複雑化）
+  - Production と Preview の構成同期を保証
+  - 個人開発における最小構成で運用負荷を軽減
+- **Direct Upload 採用理由**: GitHub 統合不使用により Terraform との一貫性を確保、デプロイタイミングの完全制御
 - **API連携**: Hono Lambda API との HTTP 通信
 
 ### バックエンド
-- **フレームワーク**: Hono 4 + AWS Lambda adapter
-- **プラットフォーム**: AWS Lambda (Node.js 22.x) - 環境別関数分離
+- **フレームワーク**: Hono 4以上 + AWS Lambda adapter
+- **プラットフォーム**: AWS Lambda (Node.js 22以上) - 環境別関数分離
 - **ビルド**: `bun run build:lambda` で lambda.js 生成
 - **デプロイ**: GitHub Actions + Lambda ZIP package
 - **認証方式**: JWKS (JSON Web Key Set) による非対称鍵暗号認証
 - **環境管理**: 環境別Lambda関数（Preview専用関数、Production専用関数による完全分離）
-- **エンドポイント**: Lambda Function URL - 直接HTTPS接続（API Gateway不使用）
+- **エンドポイント**: Lambda Function URL - 直接HTTPS接続（API Gateway不使用によるコスト削減）
 - **バージョン管理**: stableエイリアス（本番）+ $LATESTバージョン（プレビュー）
 - **依存関係**: monorepo shared-schemas パッケージ管理
 
@@ -74,9 +116,13 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **マイグレーション**: drizzle-kit generate + PostgreSQL直接実行
 - **接続方式**: DATABASE_URL直接接続（Supabase Access Token不要）
 - **環境分離**: PostgreSQLスキーマによる分離
-  - Production: `${BASE_SCHEMA}`（例: `projectname`）
-  - Preview: `${BASE_SCHEMA}_preview`（例: `projectname_preview`）
-  - Terraform連携: Terraformがスキーマ名を環境変数として設定
+  - Production: `${BASE_SCHEMA}`（例: `app_projectname`）
+  - Preview: `${BASE_SCHEMA}_preview`（例: `app_projectname_preview`）
+  - Terraform連携: Terraformが `preview_schema_suffix = "_preview"` を設定
+  - スキーマ分離の利点:
+    - 環境間の完全な論理分離（名前空間レベル）
+    - PR Close時の一括削除が容易（`DROP SCHEMA app_projectname_preview CASCADE`）
+    - 権限管理の簡素化（スキーマ単位で制御）
 - **セキュリティ**: Row-Level Security (RLS) 必須
 
 ### セキュリティ
@@ -84,6 +130,9 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **ブランチ制限**: mainブランチ・PR のみアクセス許可（feature/develop等ブランチ無効化）
 - **権限管理**: Repository-level Secrets + 環境別アクセス制御による最小権限制御（Production/Preview共通ロール）
 - **シークレット管理**: Repository Secrets + 共通設定統合による管理負荷軽減
+  - **統合戦略**: Environment 別Secrets を廃止し Repository Secrets に集約
+  - **効果**: 設定項目 60%削減、更新時の修正箇所を1箇所に統一
+  - **OIDC制約**: IAM Role の Trust Policy で `repo:${owner}/${repo}:environment:production` 等を指定し、ブランチレベルでアクセス制御
 - **監査**: CloudTrail + GitHub Actions logs
 
 ## デプロイメント順序
@@ -122,10 +171,12 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### Preview環境
 - **トリガー**: PR 作成・更新
-- **データベース**: 同一Supabaseプロジェクト内で `${TABLE_PREFIX}_dev_*` テーブル使用
-- **リソース**: CloudFlare Preview + Lambda Preview 関数 + Function URL（PR close で自動削除）
+- **データベース**: 全PRで単一の `app_projectname_preview` スキーマを共有・上書き更新
+- **リソース**: CloudFlare Preview + Lambda Preview 関数 + Function URL（常に同一リソースを再利用）
 - **制限**: Terraform は read-only plan のみ
-- **注意**: テーブルは上書き型（複数PRで共有、競合の可能性あり）
+- **注意**: 全PRで同一リソース共有のため、最後のPR更新内容が反映される（並行レビュー時は最新のみ有効）
+- **削除方針**: リソース削除は実装せず、削除失敗によるリソース増殖リスクを回避
+- **CloudFlare**: Preview deployment管理はCloudFlare側に委任
 
 ## エラーハンドリング
 
@@ -161,3 +212,45 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **AWS**: 単一GitHub OIDC 統合 IAM role（Environment条件による最小権限制御）
 - **CloudFlare**: API token（ページ管理権限のみ）
 - **Supabase**: Service role（マイグレーション権限）
+
+## 実装ロードマップ
+
+### フェーズ1: 統合基盤整備
+- Terraform state管理用 S3・DynamoDB・KMS 作成
+- 単一GitHub OIDC Provider・統合IAM Role 設定
+- Repository Secrets 統合戦略の適用
+
+### フェーズ2: 統合インフラ自動化
+- 統合Terraform設定実装（単一state管理）
+- 環境別AWS Lambda Function URL 構築
+- CloudFlare Pages 単一プロジェクト設定
+
+### フェーズ3: 統合CI/CD パイプライン
+- GitHub Actions ワークフロー実装（統一ロール使用）
+- デプロイ順序制御・エラーハンドリング
+- セキュリティスキャン（TruffleHog・Semgrep）統合
+- Discord 通知設定
+
+### フェーズ4: 監視・運用
+- CloudWatch アラーム設定
+- ログ収集・監査機能実装
+- 運用手順書作成
+
+## 受け入れ基準
+
+本システムは以下の受け入れ基準を満たします：
+
+- ✅ **統合基盤構築**: Terraform・単一GitHub OIDC・統合IAM設定
+- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御（Lambda完全分離・unified state）
+- ✅ **品質保証**: 破壊的変更承認・マイグレーション・待機キュー
+- ✅ **監査ログ**: 実行者・日時・対象記録・Secret Scanning
+- ✅ **エラーハンドリング**: 再試行・タイムアウト・アラート機能
+- ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定（最小権限統合ロール）
+- ✅ **環境分離**: Lambda完全分離 + CloudFlare Pages統合プロジェクト + PostgreSQLスキーマ分離方式
+
+## 次ステップ
+
+1. **技術検証**: 統合設計内容の実装可能性検証
+2. **段階実装**: 統合基盤→CI/CD→監視の順で段階的実装
+3. **テスト**: 各受け入れ基準に対する動作確認
+4. **運用開始**: 統合環境での継続的デプロイメント開始
