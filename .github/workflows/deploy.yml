@@ -50,22 +50,114 @@ jobs:
         with:
           environment-override: ${{ github.event.inputs.environment || '' }}
 
-  # Phase 1: テスト実行
-  run-tests:
-    name: Run Tests Before Deploy
+  # Phase 1: Client テスト実行
+  client-test:
+    name: Client Unit Tests
     needs: [setup-environment]
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
-    uses: ./.github/workflows/ci.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
-  # Phase 2: デプロイ開始記録
+      - name: Run Client Tests
+        uses: ./.github/actions/client-test
+        with:
+          working-directory: ./app/client
+
+  # Phase 2: Server テスト実行
+  server-test:
+    name: Server Unit Tests
+    needs: [client-test]
+    if: needs.client-test.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Run Server Tests
+        uses: ./.github/actions/server-test
+        with:
+          working-directory: ./app/server
+          db-host: localhost
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+  # Phase 3: E2E テスト実行
+  e2e-test:
+    name: E2E Tests
+    needs: [server-test]
+    if: needs.server-test.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 5s
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run E2E Tests
+        uses: ./.github/actions/e2e-test
+        with:
+          client-directory: ./app/client
+          server-directory: ./app/server
+          db-host: localhost
+          db-name: postgres
+          db-user: postgres
+          db-password: test_password
+
+  # Phase 4: デプロイ開始記録
   log-deployment-start:
     name: Log Deployment Start
-    needs: [setup-environment]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test]
+    if: needs.e2e-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,13 +173,11 @@ jobs:
           environment: ${{ needs.setup-environment.outputs.environment-type }}
           details: 'Starting full stack deployment'
 
-  # Phase 3: インフラストラクチャデプロイ
+  # Phase 5: インフラストラクチャデプロイ
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [setup-environment, run-tests, log-deployment-start]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test, log-deployment-start]
+    if: needs.e2e-test.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -95,28 +185,25 @@ jobs:
     with:
       terraform-version: ${{ vars.TERRAFORM_VERSION }}
       aws-region: ${{ vars.AWS_REGION }}
+      environment-type: ${{ needs.setup-environment.outputs.environment-type }}
     secrets: inherit
 
-  # Phase 4: データベースマイグレーション
+  # Phase 6: データベースマイグレーション
   deploy-database:
     name: Deploy Database
-    needs: [setup-environment, deploy-infrastructure]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test, deploy-infrastructure]
+    if: needs.e2e-test.result == 'success'
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
     secrets: inherit
 
-  # Phase 5: バックエンドデプロイ（database完了後、frontendと並行実行）
+  # Phase 7: バックエンドデプロイ（database完了後、frontendと並行実行）
   deploy-backend:
     name: Deploy Backend
-    needs: [setup-environment, deploy-database]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test, deploy-infrastructure, deploy-database]
+    if: needs.e2e-test.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -131,10 +218,8 @@ jobs:
   # Debug: インフラ出力確認
   debug-infrastructure-outputs:
     name: Debug Infrastructure Outputs
-    needs: [setup-environment, deploy-infrastructure]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test, deploy-infrastructure]
+    if: needs.e2e-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Debug Infrastructure Outputs
@@ -156,13 +241,11 @@ jobs:
           echo "next-public-api-base-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
           echo "next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
 
-  # Phase 6: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
+  # Phase 8: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [setup-environment, deploy-infrastructure, debug-infrastructure-outputs]
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      github.event_name == 'workflow_dispatch'
+    needs: [setup-environment, e2e-test, deploy-infrastructure, debug-infrastructure-outputs]
+    if: needs.e2e-test.result == 'success'
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
@@ -172,11 +255,11 @@ jobs:
       cloudflare-project-name: ${{ vars.PROJECT_NAME }}
     secrets: inherit
 
-  # Phase 7: デプロイ成功通知
+  # Phase 9: デプロイ成功通知
   notify-success:
     name: Notify Deployment Success
     if: success()
-    needs: [setup-environment, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -216,11 +299,11 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ github.run_id }}
 
-  # Phase 8: デプロイ失敗通知
+  # Phase 10: デプロイ失敗通知
   notify-failure:
     name: Notify Deployment Failure
     if: failure()
-    needs: [setup-environment, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
