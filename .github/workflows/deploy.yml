@@ -320,6 +320,8 @@ jobs:
           actor: ${{ github.actor }}
           repository: ${{ github.repository }}
           run-id: ${{ github.run_id }}
+          repository-url: ${{ github.server_url }}/${{ github.repository }}
+          frontend-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
 
   # Phase 10: デプロイ失敗通知
   notify-failure:
