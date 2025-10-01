@@ -129,30 +129,12 @@ resource "aws_lambda_function_url" "production" {
   function_name      = aws_lambda_function.production.function_name
   qualifier          = "stable"
   authorization_type = "NONE"
-
-  cors {
-    allow_credentials = true
-    allow_headers     = ["*"]
-    allow_methods     = ["*"]
-    allow_origins     = ["https://${var.domain_name}"]
-    expose_headers    = ["*"]
-    max_age           = 86400
-  }
 }
 
 resource "aws_lambda_function_url" "preview" {
   function_name      = aws_lambda_function.preview.function_name
   qualifier          = "stable"
   authorization_type = "NONE"
-
-  cors {
-    allow_credentials = true
-    allow_headers     = ["*"]
-    allow_methods     = ["*"]
-    allow_origins     = ["https://*"]
-    expose_headers    = ["*"]
-    max_age           = 86400
-  }
 }
 
 # Lambda Stable Alias (事前作成でCreateAlias分岐を不要に)
