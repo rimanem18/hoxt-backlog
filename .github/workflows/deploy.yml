@@ -70,11 +70,13 @@ jobs:
         with:
           working-directory: ./app/client
 
-  # Phase 2: Server テスト実行
+  # Phase 2: Server テスト実行（並列）
   server-test:
     name: Server Unit Tests
-    needs: [client-test]
-    if: needs.client-test.result == 'success'
+    needs: [setup-environment]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
@@ -108,11 +110,13 @@ jobs:
           db-user: postgres
           db-password: test_password
 
-  # Phase 3: E2E テスト実行
+  # Phase 3: E2E テスト実行（並列）
   e2e-test:
     name: E2E Tests
-    needs: [server-test]
-    if: needs.server-test.result == 'success'
+    needs: [setup-environment]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -156,8 +160,11 @@ jobs:
   # Phase 4: デプロイ開始記録
   log-deployment-start:
     name: Log Deployment Start
-    needs: [setup-environment, e2e-test]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -176,8 +183,11 @@ jobs:
   # Phase 5: インフラストラクチャデプロイ
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [setup-environment, e2e-test, log-deployment-start]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test, log-deployment-start]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -191,8 +201,11 @@ jobs:
   # Phase 6: データベースマイグレーション
   deploy-database:
     name: Deploy Database
-    needs: [setup-environment, e2e-test, deploy-infrastructure]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -202,8 +215,11 @@ jobs:
   # Phase 7: バックエンドデプロイ（database完了後、frontendと並行実行）
   deploy-backend:
     name: Deploy Backend
-    needs: [setup-environment, e2e-test, deploy-infrastructure, deploy-database]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -218,8 +234,11 @@ jobs:
   # Debug: インフラ出力確認
   debug-infrastructure-outputs:
     name: Debug Infrastructure Outputs
-    needs: [setup-environment, e2e-test, deploy-infrastructure]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Debug Infrastructure Outputs
@@ -244,8 +263,11 @@ jobs:
   # Phase 8: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [setup-environment, e2e-test, deploy-infrastructure, debug-infrastructure-outputs]
-    if: needs.e2e-test.result == 'success'
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, debug-infrastructure-outputs]
+    if: |
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}

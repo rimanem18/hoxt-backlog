@@ -59,11 +59,11 @@ jobs:
         with:
           working-directory: ./app/client
 
-  # Server テスト実行
+  # Server テスト実行（並列）
   server-test:
     name: Run Server Tests
-    if: needs.client-test.result == 'success'
-    needs: [client-test]
+    if: needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     
@@ -95,11 +95,11 @@ jobs:
           db-user: postgres
           db-password: test_password
 
-  # E2E テスト実行
+  # E2E テスト実行（並列）
   e2e-test:
     name: Run E2E Tests
-    if: needs.server-test.result == 'success'
-    needs: [server-test]
+    if: needs.security-check.outputs.can-deploy == 'true'
+    needs: [security-check]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
@@ -141,8 +141,12 @@ jobs:
   # デプロイ開始ログ
   log-deployment-start:
     name: Log Preview Deployment Start
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -159,8 +163,12 @@ jobs:
   # Phase 1: インフラストラクチャ（Preview環境）
   deploy-infrastructure:
     name: Deploy Preview Infrastructure
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test, log-deployment-start]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: 1.6.0
@@ -171,8 +179,12 @@ jobs:
   # Phase 2: データベース（Preview schema）
   deploy-database:
     name: Deploy Preview Database
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test, deploy-infrastructure]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -182,8 +194,12 @@ jobs:
   # Phase 3: バックエンド（Preview Lambda）
   deploy-backend:
     name: Deploy Preview Backend
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test, deploy-infrastructure, deploy-database]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
@@ -195,8 +211,12 @@ jobs:
   # Phase 4: フロントエンド（Preview Pages）
   deploy-frontend:
     name: Deploy Preview Frontend
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test, deploy-infrastructure, deploy-backend]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -209,8 +229,13 @@ jobs:
   # デプロイ完了ログ
   log-deployment-result:
     name: Log Preview Deployment Result
-    if: always() && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
-    needs: [security-check, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    if: |
+      always() &&
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -237,8 +262,13 @@ jobs:
   # プレビューURL コメント
   comment-preview-urls:
     name: Comment Preview URLs
-    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success' && needs.deploy-frontend.result == 'success'
-    needs: [security-check, e2e-test, deploy-infrastructure, deploy-frontend]
+    if: |
+      needs.security-check.outputs.can-deploy == 'true' &&
+      needs.client-test.result == 'success' &&
+      needs.server-test.result == 'success' &&
+      needs.e2e-test.result == 'success' &&
+      needs.deploy-frontend.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
