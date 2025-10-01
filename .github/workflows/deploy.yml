@@ -1,10 +1,20 @@
 name: Production Deployment
 
 on:
-  push:
+  pull_request:
     branches:
-      - main    # REQ-104準拠: mainマージでproduction更新
-  workflow_dispatch: {}  # 手動実行オプション
+      - main
+    types: [closed]  # PRクローズ時にトリガー
+  workflow_dispatch:  # 手動実行オプション
+    inputs:
+      environment:
+        description: 'Deployment environment (production or preview)'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -15,31 +25,69 @@ env:
   TERRAFORM_VERSION: 1.6.0
 
 jobs:
-  # Phase 0: テスト実行
+  # Phase 0: 環境判定
+  setup-environment:
+    name: Setup Environment
+    # PRマージまたは手動実行のみ実行
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      environment-type: ${{ steps.env.outputs.environment-type }}
+      is-production: ${{ steps.env.outputs.is-production }}
+      is-preview: ${{ steps.env.outputs.is-preview }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # PRマージの場合はマージコミットを使用
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/setup-environment
+        with:
+          environment-override: ${{ github.event.inputs.environment || '' }}
+
+  # Phase 1: テスト実行
   run-tests:
     name: Run Tests Before Deploy
+    needs: [setup-environment]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/ci.yml
 
-  # Phase 1: デプロイ開始記録
+  # Phase 2: デプロイ開始記録
   log-deployment-start:
     name: Log Deployment Start
+    needs: [setup-environment]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Record Deployment Start
         uses: ./.github/actions/deployment-logger
         with:
           event-type: 'start'
           component: 'full-stack'
-          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          environment: ${{ needs.setup-environment.outputs.environment-type }}
           details: 'Starting full stack deployment'
 
-  # Phase 1: インフラストラクチャデプロイ
+  # Phase 3: インフラストラクチャデプロイ
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [run-tests, log-deployment-start]
+    needs: [setup-environment, run-tests, log-deployment-start]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     permissions:
       id-token: write
       contents: read
@@ -49,42 +97,52 @@ jobs:
       aws-region: ${{ vars.AWS_REGION }}
     secrets: inherit
 
-  # Phase 2: データベースマイグレーション
+  # Phase 4: データベースマイグレーション
   deploy-database:
     name: Deploy Database
-    needs: [deploy-infrastructure]
+    needs: [setup-environment, deploy-infrastructure]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
-      environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      environment-type: ${{ needs.setup-environment.outputs.environment-type }}
     secrets: inherit
 
-  # Phase 3: バックエンドデプロイ（database完了後、frontendと並行実行）
+  # Phase 5: バックエンドデプロイ（database完了後、frontendと並行実行）
   deploy-backend:
     name: Deploy Backend
-    needs: [deploy-database]
+    needs: [setup-environment, deploy-database]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-backend.yml
     with:
-      lambda-function-name: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.lambda-function-name-production || needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
-      environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      lambda-function-name: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.lambda-function-name-production || needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
+      environment-type: ${{ needs.setup-environment.outputs.environment-type }}
       aws-region: ${{ vars.AWS_REGION }}
-      cors-allow-origin: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
+      cors-allow-origin: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
     secrets: inherit
 
   # Debug: インフラ出力確認
   debug-infrastructure-outputs:
     name: Debug Infrastructure Outputs
-    needs: [deploy-infrastructure]
+    needs: [setup-environment, deploy-infrastructure]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Debug Infrastructure Outputs
         run: |
           echo "🔍 Infrastructure Outputs Debug:"
-          echo "Environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}"
-          echo "Branch: ${{ github.ref_name }}"
+          echo "Environment: ${{ needs.setup-environment.outputs.environment-type }}"
+          echo "Is Production: ${{ needs.setup-environment.outputs.is-production }}"
+          echo "Event: ${{ github.event_name }}"
           echo ""
           echo "📋 Production Outputs:"
           echo "next-public-api-base-url-production: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-production }}"
@@ -95,45 +153,50 @@ jobs:
           echo "next-public-site-url-preview: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
           echo ""
           echo "✅ Selected Values:"
-          echo "next-public-api-base-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
-          echo "next-public-site-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
+          echo "next-public-api-base-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
+          echo "next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
 
-  # Phase 4: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
+  # Phase 6: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-infrastructure, debug-infrastructure-outputs]
+    needs: [setup-environment, deploy-infrastructure, debug-infrastructure-outputs]
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/deploy-frontend.yml
     with:
-      environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
-      next-public-api-base-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
-      next-public-site-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
-      next-public-trusted-domains: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-trusted-domains-production || needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
+      environment-type: ${{ needs.setup-environment.outputs.environment-type }}
+      next-public-api-base-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+      next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
+      next-public-trusted-domains: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-trusted-domains-production || needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
       cloudflare-project-name: ${{ vars.PROJECT_NAME }}
     secrets: inherit
 
-  # Phase 5: デプロイ成功通知
+  # Phase 7: デプロイ成功通知
   notify-success:
     name: Notify Deployment Success
     if: success()
-    needs: [deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Record Deployment Success
         uses: ./.github/actions/deployment-logger
         with:
           event-type: 'success'
           component: 'full-stack'
-          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          environment: ${{ needs.setup-environment.outputs.environment-type }}
           details: 'All components deployed successfully'
 
       - name: Generate Deployment Summary
         uses: ./.github/actions/deployment-summary
         with:
-          environment-type: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
-          lambda-function-url: ${{ github.ref_name == 'main' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+          environment-type: ${{ needs.setup-environment.outputs.environment-type }}
+          lambda-function-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
           cloudflare-deployment-url: ${{ needs.deploy-frontend.outputs.deployment-url }}
           lambda-version: ${{ needs.deploy-backend.outputs.deployed-version }}
           terraform-outputs: ${{ needs.deploy-infrastructure.outputs.terraform-outputs }}
@@ -153,22 +216,24 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ github.run_id }}
 
-  # Phase 6: デプロイ失敗通知
+  # Phase 8: デプロイ失敗通知
   notify-failure:
     name: Notify Deployment Failure
     if: failure()
-    needs: [deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Record Deployment Failure
         uses: ./.github/actions/deployment-logger
         with:
           event-type: 'failure'
           component: 'full-stack'
-          environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          environment: ${{ needs.setup-environment.outputs.environment-type }}
           details: 'Deployment failed - check logs for details'
 
       - name: Send Failure Notification

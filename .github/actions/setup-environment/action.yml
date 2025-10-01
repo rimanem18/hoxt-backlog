@@ -1,0 +1,59 @@
+name: Setup Environment
+description: Determine deployment environment (production or preview)
+
+inputs:
+  environment-override:
+    description: 'Override environment type (production or preview). If empty, auto-detect from event context.'
+    required: false
+    default: ''
+
+outputs:
+  environment-type:
+    description: 'Deployment environment type: production or preview'
+    value: ${{ steps.determine.outputs.environment-type }}
+  is-production:
+    description: 'true if production environment, false otherwise'
+    value: ${{ steps.determine.outputs.is-production }}
+  is-preview:
+    description: 'true if preview environment, false otherwise'
+    value: ${{ steps.determine.outputs.is-preview }}
+
+runs:
+  using: composite
+  steps:
+    - id: determine
+      shell: bash
+      run: |
+        # 環境判定ロジック
+        # 1. environment-override が指定されていればそれを使用
+        # 2. PRマージイベントならproduction
+        # 3. それ以外（preview workflow等）はpreview
+
+        OVERRIDE="${{ inputs.environment-override }}"
+
+        if [[ -n "$OVERRIDE" ]]; then
+          # 手動実行時の環境指定を優先
+          ENV_TYPE="$OVERRIDE"
+          echo "🔧 Environment override specified: $ENV_TYPE"
+        elif [[ "${{ github.event_name }}" == "pull_request" ]] && [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+          # PRマージ時はproduction
+          ENV_TYPE="production"
+          echo "✅ PR merged to main: production environment"
+        else
+          # その他の場合はpreview
+          ENV_TYPE="preview"
+          echo "🔍 Default: preview environment"
+        fi
+
+        # 出力値を設定
+        echo "environment-type=$ENV_TYPE" >> $GITHUB_OUTPUT
+
+        if [[ "$ENV_TYPE" == "production" ]]; then
+          echo "is-production=true" >> $GITHUB_OUTPUT
+          echo "is-preview=false" >> $GITHUB_OUTPUT
+        else
+          echo "is-production=false" >> $GITHUB_OUTPUT
+          echo "is-preview=true" >> $GITHUB_OUTPUT
+        fi
+
+        echo "📋 Environment determined: $ENV_TYPE"
