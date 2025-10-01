@@ -176,7 +176,7 @@ jobs:
       environment-type: 'preview'
     secrets: inherit
 
-  # Phase 2: データベース（Preview schema）
+  # Phase 2: データベース（Preview schema）- Frontendと並列実行
   deploy-database:
     name: Deploy Preview Database
     if: |
@@ -191,7 +191,7 @@ jobs:
       environment-type: 'preview'
     secrets: inherit
 
-  # Phase 3: バックエンド（Preview Lambda）
+  # Phase 3: バックエンド（Preview Lambda）- Database完了後
   deploy-backend:
     name: Deploy Preview Backend
     if: |
@@ -208,7 +208,7 @@ jobs:
       cors-allow-origin: ${{ needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
     secrets: inherit
 
-  # Phase 4: フロントエンド（Preview Pages）
+  # Phase 2: フロントエンド（Preview Pages）- Database/Backendと並列実行
   deploy-frontend:
     name: Deploy Preview Frontend
     if: |
@@ -216,7 +216,7 @@ jobs:
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-backend]
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -267,8 +267,11 @@ jobs:
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
+      needs.deploy-infrastructure.result == 'success' &&
+      needs.deploy-database.result == 'success' &&
+      needs.deploy-backend.result == 'success' &&
       needs.deploy-frontend.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-frontend]
+    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

@@ -198,7 +198,7 @@ jobs:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
     secrets: inherit
 
-  # Phase 6: データベースマイグレーション
+  # Phase 6: データベースマイグレーション - Frontendと並列実行
   deploy-database:
     name: Deploy Database
     needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
@@ -212,7 +212,7 @@ jobs:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
     secrets: inherit
 
-  # Phase 7: バックエンドデプロイ（database完了後、frontendと並行実行）
+  # Phase 7: バックエンドデプロイ（database完了後）
   deploy-backend:
     name: Deploy Backend
     needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database]
@@ -260,10 +260,10 @@ jobs:
           echo "next-public-api-base-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}"
           echo "next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}"
 
-  # Phase 8: フロントエンドデプロイ（infrastructure完了後、backendと並行実行）
+  # Phase 8: フロントエンドデプロイ（infrastructure完了後、database/backendと並列実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, debug-infrastructure-outputs]
+    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
