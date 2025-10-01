@@ -35,15 +35,17 @@ flowchart TD
 flowchart TD
     A[PR Created/Updated] --> B[GitHub Actions Trigger]
     B --> C[Terraform Plan Only]
-    C --> D[Database Migration<br/>PostgreSQL preview schema]
-    D --> E[Lambda $LATEST Deploy<br/>with preview schema]
-    E --> F[CloudFlare Preview Deploy]
+    C --> D[Database Migration<br/>PostgreSQL shared preview schema<br/>app_projectname_preview 上書き更新]
+    D --> E[Lambda Preview Function Deploy<br/>shared function, overwrite deployment]
+    E --> F[CloudFlare Preview Deploy<br/>via Direct Upload API]
     F --> G[Preview Environment Ready]
-    
-    H[PR Closed] --> I[Cleanup Preview Resources]
-    I --> J[Delete CloudFlare Preview]
-    I --> K[Delete Lambda Version]
-    I --> L[Cleanup PostgreSQL preview schema]
+    G --> H[Comment PR with Preview URL]
+
+    I[PR Closed] --> J[No Cleanup Action]
+    J --> K[Resources remain for next PR<br/>app_projectname_preview schema reused]
+    J --> L[Lambda Preview Function unchanged]
+    J --> M[CloudFlare manages preview lifecycle]
+    M --> N[Ready for Next PR]
 ```
 
 ## GitHub OIDC認証フロー
@@ -86,7 +88,7 @@ graph TD
     end
     
     subgraph "Phase 3: Database"
-        F --> G[drizzle-kit Migration<br/>Production: base_schema<br/>Preview: base_schema_preview]
+        F --> G[drizzle-kit Migration<br/>Production: app_projectname<br/>Preview: app_projectname_preview]
         G --> H[Database Schema Ready]
     end
     
@@ -195,13 +197,48 @@ flowchart TD
     B --> C{Secrets Detected?}
     C -->|Yes| D[Block Push]
     C -->|No| E[Continue to Deploy Pipeline]
-    
+
     D --> F[Notify Security Team]
     F --> G[Quarantine Repository]
-    
-    E --> H[SAST Scan]
-    H --> I{Vulnerabilities Found?}
-    I -->|High/Critical| J[Block Deploy]
-    I -->|Low/Medium| K[Deploy with Warning]
-    I -->|None| L[Continue Deploy]
+
+    E --> H[TruffleHog Secret Scan]
+    H --> I[Semgrep SAST Scan]
+    I --> J{Vulnerabilities Found?}
+    J -->|High/Critical| K[Block Deploy]
+    J -->|Low/Medium| L[Deploy with Warning]
+    J -->|None| M[Continue Deploy]
+```
+
+## デプロイ通知フロー
+
+```mermaid
+flowchart TD
+    A[Deploy Start] --> B[Run Deployment Pipeline]
+    B --> C{Deploy Result}
+
+    C -->|Success| D[Collect Success Metadata]
+    D --> E[Format Discord Embed<br/>Green Color]
+    E --> F[Send Discord Webhook]
+    F --> G[Post to Notification Channel]
+
+    C -->|Failure| H[Collect Error Details]
+    H --> I[Format Discord Embed<br/>Red Color]
+    I --> J[Include Job Logs Link]
+    J --> F
+
+    G --> K[Team Notified]
+
+    subgraph "Success Metadata"
+        D1[Commit SHA]
+        D2[Branch Name]
+        D3[Actor]
+        D4[Components Deployed]
+    end
+
+    subgraph "Failure Metadata"
+        H1[Failed Step]
+        H2[Error Message]
+        H3[Job Logs URL]
+        H4[Retry Instructions]
+    end
 ```

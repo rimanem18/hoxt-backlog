@@ -229,13 +229,17 @@ export interface CloudFlarePagesDeployResult {
 
 /**
  * PostgreSQLスキーマ設定
+ *
+ * スキーマ分離戦略による環境分離を実現:
+ * - Production: app_projectname
+ * - Preview: app_projectname_preview
  */
 export interface PostgreSQLSchemaConfig {
   /** データベースURL */
   database_url: string;
-  /** ベーススキーマ名 */
+  /** ベーススキーマ名（環境接尾辞なし） */
   base_schema: string;
-  /** 実際のスキーマ名 */
+  /** 実際に使用するスキーマ名（preview時は base_schema + '_preview'） */
   schema_name: string;
   /** 環境種別 */
   environment: 'production' | 'preview';
@@ -319,8 +323,8 @@ export interface SupabaseMigrationResult {
   error?: string;
   /** 環境（本番/プレビュー） */
   environment: 'production' | 'preview';
-  /** テーブルプレフィックス */
-  table_prefix: string;
+  /** スキーマ名 */
+  schema_name: string;
 }
 
 // ========================================
@@ -396,21 +400,35 @@ export interface SecurityFinding {
 
 /**
  * 環境別設定
+ *
+ * Secrets統合戦略：
+ * - Repository Secrets に集約し Environment Secrets は廃止
+ * - 設定項目を60%削減、更新時の修正箇所を1箇所に統一
+ * - OIDC Trust Policy で環境別アクセス制御を実現
+ *
+ * CORS設定：
+ * - access_allow_origin: 許可するオリジン（Production/Preview で異なる）
+ * - access_allow_methods: 許可するHTTPメソッド
+ * - access_allow_headers: 許可するリクエストヘッダー
+ *
+ * スキーマ分離戦略：
+ * - Production: base_schema (例: app_projectname)
+ * - Preview: base_schema + '_preview' (例: app_projectname_preview)
  */
 export interface EnvironmentConfig {
   /** 環境名 */
   name: 'production' | 'preview';
-  /** ベーステーブルプレフィックス */
-  base_table_prefix: string;
-  /** 実際に使用するテーブルプレフィックス（preview時は base_table_prefix + '_dev'） */
-  table_prefix: string;
+  /** ベーススキーマ名（環境接尾辞なし） */
+  base_schema: string;
+  /** 実際に使用するスキーマ名（preview時は base_schema + '_preview'） */
+  schema_name: string;
   /** AWS設定 */
   aws: {
     region: string;
     account_id: string;
     role_arn: string;
   };
-  /** CloudFlare設定 */
+  /** CloudFlare設定（単一プロジェクト管理による構成最小化） */
   cloudflare: CloudFlarePagesConfig;
   /** Supabase設定 */
   supabase: SupabaseConfig;
@@ -487,4 +505,58 @@ export interface HealthCheckResponse {
   response_time: number;
   /** 詳細情報 */
   details?: Record<string, unknown>;
+}
+
+// ========================================
+// 監視・通知関連型定義（将来拡張用）
+// ========================================
+
+/**
+ * 監視モジュール設定
+ *
+ * Terraform monitoring モジュールで使用される設定
+ * 現在は将来の拡張に備えた型定義
+ */
+export interface MonitoringConfig {
+  /** プロジェクト名 */
+  project_name: string;
+  /** 監視対象Lambda関数名リスト */
+  lambda_function_names: string[];
+  /** CloudWatch アラーム設定 */
+  cloudwatch_alarms?: {
+    /** エラー率閾値（%） */
+    error_rate_threshold: number;
+    /** 応答時間閾値（ms） */
+    response_time_threshold: number;
+    /** 評価期間（分） */
+    evaluation_periods: number;
+  };
+  /** Discord 通知設定 */
+  discord_notification?: {
+    /** Webhook URL（Secret管理） */
+    webhook_url_secret_name: string;
+    /** 通知レベル */
+    notification_level: 'all' | 'errors_only' | 'critical_only';
+  };
+}
+
+/**
+ * Discord通知ペイロード
+ */
+export interface DiscordNotificationPayload {
+  /** 埋め込みメッセージ */
+  embeds: Array<{
+    /** タイトル */
+    title: string;
+    /** 色（10進数） */
+    color: number;
+    /** フィールド */
+    fields: Array<{
+      name: string;
+      value: string;
+      inline?: boolean;
+    }>;
+    /** タイムスタンプ */
+    timestamp: string;
+  }>;
 }

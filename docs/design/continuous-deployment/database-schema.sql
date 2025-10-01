@@ -2,13 +2,28 @@
 -- MVP Google認証システム データベーススキーマ
 --
 -- 作成日: 2025-08-12
--- 更新日: 2025-08-12
+-- 更新日: 2025-09-30
 --
 -- 設計原則:
 -- 1. プロバイダー非依存設計（将来的な拡張対応）
--- 2. 環境変数による動的テーブル名接頭辞対応
+-- 2. PostgreSQLスキーマによる環境分離
 -- 3. DDD + クリーンアーキテクチャ対応
 -- 4. パフォーマンス最適化済みインデックス設計
+--
+-- 環境別スキーマ分離運用:
+-- - Production環境: ${BASE_SCHEMA} = "app_projectname"
+--   → スキーマ名: app_projectname
+--   → テーブル参照例: app_projectname.users
+-- - Preview環境: ${BASE_SCHEMA} = "app_projectname_preview"
+--   → スキーマ名: app_projectname_preview
+--   → テーブル参照例: app_projectname_preview.users
+-- - Terraform変数: preview_schema_suffix = "_preview"
+-- - PR Close時: DROP SCHEMA app_projectname_preview CASCADE で一括削除
+--
+-- スキーマ分離の利点:
+-- - 環境間の完全な論理分離（名前空間レベル）
+-- - PR Close時の一括削除が容易（CASCADE）
+-- - 権限管理の簡素化（スキーマ単位で制御）
 -- ============================================================================
 
 -- ============================================================================
@@ -27,7 +42,8 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- 認証プロバイダー種別
 -- 将来的な拡張を考慮した enum 型
-CREATE TYPE auth_provider_type AS ENUM (
+-- スキーマ内に定義することで環境分離を実現
+CREATE TYPE ${BASE_SCHEMA}.auth_provider_type AS ENUM (
     'google',
     'apple',
     'microsoft',
@@ -42,7 +58,7 @@ CREATE TYPE auth_provider_type AS ENUM (
 
 -- ユーザーテーブル
 -- DDD User Entity に対応するメインテーブル
-CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}users (
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.users (
     -- プライマリキー（UUID v4）
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
@@ -51,7 +67,7 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}users (
     external_id VARCHAR(255) NOT NULL,
 
     -- 認証プロバイダー種別
-    provider auth_provider_type NOT NULL,
+    provider ${BASE_SCHEMA}.auth_provider_type NOT NULL,
 
     -- ユーザー基本情報
     email VARCHAR(320) NOT NULL, -- RFC 5321 準拠の最大長
@@ -77,33 +93,33 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}users (
 -- 高速認証のための複合インデックス
 -- JWT検証時の external_id + provider での検索を最適化
 CREATE INDEX IF NOT EXISTS idx_users_external_id_provider
-ON ${DB_TABLE_PREFIX}users (external_id, provider);
+ON ${BASE_SCHEMA}.users (external_id, provider);
 
 -- メールアドレス検索用インデックス
 -- 重複チェック・ユーザー検索用
 CREATE INDEX IF NOT EXISTS idx_users_email
-ON ${DB_TABLE_PREFIX}users (email);
+ON ${BASE_SCHEMA}.users (email);
 
 -- 最終ログイン日時でのソート・フィルタ用インデックス
 -- 分析・管理画面での使用を想定
 CREATE INDEX IF NOT EXISTS idx_users_last_login_at
-ON ${DB_TABLE_PREFIX}users (last_login_at DESC NULLS LAST);
+ON ${BASE_SCHEMA}.users (last_login_at DESC NULLS LAST);
 
 -- プロバイダー別統計用インデックス
 -- 管理画面・分析での使用を想定
 CREATE INDEX IF NOT EXISTS idx_users_provider_created_at
-ON ${DB_TABLE_PREFIX}users (provider, created_at DESC);
+ON ${BASE_SCHEMA}.users (provider, created_at DESC);
 
 -- ============================================================================
 -- Row Level Security (RLS)（行レベルセキュリティ）
 -- ============================================================================
 
 -- RLSを有効化（要件 NFR-103 対応）
-ALTER TABLE ${DB_TABLE_PREFIX}users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ${BASE_SCHEMA}.users ENABLE ROW LEVEL SECURITY;
 
 -- ユーザーが自分自身の情報のみアクセス可能なポリシー
 -- JWT の sub claim と external_id が一致する場合のみ許可
-CREATE POLICY users_self_access ON ${DB_TABLE_PREFIX}users
+CREATE POLICY users_self_access ON ${BASE_SCHEMA}.users
     FOR ALL
     USING (
         -- Supabase の auth.jwt() 関数を使用してJWTからsubを取得
@@ -127,7 +143,7 @@ $$ language 'plpgsql';
 
 -- users テーブルの updated_at 自動更新トリガー
 CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON ${DB_TABLE_PREFIX}users
+    BEFORE UPDATE ON ${BASE_SCHEMA}.users
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -140,7 +156,7 @@ CREATE TRIGGER update_users_updated_at
 DO $$
 BEGIN
     IF current_setting('app.environment', true) = 'development' THEN
-        INSERT INTO ${DB_TABLE_PREFIX}users (
+        INSERT INTO ${BASE_SCHEMA}.users (
             external_id,
             provider,
             email,
@@ -164,7 +180,7 @@ END $$;
 
 -- 統計・分析用ビュー
 -- 管理画面・ダッシュボードでの使用を想定
-CREATE OR REPLACE VIEW ${DB_TABLE_PREFIX}user_statistics AS
+CREATE OR REPLACE VIEW ${BASE_SCHEMA}.user_statistics AS
 SELECT
     provider,
     COUNT(*) as total_users,
@@ -172,7 +188,7 @@ SELECT
     COUNT(CASE WHEN last_login_at > CURRENT_TIMESTAMP - INTERVAL '7 days' THEN 1 END) as active_users_7d,
     MIN(created_at) as first_user_created,
     MAX(created_at) as latest_user_created
-FROM ${DB_TABLE_PREFIX}users
+FROM ${BASE_SCHEMA}.users
 GROUP BY provider
 ORDER BY total_users DESC;
 
@@ -182,9 +198,9 @@ ORDER BY total_users DESC;
 
 /*
 -- 認証ログテーブル（監査・セキュリティ用）
-CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}auth_logs (
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.auth_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES ${DB_TABLE_PREFIX}users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES ${BASE_SCHEMA}.users(id) ON DELETE CASCADE,
     action VARCHAR(50) NOT NULL, -- 'login', 'logout', 'token_refresh'
     provider auth_provider_type NOT NULL,
     ip_address INET,
@@ -195,9 +211,9 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}auth_logs (
 );
 
 -- セッション管理テーブル（高度なセッション制御用）
-CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}user_sessions (
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES ${DB_TABLE_PREFIX}users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES ${BASE_SCHEMA}.users(id) ON DELETE CASCADE,
     session_token VARCHAR(255) NOT NULL UNIQUE,
     refresh_token VARCHAR(255),
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -209,7 +225,7 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}user_sessions (
 );
 
 -- ドメインイベントテーブル（イベントソーシング用）
-CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}domain_events (
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.domain_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     aggregate_id UUID NOT NULL,
     aggregate_type VARCHAR(100) NOT NULL,
@@ -220,9 +236,9 @@ CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}domain_events (
 );
 
 -- アカウント連携テーブル（複数プロバイダー対応用）
-CREATE TABLE IF NOT EXISTS ${DB_TABLE_PREFIX}user_provider_links (
+CREATE TABLE IF NOT EXISTS ${BASE_SCHEMA}.user_provider_links (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES ${DB_TABLE_PREFIX}users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES ${BASE_SCHEMA}.users(id) ON DELETE CASCADE,
     provider auth_provider_type NOT NULL,
     external_id VARCHAR(255) NOT NULL,
     linked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

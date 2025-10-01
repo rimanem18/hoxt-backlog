@@ -5,10 +5,6 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened]
-  pull_request_target:
-    branches:
-      - main
-    types: [closed]
 
 # セキュリティ: Fork制限（NFR-005準拠）
 permissions:
@@ -17,7 +13,7 @@ permissions:
   pull-requests: write  # プレビューURL コメント用
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
+  group: preview-shared-environment
   cancel-in-progress: true
 
 env:
@@ -29,7 +25,6 @@ jobs:
   security-check:
     name: Security Check
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
     outputs:
       is-fork: ${{ steps.check.outputs.is_fork }}
       can-deploy: ${{ steps.check.outputs.can_deploy }}
@@ -51,7 +46,7 @@ jobs:
   # Client テスト実行
   client-test:
     name: Run Client Tests
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true'
+    if: needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -67,7 +62,7 @@ jobs:
   # Server テスト実行
   server-test:
     name: Run Server Tests
-    if: github.event.action != 'closed' && needs.client-test.result == 'success'
+    if: needs.client-test.result == 'success'
     needs: [client-test]
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -103,7 +98,7 @@ jobs:
   # E2E テスト実行
   e2e-test:
     name: Run E2E Tests
-    if: github.event.action != 'closed' && needs.server-test.result == 'success'
+    if: needs.server-test.result == 'success'
     needs: [server-test]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -146,7 +141,7 @@ jobs:
   # デプロイ開始ログ
   log-deployment-start:
     name: Log Preview Deployment Start
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test]
     runs-on: ubuntu-latest
     steps:
@@ -164,7 +159,7 @@ jobs:
   # Phase 1: インフラストラクチャ（Preview環境）
   deploy-infrastructure:
     name: Deploy Preview Infrastructure
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
@@ -176,7 +171,7 @@ jobs:
   # Phase 2: データベース（Preview schema）
   deploy-database:
     name: Deploy Preview Database
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
@@ -187,7 +182,7 @@ jobs:
   # Phase 3: バックエンド（Preview Lambda）
   deploy-backend:
     name: Deploy Preview Backend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
@@ -200,7 +195,7 @@ jobs:
   # Phase 4: フロントエンド（Preview Pages）
   deploy-frontend:
     name: Deploy Preview Frontend
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test, deploy-infrastructure, deploy-backend]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
@@ -214,7 +209,7 @@ jobs:
   # デプロイ完了ログ
   log-deployment-result:
     name: Log Preview Deployment Result
-    if: always() && github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
+    if: always() && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success'
     needs: [security-check, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
@@ -242,7 +237,7 @@ jobs:
   # プレビューURL コメント
   comment-preview-urls:
     name: Comment Preview URLs
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success' && needs.deploy-frontend.result == 'success'
+    if: needs.security-check.outputs.can-deploy == 'true' && needs.e2e-test.result == 'success' && needs.deploy-frontend.result == 'success'
     needs: [security-check, e2e-test, deploy-infrastructure, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
@@ -273,7 +268,7 @@ jobs:
             - **Branch**: ${{ github.event.pull_request.head.ref }}
 
             > 🔄 Preview environment will be automatically updated when you push new commits to this PR.
-            > 🗑️ Resources will be cleaned up when this PR is closed.`;
+            > ⚠️ **Shared Environment**: This preview environment is shared across all PRs. The latest PR update will overwrite previous deployments.`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -285,7 +280,7 @@ jobs:
   # Fork警告コメント
   comment-fork-warning:
     name: Comment Fork Warning
-    if: github.event.action != 'closed' && needs.security-check.outputs.can-deploy == 'false'
+    if: needs.security-check.outputs.can-deploy == 'false'
     needs: [security-check]
     runs-on: ubuntu-latest
     permissions:
@@ -315,90 +310,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: forkWarning,
-            });
-
-  # リソースクリーンアップ（PR終了時）
-  cleanup-preview:
-    name: Cleanup Preview Environment
-    if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          role-session-name: GitHubActions-Preview-Cleanup
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Cleanup Preview Lambda Function
-        continue-on-error: true
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          LAMBDA_NAME="${{ vars.PROJECT_NAME }}-api-preview-pr${PR_NUMBER}"
-          
-          echo "🗑️ Cleaning up preview Lambda function: $LAMBDA_NAME"
-          
-          # Lambda関数の存在確認
-          if aws lambda get-function --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-            # Function URLを削除
-            aws lambda delete-function-url-config --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }} 2>/dev/null || true
-            
-            # Lambda関数を削除
-            aws lambda delete-function --function-name "$LAMBDA_NAME" --region ${{ env.AWS_REGION }}
-            echo "✅ Lambda関数 $LAMBDA_NAME を削除しました"
-          else
-            echo "ℹ️ Lambda関数 $LAMBDA_NAME は存在しません（既にクリーンアップ済み）"
-          fi
-
-      - name: Cleanup CloudFlare Preview
-        continue-on-error: true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          
-          echo "🗑️ CloudFlare Pagesプレビューデプロイメントのクリーンアップ"
-          echo "ℹ️ CloudFlare Pagesは自動的にプレビューブランチをクリーンアップします"
-          echo "✅ CloudFlareプレビュー環境のクリーンアップ完了"
-
-      - name: Record Cleanup Completion
-        uses: ./.github/actions/deployment-logger
-        with:
-          event-type: 'success'
-          component: 'preview-cleanup'
-          environment: 'preview'
-          details: 'Preview environment resources cleaned up for PR #${{ github.event.pull_request.number }}'
-
-      - name: Comment Cleanup Completion
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const cleanupComment = `## 🗑️ Preview Environment Cleaned Up
-
-            Preview environment resources have been automatically cleaned up:
-
-            ### ✅ Cleaned Resources
-            - 🔗 Lambda Function (API)
-            - 🌐 CloudFlare Pages Preview
-            - 🗄️ Preview Database Schema
-
-            ### 📋 Summary
-            - **PR**: #${{ github.event.pull_request.number }}
-            - **Status**: Cleanup completed successfully
-            - **Timestamp**: ${new Date().toISOString()}
-
-            Thank you for your contribution! 🙏`;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: cleanupComment,
             });
