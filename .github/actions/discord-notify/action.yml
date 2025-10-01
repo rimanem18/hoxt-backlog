@@ -36,6 +36,14 @@ inputs:
     description: 'GitHub Actions run ID'
     required: false
     default: ${{ github.run_id }}
+  repository-url:
+    description: 'Full repository URL'
+    required: false
+    default: ''
+  frontend-url:
+    description: 'Frontend production URL'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -79,21 +87,38 @@ runs:
       run: |
         # タイムスタンプを生成
         TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-        
+
         # 成功時と失敗時でペイロードを分岐
         if [ "${{ inputs.status }}" = "success" ]; then
+          # 基本フィールドを構築
+          FIELDS='[
+            {"name": "Commit", "value": "${{ inputs.commit-sha }}", "inline": true},
+            {"name": "Branch", "value": "${{ inputs.branch-name }}", "inline": true},
+            {"name": "Actor", "value": "${{ inputs.actor }}", "inline": true},
+            {"name": "Repository", "value": "${{ inputs.repository }}", "inline": false},
+            {"name": "Components Deployed", "value": "${{ steps.prepare.outputs.components }}", "inline": false}'
+
+          # Repository URLが空でない場合は追加
+          if [ -n "${{ inputs.repository-url }}" ]; then
+            FIELDS="$FIELDS"',
+            {"name": "🔗 Repository URL", "value": "${{ inputs.repository-url }}", "inline": false}'
+          fi
+
+          # Frontend URLが空でない場合は追加
+          if [ -n "${{ inputs.frontend-url }}" ]; then
+            FIELDS="$FIELDS"',
+            {"name": "🌐 Frontend URL", "value": "${{ inputs.frontend-url }}", "inline": false}'
+          fi
+
+          # フィールド配列を閉じる
+          FIELDS="$FIELDS"']'
+
           PAYLOAD=$(cat <<EOF
         {
           "embeds": [{
             "title": "${{ steps.prepare.outputs.title }}",
             "color": ${{ steps.prepare.outputs.color }},
-            "fields": [
-              {"name": "Commit", "value": "${{ inputs.commit-sha }}", "inline": true},
-              {"name": "Branch", "value": "${{ inputs.branch-name }}", "inline": true},
-              {"name": "Actor", "value": "${{ inputs.actor }}", "inline": true},
-              {"name": "Repository", "value": "${{ inputs.repository }}", "inline": false},
-              {"name": "Components Deployed", "value": "${{ steps.prepare.outputs.components }}", "inline": false}
-            ],
+            "fields": $FIELDS,
             "timestamp": "$TIMESTAMP"
           }]
         }
