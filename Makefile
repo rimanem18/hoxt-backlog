@@ -69,6 +69,8 @@ iac-plan-save:
 		export PROJECT_NAME=${PROJECT_NAME} && \
 		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
 		export TF_VAR_database_url=${DATABASE_URL} && \
+		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
+		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
@@ -92,6 +94,8 @@ iac-bootstrap-apply:
 		export PROJECT_NAME=${PROJECT_NAME} && \
 		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
 		export TF_VAR_database_url=${DATABASE_URL} && \
+		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
+		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
 		cd bootstrap && \
 		terraform apply terraform.tfplan'
 	@echo "✅ Bootstrap構成の適用が完了しました。"

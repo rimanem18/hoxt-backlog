@@ -74,7 +74,7 @@ resource "aws_lambda_function" "production" {
       NODE_ENV                = "production"
       BASE_SCHEMA             = "app_${local.project_name}"
       DATABASE_URL            = var.database_url
-      ACCESS_ALLOW_ORIGIN     = "https://${var.domain_name}"
+      ACCESS_ALLOW_ORIGIN     = var.access_allow_origin_production
       ACCESS_ALLOW_METHODS    = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
       ACCESS_ALLOW_HEADERS    = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
       USE_JWKS_VERIFIER       = "true"
@@ -103,7 +103,7 @@ resource "aws_lambda_function" "preview" {
       NODE_ENV                = "development"
       BASE_SCHEMA             = "app_${local.project_name}_preview"
       DATABASE_URL            = var.database_url
-      ACCESS_ALLOW_ORIGIN     = "https://*.${local.project_name}.pages.dev"
+      ACCESS_ALLOW_ORIGIN     = var.access_allow_origin_preview
       ACCESS_ALLOW_METHODS    = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
       ACCESS_ALLOW_HEADERS    = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
       USE_JWKS_VERIFIER       = "true"
