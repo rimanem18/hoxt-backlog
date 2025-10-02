@@ -281,7 +281,7 @@ jobs:
         with:
           script: |
             // URL正規化処理
-            const frontendUrl = '${{ needs.deploy-frontend.outputs.deployment-url }}' || '(取得中...)';
+            const frontendUrl = '${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}';
             const apiUrl = '${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}';
             const healthUrl = apiUrl.replace(/\/$/, '') + '/api/health'; // 正しいAPIエンドポイントパス
             

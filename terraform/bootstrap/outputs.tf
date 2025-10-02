@@ -106,12 +106,12 @@ output "next_public_trusted_domains_preview" {
 # CORS設定用
 output "access_allow_origin_production" {
   description = "Production CORS Allow Origin URL"
-  value       = "https://${var.domain_name}"
+  value       = var.access_allow_origin_production
 }
 
 output "access_allow_origin_preview" {
   description = "Preview CORS Allow Origin URL with wildcard"
-  value       = "https://*.${local.project_name}.pages.dev"
+  value       = var.access_allow_origin_preview
 }
 
 output "access_allow_methods" {

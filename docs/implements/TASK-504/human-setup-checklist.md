@@ -184,6 +184,8 @@ AWS_ROLE_ARN: [統合AWSのIAMロールARN]
 ```
 PROJECT_NAME: your-project
 PRODUCTION_DOMAIN: your-project.net
+ACCESS_ALLOW_ORIGIN_PRODUCTION: https://your-project.net
+ACCESS_ALLOW_ORIGIN_PREVIEW: https://*.your-project.pages.dev
 ```
 
 #### 4-3. 環境分離メカニズム

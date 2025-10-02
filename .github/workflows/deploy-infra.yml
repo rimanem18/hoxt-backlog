@@ -109,3 +109,5 @@ jobs:
           TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
           TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
           TF_VAR_environment_type: ${{ inputs.environment-type }}
+          TF_VAR_access_allow_origin_production: ${{ vars.ACCESS_ALLOW_ORIGIN_PRODUCTION }}
+          TF_VAR_access_allow_origin_preview: ${{ vars.ACCESS_ALLOW_ORIGIN_PREVIEW }}

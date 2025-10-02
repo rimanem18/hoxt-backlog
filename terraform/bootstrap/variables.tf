@@ -31,3 +31,13 @@ variable "database_url" {
   type        = string
   sensitive   = true
 }
+
+variable "access_allow_origin_production" {
+  description = "Production CORS allow origin URL"
+  type        = string
+}
+
+variable "access_allow_origin_preview" {
+  description = "Preview CORS allow origin URL (supports wildcard)"
+  type        = string
+}

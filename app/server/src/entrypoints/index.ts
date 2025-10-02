@@ -10,11 +10,11 @@ import { auth, greet, health, user } from '@/presentation/http/routes';
 const createServer = (): Hono => {
   const app = new Hono();
 
+  // 【CORS】: ミドルウェアを API ルートに適用（エラーレスポンスにもCORSヘッダーが必要なため最初に配置）
+  app.use('/api/*', corsMiddleware);
+
   // 【エラーハンドリング】: 全APIルートに統一エラーレスポンス適用
   app.use('/api/*', errorHandlerMiddleware);
-
-  // 【CORS】: ミドルウェアを API ルートに適用
-  app.use('/api/*', corsMiddleware);
 
   // API ルートをマウント
   app.route('/api', greet);
