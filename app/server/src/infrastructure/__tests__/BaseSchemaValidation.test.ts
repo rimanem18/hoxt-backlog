@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { getBaseSchema } from '../database/schema';
 
 describe('BASE_SCHEMA環境変数検証', () => {
   // 元の環境変数を保存
@@ -9,6 +8,7 @@ describe('BASE_SCHEMA環境変数検証', () => {
   // 各テスト前に環境変数をクリア
   beforeEach(() => {
     delete process.env.BASE_SCHEMA;
+    delete process.env.DATABASE_URL;
   });
 
   // テスト後に元の環境変数を復元
@@ -26,46 +26,47 @@ describe('BASE_SCHEMA環境変数検証', () => {
     }
   });
 
-  test('BASE_SCHEMA未設定時にgetBaseSchema()で例外がスローされること', () => {
+  test('BASE_SCHEMA未設定時にgetBaseSchema()で例外がスローされること', async () => {
     // Given: BASE_SCHEMAが未設定
     // beforeEach でクリア済み
 
-    // When & Then: getBaseSchema()で例外が発生
-    expect(() => {
-      getBaseSchema();
-    }).toThrow('環境変数設定エラー');
+    // When & Then: 動的importでschema.tsを読み込むと例外が発生
+    await expect(import(`../database/schema?t=${Date.now()}`)).rejects.toThrow(
+      '環境変数設定エラー',
+    );
   });
 
-  test('空文字のBASE_SCHEMAでgetBaseSchema()で例外がスローされること', () => {
+  test('空文字のBASE_SCHEMAでgetBaseSchema()で例外がスローされること', async () => {
     // Given: BASE_SCHEMAが空文字
     process.env.BASE_SCHEMA = '';
 
-    // When & Then: getBaseSchema()で例外が発生
-    expect(() => {
-      getBaseSchema();
-    }).toThrow('環境変数設定エラー');
+    // When & Then: 動的importでschema.tsを読み込むと例外が発生
+    await expect(import(`../database/schema?t=${Date.now()}`)).rejects.toThrow(
+      '環境変数設定エラー',
+    );
   });
 
-  test('有効なBASE_SCHEMAが設定されている場合にgetBaseSchema()が正常に値を返すこと', () => {
+  test('有効なBASE_SCHEMAが設定されている場合にschema.tsが正常にロードされること', async () => {
     // Given: 有効なBASE_SCHEMA
     process.env.BASE_SCHEMA = 'test_schema';
 
-    // When: getBaseSchema()を実行
-    const result = getBaseSchema();
+    // When: schema.tsを動的にimport
+    const schemaModule = await import(`../database/schema?t=${Date.now()}`);
 
-    // Then: 正しい値が返される
-    expect(result).toBe('test_schema');
+    // Then: getBaseSchema関数が存在し、正しい値を返す
+    expect(schemaModule.getBaseSchema).toBeDefined();
+    expect(schemaModule.getBaseSchema()).toBe('test_schema');
   });
 
-  test('DATABASE_URLが未設定でもBASE_SCHEMAが設定されていれば正常に動作すること', () => {
+  test('DATABASE_URLが未設定でもBASE_SCHEMAが設定されていれば正常に動作すること', async () => {
     // Given: BASE_SCHEMAのみ設定、DATABASE_URL未設定
     process.env.BASE_SCHEMA = 'production_schema';
     delete process.env.DATABASE_URL;
 
-    // When: getBaseSchema()を実行
-    const result = getBaseSchema();
+    // When: schema.tsを動的にimport
+    const schemaModule = await import(`../database/schema?t=${Date.now()}`);
 
-    // Then: 正しい値が返される（drizzle-kit対応）
-    expect(result).toBe('production_schema');
+    // Then: 正常にロードされる（drizzle-kit対応）
+    expect(schemaModule.getBaseSchema()).toBe('production_schema');
   });
 });
