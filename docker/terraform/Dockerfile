@@ -29,16 +29,23 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
  && rm -rf aws awscliv2.zip \
  && aws --version
 
+# 非rootユーザーterraformを作成
+RUN groupadd -r terraform && useradd -r -g terraform terraform
+
 # 作業ディレクトリ設定
 WORKDIR /workspace
 
 # Terraformプラグインキャッシュディレクトリ作成
 ENV TF_PLUGIN_CACHE_DIR=/workspace/.terraform.d/plugin-cache
-RUN mkdir -p $TF_PLUGIN_CACHE_DIR
+RUN mkdir -p $TF_PLUGIN_CACHE_DIR && \
+    chown -R terraform:terraform /workspace
 
 # エントリポイント設定
 COPY ./docker/terraform/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# 非rootユーザーに切り替え
+USER terraform
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["terraform", "--help"]
