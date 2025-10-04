@@ -26,22 +26,12 @@ jobs:
     name: Security Check
     runs-on: ubuntu-latest
     outputs:
-      is-fork: ${{ steps.check.outputs.is_fork }}
-      can-deploy: ${{ steps.check.outputs.can_deploy }}
+      is-fork: ${{ steps.fork.outputs.is-fork }}
+      can-deploy: ${{ steps.fork.outputs.can-proceed }}
     steps:
       - name: Check Fork Status
-        id: check
-        run: |
-          IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
-          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
-          
-          if [ "$IS_FORK" = "true" ]; then
-            echo "can_deploy=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Fork からのPRのため、プレビューデプロイはスキップされます（セキュリティ制限）"
-          else
-            echo "can_deploy=true" >> $GITHUB_OUTPUT
-            echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
-          fi
+        id: fork
+        uses: ./.github/actions/fork-check
 
   # Client テスト実行
   client-test:
