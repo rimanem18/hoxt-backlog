@@ -29,6 +29,33 @@ jobs:
       is-fork: ${{ steps.fork.outputs.is-fork }}
       can-deploy: ${{ steps.fork.outputs.can-proceed }}
     steps:
+      - name: Determine checkout ref for fork safety
+        id: checkout_ref
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
+            if [ "$IS_FORK" = "true" ]; then
+              # Fork PR: main ブランチを使用（改ざん対策）
+              echo "ref=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+              echo "📌 Fork PR detected: using base branch for security"
+            else
+              # 同一リポジトリ PR: マージコミットを使用（実際のPR挙動を再現）
+              echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+              echo "📌 Same-repo PR: using merge commit"
+            fi
+          else
+            # push/workflow_dispatch: 現在のコミット（実際のマージ挙動を再現）
+            echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "📌 Non-PR event: using current commit"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.checkout_ref.outputs.ref }}
+          persist-credentials: false
+
       - name: Check Fork Status
         id: fork
         uses: ./.github/actions/fork-check
