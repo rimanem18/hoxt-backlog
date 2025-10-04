@@ -53,7 +53,7 @@
 **リクエスト仕様**:
 ```http
 GET /api/user/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <JWT_TOKEN_REDACTED>.
 ```
 
 **成功レスポンス (200 OK) - api-endpoints.md仕様準拠**:
