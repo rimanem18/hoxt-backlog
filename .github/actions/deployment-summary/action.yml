@@ -31,6 +31,17 @@ runs:
   steps:
     - name: Generate Deployment Summary
       shell: bash
+      env:
+        INPUT_ENV_TYPE: ${{ inputs.environment-type }}
+        INPUT_COMMIT_SHA: ${{ inputs.commit-sha }}
+        INPUT_BRANCH_NAME: ${{ inputs.branch-name }}
+        INPUT_LAMBDA_URL: ${{ inputs.lambda-function-url }}
+        INPUT_LAMBDA_VERSION: ${{ inputs.lambda-version }}
+        INPUT_TERRAFORM_OUTPUTS: ${{ inputs.terraform-outputs }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
       run: |
         # デプロイサマリーファイルを作成
         SUMMARY_FILE="deployment-summary-$(date +%Y%m%d-%H%M%S).md"
@@ -41,46 +52,46 @@ runs:
         # 🚀 Deployment Summary
 
         ## 📋 Basic Information
-        - **Environment**: ${{ inputs.environment-type }}
-        - **Commit**: ${{ inputs.commit-sha }}
-        - **Branch**: ${{ inputs.branch-name }}
+        - **Environment**: $INPUT_ENV_TYPE
+        - **Commit**: $INPUT_COMMIT_SHA
+        - **Branch**: $INPUT_BRANCH_NAME
         - **Timestamp**: $CURRENT_TIMESTAMP
-        - **Actor**: ${{ github.actor }}
+        - **Actor**: $GITHUB_ACTOR
 
         ## 🌐 Deployment URLs
         EOF
 
         # Lambda URL情報を追加
-        if [ -n "${{ inputs.lambda-function-url }}" ]; then
-          echo "- **🔗 API Endpoint**: ${{ inputs.lambda-function-url }}" >> "$SUMMARY_FILE"
+        if [ -n "$INPUT_LAMBDA_URL" ]; then
+          echo "- **🔗 API Endpoint**: $INPUT_LAMBDA_URL" >> "$SUMMARY_FILE"
         fi
 
         # Lambda バージョン情報を追加
-        if [ -n "${{ inputs.lambda-version }}" ]; then
+        if [ -n "$INPUT_LAMBDA_VERSION" ]; then
           echo "" >> "$SUMMARY_FILE"
           echo "## ⚙️ Technical Details" >> "$SUMMARY_FILE"
-          echo "- **Lambda Version**: ${{ inputs.lambda-version }}" >> "$SUMMARY_FILE"
+          echo "- **Lambda Version**: $INPUT_LAMBDA_VERSION" >> "$SUMMARY_FILE"
         fi
 
         # Terraform出力情報を追加
-        if [ -n "${{ inputs.terraform-outputs }}" ]; then
+        if [ -n "$INPUT_TERRAFORM_OUTPUTS" ]; then
           echo "- **Infrastructure**: Updated via Terraform" >> "$SUMMARY_FILE"
         fi
 
         # GitHub Actionsサマリーに表示
-        echo "## 🎯 ${{ inputs.environment-type }} Deployment Completed Successfully!" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        cat "$SUMMARY_FILE" >> $GITHUB_STEP_SUMMARY
+        echo "## 🎯 $INPUT_ENV_TYPE Deployment Completed Successfully!" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
 
         # 追加の便利情報
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 🔧 Quick Actions" >> $GITHUB_STEP_SUMMARY
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "## 🔧 Quick Actions" >> "$GITHUB_STEP_SUMMARY"
 
-        if [ -n "${{ inputs.lambda-function-url }}" ]; then
-          echo "- [🧪 Test API Endpoint](${{ inputs.lambda-function-url }}/health)" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$INPUT_LAMBDA_URL" ]; then
+          echo "- [🧪 Test API Endpoint](${INPUT_LAMBDA_URL}/health)" >> "$GITHUB_STEP_SUMMARY"
         fi
 
-        echo "- [📊 View Deployment Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [📊 View Deployment Logs](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> "$GITHUB_STEP_SUMMARY"
 
         echo "✅ Deployment summary generated: $SUMMARY_FILE"
 

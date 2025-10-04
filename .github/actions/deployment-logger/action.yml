@@ -26,35 +26,45 @@ runs:
   steps:
     - name: Record Deployment Event
       shell: bash
+      env:
+        INPUT_EVENT_TYPE: ${{ inputs.event-type }}
+        INPUT_COMPONENT: ${{ inputs.component }}
+        INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        INPUT_DETAILS: ${{ inputs.details }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
       run: |
         # デプロイ記録の基本情報
         TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
-        
+
         # ログエントリを生成
-        LOG_ENTRY="[$TIMESTAMP] ${{ inputs.event-type }} - ${{ inputs.component }} deployment"
-        LOG_ENTRY="$LOG_ENTRY | Actor: ${{ github.actor }}"
-        LOG_ENTRY="$LOG_ENTRY | Environment: ${{ inputs.environment }}"
-        LOG_ENTRY="$LOG_ENTRY | Branch: ${{ github.ref_name }}"
-        
-        if [ -n "${{ inputs.details }}" ]; then
-          LOG_ENTRY="$LOG_ENTRY | Details: ${{ inputs.details }}"
+        LOG_ENTRY="[$TIMESTAMP] $INPUT_EVENT_TYPE - $INPUT_COMPONENT deployment"
+        LOG_ENTRY="$LOG_ENTRY | Actor: $GITHUB_ACTOR"
+        LOG_ENTRY="$LOG_ENTRY | Environment: $INPUT_ENVIRONMENT"
+        LOG_ENTRY="$LOG_ENTRY | Branch: $GITHUB_REF_NAME"
+
+        if [ -n "$INPUT_DETAILS" ]; then
+          LOG_ENTRY="$LOG_ENTRY | Details: $INPUT_DETAILS"
         fi
-        
+
         # ログファイルに記録（GitHubアクションサマリーにも出力）
         echo "$LOG_ENTRY" >> deployment.log
-        echo "📋 $LOG_ENTRY" >> $GITHUB_STEP_SUMMARY
-        
+        echo "📋 $LOG_ENTRY" >> "$GITHUB_STEP_SUMMARY"
+
         # イベント種別に応じた詳細ログ
-        case "${{ inputs.event-type }}" in
+        case "$INPUT_EVENT_TYPE" in
           "start")
-            echo "🚀 Started deploying ${{ inputs.component }} to ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 Started deploying $INPUT_COMPONENT to $INPUT_ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
             ;;
           "success")
-            echo "✅ Successfully deployed ${{ inputs.component }} to ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Successfully deployed $INPUT_COMPONENT to $INPUT_ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
             ;;
           "failure")
-            echo "❌ Failed to deploy ${{ inputs.component }} to ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-            echo "🔗 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Failed to deploy $INPUT_COMPONENT to $INPUT_ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
+            echo "🔗 Check logs: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
             ;;
         esac
 
