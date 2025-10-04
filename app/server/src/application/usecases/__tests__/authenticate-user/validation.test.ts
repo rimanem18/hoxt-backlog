@@ -121,11 +121,13 @@ describe('入力検証テスト', () => {
     );
 
     test('2KB超過のJWTで制限エラーが発生する', async () => {
-      // Given: 2KB超過のJWT
-      const longJwt =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-        'a'.repeat(2100) +
-        '.signature';
+      // Given: 2KB超過のJWT（動的生成）
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      const longJwt = `${header}.${'a'.repeat(2100)}.signature`;
       const input: AuthenticateUserUseCaseInput = { jwt: longJwt };
 
       // When & Then: サイズ制限超過で ValidationError がスローされる
@@ -140,15 +142,58 @@ describe('入力検証テスト', () => {
     test.each([
       [
         'Unicode文字含む',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoi5pel5pysIiwic3ViIjoiMTIzIn0.signature',
+        (() => {
+          const header = Buffer.from(
+            JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+          )
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+          const payload = Buffer.from(
+            JSON.stringify({ name: '日本', sub: '123' }),
+          )
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+          return `${header}.${payload}.signature`;
+        })(),
       ],
       [
         'URL安全でないbase64',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMifQ==.signature',
+        (() => {
+          const header = Buffer.from(
+            JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+          )
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+          const payload = Buffer.from(JSON.stringify({ sub: '123' }))
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+          return `${header}.${payload}==.signature`; // パディング付き（意図的に不正）
+        })(),
       ],
       [
         '改行文字含む',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.\neyJzdWIiOiIxMjMifQ.signature',
+        (() => {
+          const header = Buffer.from(
+            JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+          )
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+          const payload = Buffer.from(JSON.stringify({ sub: '123' }))
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+          return `${header}.\n${payload}.signature`; // 改行文字含む
+        })(),
       ],
     ])('%s のJWTで適切に処理される', async (_description, jwt: string) => {
       const input: AuthenticateUserUseCaseInput = { jwt };

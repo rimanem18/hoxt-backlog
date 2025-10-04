@@ -99,12 +99,14 @@ runs:
 
     - name: Terraform Apply
       uses: nick-invision/retry@v2
+      env:
+        TF_WORKDIR: ${{ inputs.working-directory }}
       with:
         timeout_minutes: 15
         max_attempts: 3
         retry_on: error
         command: |
-          cd ${{ inputs.working-directory }}
+          cd "$TF_WORKDIR"
           terraform apply -auto-approve tfplan
 
     - name: Extract Terraform Outputs

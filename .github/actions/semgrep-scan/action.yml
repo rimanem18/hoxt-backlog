@@ -1,0 +1,122 @@
+name: 'Semgrep SAST Scanning'
+description: 'Static application security testing with Semgrep using official recommended rules'
+
+outputs:
+  severity:
+    description: 'Scan severity: none (no issues), warning (Medium/Low findings), or critical (High/Critical findings)'
+    value: ${{ steps.analyze.outputs.severity }}
+  high_critical_count:
+    description: 'Number of High/Critical severity findings'
+    value: ${{ steps.analyze.outputs.high_critical_count }}
+  medium_low_count:
+    description: 'Number of Medium/Low severity findings'
+    value: ${{ steps.analyze.outputs.medium_low_count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Semgrep SAST
+      shell: bash
+      run: |
+        # Composite actionではjob-level containerが使えないため、
+        # Docker run を直接実行してSemgrepコンテナを利用
+
+        echo "🛡️ Semgrep SAST スキャンを開始します..."
+
+        # bash -e モードを一時的に無効化（exit code 1を許容するため）
+        set +e
+
+        # 公式推奨軽量ルールのみ使用（カスタムルールなし）
+        # --config=auto: Semgrepが自動で適切なルールセットを選択
+        docker run --rm \
+          -v "$PWD:/src" \
+          returntocorp/semgrep:latest \
+          semgrep scan \
+          --config=auto \
+          --json \
+          --output=/src/semgrep-results.json \
+          /src
+
+        SEMGREP_EXIT=$?
+
+        # bash -e モードを再有効化
+        set -e
+
+        # Semgrepのexit codeを判定
+        # 0: クリーン（脆弱性なし）
+        # 1: 脆弱性検出
+        # 2+: エラー（インフラ/ネットワーク障害等）
+        if [ $SEMGREP_EXIT -eq 0 ] || [ $SEMGREP_EXIT -eq 1 ]; then
+          echo "✅ Semgrep スキャン完了（exit code: $SEMGREP_EXIT）"
+        else
+          echo "❌ Semgrep 実行エラー（exit code: $SEMGREP_EXIT）"
+          exit $SEMGREP_EXIT
+        fi
+
+    - name: Analyze Semgrep Results
+      id: analyze
+      shell: bash
+      run: |
+        echo "🔍 Semgrep 結果を分析中..."
+
+        # 結果ファイルが存在しない、または空の場合
+        if [ ! -f semgrep-results.json ] || [ ! -s semgrep-results.json ]; then
+          echo "✅ 脆弱性は検出されませんでした"
+          echo "severity=none" >> $GITHUB_OUTPUT
+          echo "high_critical_count=0" >> $GITHUB_OUTPUT
+          echo "medium_low_count=0" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # jqがインストールされていない可能性があるため、事前にインストール
+        if ! command -v jq &> /dev/null; then
+          echo "📦 jqをインストール中..."
+          sudo apt-get update -qq && sudo apt-get install -y -qq jq
+        fi
+
+        # 重要度別カウント
+        # Semgrepの重要度: ERROR (High/Critical相当), WARNING (Medium相当), INFO (Low相当)
+        HIGH_CRITICAL_COUNT=$(cat semgrep-results.json | jq '[.results[] | select(.extra.severity == "ERROR" or .extra.severity == "CRITICAL")] | length' 2>/dev/null || echo "0")
+        MEDIUM_LOW_COUNT=$(cat semgrep-results.json | jq '[.results[] | select(.extra.severity == "WARNING" or .extra.severity == "INFO")] | length' 2>/dev/null || echo "0")
+
+        echo "📊 検出結果:"
+        echo "  - High/Critical: ${HIGH_CRITICAL_COUNT}件"
+        echo "  - Medium/Low: ${MEDIUM_LOW_COUNT}件"
+
+        # 出力設定
+        echo "high_critical_count=${HIGH_CRITICAL_COUNT}" >> $GITHUB_OUTPUT
+        echo "medium_low_count=${MEDIUM_LOW_COUNT}" >> $GITHUB_OUTPUT
+
+        # 重要度判定
+        if [ "$HIGH_CRITICAL_COUNT" -gt 0 ]; then
+          echo "❌ High/Critical の脆弱性が検出されました"
+          echo "severity=critical" >> $GITHUB_OUTPUT
+
+          # 検出内容の詳細表示
+          echo "🔴 検出された High/Critical 脆弱性:"
+          cat semgrep-results.json | jq -r '.results[] | select(.extra.severity == "ERROR" or .extra.severity == "CRITICAL") | "  ⚠️ [\(.extra.severity)] \(.check_id): \(.path):\(.start.line)"' 2>/dev/null || echo "  詳細表示エラー"
+
+        elif [ "$MEDIUM_LOW_COUNT" -gt 0 ]; then
+          echo "⚠️ Medium/Low の脆弱性が検出されました（警告レベル）"
+          echo "severity=warning" >> $GITHUB_OUTPUT
+
+          # 検出内容の詳細表示
+          echo "🟡 検出された Medium/Low 脆弱性:"
+          cat semgrep-results.json | jq -r '.results[] | select(.extra.severity == "WARNING" or .extra.severity == "INFO") | "  ℹ️ [\(.extra.severity)] \(.check_id): \(.path):\(.start.line)"' 2>/dev/null || echo "  詳細表示エラー"
+
+        else
+          echo "✅ 脆弱性は検出されませんでした"
+          echo "severity=none" >> $GITHUB_OUTPUT
+        fi
+
+        # Composite actionは常に成功させ、呼び出し側で判定
+        exit 0
+
+    - name: Upload Semgrep Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: semgrep-results
+        path: semgrep-results.json
+        retention-days: 30
+        if-no-files-found: ignore

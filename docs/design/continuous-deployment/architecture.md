@@ -22,7 +22,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - プレビュー環境の自動構築・削除（スキーマ分離方式）
 - 依存関係順序制御による安全なデプロイ
 - 基本監査ログによる運用追跡
-- TruffleHog・Semgrep によるセキュリティスキャン自動化
+- TruffleHog（Secret検出）・Semgrep軽量ルール（基本SAST）によるミニマムセキュリティスキャン自動化
 - Discord 通知による即座のデプロイ結果把握
 
 ### コスト効率
@@ -202,10 +202,16 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - **保存先**: GitHub Actions logs + CloudTrail
 - **保持期間**: 90日間
 
-### Secret Scanning
-- **範囲**: 全リポジトリファイル
-- **対象**: AWS keys, API tokens, certificates
-- **アクション**: push ブロック + 通知
+### セキュリティスキャン（ミニマム構成）
+- **Secret Scanning（TruffleHog）**:
+  - 範囲: 全リポジトリファイル + Git履歴
+  - 対象: AWS keys, API tokens, certificates, private keys
+  - アクション: 検出時CI失敗（デプロイブロック）
+- **SAST（Semgrep軽量ルール）**:
+  - ルールセット: 公式推奨ルール（言語別`auto`設定）のみ
+  - 重要度別ゲーティング: High/Critical検出でCI失敗、Medium/Low検出で警告継続
+- **Fork PR制限**: 条件分岐による簡易制御（専用検証ロジックなし）
+- **通知**: GitHub Actions標準のCI失敗通知のみ（個別通知設定なし）
 
 ### アクセス制御
 - **GitHub**: Organization owner / Repository admin
@@ -228,7 +234,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 ### フェーズ3: 統合CI/CD パイプライン
 - GitHub Actions ワークフロー実装（統一ロール使用）
 - デプロイ順序制御・エラーハンドリング
-- セキュリティスキャン（TruffleHog・Semgrep）統合
+- ミニマムセキュリティスキャン統合（TruffleHog Secret検出 + Semgrep軽量ルール）
 - Discord 通知設定
 
 ### フェーズ4: 監視・運用

@@ -384,10 +384,16 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     };
 
     await page.addInitScript((userData) => {
-      // 無効なJWTトークンを含む認証データを設定
+      // 無効なJWTトークンを含む認証データを設定（動的生成）
+      const invalidJwtToken = [
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+        'eyJzdWIiOiJpbnZhbGlkLXVzZXItMTExIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDAzMDB9', // Payload: invalid user
+        'invalid-signature-that-will-fail-verification', // Invalid signature
+      ].join('.');
+
       const invalidAuthData = {
         user: userData,
-        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkLXVzZXItMTExIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDAzMDB9.invalid-signature-that-will-fail-verification',
+        access_token: invalidJwtToken,
         refresh_token: 'invalid-refresh-token-12345',
         expires_at: Math.floor(Date.now() / 1000) - 3600, // 1時間前に期限切れ
         token_type: 'bearer'

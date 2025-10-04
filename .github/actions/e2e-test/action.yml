@@ -87,13 +87,17 @@ runs:
         NEXT_PUBLIC_TRUSTED_DOMAINS: localhost:${{ inputs.client-port }},localhost:${{ inputs.server-port }}
         NEXT_PUBLIC_SITE_URL: http://localhost:${{ inputs.client-port }}
       run: |
-        set -e
-        
+        set -euo pipefail
+
+        # PID変数を初期化（set -uでのunbound variable回避）
+        SERVER_PID=""
+        CLIENT_PID=""
+
         # プロセスクリーンアップ関数
         cleanup() {
           echo "--- Cleaning up background processes ---"
-          kill $SERVER_PID $CLIENT_PID 2>/dev/null || true
-          wait $SERVER_PID $CLIENT_PID 2>/dev/null || true
+          kill ${SERVER_PID:-} ${CLIENT_PID:-} 2>/dev/null || true
+          wait ${SERVER_PID:-} ${CLIENT_PID:-} 2>/dev/null || true
         }
         
         # 失敗時とEXIT時にクリーンアップを実行

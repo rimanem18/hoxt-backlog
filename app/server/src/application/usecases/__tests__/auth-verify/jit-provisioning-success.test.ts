@@ -24,9 +24,36 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
   });
 
   test('初回ログインユーザーのJITプロビジョニングが成功する', async () => {
-    // Given: 未登録ユーザーのJWTトークン
+    // Given: 未登録ユーザーのJWTトークン（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: 'google_987654321',
+        email: 'newuser@example.com',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          name: 'New User San',
+          avatar_url: 'https://example.com/new-avatar.jpg',
+          email: 'newuser@example.com',
+          full_name: 'New User San',
+        },
+        iss: 'https://supabase.example.com',
+        iat: 1703123456,
+        exp: 1703127056,
+      }),
+    )
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const newUserJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfOTg3NjU0MzIxIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiTmV3IFVzZXIgU2FuIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vZXhhbXBsZS5jb20vbmV3LWF2YXRhci5qcGciLCJlbWFpbCI6Im5ld3VzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiJOZXcgVXNlciBTYW4ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.dGVzdF9zaWduYXR1cmU',
+      jwt: `${header}.${payload}.dGVzdF9zaWduYXR1cmU`,
     };
 
     // JITプロビジョニングパターンのモックセットアップ
@@ -114,9 +141,36 @@ describe('AuthenticateUserUseCase - JITプロビジョニング成功テスト',
   });
 
   test('JITプロビジョニングでユーザーエンティティが正しく構築される', async () => {
-    // Given: JIT処理用のドメインバリデーションデータ
+    // Given: JIT処理用のドメインバリデーションデータ（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: 'google_domain_test',
+        email: 'valid@example.com',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          name: 'Domain Test',
+          avatar_url: null,
+          email: 'valid@example.com',
+          full_name: 'Domain Test',
+        },
+        iss: 'https://supabase.example.com',
+        iat: 1703123456,
+        exp: 1703127056,
+      }),
+    )
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const jitValidationInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfZG9tYWluX3Rlc3QiLCJlbWFpbCI6InZhbGlkQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiRG9tYWluIFRlc3QiLCJhdmF0YXJfdXJsIjpudWxsLCJlbWFpbCI6InZhbGlkQGV4YW1wbGUuY29tIiwiZnVsbF9uYW1lIjoiRG9tYWluIFRlc3QifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.ZG9tYWluX3Rlc3Rfc2ln',
+      jwt: `${header}.${payload}.ZG9tYWluX3Rlc3Rfc2ln`,
     };
 
     // When: ドメインオブジェクト構築を含むJIT処理を実行

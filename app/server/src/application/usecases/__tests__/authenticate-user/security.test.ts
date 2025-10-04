@@ -31,11 +31,13 @@ describe('セキュリティテスト', () => {
       ['4KB攻撃', 4096],
       ['異常に大きなペイロード', 10000],
     ])('%s の入力で適切に制限される', async (_description, size: number) => {
-      // Given: 長大入力の攻撃シナリオ
-      const longInput =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-        'A'.repeat(size) +
-        '.signature';
+      // Given: 長大入力の攻撃シナリオ（動的生成）
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      const longInput = `${header}.${'A'.repeat(size)}.signature`;
       const input: AuthenticateUserUseCaseInput = { jwt: longInput };
 
       // When & Then: サイズ制限チェック
@@ -185,12 +187,30 @@ describe('セキュリティテスト', () => {
     });
 
     test('JWT検証失敗時のタイミング一定性', async () => {
-      // Given: 構造的には正しいが無効な署名のJWT
+      // Given: 構造的には正しいが無効な署名のJWT（動的生成）
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+
       const validStructureJwts = [
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMifQ.invalid1',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NTYifQ.invalid2',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ODkifQ.invalid3',
-      ];
+        Buffer.from(JSON.stringify({ sub: '123' }))
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=/g, ''),
+        Buffer.from(JSON.stringify({ sub: '456' }))
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=/g, ''),
+        Buffer.from(JSON.stringify({ sub: '789' }))
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=/g, ''),
+      ].map((payload, i) => `${header}.${payload}.invalid${i + 1}`);
 
       // 全て検証失敗を返すよう設定
       (

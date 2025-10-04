@@ -1,0 +1,51 @@
+name: 'TruffleHog Secret Scanning'
+description: 'Scan Git history for verified secrets using TruffleHog'
+
+inputs:
+  base-branch:
+    description: 'Base branch for scanning (default: main)'
+    required: false
+    default: 'main'
+
+outputs:
+  severity:
+    description: 'Scan severity result: none (no secrets found) or critical (verified secrets detected)'
+    value: ${{ steps.analyze.outputs.severity }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run TruffleHog Secret Scanning
+      id: trufflehog
+      continue-on-error: true
+      uses: trufflesecurity/trufflehog@main
+      with:
+        # Git履歴全スキャン
+        path: ./
+        base: ${{ inputs.base-branch }}
+        head: HEAD
+        # 検証済みシークレットのみ検出（誤検出を最小化）
+        extra_args: --json --only-verified
+
+    - name: Analyze TruffleHog Results
+      id: analyze
+      shell: bash
+      run: |
+        echo "🔍 TruffleHog スキャン完了"
+
+        # TruffleHogのstep conclusionで判定
+        # - success: シークレット未検出
+        # - failure: シークレット検出またはエラー
+        TRUFFLEHOG_OUTCOME="${{ steps.trufflehog.outcome }}"
+
+        if [ "$TRUFFLEHOG_OUTCOME" = "success" ]; then
+          echo "✅ 検証済みシークレットは検出されませんでした"
+          echo "severity=none" >> $GITHUB_OUTPUT
+        else
+          # TruffleHogがfailureを返した場合は検証済みシークレット検出
+          echo "⚠️ 検証済みシークレットが検出されました（Critical）"
+          echo "severity=critical" >> $GITHUB_OUTPUT
+        fi
+
+        # Composite actionからは常にexit 0を返し、呼び出し側で判定
+        exit 0

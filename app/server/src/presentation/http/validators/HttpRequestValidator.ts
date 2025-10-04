@@ -92,11 +92,11 @@ export class ContentTypeValidator implements IValidator<Context> {
 export class UrlPathValidator implements IValidator<Context> {
   /**
    * @param allowedPaths 許可するパスの配列
-   * @param matchMode マッチモード（'exact' | 'endsWith' | 'regex'）
+   * @param matchMode マッチモード（'exact' | 'endsWith'）
    */
   constructor(
     private readonly allowedPaths: string[],
-    private readonly matchMode: 'exact' | 'endsWith' | 'regex' = 'exact',
+    private readonly matchMode: 'exact' | 'endsWith' = 'exact',
   ) {}
 
   /**
@@ -116,8 +116,6 @@ export class UrlPathValidator implements IValidator<Context> {
           return pathname === allowedPath;
         case 'endsWith':
           return pathname.endsWith(allowedPath);
-        case 'regex':
-          return new RegExp(allowedPath).test(pathname);
         default:
           return false;
       }

@@ -80,7 +80,7 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 - NFR-001: GitHub OIDC + 単一IAM統合ロール（環境別アクセス制御による最小権限制御）による認証を実装すること
 - NFR-002: Terraform state ファイルを暗号化ストレージ（S3+KMS）に保存すること  
 - NFR-003: PostgreSQL Row-Level Security（RLS）を必須とすること
-- NFR-004: Secret Scanning を有効化し機密情報漏洩を防止すること
+- NFR-004: TruffleHogによるSecret Scanning と Semgrep軽量ルールによるSASTを有効化し、機密情報漏洩と基本的な脆弱性を防止すること（重要度別ゲーティング: High/Critical検出時はCI失敗、Medium/Low検出時は警告継続）
 - NFR-005: Fork リポジトリからのプルリクエストでは Preview 環境を生成・更新してはならない
 - NFR-006: JWT検証は JWKS エンドポイントからの動的公開鍵取得による RS256/ES256 非対称鍵暗号を使用し、共有秘密鍵に依存しないセキュアな認証を実装すること
 
@@ -133,7 +133,9 @@ GitHub Actions と Terraform を使用した継続的デプロイフローを構
 ### 監査・ログテスト
 
 - [ ] デプロイ操作の基本ログ（実行者・日時・対象）が記録されること
-- [ ] Secret Scanning でのソースコード機密情報検出が動作すること
+- [ ] TruffleHog Secret Scanning でのソースコード機密情報検出が動作すること（手動確認）
+- [ ] Semgrep SAST での基本的な脆弱性検出が動作すること（手動確認）
+- [ ] 重要度別ゲーティングが正常に機能すること（High/Critical検出時にCI失敗）
 
 ### セキュリティテスト
 

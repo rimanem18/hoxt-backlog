@@ -148,8 +148,12 @@ export function createValidJwt(payload?: Partial<JwtPayload>): string {
   const defaultPayload = createValidJwtPayload();
   const mergedPayload = { ...defaultPayload, ...payload };
 
-  // 実際のJWT形式（Base64URLエンコードを使用）
-  const header = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+  // 実際のJWT形式（Base64URLエンコードを動的生成）
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
   const encodedPayload = Buffer.from(JSON.stringify(mergedPayload))
     .toString('base64')
     .replace(/\+/g, '-')
@@ -170,9 +174,20 @@ export const INVALID_JWT_PATTERNS = {
   null: null as string | null,
   undefined: undefined as string | undefined,
 
-  // 署名が無効
-  invalidSignature:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZhbGlkIn0.invalid-signature',
+  // 署名が無効（動的生成）
+  invalidSignature: (() => {
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    const payload = Buffer.from(JSON.stringify({ sub: 'invalid' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    return `${header}.${payload}.invalid-signature`;
+  })(),
 
   // 期限切れ
   expired: createValidJwt({ exp: Math.floor(Date.now() / 1000) - 3600 }),

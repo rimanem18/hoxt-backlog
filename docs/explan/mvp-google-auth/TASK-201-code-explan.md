@@ -25,7 +25,7 @@ sequenceDiagram
     participant Domain as AuthenticationDomainService
     participant DB as PostgreSQL
 
-    Client->>Route: POST /api/auth/verify {token: "eyJ..."}
+    Client->>Route: POST /api/auth/verify {token: "<JWT_TOKEN_REDACTED>."}
     Route->>Controller: verifyToken(context)
     Controller->>Controller: HTTPリクエストを検証
     Controller->>Controller: JSONパース

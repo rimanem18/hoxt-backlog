@@ -23,9 +23,36 @@ describe('AuthenticateUserUseCase - JWT認証成功テスト', () => {
   });
 
   test('有効なJWTで既存ユーザーの認証が成功する', async () => {
-    // Given: 有効なJWTトークンと既存ユーザーデータ
+    // Given: 有効なJWTトークンと既存ユーザーデータ（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: 'google_123456789',
+        email: 'user@example.com',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          name: '山田太郎',
+          avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
+          email: 'user@example.com',
+          full_name: '山田太郎',
+        },
+        iss: 'https://supabase.example.com',
+        iat: 1703123456,
+        exp: 1703127056,
+      }),
+    )
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const validJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.dGVzdF9zaWduYXR1cmU',
+      jwt: `${header}.${payload}.dGVzdF9zaWduYXR1cmU`,
     };
 
     // 認証成功パターンのモックセットアップ

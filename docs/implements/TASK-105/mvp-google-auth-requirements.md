@@ -130,7 +130,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 ```typescript
 // AuthControllerからの呼び出し
 const input: AuthenticateUserUseCaseInput = {
-  jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  jwt: "<JWT_TOKEN_REDACTED>."
 };
 
 const result = await authenticateUserUseCase.execute(input);

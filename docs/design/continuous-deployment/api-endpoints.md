@@ -514,7 +514,7 @@ Authorization: Bearer {ACTIONS_ID_TOKEN_REQUEST_TOKEN}
 **レスポンス例:**
 ```json
 {
-  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "value": "<JWT_TOKEN_REDACTED>.",
   "count": 1
 }
 ```
@@ -528,7 +528,7 @@ X-Amz-Target: AWSSecurityTokenServiceV20110615.AssumeRoleWithWebIdentity
 {
   "RoleArn": "arn:aws:iam::123456789012:role/GitHubActions-Production",
   "RoleSessionName": "GitHubActions-Deploy",
-  "WebIdentityToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "WebIdentityToken": "<JWT_TOKEN_REDACTED>.",
   "DurationSeconds": 3600
 }
 ```

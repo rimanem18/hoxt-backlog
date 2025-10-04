@@ -170,7 +170,7 @@ export default function AuthCallbackPage(): React.ReactNode {
         }
 
         // デバッグ情報とエラースタックを記録
-        console.error(logMessage, {
+        console.error(`Auth callback error: ${String(logMessage)}`, {
           error,
           stack: error instanceof Error ? error.stack : undefined,
           timestamp: new Date().toISOString(),

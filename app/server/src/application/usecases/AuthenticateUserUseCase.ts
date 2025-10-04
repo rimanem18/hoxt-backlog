@@ -57,7 +57,7 @@ const DEFAULT_CONFIG: AuthenticationConfig = {
  *   authDomainService,
  *   logger
  * );
- * const result = await useCase.execute({ jwt: 'eyJ...' });
+ * const result = await useCase.execute({ jwt: '<JWT_EXAMPLE>' });
  * if (result.isNewUser) {
  *   console.log('New user created:', result.user.id);
  * }

@@ -51,63 +51,83 @@ runs:
     - name: Prepare notification content
       id: prepare
       shell: bash
+      env:
+        INPUT_STATUS: ${{ inputs.status }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_COMPONENTS: ${{ inputs.components }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_RUN_ID: ${{ inputs.run-id }}
       run: |
         # ステータスに応じた設定
-        if [ "${{ inputs.status }}" = "success" ]; then
-          TITLE="${{ inputs.title }}"
+        if [ "$INPUT_STATUS" = "success" ]; then
+          TITLE="$INPUT_TITLE"
           if [ -z "$TITLE" ]; then
             TITLE="🚀 Production Deployment Completed Successfully!"
           fi
           COLOR=65280  # 緑色
-          
-          COMPONENTS="${{ inputs.components }}"
+
+          COMPONENTS="$INPUT_COMPONENTS"
           if [ -z "$COMPONENTS" ]; then
             COMPONENTS="✅ Infrastructure (Terraform)\\n✅ Database (drizzle-kit)\\n✅ Backend (AWS Lambda)\\n✅ Frontend (CloudFlare Pages)"
           fi
-          
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "color=$COLOR" >> $GITHUB_OUTPUT
-          echo "components=$COMPONENTS" >> $GITHUB_OUTPUT
+
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "color=$COLOR" >> "$GITHUB_OUTPUT"
+          echo "components=$COMPONENTS" >> "$GITHUB_OUTPUT"
         else
-          TITLE="${{ inputs.title }}"
+          TITLE="$INPUT_TITLE"
           if [ -z "$TITLE" ]; then
             TITLE="❌ Production Deployment Failed!"
           fi
           COLOR=16711680  # 赤色
-          
-          ACTION_MESSAGE="Please check the [job logs](${{ github.server_url }}/${{ inputs.repository }}/actions/runs/${{ inputs.run-id }}) for details and retry the deployment."
-          
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "color=$COLOR" >> $GITHUB_OUTPUT
-          echo "action_message=$ACTION_MESSAGE" >> $GITHUB_OUTPUT
+
+          ACTION_MESSAGE="Please check the [job logs](${GITHUB_SERVER_URL}/${INPUT_REPOSITORY}/actions/runs/${INPUT_RUN_ID}) for details and retry the deployment."
+
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "color=$COLOR" >> "$GITHUB_OUTPUT"
+          echo "action_message=$ACTION_MESSAGE" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Send Discord notification
       shell: bash
+      env:
+        INPUT_STATUS: ${{ inputs.status }}
+        INPUT_COMMIT_SHA: ${{ inputs.commit-sha }}
+        INPUT_BRANCH_NAME: ${{ inputs.branch-name }}
+        INPUT_ACTOR: ${{ inputs.actor }}
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_REPOSITORY_URL: ${{ inputs.repository-url }}
+        INPUT_FRONTEND_URL: ${{ inputs.frontend-url }}
+        INPUT_WEBHOOK_URL: ${{ inputs.webhook-url }}
+        PREPARE_TITLE: ${{ steps.prepare.outputs.title }}
+        PREPARE_COLOR: ${{ steps.prepare.outputs.color }}
+        PREPARE_COMPONENTS: ${{ steps.prepare.outputs.components }}
+        PREPARE_ACTION_MESSAGE: ${{ steps.prepare.outputs.action_message }}
       run: |
         # タイムスタンプを生成
         TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 
         # 成功時と失敗時でペイロードを分岐
-        if [ "${{ inputs.status }}" = "success" ]; then
+        if [ "$INPUT_STATUS" = "success" ]; then
           # 基本フィールドを構築
           FIELDS='[
-            {"name": "Commit", "value": "${{ inputs.commit-sha }}", "inline": true},
-            {"name": "Branch", "value": "${{ inputs.branch-name }}", "inline": true},
-            {"name": "Actor", "value": "${{ inputs.actor }}", "inline": true},
-            {"name": "Repository", "value": "${{ inputs.repository }}", "inline": false},
-            {"name": "Components Deployed", "value": "${{ steps.prepare.outputs.components }}", "inline": false}'
+            {"name": "Commit", "value": "'"$INPUT_COMMIT_SHA"'", "inline": true},
+            {"name": "Branch", "value": "'"$INPUT_BRANCH_NAME"'", "inline": true},
+            {"name": "Actor", "value": "'"$INPUT_ACTOR"'", "inline": true},
+            {"name": "Repository", "value": "'"$INPUT_REPOSITORY"'", "inline": false},
+            {"name": "Components Deployed", "value": "'"$PREPARE_COMPONENTS"'", "inline": false}'
 
           # Repository URLが空でない場合は追加
-          if [ -n "${{ inputs.repository-url }}" ]; then
+          if [ -n "$INPUT_REPOSITORY_URL" ]; then
             FIELDS="$FIELDS"',
-            {"name": "🔗 Repository URL", "value": "${{ inputs.repository-url }}", "inline": false}'
+            {"name": "🔗 Repository URL", "value": "'"$INPUT_REPOSITORY_URL"'", "inline": false}'
           fi
 
           # Frontend URLが空でない場合は追加
-          if [ -n "${{ inputs.frontend-url }}" ]; then
+          if [ -n "$INPUT_FRONTEND_URL" ]; then
             FIELDS="$FIELDS"',
-            {"name": "🌐 Frontend URL", "value": "${{ inputs.frontend-url }}", "inline": false}'
+            {"name": "🌐 Frontend URL", "value": "'"$INPUT_FRONTEND_URL"'", "inline": false}'
           fi
 
           # フィールド配列を閉じる
@@ -116,8 +136,8 @@ runs:
           PAYLOAD=$(cat <<EOF
         {
           "embeds": [{
-            "title": "${{ steps.prepare.outputs.title }}",
-            "color": ${{ steps.prepare.outputs.color }},
+            "title": "$PREPARE_TITLE",
+            "color": $PREPARE_COLOR,
             "fields": $FIELDS,
             "timestamp": "$TIMESTAMP"
           }]
@@ -128,14 +148,14 @@ runs:
           PAYLOAD=$(cat <<EOF
         {
           "embeds": [{
-            "title": "${{ steps.prepare.outputs.title }}",
-            "color": ${{ steps.prepare.outputs.color }},
+            "title": "$PREPARE_TITLE",
+            "color": $PREPARE_COLOR,
             "fields": [
-              {"name": "Commit", "value": "${{ inputs.commit-sha }}", "inline": true},
-              {"name": "Branch", "value": "${{ inputs.branch-name }}", "inline": true},
-              {"name": "Actor", "value": "${{ inputs.actor }}", "inline": true},
-              {"name": "Repository", "value": "${{ inputs.repository }}", "inline": false},
-              {"name": "Action", "value": "${{ steps.prepare.outputs.action_message }}", "inline": false}
+              {"name": "Commit", "value": "$INPUT_COMMIT_SHA", "inline": true},
+              {"name": "Branch", "value": "$INPUT_BRANCH_NAME", "inline": true},
+              {"name": "Actor", "value": "$INPUT_ACTOR", "inline": true},
+              {"name": "Repository", "value": "$INPUT_REPOSITORY", "inline": false},
+              {"name": "Action", "value": "$PREPARE_ACTION_MESSAGE", "inline": false}
             ],
             "timestamp": "$TIMESTAMP"
           }]
@@ -143,11 +163,11 @@ runs:
         EOF
           )
         fi
-        
+
         # Discord Webhookに通知を送信
         curl -H "Content-Type: application/json" \
              -d "$PAYLOAD" \
-             "${{ inputs.webhook-url }}" \
+             "$INPUT_WEBHOOK_URL" \
              --fail --silent --show-error
-        
+
         echo "✅ Discord通知を正常に送信しました"
