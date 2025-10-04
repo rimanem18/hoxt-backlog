@@ -50,6 +50,64 @@ jobs:
         with:
           environment-override: ${{ github.event.inputs.environment || '' }}
 
+  # TruffleHog Secret Scanning（セキュリティゲート）
+  trufflehog:
+    name: TruffleHog Secret Scan
+    needs: setup-environment
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      severity: ${{ steps.scan.outputs.severity }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Git履歴全スキャンのため全履歴取得
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Run TruffleHog Scan
+        id: scan
+        uses: ./.github/actions/trufflehog-scan
+        with:
+          base-branch: ${{ github.event.repository.default_branch }}
+
+      - name: Check Critical Findings
+        if: steps.scan.outputs.severity == 'critical'
+        run: |
+          echo "❌ Critical: 検証済みシークレットが検出されました"
+          exit 1
+
+  # Semgrep SAST（セキュリティゲート）
+  semgrep:
+    name: Semgrep SAST Scan
+    needs: setup-environment
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      severity: ${{ steps.scan.outputs.severity }}
+      high_critical_count: ${{ steps.scan.outputs.high_critical_count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Run Semgrep Scan
+        id: scan
+        uses: ./.github/actions/semgrep-scan
+
+      - name: Check Critical Findings
+        if: steps.scan.outputs.severity == 'critical'
+        run: |
+          echo "❌ Critical: High/Critical の脆弱性が ${HIGH_CRITICAL_COUNT} 件検出されました"
+          exit 1
+        env:
+          HIGH_CRITICAL_COUNT: ${{ steps.scan.outputs.high_critical_count }}
+
   # Phase 1: Client テスト実行
   client-test:
     name: Client Unit Tests
@@ -160,11 +218,13 @@ jobs:
   # Phase 4: デプロイ開始記録
   log-deployment-start:
     name: Log Deployment Start
-    needs: [setup-environment, client-test, server-test, e2e-test]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -183,11 +243,13 @@ jobs:
   # Phase 5: インフラストラクチャデプロイ
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [setup-environment, client-test, server-test, e2e-test, log-deployment-start]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -201,11 +263,13 @@ jobs:
   # Phase 6: データベースマイグレーション - Frontendと並列実行
   deploy-database:
     name: Deploy Database
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -215,11 +279,13 @@ jobs:
   # Phase 7: バックエンドデプロイ（database完了後）
   deploy-backend:
     name: Deploy Backend
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -234,11 +300,13 @@ jobs:
   # Debug: インフラ出力確認
   debug-infrastructure-outputs:
     name: Debug Infrastructure Outputs
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Debug Infrastructure Outputs
@@ -263,11 +331,13 @@ jobs:
   # Phase 8: フロントエンドデプロイ（infrastructure完了後、database/backendと並列実行）
   deploy-frontend:
     name: Deploy Frontend
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     if: |
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
@@ -281,7 +351,7 @@ jobs:
   notify-success:
     name: Notify Deployment Success
     if: success()
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -327,7 +397,7 @@ jobs:
   notify-failure:
     name: Notify Deployment Failure
     if: failure()
-    needs: [setup-environment, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [setup-environment, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
