@@ -104,7 +104,7 @@ runs:
         fi
 
     - name: Terraform Apply
-      uses: nick-invision/retry@v2
+      uses: nick-fields/retry@v3.0.1
       env:
         TF_WORKDIR: ${{ inputs.working-directory }}
       with:
