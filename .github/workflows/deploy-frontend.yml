@@ -52,12 +52,17 @@ jobs:
 
       - name: Debug Environment Variables
         working-directory: ./app/client
+        env:
+          INPUT_API_BASE_URL: ${{ inputs.next-public-api-base-url }}
+          INPUT_SITE_URL: ${{ inputs.next-public-site-url }}
+          INPUT_TRUSTED_DOMAINS: ${{ inputs.next-public-trusted-domains }}
+          INPUT_ENV_TYPE: ${{ inputs.environment-type }}
         run: |
           echo "🔍 Frontend Environment Variables Debug:"
-          echo "Input next-public-api-base-url: ${{ inputs.next-public-api-base-url }}"
-          echo "Input next-public-site-url: ${{ inputs.next-public-site-url }}"
-          echo "Input next-public-trusted-domains: ${{ inputs.next-public-trusted-domains }}"
-          echo "Environment type: ${{ inputs.environment-type }}"
+          echo "Input next-public-api-base-url: $INPUT_API_BASE_URL"
+          echo "Input next-public-site-url: $INPUT_SITE_URL"
+          echo "Input next-public-trusted-domains: $INPUT_TRUSTED_DOMAINS"
+          echo "Environment type: $INPUT_ENV_TYPE"
 
       - name: Build Frontend Application
         working-directory: ./app/client

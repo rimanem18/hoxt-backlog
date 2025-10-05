@@ -32,21 +32,26 @@ jobs:
       - name: Determine checkout ref for fork safety
         id: checkout_ref
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IS_FORK_CHECK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            IS_FORK="$IS_FORK_CHECK"
             if [ "$IS_FORK" = "true" ]; then
               # Fork PR: main ブランチを使用（改ざん対策）
-              echo "ref=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+              echo "ref=$PR_BASE_SHA" >> "$GITHUB_OUTPUT"
               echo "📌 Fork PR detected: using base branch for security"
             else
               # 同一リポジトリ PR: マージコミットを使用（実際のPR挙動を再現）
-              echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+              echo "ref=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
               echo "📌 Same-repo PR: using merge commit"
             fi
           else
             # push/workflow_dispatch: 現在のコミット（実際のマージ挙動を再現）
-            echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "ref=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
             echo "📌 Non-PR event: using current commit"
           fi
 
