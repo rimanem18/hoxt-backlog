@@ -4,6 +4,12 @@ description: 与えられた指示に対し、gemini, o3, codex と壁打ちし�
 
 試行錯誤回数よりも質を重視するため、gemini MCP, o3 MCP, codex MCP などを並行利用してください。  
 
+- use context7 MCP
+- use serena MCP
+- use Codex MCP
+- use o3-search MCP
+- use ask-gemini MCP
+
 ## 実行内容
 
   - コードベースの状況調査には Serena MCP を活用します。

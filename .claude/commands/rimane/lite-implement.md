@@ -4,14 +4,15 @@ description: Claude が実装し、Codex がレビューする形で協働で実
 
 与えられた指示を完了してください。
 
+- use context7 MCP
+- use serena MCP
+- use Codex MCP
 
 ## プランニングフェーズ
 
 1. 次のセクションで示されている実装順序にのっとり、指示を遂行するためのプランを立てます。
   - プラン内容には、TDD or DIRECT のどちらで実装するか必ず記載します。
   - ユーザから何かしらの推測や提案が示された場合は、それが妥当かどうか精査します。
-  - コードベースの状況調査には Serena MCP を活用します。
-  - 最新情報などが必要な場合、 Context7 MCP を活用します。
 
 2. プラン内容を Codex MCP に共有し、レビューしてもらいます。
 
@@ -22,9 +23,10 @@ description: Claude が実装し、Codex がレビューする形で協働で実
 1. Red - Green - Refactor のサイクルで実装します。Red は仕様に則り、Green, Refactor のときにはテストの意味自体が破壊されないようにします。
   - ただし、「TDD が適さないタスクである」と判断した場合は、DIRECT に実装して OK です。
 
-2. 実装を終えたら、test と lint を実施します。問題があれば修正します。
+2. 実装を終えたら、test と lint, semgrep を実施します。問題があれば修正します。
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
+  - `docker compose run --rm semgrep semgrep <args...>`
 
 3. フォーマットが終わったら、 Codex MCP を使用してレビューを依頼します。
   - {at-mark}/filepath でファイル情報を渡すことができます。
@@ -44,8 +46,9 @@ description: Claude が実装し、Codex がレビューする形で協働で実
 - **対応非推奨**: 実施時間に見合わない品質向上
 - **対応禁止**: ついでに機能を追加
 
-6. 改めて 、test と lint を実施します。問題があれば修正します。
+6. 改めて 、test と lint,semgrep を実施します。問題があれば修正します。
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
+  - `docker compose run --rm semgrep semgrep <args...>`
 
 #think
