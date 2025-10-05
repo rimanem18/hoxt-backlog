@@ -205,9 +205,12 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### 監視
 - **対象**: Production Lambda関数のみ
-- **メトリクス**: エラー率、実行時間
+- **メトリクス**: エラー率（閾値: 5エラー/分）、実行時間（閾値: 10秒）
 - **アラート**: CloudWatch Alarms
-- **通知**: メール（SNS経由）
+- **通知**: SNS Email通知（自動送信、SES・Lambda不要）
+  - 設定: GitHub Repository Secret `OPS_EMAIL`
+  - 初回のみメール購読確認リンククリック必要
+  - アラーム発火時・復旧時に自動通知
 
 ### セキュリティスキャン（ミニマム構成）
 - **Secret Scanning（TruffleHog）**:

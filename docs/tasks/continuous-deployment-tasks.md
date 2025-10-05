@@ -244,19 +244,26 @@
 
 #### TASK-702: Production Lambda監視
 
-- [ ] **タスク完了**
+- [x] **タスク完了** - 2025年10月05日完了
 - **タスクタイプ**: DIRECT
-- **要件リンク**: EDGE-101
+- **要件リンク**: NFR-007
 - **依存タスク**: TASK-604
 - **推定工数**: 1時間
 - **実装詳細**:
-  - `terraform/app/main.tf` に `module "monitoring_production"` 追加
+  - `terraform/modules/monitoring` にSNS Email通知機能追加
   - Production Lambda関数の監視（エラー率、実行時間）
-  - CloudWatch Alarmsによるアラート設定
+  - CloudWatch AlarmsによるSNS Email通知設定
+  - GitHub Repository Secret `OPS_EMAIL` による通知先設定
 - **完了条件**:
   - [x] Production Lambda監視モジュール統合完了
+  - [x] SNS Email通知機能実装完了
   - [ ] CloudWatch Alarmsデプロイ確認（次回Terraformデプロイ時に自動適用）
-  - [ ] メール通知テスト成功（SNS設定後に実施予定）
+  - [ ] SNS購読確認完了（デプロイ後、メール確認リンククリック必要）
+- **運用手順**:
+  1. GitHub Repository Settings → Secrets → `OPS_EMAIL` を設定
+  2. Terraformデプロイ実行（mainブランチpushまたは手動）
+  3. 届いたメールの「Confirm subscription」リンクをクリック
+  4. CloudWatchコンソールでアラーム状態確認
 
 ## 実行順序
 

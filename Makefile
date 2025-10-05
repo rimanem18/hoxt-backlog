@@ -78,6 +78,7 @@ iac-plan-save:
 	@echo ""
 	@echo "🔄 Step 2/2: App構成の計画実行..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		export TF_VAR_ops_email=${OPS_EMAIL} && \
 		cd app && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
@@ -103,6 +104,7 @@ iac-bootstrap-apply:
 iac-apply:
 	@echo "App構成を適用（制限権限・日常的変更）..."
 	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
+		export TF_VAR_ops_email=${OPS_EMAIL} && \
 		cd app && terraform apply terraform.tfplan'
 	@echo "✅ App構成の適用が完了しました。"
 

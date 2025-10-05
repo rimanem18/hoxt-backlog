@@ -76,9 +76,10 @@ data "aws_lambda_alias" "production_stable" {
 module "monitoring_production" {
   source = "../modules/monitoring"
 
-  project_name        = local.project_name
-  environment         = "production"
+  project_name         = local.project_name
+  environment          = "production"
   lambda_function_name = local.lambda_production_function_name
+  alarm_emails         = length(var.ops_email) > 0 ? [var.ops_email] : []
 
   tags = merge(
     local.common_tags,
