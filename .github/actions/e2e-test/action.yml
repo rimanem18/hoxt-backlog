@@ -63,8 +63,10 @@ runs:
 
     - name: Install Playwright browsers
       shell: bash
+      env:
+        CLIENT_DIR: ${{ inputs.client-directory }}
       run: |
-        cd ${{ inputs.client-directory }}
+        cd "$CLIENT_DIR"
         npx playwright install --with-deps
 
     - name: Install server dependencies
@@ -79,6 +81,13 @@ runs:
       env:
         CLIENT_PORT: ${{ inputs.client-port }}
         SERVER_PORT: ${{ inputs.server-port }}
+        CLIENT_DIR: ${{ inputs.client-directory }}
+        SERVER_DIR: ${{ inputs.server-directory }}
+        DB_HOST: ${{ inputs.db-host }}
+        DB_PORT: ${{ inputs.db-port }}
+        DB_NAME: ${{ inputs.db-name }}
+        DB_USER: ${{ inputs.db-user }}
+        DB_PASSWORD: ${{ inputs.db-password }}
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:${{ inputs.server-port }}/api"
         # Supabase test environment variables (mocked)
         NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
@@ -105,45 +114,45 @@ runs:
         
         echo "--- Waiting for PostgreSQL to be ready ---"
         for i in $(seq 1 30); do
-          if pg_isready -h ${{ inputs.db-host }} -p ${{ inputs.db-port }} -U ${{ inputs.db-user }}; then
+          if pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; then
             echo "PostgreSQL is ready!"
             break
           fi
           echo "Waiting for PostgreSQL... (attempt $i/30)"
           sleep 2
         done
-        
+
         echo "--- Starting server in background (Node.js runtime) ---"
-        cd ${{ inputs.server-directory }}
-        SERVER_PORT=${{ inputs.server-port }} \
-        ACCESS_ALLOW_ORIGIN=http://localhost:${{ inputs.client-port }} \
+        cd "$SERVER_DIR"
+        SERVER_PORT="$SERVER_PORT" \
+        ACCESS_ALLOW_ORIGIN="http://localhost:$CLIENT_PORT" \
         ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
         ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
         SUPABASE_URL=http://localhost:54321 \
-        DB_HOST=${{ inputs.db-host }} \
-        DB_PORT=${{ inputs.db-port }} \
-        DB_NAME=${{ inputs.db-name }} \
-        DB_USER=${{ inputs.db-user }} \
-        DB_PASSWORD=${{ inputs.db-password }} \
+        DB_HOST="$DB_HOST" \
+        DB_PORT="$DB_PORT" \
+        DB_NAME="$DB_NAME" \
+        DB_USER="$DB_USER" \
+        DB_PASSWORD="$DB_PASSWORD" \
         BASE_SCHEMA=test_schema \
-        DATABASE_URL=postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }} \
+        DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME" \
         DB_CONNECT_TIMEOUT_SECONDS=3 \
         DB_IDLE_TIMEOUT_SECONDS=10 \
         DB_MAX_CONNECTIONS=5 \
         npm run start:node &
         SERVER_PID=$!
         cd ../..
-        
+
         echo "--- Starting client in background ---"
-        cd ${{ inputs.client-directory }}
+        cd "$CLIENT_DIR"
         bun run dev &
         CLIENT_PID=$!
         cd ../..
-        
+
         echo "--- Waiting for services to be ready ---"
         for i in $(seq 1 30); do
-          if curl -f http://localhost:${{ inputs.client-port }} >/dev/null 2>&1 && \
-             curl -f http://localhost:${{ inputs.server-port }}/api/health >/dev/null 2>&1; then
+          if curl -f "http://localhost:$CLIENT_PORT" >/dev/null 2>&1 && \
+             curl -f "http://localhost:$SERVER_PORT/api/health" >/dev/null 2>&1; then
             echo "All services are ready!"
             break
           fi
