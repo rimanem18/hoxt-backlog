@@ -71,4 +71,22 @@ data "aws_lambda_alias" "production_stable" {
   name         = local.lambda_production_stable_alias
 }
 
+# Production Lambda監視（TASK-702簡素化版）
+# 個人開発MVP向けにProductionのみ監視、Preview環境は除外
+module "monitoring_production" {
+  source = "../modules/monitoring"
+
+  project_name        = local.project_name
+  environment         = "production"
+  lambda_function_name = local.lambda_production_function_name
+
+  tags = merge(
+    local.common_tags,
+    {
+      Component = "Monitoring"
+      Scope     = "Production"
+    }
+  )
+}
+
 
