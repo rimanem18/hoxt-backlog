@@ -28,6 +28,12 @@ outputs:
   has-destructive-changes:
     description: 'Whether destructive changes were detected'
     value: ${{ steps.plan.outputs.has_destructive_changes }}
+  lambda_function_name_production:
+    description: 'Production Lambda function name'
+    value: ${{ steps.outputs.outputs.lambda_function_name_production }}
+  lambda_function_name_preview:
+    description: 'Preview Lambda function name'
+    value: ${{ steps.outputs.outputs.lambda_function_name_preview }}
   lambda-production-function-url:
     description: 'Production Lambda Function URL'
     value: ${{ steps.outputs.outputs.lambda_function_url_production }}
