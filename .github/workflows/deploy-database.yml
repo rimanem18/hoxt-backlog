@@ -65,7 +65,7 @@ jobs:
             echo "status=failed" >> $GITHUB_OUTPUT
             
             if [ $EXIT_CODE -eq 124 ]; then
-              echo "❌ データベースマイグレーションがタイムアウトしました（${{ inputs.timeout-minutes }}分）"
+              echo "❌ データベースマイグレーションがタイムアウトしました（${TIMEOUT_MINUTES}分）"
               echo "💡 ヒント: 長時間ブロッキングトランザクションが発生している可能性があります"
               echo "💡 対処法: データベース管理者に連絡してロック状況を確認してください"
             else
