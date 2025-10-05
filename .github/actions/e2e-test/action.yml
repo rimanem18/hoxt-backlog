@@ -165,7 +165,7 @@ runs:
         done
         
         echo "--- Running Playwright tests ---"
-        cd ${{ inputs.client-directory }}
+        cd "$CLIENT_DIR"
         bun run test:e2e
 
     - name: Upload Playwright report
