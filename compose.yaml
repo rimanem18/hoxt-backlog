@@ -107,6 +107,15 @@ services:
       - TF_VAR_base_schema=${BASE_SCHEMA}
     command: tail -f /dev/null
 
+  semgrep:
+    image: returntocorp/semgrep:1.96.0
+    volumes:
+      - .:/src:ro
+    working_dir: /src
+    user: semgrep
+    profiles:
+      - tools
+
 volumes:
   postgres_data:
   terraform_cache:

@@ -1,0 +1,42 @@
+name: 'Fork Repository Check'
+description: 'Check if the pull request is from a forked repository and determine if workflow can proceed'
+
+outputs:
+  is-fork:
+    description: 'Whether the PR is from a fork repository (true/false)'
+    value: ${{ steps.check.outputs.is_fork }}
+  can-proceed:
+    description: 'Whether the workflow can proceed based on fork status (true/false)'
+    value: ${{ steps.check.outputs.can_proceed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check Fork Status
+      id: check
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        IS_FORK_CHECK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+      run: |
+        # PRイベントの場合のみForkチェックを実施
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          # PRのソースリポジトリと現在のリポジトリを比較
+          IS_FORK="$IS_FORK_CHECK"
+          echo "is_fork=$IS_FORK" >> "$GITHUB_OUTPUT"
+
+          if [ "$IS_FORK" = "true" ]; then
+            # Forkからのpr=信頼できないため、実行をスキップ
+            echo "can_proceed=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Fork からのPRのため、実行をスキップします（セキュリティ制限）"
+          else
+            # 同一リポジトリからのPR=信頼できるため、実行を許可
+            echo "can_proceed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 同一リポジトリからのPRのため、実行を継続します"
+          fi
+        else
+          # push または workflow_dispatch の場合は常に実行を許可
+          echo "is_fork=false" >> "$GITHUB_OUTPUT"
+          echo "can_proceed=true" >> "$GITHUB_OUTPUT"
+          echo "✅ 実行を継続します（イベント: $EVENT_NAME）"
+        fi

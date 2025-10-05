@@ -52,12 +52,17 @@ jobs:
 
       - name: Debug Environment Variables
         working-directory: ./app/client
+        env:
+          INPUT_API_BASE_URL: ${{ inputs.next-public-api-base-url }}
+          INPUT_SITE_URL: ${{ inputs.next-public-site-url }}
+          INPUT_TRUSTED_DOMAINS: ${{ inputs.next-public-trusted-domains }}
+          INPUT_ENV_TYPE: ${{ inputs.environment-type }}
         run: |
           echo "🔍 Frontend Environment Variables Debug:"
-          echo "Input next-public-api-base-url: ${{ inputs.next-public-api-base-url }}"
-          echo "Input next-public-site-url: ${{ inputs.next-public-site-url }}"
-          echo "Input next-public-trusted-domains: ${{ inputs.next-public-trusted-domains }}"
-          echo "Environment type: ${{ inputs.environment-type }}"
+          echo "Input next-public-api-base-url: $INPUT_API_BASE_URL"
+          echo "Input next-public-site-url: $INPUT_SITE_URL"
+          echo "Input next-public-trusted-domains: $INPUT_TRUSTED_DOMAINS"
+          echo "Environment type: $INPUT_ENV_TYPE"
 
       - name: Build Frontend Application
         working-directory: ./app/client
@@ -84,13 +89,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PROJECT_INPUT: ${{ inputs.cloudflare-project-name }}
+          DEFAULT_PROJECT_NAME: ${{ vars.PROJECT_NAME }}
           # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく処理
           LANG: C.UTF-8
         run: |
           # プロジェクト名を決定（入力がない場合はvarsから取得）
-          PROJECT_NAME="${{ inputs.cloudflare-project-name }}"
+          PROJECT_NAME="$CLOUDFLARE_PROJECT_INPUT"
           if [ -z "$PROJECT_NAME" ]; then
-            PROJECT_NAME="${{ vars.PROJECT_NAME }}"
+            PROJECT_NAME="$DEFAULT_PROJECT_NAME"
           fi
 
           echo "CloudFlare Pagesにデプロイ中..."

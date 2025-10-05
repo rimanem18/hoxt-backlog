@@ -89,7 +89,7 @@ POST /api/auth/verify
 Content-Type: application/json
 
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "<JWT_TOKEN_REDACTED>."
 }
 ```
 
@@ -165,7 +165,7 @@ Content-Type: application/json
 **リクエスト**:
 ```http
 GET /api/user/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <JWT_TOKEN_REDACTED>.
 ```
 
 **成功レスポンス (200 OK)**:

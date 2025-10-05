@@ -56,20 +56,25 @@ runs:
 
     - name: Deploy Lambda Function
       id: deploy
-      uses: nick-invision/retry@v2
+      uses: nick-fields/retry@v3.0.1
+      env:
+        WORKING_DIR: ${{ inputs.working-directory }}
+        FUNCTION_NAME: ${{ inputs.function-name }}
+        AWS_REGION: ${{ inputs.aws-region }}
       with:
         timeout_minutes: 10
         max_attempts: 3
         retry_on: error
         command: |
-          cd ${{ inputs.working-directory }}
-          
+          set -euo pipefail
+          cd "$WORKING_DIR"
+
           # Lambda関数コードを更新（出力を抑制してシークレット露出を防止）
           echo "Lambda関数コードを更新中..."
           aws lambda update-function-code \
-            --function-name ${{ inputs.function-name }} \
+            --function-name "$FUNCTION_NAME" \
             --zip-file fileb://lambda-deployment.zip \
-            --region ${{ inputs.aws-region }} \
+            --region "$AWS_REGION" \
             --output text > /dev/null
 
           echo "✅ Lambda関数コードが正常に更新されました"
@@ -77,27 +82,27 @@ runs:
           # 関数更新の完了を待機
           echo "関数更新の完了を待機中..."
           aws lambda wait function-updated \
-            --function-name ${{ inputs.function-name }} \
-            --region ${{ inputs.aws-region }}
+            --function-name "$FUNCTION_NAME" \
+            --region "$AWS_REGION"
 
           # 新バージョンを発行
           echo "新しいLambdaバージョンを発行中..."
           VERSION=$(aws lambda publish-version \
-            --function-name ${{ inputs.function-name }} \
-            --region ${{ inputs.aws-region }} \
+            --function-name "$FUNCTION_NAME" \
+            --region "$AWS_REGION" \
             --query 'Version' \
             --output text)
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
           echo "✅ Lambda バージョン $VERSION を発行しました"
 
           # stableエイリアスを新バージョンに更新
           echo "stableエイリアスをバージョン $VERSION に更新中..."
           aws lambda update-alias \
-            --function-name ${{ inputs.function-name }} \
+            --function-name "$FUNCTION_NAME" \
             --name stable \
-            --function-version $VERSION \
-            --region ${{ inputs.aws-region }} \
+            --function-version "$VERSION" \
+            --region "$AWS_REGION" \
             --output text > /dev/null
 
           echo "🚀 Lambda バージョン $VERSION を本番環境（stable）に正常にデプロイしました"

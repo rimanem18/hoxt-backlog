@@ -30,7 +30,7 @@
 - **入力値**: 
   ```typescript
   // Supabase JWT Secretで署名された有効なJWT
-  validGoogleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5MCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6Imdvb2dsZSIsInByb3ZpZGVycyI6WyJnb29nbGUiXX0sInVzZXJfbWV0YWRhdGEiOnsibmFtZSI6IlRlc3QgVXNlciIsImF2YXRhcl91cmwiOiJodHRwczovL2V4YW1wbGUuY29tL2F2YXRhci5qcGciLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiJUZXN0IFVzZXIifSwiaXNzIjoiaHR0cHM6Ly95b3VyLXN1cGFiYXNlLnVybCIsImlhdCI6MTY5Mjc4MDgwMCwiZXhwIjoxNjkyNzg0NDAwfQ.signature"
+  validGoogleJwt = "<JWT_TOKEN_REDACTED>"
   ```
   - **入力データの意味**: Googleアカウント認証後にSupabaseから発行される実際のJWTトークンを模擬
 - **期待される結果**: 
@@ -68,7 +68,7 @@
   - **エラー処理の重要性**: セキュリティ侵害防止のため、署名検証の厳密性が必須
 - **入力値**: 
   ```typescript
-  invalidSignatureJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5MCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.invalid_signature"
+  invalidSignatureJwt = "<JWT_TOKEN_REDACTED>"
   ```
   - **不正な理由**: 署名部分が正しいSupabase JWT Secretで生成されていない
   - **実際の発生シナリオ**: 悪意のあるクライアントからの偽造JWT送信、ネットワーク経由での改ざん
@@ -93,7 +93,7 @@
   - **エラー処理の重要性**: セッション期限管理とセキュリティ保証のため必須
 - **入力値**: 
   ```typescript
-  expiredJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5MCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImV4cCI6MTY5Mjc4MDgwMH0.valid_signature_but_expired"
+  expiredJwt = "<JWT_TOKEN_REDACTED>"
   ```
   - **不正な理由**: exp claim（1692780800）が現在時刻より過去
   - **実際の発生シナリオ**: ユーザーが長時間ページを開きっぱなしにした後のAPI呼び出し

@@ -28,7 +28,7 @@
 - **入力値**: 
   ```typescript
   input: AuthenticateUserUseCaseInput = {
-    jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // 有効なSupabase JWT
+    jwt: "<JWT_TOKEN_REDACTED>." // 有効なSupabase JWT
   };
   ```
   - **入力データの意味**: フロントエンドで取得した、既存ユーザーの有効なGoogle OAuth JWT
@@ -63,7 +63,7 @@
 - **入力値**: 
   ```typescript
   input: AuthenticateUserUseCaseInput = {
-    jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // 新規ユーザーの有効なJWT
+    jwt: "<JWT_TOKEN_REDACTED>." // 新規ユーザーの有効なJWT
   };
   ```
   - **入力データの意味**: 初回ログインユーザーの有効なGoogle OAuth JWT

@@ -47,6 +47,7 @@ jobs:
         working-directory: ./app/server
         timeout-minutes: ${{ inputs.timeout-minutes }}
         env:
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
           DATABASE_URL: ${{ inputs.database-url || secrets.DATABASE_URL_MIGRATE }}
           BASE_SCHEMA: ${{ inputs.environment-type == 'production' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
         run: |
@@ -56,7 +57,7 @@ jobs:
           echo "drizzle-kit pushによるスキーマ適用を実行中..."
           
           # タイムアウト設定付きでマイグレーション実行
-          if timeout ${{ inputs.timeout-minutes }}m bun run db:push; then
+          if timeout "${TIMEOUT_MINUTES}m" bun run db:push; then
             echo "status=success" >> $GITHUB_OUTPUT
             echo "✅ データベースマイグレーションが正常に完了しました"
           else
@@ -64,7 +65,7 @@ jobs:
             echo "status=failed" >> $GITHUB_OUTPUT
             
             if [ $EXIT_CODE -eq 124 ]; then
-              echo "❌ データベースマイグレーションがタイムアウトしました（${{ inputs.timeout-minutes }}分）"
+              echo "❌ データベースマイグレーションがタイムアウトしました（${TIMEOUT_MINUTES}分）"
               echo "💡 ヒント: 長時間ブロッキングトランザクションが発生している可能性があります"
               echo "💡 対処法: データベース管理者に連絡してロック状況を確認してください"
             else

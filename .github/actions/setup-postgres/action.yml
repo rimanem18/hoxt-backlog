@@ -34,11 +34,19 @@ runs:
   steps:
     - name: Export PostgreSQL environment variables
       shell: bash
+      env:
+        DB_USER_INPUT: ${{ inputs.db-user }}
+        DB_PASSWORD_INPUT: ${{ inputs.db-password }}
+        DB_HOST_INPUT: ${{ inputs.db-host }}
+        DB_PORT_INPUT: ${{ inputs.db-port }}
+        DB_NAME_INPUT: ${{ inputs.db-name }}
+        SCHEMA_NAME_INPUT: ${{ inputs.schema-name }}
       run: |
-        echo "DATABASE_URL=postgresql://${{ inputs.db-user }}:${{ inputs.db-password }}@${{ inputs.db-host }}:${{ inputs.db-port }}/${{ inputs.db-name }}" >> $GITHUB_ENV
-        echo "DB_HOST=${{ inputs.db-host }}" >> $GITHUB_ENV
-        echo "DB_PORT=${{ inputs.db-port }}" >> $GITHUB_ENV
-        echo "DB_NAME=${{ inputs.db-name }}" >> $GITHUB_ENV
-        echo "DB_USER=${{ inputs.db-user }}" >> $GITHUB_ENV
-        echo "DB_PASSWORD=${{ inputs.db-password }}" >> $GITHUB_ENV
-        echo "BASE_SCHEMA=${{ inputs.schema-name }}" >> $GITHUB_ENV
+        set -euo pipefail
+        echo "DATABASE_URL=postgresql://${DB_USER_INPUT}:${DB_PASSWORD_INPUT}@${DB_HOST_INPUT}:${DB_PORT_INPUT}/${DB_NAME_INPUT}" >> "$GITHUB_ENV"
+        echo "DB_HOST=$DB_HOST_INPUT" >> "$GITHUB_ENV"
+        echo "DB_PORT=$DB_PORT_INPUT" >> "$GITHUB_ENV"
+        echo "DB_NAME=$DB_NAME_INPUT" >> "$GITHUB_ENV"
+        echo "DB_USER=$DB_USER_INPUT" >> "$GITHUB_ENV"
+        echo "DB_PASSWORD=$DB_PASSWORD_INPUT" >> "$GITHUB_ENV"
+        echo "BASE_SCHEMA=$SCHEMA_NAME_INPUT" >> "$GITHUB_ENV"

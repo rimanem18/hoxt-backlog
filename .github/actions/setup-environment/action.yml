@@ -23,19 +23,25 @@ runs:
   steps:
     - id: determine
       shell: bash
+      env:
+        ENV_OVERRIDE: ${{ inputs.environment-override }}
+        EVENT_NAME: ${{ github.event_name }}
+        PR_MERGED: ${{ github.event.pull_request.merged }}
       run: |
+        set -euo pipefail
+
         # 環境判定ロジック
         # 1. environment-override が指定されていればそれを使用
         # 2. PRマージイベントならproduction
         # 3. それ以外（preview workflow等）はpreview
 
-        OVERRIDE="${{ inputs.environment-override }}"
+        OVERRIDE="$ENV_OVERRIDE"
 
         if [[ -n "$OVERRIDE" ]]; then
           # 手動実行時の環境指定を優先
           ENV_TYPE="$OVERRIDE"
           echo "🔧 Environment override specified: $ENV_TYPE"
-        elif [[ "${{ github.event_name }}" == "pull_request" ]] && [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+        elif [[ "$EVENT_NAME" == "pull_request" ]] && [[ "$PR_MERGED" == "true" ]]; then
           # PRマージ時はproduction
           ENV_TYPE="production"
           echo "✅ PR merged to main: production environment"

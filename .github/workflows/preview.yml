@@ -26,22 +26,95 @@ jobs:
     name: Security Check
     runs-on: ubuntu-latest
     outputs:
-      is-fork: ${{ steps.check.outputs.is_fork }}
-      can-deploy: ${{ steps.check.outputs.can_deploy }}
+      is-fork: ${{ steps.fork.outputs.is-fork }}
+      can-deploy: ${{ steps.fork.outputs.can-proceed }}
     steps:
-      - name: Check Fork Status
-        id: check
+      - name: Determine checkout ref for fork safety
+        id: checkout_ref
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IS_FORK_CHECK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
-          IS_FORK="${{ github.event.pull_request.head.repo.full_name != github.repository }}"
-          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
-          
-          if [ "$IS_FORK" = "true" ]; then
-            echo "can_deploy=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Fork からのPRのため、プレビューデプロイはスキップされます（セキュリティ制限）"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            IS_FORK="$IS_FORK_CHECK"
+            if [ "$IS_FORK" = "true" ]; then
+              # Fork PR: main ブランチを使用（改ざん対策）
+              echo "ref=$PR_BASE_SHA" >> "$GITHUB_OUTPUT"
+              echo "📌 Fork PR detected: using base branch for security"
+            else
+              # 同一リポジトリ PR: マージコミットを使用（実際のPR挙動を再現）
+              echo "ref=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
+              echo "📌 Same-repo PR: using merge commit"
+            fi
           else
-            echo "can_deploy=true" >> $GITHUB_OUTPUT
-            echo "✅ 同一リポジトリからのPRのため、プレビューデプロイを実行します"
+            # push/workflow_dispatch: 現在のコミット（実際のマージ挙動を再現）
+            echo "ref=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
+            echo "📌 Non-PR event: using current commit"
           fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.checkout_ref.outputs.ref }}
+          persist-credentials: false
+
+      - name: Check Fork Status
+        id: fork
+        uses: ./.github/actions/fork-check
+
+  # TruffleHog Secret Scanning（セキュリティゲート）
+  trufflehog:
+    name: TruffleHog Secret Scan
+    needs: security-check
+    if: needs.security-check.outputs.can-deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      severity: ${{ steps.scan.outputs.severity }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Git履歴全スキャンのため全履歴取得
+
+      - name: Run TruffleHog Scan
+        id: scan
+        uses: ./.github/actions/trufflehog-scan
+        with:
+          base-branch: ${{ github.event.repository.default_branch }}
+
+      - name: Check Critical Findings
+        if: steps.scan.outputs.severity == 'critical'
+        run: |
+          echo "❌ Critical: 検証済みシークレットが検出されました"
+          exit 1
+
+  # Semgrep SAST（セキュリティゲート）
+  semgrep:
+    name: Semgrep SAST Scan
+    needs: security-check
+    if: needs.security-check.outputs.can-deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      severity: ${{ steps.scan.outputs.severity }}
+      high_critical_count: ${{ steps.scan.outputs.high_critical_count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Scan
+        id: scan
+        uses: ./.github/actions/semgrep-scan
+
+      - name: Check Critical Findings
+        if: steps.scan.outputs.severity == 'critical'
+        run: |
+          echo "❌ Critical: High/Critical の脆弱性が ${HIGH_CRITICAL_COUNT} 件検出されました"
+          exit 1
+        env:
+          HIGH_CRITICAL_COUNT: ${{ steps.scan.outputs.high_critical_count }}
 
   # Client テスト実行
   client-test:
@@ -145,8 +218,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -167,8 +242,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, log-deployment-start]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: 1.6.0
@@ -183,8 +260,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -198,8 +277,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
@@ -215,8 +296,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -234,8 +317,10 @@ jobs:
       needs.security-check.outputs.can-deploy == 'true' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
-      needs.e2e-test.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+      needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success'
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -267,24 +352,32 @@ jobs:
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
+      needs.trufflehog.result == 'success' &&
+      needs.semgrep.result == 'success' &&
       needs.deploy-infrastructure.result == 'success' &&
       needs.deploy-database.result == 'success' &&
       needs.deploy-backend.result == 'success' &&
       needs.deploy-frontend.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
       - name: Comment Preview URLs
         uses: actions/github-script@v7
+        env:
+          FRONTEND_URL: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
+          API_URL: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_REF: ${{ github.event.pull_request.head.ref }}
         with:
           script: |
             // URL正規化処理
-            const frontendUrl = '${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}';
-            const apiUrl = '${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}';
+            const frontendUrl = process.env.FRONTEND_URL;
+            const apiUrl = process.env.API_URL;
             const healthUrl = apiUrl.replace(/\/$/, '') + '/api/health'; // 正しいAPIエンドポイントパス
-            
+
             const previewComment = `## 🚀 Preview Environment Ready!
 
             ### 📱 Preview URLs
@@ -296,9 +389,9 @@ jobs:
             - [Frontend App](${frontendUrl})
 
             ### ℹ️ Environment Info
-            - **PR**: #${{ github.event.pull_request.number }}
-            - **Commit**: ${{ github.event.pull_request.head.sha }}
-            - **Branch**: ${{ github.event.pull_request.head.ref }}
+            - **PR**: #${process.env.PR_NUMBER}
+            - **Commit**: ${process.env.PR_SHA}
+            - **Branch**: ${process.env.PR_REF}
 
             > 🔄 Preview environment will be automatically updated when you push new commits to this PR.
             > ⚠️ **Shared Environment**: This preview environment is shared across all PRs. The latest PR update will overwrite previous deployments.`;

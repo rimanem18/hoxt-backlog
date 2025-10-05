@@ -21,9 +21,36 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
   });
 
   test('無効な署名を持つJWTで認証が失敗する', async () => {
-    // Given: 無効な署名を持つJWTトークン
+    // Given: 無効な署名を持つJWTトークン（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: 'google_123456789',
+        email: 'user@example.com',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          name: '山田太郎',
+          avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
+          email: 'user@example.com',
+          full_name: '山田太郎',
+        },
+        iss: 'https://supabase.example.com',
+        iat: 1703123456,
+        exp: 1703127056,
+      }),
+    )
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const invalidSignatureJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTI3MDU2fQ.aW52YWxpZF9zaWduYXR1cmU',
+      jwt: `${header}.${payload}.aW52YWxpZF9zaWduYXR1cmU`,
     };
 
     // 署名検証失敗パターンのモックセットアップ
@@ -65,12 +92,18 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
   });
 
   test('不正な形式のJWTで認証が失敗する', async () => {
-    // Given: 不正な形式のJWTトークンパターン
+    // Given: 不正な形式のJWTトークンパターン（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const malformedJwtInputs: AuthenticateUserUseCaseInput[] = [
       { jwt: 'invalid.jwt.token.format.broken' }, // 不正なセグメント数
       { jwt: 'not-a-jwt-at-all' }, // JWT形式ではない文字列
       {
-        jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.broken_base64_payload.dGVzdF9zaWduYXR1cmU',
+        jwt: `${header}.broken_base64_payload.dGVzdF9zaWduYXR1cmU`,
       }, // 破損したBase64
     ];
 
@@ -119,9 +152,36 @@ describe('AuthenticateUserUseCase - 無効JWT検証エラーテスト', () => {
   });
 
   test('期限切れJWTで認証が失敗する', async () => {
-    // Given: 期限切れのJWTトークン
+    // Given: 期限切れのJWTトークン（動的生成）
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        sub: 'google_123456789',
+        email: 'user@example.com',
+        app_metadata: { provider: 'google', providers: ['google'] },
+        user_metadata: {
+          name: '山田太郎',
+          avatar_url: 'https://lh3.googleusercontent.com/a/avatar.jpg',
+          email: 'user@example.com',
+          full_name: '山田太郎',
+        },
+        iss: 'https://supabase.example.com',
+        iat: 1703123456,
+        exp: 1703123456, // iat と同じ時刻 = 即時期限切れ
+      }),
+    )
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
     const expiredJwtInput: AuthenticateUserUseCaseInput = {
-      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJnb29nbGVfMTIzNDU2Nzg5IiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoi5bGx55Sw5aSq6YOOIiwiYXZhdGFyX3VybCI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL2F2YXRhci5qcGciLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJmdWxsX25hbWUiOiLlsbHnlLDlpKrpg44ifSwiaXNzIjoiaHR0cHM6Ly9zdXBhYmFzZS5leGFtcGxlLmNvbSIsImlhdCI6MTcwMzEyMzQ1NiwiZXhwIjoxNzAzMTIzNDU2fQ.ZXhwaXJlZF9zaWduYXR1cmU',
+      jwt: `${header}.${payload}.ZXhwaXJlZF9zaWduYXR1cmU`,
     };
 
     // 期限切れ検証失敗パターンのモックセットアップ

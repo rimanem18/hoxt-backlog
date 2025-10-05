@@ -4,8 +4,16 @@ description: 与えられた指示に対し、gemini, o3, codex と壁打ちし�
 
 試行錯誤回数よりも質を重視するため、gemini MCP, o3 MCP, codex MCP などを並行利用してください。  
 
+- use context7 MCP
+- use serena MCP
+- use Codex MCP
+- use o3-search MCP
+- use ask-gemini MCP
+
 ## 実行内容
 
+  - コードベースの状況調査には Serena MCP を活用します。
+  - 最新情報などが必要な場合、 Context7 MCP を活用します。
 - Gemini と o3 には、「検索」による新情報あるいは特定のバージョンについての調査を依頼します。Codex MCP には、既存のコードベースを踏まえた意見をもらえるよう依頼します。
   - 返答が返ってくるのが遅くとも気長に待機してください。何度もメッセージを送るのは禁止です。
 - MCP からの応答結果を要件定義や技術設計、既存のコードベースと比較し、齟齬が生じないか検証します。

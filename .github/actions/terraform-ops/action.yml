@@ -28,6 +28,12 @@ outputs:
   has-destructive-changes:
     description: 'Whether destructive changes were detected'
     value: ${{ steps.plan.outputs.has_destructive_changes }}
+  lambda_function_name_production:
+    description: 'Production Lambda function name'
+    value: ${{ steps.outputs.outputs.lambda_function_name_production }}
+  lambda_function_name_preview:
+    description: 'Preview Lambda function name'
+    value: ${{ steps.outputs.outputs.lambda_function_name_preview }}
   lambda-production-function-url:
     description: 'Production Lambda Function URL'
     value: ${{ steps.outputs.outputs.lambda_function_url_production }}
@@ -73,12 +79,18 @@ runs:
     - name: Terraform Init
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        BACKEND_BUCKET: ${{ inputs.backend-bucket }}
+        BACKEND_KEY: ${{ inputs.backend-key }}
+        BACKEND_REGION: ${{ inputs.backend-region }}
+        DYNAMODB_TABLE: ${{ inputs.dynamodb-table }}
       run: |
+        set -euo pipefail
         terraform init \
-          -backend-config="bucket=${{ inputs.backend-bucket }}" \
-          -backend-config="key=${{ inputs.backend-key }}" \
-          -backend-config="region=${{ inputs.backend-region }}" \
-          -backend-config="dynamodb_table=${{ inputs.dynamodb-table }}"
+          -backend-config="bucket=$BACKEND_BUCKET" \
+          -backend-config="key=$BACKEND_KEY" \
+          -backend-config="region=$BACKEND_REGION" \
+          -backend-config="dynamodb_table=$DYNAMODB_TABLE"
 
     - name: Terraform Plan
       id: plan
@@ -98,13 +110,15 @@ runs:
         fi
 
     - name: Terraform Apply
-      uses: nick-invision/retry@v2
+      uses: nick-fields/retry@v3.0.1
+      env:
+        TF_WORKDIR: ${{ inputs.working-directory }}
       with:
         timeout_minutes: 15
         max_attempts: 3
         retry_on: error
         command: |
-          cd ${{ inputs.working-directory }}
+          cd "$TF_WORKDIR"
           terraform apply -auto-approve tfplan
 
     - name: Extract Terraform Outputs
