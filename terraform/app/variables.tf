@@ -26,5 +26,4 @@ variable "ops_email" {
   description = "Operational email address for CloudWatch alarm notifications"
   type        = string
   default     = ""
-  sensitive   = true
 }
