@@ -2,463 +2,723 @@
 
 ---
 
-# セキュリティ脆弱性修正プラン（HOXBL-29続き）
+# Production Lambda HTTPエラー監視実装プラン（HOXBL-31）
 
-**作成日**: 2025-10-04 22:36 JST
-**タスク**: 残存セキュリティ脆弱性の修正（Semgrep検出）
+**作成日**: 2025-10-06 JST
+**背景**: Lambda監視のギャップ発見（HTTP 4xx/5xx未監視）
+**参照**: /rimane:polythink による多角的検証結果
 
-## 背景
-- **前回（完了済み）**:
-  - GitHub Actions注入 14件修正
-  - ハードコードJWT 14件修正
-  - Dockerfile非rootユーザー 2件修正
-- **今回（✅ 完了）**: 残り脆弱性を修正
+## 🔍 問題の発見経緯
 
----
+Lambda Function URLに404リクエストを送信してアラートテストを実施したところ、CloudWatch Alarms（SNS Email通知）が発火しませんでした。
 
-## 実装スコープ（Phase 1-4実施、Phase 5別タスク化）
+**調査結果**:
+- HTTP 404は Lambda実行成功として扱われ、`AWS/Lambda::Errors` メトリクスにカウントされない
+- 現在の監視構成は**インフラエラー**（タイムアウト、メモリ不足等）のみをカバー
+- **アプリケーションエラー**（HTTP 4xx/5xx）が完全に盲点
 
-### Phase 1: GitHub Actions `${{ }}` 式の修正 ✅ 完了
-**優先度**: 🔴 最高（コマンドインジェクション対策）
-**実装方式**: DIRECT（インフラ設定）
-
-**対象ファイル（5ファイル）**:
-1. `.github/actions/e2e-test/action.yml` - 10変数+PID初期化
-2. `.github/actions/setup-environment/action.yml` - 3変数
-3. `.github/actions/setup-postgres/action.yml` - 6変数
-4. `.github/actions/terraform-ops/action.yml` - 5変数（Terraform Apply修正含む）
-5. `.github/workflows/deploy-database.yml` - TIMEOUT_MINUTES追加
-
-**追加修正（Codexレビュー反映）**:
-- **terraform-ops.yml**: Terraform Applyステップの`working-directory`を`TF_WORKDIR`経由に修正
-- **e2e-test.yml**: PID変数を空文字列で初期化、cleanup関数で`${VAR:-}`パターン使用
-
-**修正パターン**:
-```yaml
-# Before (脆弱)
-run: |
-  echo "Actor: ${{ github.actor }}"
-
-# After (安全)
-env:
-  ACTOR: ${{ github.actor }}
-run: |
-  set -euo pipefail
-  echo "Actor: \"$ACTOR\""
-```
+**多角的検証（Gemini MCP、o3 MCP、Codex MCP）の結論**:
+- ✅ 404エラー除外は一般的（クライアント側の問題が多い）
+- ❌ **5xxエラーの見逃しは本番環境では致命的**（即座に監視必須）
+- 推奨: Embedded Metric Format (EMF) によるカスタムメトリクス
 
 ---
 
-### Phase 2: console.log非リテラル引数の修正 ✅ 完了
-**優先度**: 🟠 高（ログ偽装対策）
-**実装方式**: DIRECT（文字列操作）
+## 📋 実装スコープ
 
-**対象ファイル（1ファイル）**:
-1. `app/client/src/app/auth/callback/page.tsx` - console.errorの第一引数をテンプレートリテラル化
+### 優先度別タスク
 
-**修正内容**:
+| 優先度 | タスク | 実装期間 | 影響範囲 |
+|-------|-------|---------|---------|
+| **🔴 P0（最優先）** | HOXBL-31-1: 5xxエラー監視 | 2-3時間 | 本番障害検知 |
+| **🟠 P1（早期）** | HOXBL-31-2: 4xxエラー監視 | 1-2時間 | 異常トラフィック検知 |
+| **🟡 P2（中期）** | HOXBL-31-3: MonitoringService抽象化 | 3-4時間 | アーキテクチャ整合性 |
+
+**合計推定工数**: 6-9時間
+
+---
+
+## 🔴 HOXBL-31-1: 5xxエラー監視実装（P0）
+
+**目的**: 本番環境のサーバーサイドエラーを即座に検知
+
+### 実装スコープ
+
+1. **EMFミドルウェア実装**（Presentation層）
+   - ファイル: `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts`
+   - 全HTTPリクエストのステータスコードを捕捉
+   - Embedded Metric Format形式でCloudWatch Logsに出力
+
+2. **entrypoints統合**
+   - ファイル: `app/server/src/entrypoints/index.ts`
+   - CORSミドルウェアの直後にemfMetricsMiddleware登録
+
+3. **Terraform カスタムメトリクスアラーム**
+   - ファイル: `terraform/modules/monitoring/main.tf`
+   - `5xxErrors` カスタムメトリクスアラーム（閾値: 1エラー/分）
+   - 既存SNS Topicに接続
+
+4. **設計文書更新**
+   - `docs/design/continuous-deployment/architecture.md` - 監視セクション更新
+   - `docs/tasks/continuous-deployment-tasks.md` - TASK-702 実装詳細更新
+
+---
+
+### 実装コード
+
+#### emfMetricsMiddleware.ts（新規作成）
+
 ```typescript
-// Before（脆弱）
-console.error(logMessage, { error, ... });
+/**
+ * Embedded Metric Format (EMF) によるHTTPメトリクス記録ミドルウェア
+ *
+ * CloudWatch Logsに構造化ログを出力し、自動的にカスタムメトリクスを生成する。
+ * 5xxエラー、4xxエラー、レイテンシをメトリクス化。
+ */
+import { createMiddleware } from 'hono/factory';
 
-// After（安全）
-console.error(`Auth callback error: ${String(logMessage)}`, { error, ... });
+/**
+ * EMFミドルウェア
+ * 全HTTPリクエストのレスポンス情報をCloudWatch Metricsに記録する
+ */
+export const emfMetricsMiddleware = createMiddleware(async (c, next) => {
+  const start = Date.now();
+
+  // 下流ミドルウェア・ハンドラーを実行
+  await next();
+
+  const statusCode = c.res.status;
+  const latency = Date.now() - start;
+
+  // Embedded Metric Format仕様に準拠したペイロード
+  const emfPayload = {
+    _aws: {
+      Timestamp: Date.now(),
+      CloudWatchMetrics: [
+        {
+          Namespace: process.env.METRICS_NAMESPACE || 'Application/Monitoring',
+          Dimensions: [['Environment']],
+          Metrics: [
+            { Name: 'Latency', Unit: 'Milliseconds' },
+            ...(statusCode >= 500 ? [{ Name: '5xxErrors', Unit: 'Count' }] : []),
+          ],
+        },
+      ],
+    },
+    Environment: process.env.NODE_ENV || 'unknown',
+    StatusCode: statusCode,
+    Path: c.req.path,
+    Method: c.req.method,
+    Latency: latency,
+    ...(statusCode >= 500 && { '5xxErrors': 1 }),
+  };
+
+  // CloudWatch Logsへ出力（自動的にメトリクス化される）
+  console.log(JSON.stringify(emfPayload));
+});
 ```
-
-**結果**: フォーマット文字列攻撃によるログ偽装を防止
 
 ---
 
-### Phase 3: 動的RegExp修正 ✅ 完了
-**優先度**: 🟡 中（ReDoS対策）
-**実装方式**: DIRECT（テスト未存在）
+#### entrypoints/index.ts への統合
 
-**対象ファイル（1ファイル）**:
-- `app/server/src/presentation/http/validators/HttpRequestValidator.ts`
-
-**修正内容**: `regex`モードを削除（ホワイトリスト化）
 ```typescript
-// Before（脆弱）
-private readonly matchMode: 'exact' | 'endsWith' | 'regex' = 'exact'
-case 'regex':
-  return new RegExp(allowedPath).test(pathname);
+import { Hono } from 'hono';
+import { errorHandlerMiddleware } from '@/presentation/http/middleware';
+import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
+import { emfMetricsMiddleware } from '@/presentation/http/middleware/emfMetricsMiddleware';
+import { auth, greet, health, user } from '@/presentation/http/routes';
 
-// After（安全）
-private readonly matchMode: 'exact' | 'endsWith' = 'exact'
-// regex caseを削除
+const createServer = (): Hono => {
+  const app = new Hono();
+
+  // CORSミドルウェア（最初に適用）
+  app.use('/api/*', corsMiddleware);
+
+  // メトリクス記録ミドルウェア（全リクエストを記録）
+  app.use('/api/*', emfMetricsMiddleware);
+
+  // エラーハンドリングミドルウェア
+  app.use('/api/*', errorHandlerMiddleware);
+
+  // APIルートをマウント
+  app.route('/api', greet);
+  app.route('/api', health);
+  app.route('/api', auth);
+  app.route('/api', user);
+
+  return app;
+};
+
+const app = createServer();
+
+export default app;
 ```
 
-**結果**: ReDoS（正規表現DoS）攻撃リスクを完全排除
+---
+
+#### Terraform: 5xxErrorsアラーム追加
+
+```hcl
+# terraform/modules/monitoring/main.tf
+
+# 5xxエラー監視アラーム
+resource "aws_cloudwatch_metric_alarm" "lambda_5xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-lambda-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "5xxErrors"
+  namespace           = var.metrics_namespace
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_description   = "This metric monitors lambda 5xx errors (server-side errors)"
+  treat_missing_data  = "notBreaching"
+
+  # SNS通知設定（既存Topicを使用）
+  alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+
+  dimensions = {
+    Environment = var.environment
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-5xx-errors-alarm"
+  })
+}
+```
 
 ---
 
-### Phase 4: ドキュメント内JWT削除 ✅ 完了
-**優先度**: 🟢 低（シークレット漏洩対策）
-**実装方式**: DIRECT（ドキュメント修正）
+### チェックリスト
 
-**対象ファイル（8ファイル）**:
-1. `docs/implements/TASK-104/mvp-google-auth-testcases.md`
-2. `docs/implements/TASK-202/mvp-google-auth-requirements.md`
-3. `docs/implements/TASK-105/mvp-google-auth-requirements.md`
-4. `docs/implements/TASK-105/mvp-google-auth-testcases.md`
-5. `docs/explan/mvp-google-auth/TASK-201-code-explan.md`
-6. `docs/explan/mvp-google-auth/TASK-105-code-explan.md`
-7. `docs/design/continuous-deployment/api-endpoints.md`
-8. `docs/design/mvp-google-auth/api-endpoints.md`
+#### コード実装
+- [ ] `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts` 作成
+- [ ] `app/server/src/entrypoints/index.ts` でミドルウェア登録（CORSの直後）
+- [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
+- [ ] Lint: `docker compose exec server bun run fix`
 
-**修正**: 正規表現 `eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*` でJWTを `<JWT_TOKEN_REDACTED>` に一括置換
+#### Terraform実装
+- [ ] `terraform/modules/monitoring/main.tf` に5xxErrorsアラーム追加
+- [ ] `make iac-plan-save` で動作確認
+- [ ] Plan出力で5xxErrorsアラームが追加されることを確認
 
-**結果**: ドキュメント内シークレット漏洩リスクを解消
+#### 設計文書更新
+- [ ] `docs/design/continuous-deployment/architecture.md` 監視セクション更新
+  - インフラエラー/アプリケーションエラーの区別を明記
+  - EMF実装方式を追記
+- [ ] `docs/tasks/continuous-deployment-tasks.md` TASK-702更新
+  - 実装詳細にEMFミドルウェア追加
 
----
-
-### Phase 5: Terraform修正 🚫
-**優先度**: 低（別タスク化）
-**理由**: 影響範囲大、インフラ受け入れテスト必要
-
-**対応内容（別チケットHOXBL-XXX）**:
-- Lambda X-Ray有効化
-- KMS暗号化（Lambda環境変数、CloudWatch Logs、DynamoDB SSE）
-- KMSキーローテーション
-- IAM権限エスカレーション対策
+#### デプロイ & 動作確認
+- [ ] Git commit: `feat: Production Lambda 5xxエラー監視追加 HOXBL-31`
+- [ ] `make iac-apply` でTerraform適用
+- [ ] 意図的に5xxエラー発生させてメール通知確認
 
 ---
 
-## Git Commit戦略（実施結果）
-- **Commit 48e0023**: Phase 1-4統合修正（GitHub Actions注入 + console.log + RegExp + JWTドキュメント）
-  - Codexレビュー反映（terraform-ops.yml TF_WORKDIR修正、e2e-test.yml PID初期化）
+## 🟠 HOXBL-31-2: 4xxエラートレンド監視（P1）
+
+**目的**: 異常なトラフィックパターン（攻撃、不正リクエスト）を検知
+
+### 実装スコープ
+
+1. **EMFミドルウェア拡張**
+   - `4xxErrors` メトリクス追加
+
+2. **Terraform アラーム追加**
+   - `4xxErrors` カスタムメトリクスアラーム（閾値: 100エラー/分）
 
 ---
 
-## チェックリスト ✅ 全完了
+### 実装コード
 
-### Phase 1: GitHub Actions
-- [x] すべての`run:`から`${{ }}`削除
-- [x] `env:`ブロック経由に変更
-- [x] 変数参照は二重引用符で囲む
-- [x] `set -euo pipefail`追加
-- [x] Terraform Applyステップも`TF_WORKDIR`経由に修正（Codexレビュー反映）
-- [x] PID変数初期化で`set -u`対応（Codexレビュー反映）
+#### emfMetricsMiddleware.ts の拡張
 
-### Phase 2: console.log
-- [x] 非リテラル第一引数をすべて修正
-- [x] テンプレートリテラルまたは定数フォーマット使用
+```typescript
+// Metrics配列に4xxErrors追加
+Metrics: [
+  { Name: 'Latency', Unit: 'Milliseconds' },
+  ...(statusCode >= 500 ? [{ Name: '5xxErrors', Unit: 'Count' }] : []),
+  ...(statusCode >= 400 && statusCode < 500 ? [{ Name: '4xxErrors', Unit: 'Count' }] : []),
+],
 
-### Phase 3: RegExp
-- [x] `matchMode`から`'regex'`削除
-- [x] `validate()`の`case 'regex':`削除
-- [x] 型チェック実行
-
-### Phase 4: JWT
-- [x] 8ファイルのJWTを`<JWT_TOKEN_REDACTED>`に置換
-
-### 最終確認
-- [x] Lint実行: `docker compose exec server bun run fix`
-- [x] 型チェック: `docker compose exec server bunx tsc --noEmit`
-- [ ] Semgrep再実行（PR上で確認） ← **次のステップ**
+// ペイロードに4xxErrors追加
+...(statusCode >= 500 && { '5xxErrors': 1 }),
+...(statusCode >= 400 && statusCode < 500 && { '4xxErrors': 1 }),
+```
 
 ---
 
-## 実装サマリー
+#### Terraform: 4xxErrorsアラーム追加
 
-### 修正ファイル総数: 14ファイル
-- GitHub Actions: 5ファイル
-- アプリケーション: 2ファイル（console.log + RegExp）
-- ドキュメント: 8ファイル（JWT削除）
+```hcl
+# terraform/modules/monitoring/main.tf
 
-### 解消された脆弱性
-1. **コマンドインジェクション**: GitHub Actions `run:`内の`${{ }}`式を完全排除
-2. **ログ偽装**: console.log非リテラル第一引数を修正
-3. **ReDoS攻撃**: 動的RegExp生成を削除
-4. **シークレット漏洩**: ドキュメント内JWTトークンを削除
+# 4xxエラー監視アラーム（異常トラフィック検知）
+resource "aws_cloudwatch_metric_alarm" "lambda_4xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-lambda-4xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "4xxErrors"
+  namespace           = var.metrics_namespace
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 100
+  alarm_description   = "This metric monitors lambda 4xx errors (abnormal traffic pattern)"
+  treat_missing_data  = "notBreaching"
 
-### 次のアクション
-1. PRを作成してSemgrepを実行
-2. 脆弱性が解消されたことを確認
-3. Phase 5（Terraform修正）を別タスク（HOXBL-XXX）として起票
+  alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+
+  dimensions = {
+    Environment = var.environment
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-4xx-errors-alarm"
+  })
+}
+```
+
+---
+
+### チェックリスト
+
+- [ ] `emfMetricsMiddleware.ts` に4xxErrors追加
+- [ ] `terraform/modules/monitoring/main.tf` に4xxErrorsアラーム追加
+- [ ] `make iac-plan-save` で動作確認
+- [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
+- [ ] Git commit: `feat: Production Lambda 4xxエラートレンド監視追加 HOXBL-31`
+
+---
+
+## 🟡 HOXBL-31-3: MonitoringService抽象化（P2）
+
+**目的**: DDD/Clean Architecture準拠のアーキテクチャ整合性確保
+
+### アーキテクチャ設計
+
+```
+┌─────────────────────────────────────────────┐
+│ Presentation Layer (HTTP Middleware)       │
+│  - metricsMiddleware(monitoring)            │
+│    └─ depends on ─┐                         │
+└───────────────────┼─────────────────────────┘
+                    │ インターフェース依存
+┌───────────────────▼─────────────────────────┐
+│ Shared Layer (Interface)                   │
+│  - MonitoringService (interface)            │
+│    - recordHttpStatus()                     │
+│    - recordException()                      │
+└───────────────────┬─────────────────────────┘
+                    │ 実装
+┌───────────────────▼─────────────────────────┐
+│ Infrastructure Layer (Implementation)       │
+│  - CloudWatchMonitoringService              │
+│    - EMF形式でCloudWatch Logsに出力         │
+└─────────────────────────────────────────────┘
+```
+
+**DDD/Clean Architecture原則の適用**:
+- **Shared層**: 監視の抽象概念を定義（技術的詳細に非依存）
+- **Infrastructure層**: CloudWatch固有の実装（将来Datadog等に交換可能）
+- **Presentation層**: インターフェースに依存（具象クラスに非依存）
+
+---
+
+### 実装スコープ
+
+1. **MonitoringService インターフェース**（Shared層）
+   - ファイル: `app/server/src/shared/monitoring/MonitoringService.ts`
+
+2. **CloudWatchMonitoringService 実装**（Infrastructure層）
+   - ファイル: `app/server/src/infrastructure/monitoring/CloudWatchMonitoringService.ts`
+   - EMF形式でCloudWatch Logsに出力
+
+3. **metricsMiddleware リファクタリング**（Presentation層）
+   - ファイル: `app/server/src/presentation/http/middleware/metricsMiddleware.ts`
+   - MonitoringService依存に変更
+
+4. **依存性注入**（entrypoints）
+   - ファイル: `app/server/src/entrypoints/index.ts`
+   - CloudWatchMonitoringServiceをインスタンス化
+
+---
+
+### 実装コード
+
+#### MonitoringService.ts（Shared層）
+
+```typescript
+/**
+ * 監視サービスの抽象インターフェース
+ *
+ * DDD/Clean Architecture原則に従い、監視の抽象概念をShared層で定義する。
+ * 具体的な監視基盤（CloudWatch、Datadog等）はInfrastructure層で実装。
+ */
+
+/**
+ * HTTPステータスメトリクス
+ */
+export interface HttpStatusMetrics {
+  /** HTTPステータスコード */
+  status: number;
+  /** リクエストパス */
+  path: string;
+  /** HTTPメソッド */
+  method: string;
+  /** レイテンシ（ミリ秒） */
+  latency: number;
+  /** リクエストID（オプション） */
+  requestId?: string;
+}
+
+/**
+ * 監視サービスインターフェース
+ *
+ * アプリケーション全体の監視機能を抽象化する。
+ * Infrastructure層で具体的な監視基盤（CloudWatch等）を実装する。
+ */
+export interface MonitoringService {
+  /**
+   * HTTPリクエストのステータスメトリクスを記録
+   * @param metrics - HTTPステータスメトリクス
+   */
+  recordHttpStatus(metrics: HttpStatusMetrics): void;
+
+  /**
+   * 例外発生を記録
+   * @param error - 発生した例外
+   * @param context - 追加のコンテキスト情報
+   */
+  recordException(error: Error, context?: Record<string, unknown>): void;
+}
+```
+
+---
+
+#### CloudWatchMonitoringService.ts（Infrastructure層）
+
+```typescript
+/**
+ * CloudWatch Embedded Metric Format (EMF) による監視サービス実装
+ *
+ * MonitoringServiceインターフェースの具体実装。
+ * CloudWatch Logsに構造化ログを出力し、自動的にカスタムメトリクスを生成する。
+ */
+import type {
+  MonitoringService,
+  HttpStatusMetrics,
+} from '@/shared/monitoring/MonitoringService';
+
+/**
+ * CloudWatch監視サービス
+ *
+ * Embedded Metric Format (EMF) を使用してCloudWatch Logsに出力する。
+ * CloudWatchが自動的にログからメトリクスを抽出し、カスタムメトリクスを作成する。
+ */
+export class CloudWatchMonitoringService implements MonitoringService {
+  /**
+   * HTTPリクエストのステータスメトリクスを記録
+   *
+   * EMF形式でCloudWatch Logsに出力し、以下のメトリクスを生成：
+   * - Latency: レイテンシ（ミリ秒）
+   * - 5xxErrors: サーバーエラー数
+   * - 4xxErrors: クライアントエラー数
+   */
+  recordHttpStatus(metrics: HttpStatusMetrics): void {
+    const { status, path, method, latency, requestId } = metrics;
+
+    // Embedded Metric Format仕様に準拠したペイロード
+    const emfPayload = {
+      _aws: {
+        Timestamp: Date.now(),
+        CloudWatchMetrics: [
+          {
+            Namespace: process.env.METRICS_NAMESPACE || 'Application/Monitoring',
+            Dimensions: [['Environment']],
+            Metrics: [
+              { Name: 'Latency', Unit: 'Milliseconds' },
+              ...(status >= 500
+                ? [{ Name: '5xxErrors', Unit: 'Count' }]
+                : []),
+              ...(status >= 400 && status < 500
+                ? [{ Name: '4xxErrors', Unit: 'Count' }]
+                : []),
+            ],
+          },
+        ],
+      },
+      Environment: process.env.NODE_ENV || 'unknown',
+      StatusCode: status,
+      Path: path,
+      Method: method,
+      Latency: latency,
+      ...(requestId && { RequestId: requestId }),
+      ...(status >= 500 && { '5xxErrors': 1 }),
+      ...(status >= 400 && status < 500 && { '4xxErrors': 1 }),
+    };
+
+    // CloudWatch Logsへ出力（自動的にメトリクス化される）
+    console.log(JSON.stringify(emfPayload));
+  }
+
+  /**
+   * 例外発生を記録
+   *
+   * エラーログとして構造化情報をCloudWatch Logsに出力する。
+   */
+  recordException(error: Error, context?: Record<string, unknown>): void {
+    console.error('Exception occurred', {
+      error: error.message,
+      stack: error.stack,
+      ...context,
+    });
+  }
+}
+```
+
+---
+
+#### metricsMiddleware.ts（Presentation層リファクタリング）
+
+```typescript
+/**
+ * HTTPメトリクス記録ミドルウェア
+ *
+ * 全HTTPリクエストのレスポンス情報をMonitoringServiceに記録する。
+ * MonitoringServiceの具象実装（CloudWatch等）には依存しない。
+ */
+import { createMiddleware } from 'hono/factory';
+import type { MonitoringService } from '@/shared/monitoring/MonitoringService';
+
+/**
+ * メトリクスミドルウェア
+ *
+ * 依存性注入パターンを使用し、MonitoringServiceインターフェースに依存する。
+ * 具体的な監視基盤（CloudWatch、Datadog等）は実行時に注入される。
+ *
+ * @param monitoring - 監視サービスインスタンス
+ */
+export const metricsMiddleware = (monitoring: MonitoringService) =>
+  createMiddleware(async (c, next) => {
+    const start = Date.now();
+
+    // 下流ミドルウェア・ハンドラーを実行
+    await next();
+
+    // HTTPステータスメトリクスを記録
+    monitoring.recordHttpStatus({
+      status: c.res.status,
+      path: c.req.path,
+      method: c.req.method,
+      latency: Date.now() - start,
+      requestId: c.req.header('x-request-id'),
+    });
+  });
+```
+
+---
+
+#### entrypoints/index.ts（依存性注入）
+
+```typescript
+import { Hono } from 'hono';
+import { errorHandlerMiddleware } from '@/presentation/http/middleware';
+import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
+import { metricsMiddleware } from '@/presentation/http/middleware/metricsMiddleware';
+import { CloudWatchMonitoringService } from '@/infrastructure/monitoring/CloudWatchMonitoringService';
+import { auth, greet, health, user } from '@/presentation/http/routes';
+
+/**
+ * Hono アプリケーションサーバーを作成する
+ *
+ * DDD/Clean Architecture原則に従い、依存性注入パターンを使用。
+ * 監視サービスの具象実装（CloudWatchMonitoringService）をここで注入する。
+ */
+const createServer = (): Hono => {
+  const app = new Hono();
+
+  // 依存性注入: CloudWatch監視サービスをインスタンス化
+  const monitoring = new CloudWatchMonitoringService();
+
+  // CORSミドルウェア（最初に適用）
+  app.use('/api/*', corsMiddleware);
+
+  // メトリクス記録ミドルウェア（監視サービスを注入）
+  app.use('/api/*', metricsMiddleware(monitoring));
+
+  // エラーハンドリングミドルウェア
+  app.use('/api/*', errorHandlerMiddleware);
+
+  // APIルートをマウント
+  app.route('/api', greet);
+  app.route('/api', health);
+  app.route('/api', auth);
+  app.route('/api', user);
+
+  return app;
+};
+
+const app = createServer();
+
+export default app;
+```
+
+---
+
+### チェックリスト
+
+#### インターフェース設計（Shared層）
+- [ ] `app/server/src/shared/monitoring/MonitoringService.ts` 作成
+- [ ] HttpStatusMetrics型定義
+- [ ] MonitoringServiceインターフェース定義
+
+#### 実装（Infrastructure層）
+- [ ] `app/server/src/infrastructure/monitoring/CloudWatchMonitoringService.ts` 作成
+- [ ] recordHttpStatus() 実装（EMF形式）
+- [ ] recordException() 実装
+
+#### ミドルウェアリファクタリング（Presentation層）
+- [ ] `app/server/src/presentation/http/middleware/metricsMiddleware.ts` 作成
+- [ ] MonitoringService依存に変更
+- [ ] `emfMetricsMiddleware.ts` を削除（metricsMiddlewareに統合）
+
+#### 依存性注入（entrypoints）
+- [ ] `app/server/src/entrypoints/index.ts` 修正
+- [ ] CloudWatchMonitoringServiceインスタンス化
+- [ ] metricsMiddleware(monitoring) で注入
+
+#### テスト & 検証
+- [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
+- [ ] Lint: `docker compose exec server bun run fix`
+- [ ] `make iac-plan-save` で既存Terraform設定に影響ないことを確認
+- [ ] ローカルで動作確認
+
+#### Git Commit
+- [ ] `refactor: MonitoringService抽象化でDDD/Clean Architecture準拠 HOXBL-31`
+
+---
+
+## 📅 実装スケジュール
+
+### Week 1: P0（最優先）
+- **Day 1-2**: HOXBL-31-1 実装（5xxエラー監視）
+  - EMFミドルウェア実装
+  - Terraform設定追加
+  - 設計文書更新
+  - デプロイ & 動作確認
+
+### Week 2: P1（早期）
+- **Day 3**: HOXBL-31-2 実装（4xxエラー監視）
+  - ミドルウェア拡張
+  - Terraform設定追加
+  - デプロイ & 動作確認
+
+### Week 3-4: P2（中期）
+- **Day 4-7**: HOXBL-31-3 実装（MonitoringService抽象化）
+  - MonitoringServiceインターフェース設計
+  - CloudWatchMonitoringService実装
+  - metricsMiddlewareリファクタリング
+  - 依存性注入統合
+  - テスト & 検証
+
+---
+
+## 📚 参考資料
+
+### AWS公式ドキュメント
+- [Embedded Metric Format Specification](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html)
+- [CloudWatch Alarms Best Practices](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Best_Practice_Recommended_Alarms_AWS_Services.html)
+- [Lambda Monitoring Metrics](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics-types.html)
+
+### アーキテクチャ原則
+- Google SRE Book: Golden Signals (latency, traffic, errors, saturation)
+- AWS Well-Architected Framework: Operational Excellence Pillar
+- Eric Evans: Domain-Driven Design - Infrastructure Layer
+
+---
+
+## 🔧 環境変数化のTODO（プロジェクト固有名称の除去）
+
+### 背景
+プロジェクト固有の名称をコードやドキュメントから除去し、環境変数で管理する。
+DDD/Clean Architecture の依存性逆転の原則（DIP）に基づき、環境変数名も監視基盤（CloudWatch等）に依存しない抽象的な名前を使用する。
+
+### 必要な対応（実装ガイダンス）
+
+#### 1. 環境変数定義
+- [x] `.env.example` に `METRICS_NAMESPACE` を追加（完了）
+  ```bash
+  # メトリクス名前空間（監視基盤に依存しない抽象概念）
+  METRICS_NAMESPACE=Application/Monitoring
+  ```
+
+#### 2. Docker Compose設定
+- [x] `compose.yaml` の server サービスに環境変数を追加（完了）
+  ```yaml
+  services:
+    server:
+      environment:
+        - METRICS_NAMESPACE=${METRICS_NAMESPACE}
+  ```
+
+#### 3. Terraform変数定義
+- [ ] `terraform/app/variables.tf` に変数追加
+  ```hcl
+  variable "metrics_namespace" {
+    description = "Metrics namespace for application monitoring (platform-agnostic)"
+    type        = string
+    default     = "Application/Monitoring"
+  }
+  ```
+
+- [ ] `terraform/modules/monitoring/variables.tf` に変数追加
+  ```hcl
+  variable "metrics_namespace" {
+    description = "Metrics namespace for application monitoring"
+    type        = string
+  }
+  ```
+
+- [ ] `terraform/app/main.tf` で monitoring モジュールに渡す
+  ```hcl
+  module "monitoring_production" {
+    source            = "../modules/monitoring"
+    metrics_namespace = var.metrics_namespace
+    # ... 他のパラメータ
+  }
+  ```
+
+- [ ] Makefile または GitHub Actions ワークフローで環境変数を渡す
+  ```makefile
+  # Makefile 例
+  iac-plan-save:
+  	export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
+  	docker compose exec iac terraform plan -out=tfplan
+  ```
+
+  ```yaml
+  # GitHub Actions 例
+  env:
+    TF_VAR_metrics_namespace: ${{ secrets.METRICS_NAMESPACE }}
+  ```
+
+#### 4. 実装時の注意
+- [ ] TypeScriptコードで `process.env.METRICS_NAMESPACE` を使用
+- [ ] デフォルト値は `'Application/Monitoring'` など汎用的な名前にする
+- [ ] Terraform で `var.metrics_namespace` を使用
+- [ ] 環境変数名は監視基盤（CloudWatch、Datadog等）に依存しない抽象的な名前にする
+
+### DDD/Clean Architecture 原則の適用
+- **抽象化レベルの一貫性**: 環境変数も MonitoringService と同じ抽象レベルで命名
+- **Infrastructure 層の責務**: CloudWatch 固有の詳細（EMF の Namespace フィールド等）は CloudWatchMonitoringService が解釈
+- **交換可能性の保証**: `METRICS_NAMESPACE` は監視基盤に依存しないため、将来 Datadog に切り替えても環境変数は変更不要
 
 ---
 
 **更新履歴**:
-- 2025-10-04 22:36: 初版作成
-- 2025-10-04 23:15: 実装完了、Codexレビュー反映、最終サマリー追加
-- 2025-10-05 23:XX: ChatGPT指摘事項を精査、Phase 6-8プラン追加
-
----
-
-# セキュリティ脆弱性修正プラン（HOXBL-29 追加修正）
-
-**作成日**: 2025-10-05 23:XX JST
-**タスク**: ChatGPT指摘事項に基づく残存脆弱性の修正
-
-## 調査結果サマリー
-
-### 脆弱性カテゴリ別の状況
-
-1. **GitHub Actions コマンドインジェクション**: 4ファイルに残存脆弱性
-2. **JS/TS console.log**: 前回修正済み（問題なし）
-3. **Terraform 暗号化・監視**: 複数の強化推奨設定が不足
-4. **IAM 権限エスカレーション**: PassRole条件の追加推奨
-5. **Semgrep 誤検知**: パーサー都合のノイズ除外推奨
-
----
-
-## 実装スコープ（Phase 6-9）
-
-### Phase 6: 残存GitHub Actions脆弱性修正 🔴 高優先度
-**優先度**: 🔴 最高（コマンドインジェクション対策）
-**実装方式**: DIRECT（インフラ設定）
-
-**対象ファイル（4ファイル）**:
-1. `.github/actions/lambda-package/action.yml` - command:ブロック内（64-103行目）
-2. `.github/workflows/deploy-frontend.yml` - run:ブロック内（55-60行目のデバッグecho）
-3. `.github/actions/fork-check/action.yml` - run:ブロック内（20, 22, 38行目）
-4. `.github/workflows/preview.yml` - run:ブロック内（36-49行目）
-
-**修正パターン**:
-```yaml
-# Before (脆弱) - lambda-package/action.yml
-command: |
-  cd ${{ inputs.working-directory }}
-  aws lambda update-function-code \
-    --function-name ${{ inputs.function-name }} \
-    --region ${{ inputs.aws-region }}
-
-# After (安全)
-env:
-  WORK_DIR: ${{ inputs.working-directory }}
-  FUNCTION_NAME: ${{ inputs.function-name }}
-  AWS_REGION: ${{ inputs.aws-region }}
-command: |
-  set -euo pipefail
-  cd "$WORK_DIR"
-  aws lambda update-function-code \
-    --function-name "$FUNCTION_NAME" \
-    --region "$AWS_REGION"
-```
-
-**チェックリスト**:
-- [ ] lambda-package: 3つのinputs変数をenv経由に
-- [ ] deploy-frontend: デバッグechoの4つの${{}}をenv経由に
-- [ ] fork-check: github.event_nameとPR情報をenv経由に
-- [ ] preview: checkout_ref計算の${{}}をenv経由に
-
----
-
-### Phase 7: Terraform 暗号化・監視強化 🟡 中優先度
-**優先度**: 🟡 中（セキュリティベストプラクティス適用）
-**実装方式**: DIRECT（Terraformリソース追加・修正）
-
-#### 7-1: Lambda X-Ray トレーシング
-
-**対象ファイル**:
-- `terraform/modules/lambda/main.tf`
-- `terraform/bootstrap/main.tf` (production/preview両方)
-
-**追加内容**:
-```hcl
-resource "aws_lambda_function" "this" {
-  # 既存設定...
-
-  tracing_config {
-    mode = "Active"
-  }
-}
-```
-
-**チェックリスト**:
-- [ ] modules/lambda/main.tf: tracing_config追加
-- [ ] bootstrap/main.tf: production関数にtracing_config追加
-- [ ] bootstrap/main.tf: preview関数にtracing_config追加
-
-#### 7-2: KMS暗号化（Lambda環境変数）
-
-**対象ファイル**:
-- `terraform/modules/kms/` (新規モジュール作成)
-- `terraform/modules/lambda/main.tf`
-- `terraform/bootstrap/main.tf`
-
-**追加内容**:
-```hcl
-# KMSキー作成
-resource "aws_kms_key" "lambda_env" {
-  description         = "Lambda environment variables encryption"
-  enable_key_rotation = true
-}
-
-resource "aws_kms_alias" "lambda_env" {
-  name          = "alias/${var.project_name}-lambda-env"
-  target_key_id = aws_kms_key.lambda_env.key_id
-}
-
-# Lambda関数で使用
-resource "aws_lambda_function" "this" {
-  # 既存設定...
-  kms_key_arn = aws_kms_key.lambda_env.arn
-}
-```
-
-**チェックリスト**:
-- [ ] modules/kms/main.tf: lambda_env KMSキー作成
-- [ ] modules/lambda/main.tf: kms_key_arn変数追加
-- [ ] bootstrap/main.tf: KMSモジュール呼び出し
-- [ ] Lambda関数にkms_key_arn設定
-
-#### 7-3: CloudWatch Logs KMS暗号化
-
-**対象ファイル**:
-- `terraform/modules/monitoring/main.tf`
-
-**追加内容**:
-```hcl
-resource "aws_kms_key" "logs" {
-  description         = "CloudWatch Logs encryption"
-  enable_key_rotation = true
-}
-
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.lambda_function_name}"
-  retention_in_days = 30  # 7→30日に延長
-  kms_key_id        = aws_kms_key.logs.arn
-}
-```
-
-**チェックリスト**:
-- [ ] modules/monitoring/main.tf: logs KMSキー追加
-- [ ] Log Groupにkms_key_id設定
-- [ ] retention_in_days: 7→30に変更
-
-#### 7-4: DynamoDB CMK暗号化
-
-**対象ファイル**:
-- `terraform/bootstrap/main.tf`
-
-**追加内容**:
-```hcl
-resource "aws_kms_key" "dynamodb" {
-  description         = "DynamoDB table encryption"
-  enable_key_rotation = true
-}
-
-resource "aws_dynamodb_table" "terraform_locks" {
-  # 既存設定...
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.dynamodb.arn
-  }
-}
-```
-
-**チェックリスト**:
-- [ ] bootstrap/main.tf: DynamoDB KMSキー作成
-- [ ] terraform_locks テーブルにserver_side_encryption追加
-
----
-
-### Phase 8: IAM権限強化 🟢 低優先度
-**優先度**: 🟢 低（セキュリティ強化）
-**実装方式**: DIRECT（IAMポリシー条件追加）
-
-**対象ファイル**:
-- `terraform/modules/iam-oidc/main.tf`
-
-**修正内容**:
-```hcl
-# Before (176行目付近)
-{
-  Effect = "Allow"
-  Action = [
-    "iam:PassRole"
-  ]
-  Resource = [
-    "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role",
-    "arn:aws:iam::*:role/${var.project_name}-github-actions"
-  ]
-}
-
-# After (Condition追加)
-{
-  Effect = "Allow"
-  Action = [
-    "iam:PassRole"
-  ]
-  Resource = [
-    "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role",
-    "arn:aws:iam::*:role/${var.project_name}-github-actions"
-  ]
-  Condition = {
-    StringEquals = {
-      "iam:PassedToService" = "lambda.amazonaws.com"
-    }
-  }
-}
-```
-
-**チェックリスト**:
-- [ ] iam-oidc/main.tf: PassRole条件追加
-
----
-
-### Phase 9: Semgrep設定調整 🟢 低優先度
-**優先度**: 🟢 低（誤検知ノイズ削減）
-**実装方式**: DIRECT（設定ファイル追加）
-
-**目的**: `curl-eval`等のパーサー都合による誤検知を除外
-
-**対象ファイル（新規作成）**:
-- `.semgrepignore`
-
-**追加内容**:
-```
-# Partial parsing errors（パーサー限界による誤検知）
-# GitHub Actions ${{ }} 式は run-shell-injection で検出済み
-# curl-eval は誤検知が多いため除外
-```
-
-**チェックリスト**:
-- [ ] .semgrepignore作成（必要に応じて）
-
----
-
-## Git Commit戦略
-
-### Commit構成案
-
-1. **Commit 1: Phase 6（GitHub Actions残存修正）**
-   - `fix: 残存GitHub Actionsコマンドインジェクション脆弱性を修正 HOXBL-29`
-   - 4ファイル修正
-
-2. **Commit 2: Phase 7（Terraform暗号化・監視）**
-   - `feat: Lambda X-Ray・KMS暗号化・CloudWatch監視を強化 HOXBL-29`
-   - 複数モジュール修正・追加
-
-3. **Commit 3: Phase 8（IAM権限）**
-   - `fix: IAM PassRole条件追加で権限エスカレーションリスクを低減 HOXBL-29`
-   - 1ファイル修正
-
-4. **Commit 4: Phase 9（Semgrep設定）**
-   - `chore: Semgrep誤検知ルールを除外 HOXBL-29`
-   - 1ファイル追加
-
----
-
-## 実装優先順位
-
-### 最優先（今回実施）
-- **Phase 6**: GitHub Actions脆弱性修正（4ファイル）
-
-### 今回検討
-- **Phase 7**: Terraform暗号化・監視（影響範囲大、要判断）
-- **Phase 8**: IAM権限強化（影響小、ベストプラクティス）
-- **Phase 9**: Semgrep設定（運用改善）
-
-### ユーザー判断ポイント
-1. **Phase 6のみ実施**: 最速で脆弱性解消（推奨）
-2. **Phase 6-9全実施**: 包括的なセキュリティ強化（時間要）
-
----
-
-**更新履歴**:
-- 2025-10-05 23:XX: ChatGPT指摘事項精査、Phase 6-9プラン追加
-
+- 2025-10-06: 初版作成（Lambda HTTPエラー監視実装プラン）
+- 2025-10-06: 環境変数化TODOセクション追加（プロジェクト固有名称の除去）
