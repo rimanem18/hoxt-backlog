@@ -275,38 +275,104 @@ module "monitoring_production" {
 }
 ```
 
-### 4. GitHub Actions Variables設定（手動）
+### 4. Lambda環境変数設定（手動）
 
-**⚠️ 重要**: デプロイ前に以下の環境変数を設定してください。
+**⚠️ 重要**: デプロイ前にLambda環境変数`ENVIRONMENT`を設定してください。
 
-#### 設定が必要な変数
+#### 設定が必要な環境変数
 
 - **変数名**: `ENVIRONMENT`
 - **値**:
-  - 本番環境: `production`
-  - プレビュー環境: `preview`
+  - Production Lambda: `production`
+  - Preview Lambda: `preview`
 
 #### 設定理由
 
 EMFミドルウェアが`Environment`ディメンションに使用します。
 - `NODE_ENV`はesbuildビルド時に静的に埋め込まれるため使用不可
-- `ENVIRONMENT`は実行時環境変数として動的に読み込まれる
+- `ENVIRONMENT`はLambda実行時環境変数として動的に読み込まれる
 - CloudWatch Alarmの`Environment=production`フィルタと整合させるため必須
 
-#### 設定手順
+#### 設定方法（2つのアプローチ）
 
-1. GitHubリポジトリの**Settings** > **Secrets and variables** > **Actions**に移動
-2. **Variables**タブを選択
-3. **New repository variable**をクリック
-4. 以下を入力：
-   - Name: `ENVIRONMENT`
-   - Value: `production`（本番環境の場合）
-5. **Add variable**をクリック
+##### 方法1: Terraform（bootstrap）で管理 ✅ 推奨
+
+**ファイル**: `terraform/bootstrap/main.tf`
+
+```hcl
+# Production Lambda Function
+resource "aws_lambda_function" "production" {
+  # ... 既存設定 ...
+
+  environment {
+    variables = {
+      NODE_ENV                = "production"
+      ENVIRONMENT             = "production"  # ← 追加
+      BASE_SCHEMA             = "app_${local.project_name}"
+      # ... 他の環境変数 ...
+    }
+  }
+}
+
+# Preview Lambda Function
+resource "aws_lambda_function" "preview" {
+  # ... 既存設定 ...
+
+  environment {
+    variables = {
+      NODE_ENV                = "development"
+      ENVIRONMENT             = "preview"  # ← 追加
+      BASE_SCHEMA             = "app_${local.project_name}_preview"
+      # ... 他の環境変数 ...
+    }
+  }
+}
+```
+
+**適用手順**:
+1. `terraform/bootstrap/main.tf`を編集
+2. ローカルで`terraform apply`を実行（bootstrap層）
+
+**メリット**: Infrastructure as Code原則に沿う、Terraform管理で一元化
+
+##### 方法2: GitHub Actions（CI/CD）で更新
+
+**ファイル**: `.github/actions/lambda-package/action.yml`
+
+Deploy Lambda Functionステップの後に以下を追加：
+
+```yaml
+- name: Update Lambda Environment Variables
+  shell: bash
+  env:
+    FUNCTION_NAME: ${{ inputs.function-name }}
+    AWS_REGION: ${{ inputs.aws-region }}
+    ENVIRONMENT_VALUE: ${{ inputs.function-name == 'production' && 'production' || 'preview' }}
+  run: |
+    aws lambda update-function-configuration \
+      --function-name "$FUNCTION_NAME" \
+      --environment "Variables={ENVIRONMENT=$ENVIRONMENT_VALUE}" \
+      --region "$AWS_REGION"
+```
+
+**デメリット**: Terraform管理外、設定の冗長性
 
 #### 設定タイミング
 
 - **本番デプロイ前**: 必ず設定
 - **プレビューデプロイ**: オプション（未設定時は`unknown`になり、アラームは発火しない）
+
+#### 設定確認方法
+
+```bash
+# Production Lambda
+aws lambda get-function-configuration --function-name ${PROJECT_NAME}-api-production \
+  --query 'Environment.Variables.ENVIRONMENT' --output text
+
+# Preview Lambda
+aws lambda get-function-configuration --function-name ${PROJECT_NAME}-api-preview \
+  --query 'Environment.Variables.ENVIRONMENT' --output text
+```
 
 ### 5. 設計文書更新
 
