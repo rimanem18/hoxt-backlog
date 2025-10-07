@@ -79,6 +79,7 @@ module "monitoring_production" {
   project_name         = local.project_name
   environment          = "production"
   lambda_function_name = local.lambda_production_function_name
+  metrics_namespace    = var.metrics_namespace
   alarm_emails         = length(var.ops_email) > 0 ? [var.ops_email] : []
 
   tags = merge(

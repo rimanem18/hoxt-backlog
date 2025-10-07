@@ -27,3 +27,9 @@ variable "ops_email" {
   type        = string
   default     = ""
 }
+
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring (platform-agnostic)"
+  type        = string
+  default     = "Application/Monitoring"
+}

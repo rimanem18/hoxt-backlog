@@ -38,42 +38,49 @@ Lambda Function URLに404リクエストを送信してアラートテストを�
 
 ---
 
-## 🔴 HOXBL-31-1: 5xxエラー監視実装（P0）
+## 🔴 HOXBL-31-1-TDD: EMFミドルウェア実装（P0-TDD）
 
-**目的**: 本番環境のサーバーサイドエラーを即座に検知
+**目的**: HTTPステータスコードを捕捉し、EMF形式でCloudWatch Logsに出力
+
+**実装方式**: TDD（Red-Green-Refactor）
+
+**推定工数**: 1-1.5時間
+
+**Codex MCPレビュー済み**: ミドルウェア配置順序、セキュリティ、EMF仕様準拠を確認済み
 
 ### 実装スコープ
 
-1. **EMFミドルウェア実装**（Presentation層）
-   - ファイル: `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts`
-   - 全HTTPリクエストのステータスコードを捕捉
-   - Embedded Metric Format形式でCloudWatch Logsに出力
+- ファイル: `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts`
 
-2. **entrypoints統合**
-   - ファイル: `app/server/src/entrypoints/index.ts`
-   - CORSミドルウェアの直後にemfMetricsMiddleware登録
+### テストケース（Red）
 
-3. **Terraform カスタムメトリクスアラーム**
-   - ファイル: `terraform/modules/monitoring/main.tf`
-   - `5xxErrors` カスタムメトリクスアラーム（閾値: 1エラー/分）
-   - 既存SNS Topicに接続
+1. **5xxエラー時に5xxErrorsメトリクスを出力する**
+2. **2xx成功時はエラーメトリクスを出力しない**
+3. **EMFペイロード構造がCloudWatch仕様に準拠している**（スナップショットテスト）
+   - `_aws.CloudWatchMetrics` フィールド検証
+   - Namespace, Dimensions, Metrics配列の構造
+   - Timestamp, Unit=`Count`, Value numeric
+4. **環境変数METRICS_NAMESPACEが反映される**
+5. **METRICS_NAMESPACE未設定時にデフォルト値を使用する**
 
-4. **設計文書更新**
-   - `docs/design/continuous-deployment/architecture.md` - 監視セクション更新
-   - `docs/tasks/continuous-deployment-tasks.md` - TASK-702 実装詳細更新
+### 実装要件（Green）
 
----
+- `try/finally` でエラー発生時もメトリクス出力を保証
+- `console.log(JSON.stringify(emfPayload))` のみ出力（センシティブデータ除外）
+- 環境変数ガード: `process.env.METRICS_NAMESPACE || 'Application/Monitoring'`
+- **重要**: ミドルウェア配置は **errorHandlerMiddlewareの後**（最終的なステータスコードを捕捉）
 
-### 実装コード
-
-#### emfMetricsMiddleware.ts（新規作成）
+### 実装コード例
 
 ```typescript
 /**
  * Embedded Metric Format (EMF) によるHTTPメトリクス記録ミドルウェア
  *
  * CloudWatch Logsに構造化ログを出力し、自動的にカスタムメトリクスを生成する。
- * 5xxエラー、4xxエラー、レイテンシをメトリクス化。
+ * 5xxエラーをメトリクス化する（P0スコープ）。
+ *
+ * セキュリティ考慮:
+ * - リクエストボディ/ヘッダーは記録しない（メトリクスペイロードのみ）
  */
 import { createMiddleware } from 'hono/factory';
 
@@ -84,43 +91,66 @@ import { createMiddleware } from 'hono/factory';
 export const emfMetricsMiddleware = createMiddleware(async (c, next) => {
   const start = Date.now();
 
-  // 下流ミドルウェア・ハンドラーを実行
-  await next();
+  try {
+    // 下流ミドルウェア・ハンドラーを実行
+    await next();
+  } finally {
+    // エラー発生時もメトリクス出力を保証
+    const statusCode = c.res.status;
+    const latency = Date.now() - start;
 
-  const statusCode = c.res.status;
-  const latency = Date.now() - start;
+    // Embedded Metric Format仕様に準拠したペイロード
+    const emfPayload = {
+      _aws: {
+        Timestamp: Date.now(),
+        CloudWatchMetrics: [
+          {
+            Namespace: process.env.METRICS_NAMESPACE || 'Application/Monitoring',
+            Dimensions: [['Environment']],
+            Metrics: [
+              { Name: 'Latency', Unit: 'Milliseconds' },
+              ...(statusCode >= 500 ? [{ Name: '5xxErrors', Unit: 'Count' }] : []),
+            ],
+          },
+        ],
+      },
+      Environment: process.env.NODE_ENV || 'unknown',
+      StatusCode: statusCode,
+      Path: c.req.path,
+      Method: c.req.method,
+      Latency: latency,
+      ...(statusCode >= 500 && { '5xxErrors': 1 }),
+    };
 
-  // Embedded Metric Format仕様に準拠したペイロード
-  const emfPayload = {
-    _aws: {
-      Timestamp: Date.now(),
-      CloudWatchMetrics: [
-        {
-          Namespace: process.env.METRICS_NAMESPACE || 'Application/Monitoring',
-          Dimensions: [['Environment']],
-          Metrics: [
-            { Name: 'Latency', Unit: 'Milliseconds' },
-            ...(statusCode >= 500 ? [{ Name: '5xxErrors', Unit: 'Count' }] : []),
-          ],
-        },
-      ],
-    },
-    Environment: process.env.NODE_ENV || 'unknown',
-    StatusCode: statusCode,
-    Path: c.req.path,
-    Method: c.req.method,
-    Latency: latency,
-    ...(statusCode >= 500 && { '5xxErrors': 1 }),
-  };
-
-  // CloudWatch Logsへ出力（自動的にメトリクス化される）
-  console.log(JSON.stringify(emfPayload));
+    // CloudWatch Logsへ出力（自動的にメトリクス化される）
+    console.log(JSON.stringify(emfPayload));
+  }
 });
 ```
 
+### チェックリスト
+
+- [ ] Red: テストケース作成
+- [ ] Green: 最小実装
+- [ ] Refactor: コード品質向上
+- [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
+- [ ] Lint: `docker compose exec server bun run fix`
+- [ ] テスト: `docker compose exec server bun test`
+
 ---
 
-#### entrypoints/index.ts への統合
+## 🔴 HOXBL-31-1-DIRECT: インフラ統合・設定更新（P0-DIRECT）
+
+**目的**: EMFミドルウェアの統合とCloudWatch Alarms設定
+
+**実装方式**: DIRECT（テスト不要な設定変更）
+
+**推定工数**: 1-1.5時間
+
+### 1. entrypoints統合
+
+- [ ] `app/server/src/entrypoints/index.ts` 修正
+  - **重要**: emfMetricsMiddlewareは **errorHandlerMiddlewareの後** に登録
 
 ```typescript
 import { Hono } from 'hono';
@@ -132,16 +162,16 @@ import { auth, greet, health, user } from '@/presentation/http/routes';
 const createServer = (): Hono => {
   const app = new Hono();
 
-  // CORSミドルウェア（最初に適用）
+  // 【CORS】: 最初に配置
   app.use('/api/*', corsMiddleware);
 
-  // メトリクス記録ミドルウェア（全リクエストを記録）
-  app.use('/api/*', emfMetricsMiddleware);
-
-  // エラーハンドリングミドルウェア
+  // 【エラーハンドリング】: エラーをキャッチして統一レスポンス
   app.use('/api/*', errorHandlerMiddleware);
 
-  // APIルートをマウント
+  // 【メトリクス記録】: 最終的なステータスコードを記録（エラーハンドリング後）
+  app.use('/api/*', emfMetricsMiddleware);
+
+  // API ルートをマウント
   app.route('/api', greet);
   app.route('/api', health);
   app.route('/api', auth);
@@ -155,13 +185,35 @@ const app = createServer();
 export default app;
 ```
 
----
+### 2. Docker Compose設定
 
-#### Terraform: 5xxErrorsアラーム追加
+- [ ] `compose.yaml` のiacコンテナに環境変数追加（90行目付近）
+
+```yaml
+services:
+  iac:
+    environment:
+      # ... 既存の環境変数
+      - TF_VAR_metrics_namespace=${METRICS_NAMESPACE}
+```
+
+### 3. Terraform実装
+
+#### 3-1. モジュール変数定義
+- [ ] `terraform/modules/monitoring/variables.tf` に変数追加
 
 ```hcl
-# terraform/modules/monitoring/main.tf
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring"
+  type        = string
+  default     = "Application/Monitoring"
+}
+```
 
+#### 3-2. アラーム追加
+- [ ] `terraform/modules/monitoring/main.tf` に5xxErrorsアラーム追加
+
+```hcl
 # 5xxエラー監視アラーム
 resource "aws_cloudwatch_metric_alarm" "lambda_5xx_errors" {
   alarm_name          = "${var.project_name}-${var.environment}-lambda-5xx-errors"
@@ -189,32 +241,92 @@ resource "aws_cloudwatch_metric_alarm" "lambda_5xx_errors" {
 }
 ```
 
----
+#### 3-3. app層変数定義
+- [ ] `terraform/app/variables.tf` に変数追加
 
-### チェックリスト
+```hcl
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring (platform-agnostic)"
+  type        = string
+  default     = "Application/Monitoring"
+}
+```
 
-#### コード実装
-- [ ] `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts` 作成
-- [ ] `app/server/src/entrypoints/index.ts` でミドルウェア登録（CORSの直後）
+#### 3-4. モジュール呼び出し修正
+- [ ] `terraform/app/main.tf:76` の `module "monitoring_production"` に追加
+
+```hcl
+module "monitoring_production" {
+  source = "../modules/monitoring"
+
+  project_name         = local.project_name
+  environment          = "production"
+  lambda_function_name = local.lambda_production_function_name
+  metrics_namespace    = var.metrics_namespace  # 追加
+  alarm_emails         = length(var.ops_email) > 0 ? [var.ops_email] : []
+
+  tags = merge(
+    local.common_tags,
+    {
+      Component = "Monitoring"
+      Scope     = "Production"
+    }
+  )
+}
+```
+
+### 4. GitHub Actions Variables設定（手動）
+
+**⚠️ 重要**: デプロイ前に以下の環境変数を設定してください。
+
+#### 設定が必要な変数
+
+- **変数名**: `ENVIRONMENT`
+- **値**:
+  - 本番環境: `production`
+  - プレビュー環境: `preview`
+
+#### 設定理由
+
+EMFミドルウェアが`Environment`ディメンションに使用します。
+- `NODE_ENV`はesbuildビルド時に静的に埋め込まれるため使用不可
+- `ENVIRONMENT`は実行時環境変数として動的に読み込まれる
+- CloudWatch Alarmの`Environment=production`フィルタと整合させるため必須
+
+#### 設定手順
+
+1. GitHubリポジトリの**Settings** > **Secrets and variables** > **Actions**に移動
+2. **Variables**タブを選択
+3. **New repository variable**をクリック
+4. 以下を入力：
+   - Name: `ENVIRONMENT`
+   - Value: `production`（本番環境の場合）
+5. **Add variable**をクリック
+
+#### 設定タイミング
+
+- **本番デプロイ前**: 必ず設定
+- **プレビューデプロイ**: オプション（未設定時は`unknown`になり、アラームは発火しない）
+
+### 5. 設計文書更新
+
+- [ ] `docs/design/continuous-deployment/architecture.md`
+  - 監視セクション更新（インフラエラー vs アプリケーションエラー）
+  - EMF実装方式追記
+
+- [ ] `docs/tasks/continuous-deployment-tasks.md`
+  - TASK-702実装詳細にEMFミドルウェア追加
+
+### 6. 最終検証
+
 - [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
 - [ ] Lint: `docker compose exec server bun run fix`
-
-#### Terraform実装
-- [ ] `terraform/modules/monitoring/main.tf` に5xxErrorsアラーム追加
-- [ ] `make iac-plan-save` で動作確認
+- [ ] Terraform Plan: `make iac-plan-save`
 - [ ] Plan出力で5xxErrorsアラームが追加されることを確認
 
-#### 設計文書更新
-- [ ] `docs/design/continuous-deployment/architecture.md` 監視セクション更新
-  - インフラエラー/アプリケーションエラーの区別を明記
-  - EMF実装方式を追記
-- [ ] `docs/tasks/continuous-deployment-tasks.md` TASK-702更新
-  - 実装詳細にEMFミドルウェア追加
+### 7. Git Commit
 
-#### デプロイ & 動作確認
-- [ ] Git commit: `feat: Production Lambda 5xxエラー監視追加 HOXBL-31`
-- [ ] `make iac-apply` でTerraform適用
-- [ ] 意図的に5xxエラー発生させてメール通知確認
+- [ ] `feat: Production Lambda 5xxエラー監視追加（Codexレビュー反映） HOXBL-31`
 
 ---
 

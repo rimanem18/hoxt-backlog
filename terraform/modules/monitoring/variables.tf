@@ -29,3 +29,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring"
+  type        = string
+  default     = "Application/Monitoring"
+}

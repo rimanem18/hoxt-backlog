@@ -106,6 +106,7 @@ services:
       - TF_VAR_supabase_url=${SUPABASE_URL}
       - TF_VAR_database_url=${DATABASE_URL}
       - TF_VAR_base_schema=${BASE_SCHEMA}
+      - TF_VAR_metrics_namespace=${METRICS_NAMESPACE}
     command: tail -f /dev/null
 
   semgrep:
