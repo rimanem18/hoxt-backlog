@@ -98,3 +98,30 @@ resource "aws_cloudwatch_metric_alarm" "lambda_5xx_errors" {
     Name = "${var.project_name}-${var.environment}-5xx-errors-alarm"
   })
 }
+
+# 4xxエラー監視アラーム（カスタムメトリクス）
+# 異常なトラフィックパターン（攻撃、不正リクエスト）を検知
+resource "aws_cloudwatch_metric_alarm" "lambda_4xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-lambda-4xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "4xxErrors"
+  namespace           = var.metrics_namespace
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 150
+  alarm_description   = "This metric monitors lambda 4xx errors (abnormal traffic pattern)"
+  treat_missing_data  = "notBreaching"
+
+  # SNS通知設定（既存Topicを使用）
+  alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
+
+  dimensions = {
+    Environment = var.environment
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-4xx-errors-alarm"
+  })
+}

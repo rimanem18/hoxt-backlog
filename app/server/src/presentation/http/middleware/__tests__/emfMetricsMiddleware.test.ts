@@ -266,8 +266,7 @@ describe('emfMetricsMiddleware', () => {
     expect(loggedPayload).toHaveProperty('Environment', 'production');
 
     // Then: Dimensions配列にEnvironmentが含まれる
-    const dimensions =
-      loggedPayload._aws.CloudWatchMetrics[0].Dimensions[0];
+    const dimensions = loggedPayload._aws.CloudWatchMetrics[0].Dimensions[0];
     expect(dimensions).toContain('Environment');
 
     // Cleanup
@@ -278,7 +277,82 @@ describe('emfMetricsMiddleware', () => {
     }
   });
 
-  test('メトリクススキーマが常に一貫している（すべてのステータスコードで5xxErrorsを宣言）', async () => {
+  test('4xxエラー時は4xxErrors=1を出力する', async () => {
+    // Given: 400エラーを返すエンドポイント
+    const app = new Hono();
+    app.use('*', emfMetricsMiddleware);
+    app.get('/test', (c) => c.json({ error: 'Bad Request' }, 400));
+
+    // When: リクエストを実行
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 400レスポンスが返る
+    expect(response.status).toBe(400);
+
+    // Then: console.logが呼ばれる
+    expect(consoleLogMock).toHaveBeenCalledTimes(1);
+
+    // Then: EMFペイロードに4xxErrors=1が含まれる
+    const loggedPayload = JSON.parse(consoleLogMock.mock.calls[0]?.[0]!);
+    expect(loggedPayload).toHaveProperty('_aws');
+    expect(loggedPayload).toHaveProperty('StatusCode', 400);
+    expect(loggedPayload).toHaveProperty('4xxErrors', 1);
+    expect(loggedPayload).toHaveProperty('5xxErrors', 0);
+    expect(loggedPayload).toHaveProperty('Latency');
+    expect(loggedPayload).toHaveProperty('Path', '/test');
+    expect(loggedPayload).toHaveProperty('Method', 'GET');
+  });
+
+  test('2xx成功時は4xxErrors=0を出力する', async () => {
+    // Given: 200成功を返すエンドポイント
+    const app = new Hono();
+    app.use('*', emfMetricsMiddleware);
+    app.get('/test', (c) => c.json({ message: 'Success' }, 200));
+
+    // When: リクエストを実行
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 200レスポンスが返る
+    expect(response.status).toBe(200);
+
+    // Then: console.logが呼ばれる
+    expect(consoleLogMock).toHaveBeenCalledTimes(1);
+
+    // Then: EMFペイロードに4xxErrors=0が含まれる（メトリクススキーマ一貫性）
+    const loggedPayload = JSON.parse(consoleLogMock.mock.calls[0]?.[0]!);
+    expect(loggedPayload).toHaveProperty('_aws');
+    expect(loggedPayload).toHaveProperty('StatusCode', 200);
+    expect(loggedPayload).toHaveProperty('4xxErrors', 0);
+    expect(loggedPayload).toHaveProperty('5xxErrors', 0);
+    expect(loggedPayload).toHaveProperty('Latency');
+  });
+
+  test('5xxエラー時は4xxErrors=0を出力する', async () => {
+    // Given: 500エラーを返すエンドポイント
+    const app = new Hono();
+    app.use('*', emfMetricsMiddleware);
+    app.get('/test', (c) => c.json({ error: 'Internal Server Error' }, 500));
+
+    // When: リクエストを実行
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 500レスポンスが返る
+    expect(response.status).toBe(500);
+
+    // Then: EMFペイロードに4xxErrors=0が含まれる（メトリクススキーマ一貫性）
+    const loggedPayload = JSON.parse(consoleLogMock.mock.calls[0]?.[0]!);
+    expect(loggedPayload).toHaveProperty('StatusCode', 500);
+    expect(loggedPayload).toHaveProperty('4xxErrors', 0);
+    expect(loggedPayload).toHaveProperty('5xxErrors', 1);
+  });
+
+  test('メトリクススキーマが常に一貫している（すべてのステータスコードで5xxErrors/4xxErrorsを宣言）', async () => {
     // Given: 異なるステータスコードを返すエンドポイント
     const app = new Hono();
     app.use('*', emfMetricsMiddleware);
@@ -293,31 +367,44 @@ describe('emfMetricsMiddleware', () => {
     await app.request('http://localhost/client-error', { method: 'GET' });
     await app.request('http://localhost/server-error', { method: 'GET' });
 
-    // Then: すべてのレスポンスで5xxErrorsメトリクスが宣言されている
+    // Then: すべてのレスポンスで5xxErrors/4xxErrorsメトリクスが宣言されている
     expect(consoleLogMock).toHaveBeenCalledTimes(3);
 
     for (let i = 0; i < 3; i++) {
-      const loggedPayload = JSON.parse(
-        consoleLogMock.mock.calls[i]?.[0]!,
-      );
+      const loggedPayload = JSON.parse(consoleLogMock.mock.calls[i]?.[0]!);
       const metrics = loggedPayload._aws.CloudWatchMetrics[0].Metrics;
 
       // Metricsに5xxErrorsが常に宣言されている
-      const hasErrorMetric = metrics.some(
+      const has5xxErrorMetric = metrics.some(
         (m: { Name: string; Unit: string }) =>
           m.Name === '5xxErrors' && m.Unit === 'Count',
       );
-      expect(hasErrorMetric).toBe(true);
+      expect(has5xxErrorMetric).toBe(true);
+
+      // Metricsに4xxErrorsが常に宣言されている
+      const has4xxErrorMetric = metrics.some(
+        (m: { Name: string; Unit: string }) =>
+          m.Name === '4xxErrors' && m.Unit === 'Count',
+      );
+      expect(has4xxErrorMetric).toBe(true);
 
       // ペイロードに5xxErrorsフィールドが存在する
       expect(loggedPayload).toHaveProperty('5xxErrors');
       expect(typeof loggedPayload['5xxErrors']).toBe('number');
       expect([0, 1]).toContain(loggedPayload['5xxErrors']);
+
+      // ペイロードに4xxErrorsフィールドが存在する
+      expect(loggedPayload).toHaveProperty('4xxErrors');
+      expect(typeof loggedPayload['4xxErrors']).toBe('number');
+      expect([0, 1]).toContain(loggedPayload['4xxErrors']);
     }
 
-    // Then: 200と400は5xxErrors=0、500は5xxErrors=1
+    // Then: 200は5xxErrors=0/4xxErrors=0、400は5xxErrors=0/4xxErrors=1、500は5xxErrors=1/4xxErrors=0
     expect(JSON.parse(consoleLogMock.mock.calls[0]?.[0]!)['5xxErrors']).toBe(0);
+    expect(JSON.parse(consoleLogMock.mock.calls[0]?.[0]!)['4xxErrors']).toBe(0);
     expect(JSON.parse(consoleLogMock.mock.calls[1]?.[0]!)['5xxErrors']).toBe(0);
+    expect(JSON.parse(consoleLogMock.mock.calls[1]?.[0]!)['4xxErrors']).toBe(1);
     expect(JSON.parse(consoleLogMock.mock.calls[2]?.[0]!)['5xxErrors']).toBe(1);
+    expect(JSON.parse(consoleLogMock.mock.calls[2]?.[0]!)['4xxErrors']).toBe(0);
   });
 });

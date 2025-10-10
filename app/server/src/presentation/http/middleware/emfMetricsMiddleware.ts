@@ -2,7 +2,7 @@
  * Embedded Metric Format (EMF) によるHTTPメトリクス記録ミドルウェア
  *
  * CloudWatch Logsに構造化ログを出力し、自動的にカスタムメトリクスを生成する。
- * 5xxエラーをメトリクス化する（P0スコープ）。
+ * 5xxエラー（P0）と4xxエラー（P1）をメトリクス化する。
  *
  * セキュリティ考慮:
  * - リクエストボディ/ヘッダーは記録しない（メトリクスペイロードのみ）
@@ -12,7 +12,7 @@
  * - Why: try/finallyパターンで下流のエラーハンドリング後の最終ステータスコードを捕捉するため
  *
  * メトリクススキーマ一貫性:
- * - 5xxErrorsメトリクスは常に宣言し、値を0または1に設定
+ * - 5xxErrors/4xxErrorsメトリクスは常に宣言し、値を0または1に設定
  * - Why: CloudWatch Metricsストリームの連続性を確保し、アラーム評価を正確にするため
  */
 import { createMiddleware } from 'hono/factory';
@@ -46,6 +46,7 @@ interface EMFPayload {
   Method: string;
   Latency: number;
   '5xxErrors': number;
+  '4xxErrors': number;
 }
 
 /**
@@ -78,6 +79,7 @@ export const emfMetricsMiddleware = createMiddleware(async (c, next) => {
             Metrics: [
               { Name: 'Latency', Unit: 'Milliseconds' },
               { Name: '5xxErrors', Unit: 'Count' },
+              { Name: '4xxErrors', Unit: 'Count' },
             ],
           },
         ],
@@ -88,6 +90,7 @@ export const emfMetricsMiddleware = createMiddleware(async (c, next) => {
       Method: c.req.method,
       Latency: latency,
       '5xxErrors': statusCode >= 500 ? 1 : 0,
+      '4xxErrors': statusCode >= 400 && statusCode < 500 ? 1 : 0,
     };
 
     // CloudWatch Logsへ出力（自動的にメトリクス化される）
