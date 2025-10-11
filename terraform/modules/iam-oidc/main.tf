@@ -228,6 +228,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "sns:DeleteTopic",
           "sns:TagResource",
           "sns:UntagResource",
+          "sns:ListTagsForResource",
           "sns:Subscribe",
           "sns:Unsubscribe",
           "sns:GetSubscriptionAttributes",
