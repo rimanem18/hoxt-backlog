@@ -147,12 +147,17 @@ describe('GET /api/user/profile 統合テスト', () => {
       // When: プロフィール取得エンドポイントにリクエストを送信
       const response = await app.request(request);
 
-      // Then: 現在の実装では500エラーが返される（認証フロー統合課題）
-      // 🟡 信頼性レベル: ErrorHandlerMiddlewareがAuthErrorを捕捉できていない実装課題
-      expect(response.status).toBe(500);
+      // Then: 認証エラーで401が返される
+      // 🟢 信頼性レベル: createErrorHandlerがAuthErrorを正しく401レスポンスに変換
+      expect(response.status).toBe(401);
 
-      const responseText = await response.text();
-      expect(responseText).toBe('Internal Server Error');
+      const responseJson = await response.json();
+      expect(responseJson).toHaveProperty('success', false);
+      expect(responseJson).toHaveProperty('error');
+      expect(responseJson.error).toHaveProperty(
+        'code',
+        'AUTHENTICATION_REQUIRED',
+      );
     });
 
     test('無効なJWTで認証エラーが返される', async () => {

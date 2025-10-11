@@ -111,7 +111,7 @@ resource "aws_iam_policy" "github_actions_policy" {
           }
         }
       },
-      # CloudWatch Logs（監視・デバッグ用）
+      # CloudWatch Logs（監視・デバッグ・タグ管理用）
       {
         Effect = "Allow"
         Action = [
@@ -119,7 +119,10 @@ resource "aws_iam_policy" "github_actions_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
+          "logs:DescribeLogStreams",
+          "logs:ListTagsForResource",
+          "logs:TagResource",
+          "logs:UntagResource"
         ]
         Resource = "arn:aws:logs:${var.aws_region}:*:*"
       }
@@ -207,6 +210,52 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "arn:aws:kms:${var.aws_region}:*:key/*"
         ]
       },
+      # SNS Topic管理（Resource="*"が必要な操作）
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:ListTopics",
+          "sns:ListSubscriptions"
+        ]
+        Resource = "*"
+      },
+      # SNS Topic管理（リソース指定可能な操作）
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:GetTopicAttributes",
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:TagResource",
+          "sns:UntagResource",
+          "sns:ListTagsForResource",
+          "sns:Subscribe",
+          "sns:Unsubscribe",
+          "sns:GetSubscriptionAttributes",
+          "sns:ListSubscriptionsByTopic"
+        ]
+        Resource = "arn:aws:sns:${var.aws_region}:*:${var.project_name}-*"
+      },
+      # CloudWatch Alarms（Resource="*"が必要な操作）
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:DescribeAlarms"
+        ]
+        Resource = "*"
+      },
+      # CloudWatch Alarms管理（リソース指定可能な操作）
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricAlarm",
+          "cloudwatch:DeleteAlarms",
+          "cloudwatch:ListTagsForResource",
+          "cloudwatch:TagResource",
+          "cloudwatch:UntagResource"
+        ]
+        Resource = "arn:aws:cloudwatch:${var.aws_region}:*:alarm:${var.project_name}-*"
+      }
     ]
   })
 

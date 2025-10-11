@@ -13,7 +13,14 @@ resource "aws_lambda_function" "this" {
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
-    variables = var.base_environment_variables
+    variables = merge(
+      var.base_environment_variables,
+      {
+        # EMFミドルウェアがEnvironmentディメンションに使用
+        # アラームフィルタ（Environment=production）と整合させるため必須
+        ENVIRONMENT = var.environment
+      }
+    )
   }
 
   tags = var.tags

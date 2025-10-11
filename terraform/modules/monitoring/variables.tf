@@ -18,8 +18,20 @@ variable "lambda_function_name" {
 }
 
 
+variable "alarm_emails" {
+  description = "Email addresses for CloudWatch alarm notifications"
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)
   default     = {}
+}
+
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring"
+  type        = string
+  default     = "Application/Monitoring"
 }

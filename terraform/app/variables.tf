@@ -21,3 +21,15 @@ variable "aws_region" {
   type        = string
   default     = "ap-northeast-1"
 }
+
+variable "ops_email" {
+  description = "Operational email address for CloudWatch alarm notifications"
+  type        = string
+  default     = ""
+}
+
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring (platform-agnostic)"
+  type        = string
+  default     = "Application/Monitoring"
+}

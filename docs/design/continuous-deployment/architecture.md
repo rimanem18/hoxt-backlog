@@ -1,7 +1,7 @@
 # 継続的デプロイメントシステム アーキテクチャ設計
 
 作成日: 2025年09月12日
-最終更新: 2025年09月23日
+最終更新: 2025年10月05日
 
 
 ## システム概要
@@ -18,12 +18,13 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - Fork PR からのSecrets アクセス制限
 
 ### 運用効率
-- インフラ変更の破壊的検出と承認フロー
-- プレビュー環境の自動構築・削除（スキーマ分離方式）
+- インフラ変更の破壊的検出と自動継続
+- プレビュー環境の自動構築（スキーマ分離方式）
 - 依存関係順序制御による安全なデプロイ
-- 基本監査ログによる運用追跡
-- TruffleHog（Secret検出）・Semgrep軽量ルール（基本SAST）によるミニマムセキュリティスキャン自動化
-- Discord 通知による即座のデプロイ結果把握
+- GitHub Actionsログによる基本追跡
+- TruffleHog（Secret検出）・Semgrep軽量ルール（基本SAST）によるセキュリティスキャン
+- Discord通知による即座のデプロイ結果把握
+- Production Lambda監視による障害早期検知
 
 ### コスト効率
 - AWS Lambda Function URL による API Gateway 回避でのコスト削減
@@ -84,7 +85,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
   - `iam-oidc`: GitHub OIDC Provider と統合IAM Role
   - `lambda-functions`: 環境別Lambda関数管理
   - `cloudflare-pages`: CloudFlare Pages 設定（単一プロジェクト管理）
-  - `monitoring`: CloudWatch アラーム・ログ収集（将来拡張）
+  - `monitoring`: Production Lambda CloudWatch監視
 - **変数管理**: `preview_schema_suffix`（`_preview`）、CORS設定（`access_allow_*`）、スキーマ名（`base_schema`）を環境変数で制御
 
 ### フロントエンド
@@ -133,7 +134,7 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
   - **統合戦略**: Environment 別Secrets を廃止し Repository Secrets に集約
   - **効果**: 設定項目 60%削減、更新時の修正箇所を1箇所に統一
   - **OIDC制約**: IAM Role の Trust Policy で `repo:${owner}/${repo}:environment:production` 等を指定し、ブランチレベルでアクセス制御
-- **監査**: CloudTrail + GitHub Actions logs
+- **監視**: Production Lambda CloudWatch監視（エラー率・実行時間）
 
 ## デプロイメント順序
 
@@ -166,8 +167,8 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 
 ### Production環境
 - **トリガー**: main ブランチへの push
-- **承認**: Terraform 破壊的変更時のみ
-- **監視**: 基本ログ収集（実行者・日時・対象）
+- **承認**: Terraform 破壊的変更検出時は自動継続
+- **監視**: CloudWatch Alarmsによる Lambda エラー・実行時間監視
 
 ### Preview環境
 - **トリガー**: PR 作成・更新
@@ -181,26 +182,35 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 ## エラーハンドリング
 
 ### AWS API 制限
-- **戦略**: 指数バックオフ再試行
-- **最大回数**: 5回
-- **タイムアウト**: 30秒/回
+- **戦略**: 自動retry（nick-fields/retry@v3）
+- **最大回数**: 3回
+- **タイムアウト**: 設定ごとに異なる
 
 ### Terraform State ロック
-- **検出**: 10分間の待機タイムアウト
-- **解決**: 手動介入オプション提供
+- **検出**: DynamoDB state locking
+- **解決**: 手動で `terraform force-unlock` 実行
 - **予防**: concurrency groups による排他制御
 
 ### データベースマイグレーション
 - **方針**: Forward-only（ロールバック非対応）
-- **長時間実行**: 管理者アラート + 手動介入
+- **長時間実行**: Supabase Dashboardで手動確認
 - **失敗時**: プロセス全体停止
 
-## 運用・監査
+## 運用・監視
 
 ### ログ記録
 - **対象**: デプロイ実行者・日時・対象サービス
-- **保存先**: GitHub Actions logs + CloudTrail
-- **保持期間**: 90日間
+- **保存先**: GitHub Actions logs + deployment-logger アクション
+- **保持期間**: 90日間（GitHub Actionsアーティファクト）
+
+### 監視
+- **対象**: Production Lambda関数のみ
+- **メトリクス**: エラー率（閾値: 5エラー/分）、実行時間（閾値: 10秒）
+- **アラート**: CloudWatch Alarms
+- **通知**: SNS Email通知（自動送信、SES・Lambda不要）
+  - 設定: GitHub Repository Secret `OPS_EMAIL`
+  - 初回のみメール購読確認リンククリック必要
+  - アラーム発火時・復旧時に自動通知
 
 ### セキュリティスキャン（ミニマム構成）
 - **Secret Scanning（TruffleHog）**:
@@ -238,21 +248,20 @@ GitHub Actions、Terraform、GitHub OIDC認証を活用した継続的デプロ�
 - Discord 通知設定
 
 ### フェーズ4: 監視・運用
-- CloudWatch アラーム設定
-- ログ収集・監査機能実装
-- 運用手順書作成
+- Production Lambda CloudWatch アラーム設定
+- エラーハンドリング運用手順書作成
 
 ## 受け入れ基準
 
 本システムは以下の受け入れ基準を満たします：
 
 - ✅ **統合基盤構築**: Terraform・単一GitHub OIDC・統合IAM設定
-- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御（Lambda完全分離・unified state）
-- ✅ **品質保証**: 破壊的変更承認・マイグレーション・待機キュー
-- ✅ **監査ログ**: 実行者・日時・対象記録・Secret Scanning
-- ✅ **エラーハンドリング**: 再試行・タイムアウト・アラート機能
-- ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定（最小権限統合ロール）
-- ✅ **環境分離**: Lambda完全分離 + CloudFlare Pages統合プロジェクト + PostgreSQLスキーマ分離方式
+- ✅ **統合デプロイフロー**: main push・PR プレビュー・順序制御
+- ✅ **品質保証**: 破壊的変更検出・マイグレーション・待機キュー
+- ✅ **基本ログ**: GitHub Actionsログ・Secret Scanning
+- ✅ **エラーハンドリング**: 自動retry・手動対応手順
+- ✅ **セキュリティ**: シークレットレス・暗号化・RLS設定
+- ✅ **監視**: Production Lambda CloudWatch監視
 
 ## 次ステップ
 

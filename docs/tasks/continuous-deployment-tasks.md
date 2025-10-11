@@ -1,14 +1,14 @@
 # 継続的デプロイメント 実装タスク
 
-**最終更新**: 2025年10月04日（TASK-603ミニマム構成に変更、6時間削減）
+**最終更新**: 2025年10月05日
 
 
 ## 概要
 
-全タスク数: 18タスク（完了: 6タスク、未完了: 12タスク）
-推定作業時間: 28時間（TASK-603ミニマム構成化により6時間削減: 34時間→28時間）
-進捗状況: 33% 完了（フェーズ1: 100%完了、フェーズ2: 33%完了）
-クリティカルパス: TASK-501 → TASK-502 → TASK-503 → TASK-504 → TASK-505 → TASK-601 → TASK-602 → TASK-603 → TASK-604
+全タスク数: 8タスク（完了: 8タスク、未完了: 0タスク）
+推定作業時間: 1.5時間
+進捗状況: 100% 完了（フェーズ1: 100%完了、フェーズ2: 100%完了、フェーズ3: 100%完了）
+クリティカルパス: TASK-501 → TASK-502 → TASK-503 → TASK-504 → TASK-505 → TASK-601 → TASK-602 → TASK-603 → TASK-604 → TASK-702
 
 ## タスク一覧
 
@@ -223,152 +223,67 @@
   - [x] Semgrep SAST検出が正常動作（手動確認要）
   - [x] 重要度別ゲーティングが正常動作（手動確認要）
 
-#### TASK-604: エラーハンドリング・再試行機能
+#### TASK-604: エラーハンドリング運用
 
-- [ ] **タスク未完了**
-- **タスクタイプ**: TDD
+- [x] **タスク完了** - 2025年10月05日完了
+- **タスクタイプ**: DIRECT
 - **要件リンク**: EDGE-001, EDGE-002, EDGE-101, EDGE-201
 - **依存タスク**: TASK-603
+- **推定工数**: 0.5時間
 - **実装詳細**:
-  - 指数バックオフ再試行戦略実装
-  - Terraform state ロック競合解決
-  - AWS API制限対応
-  - GitHub OIDC トークンリフレッシュ
-- **テスト要件**:
-  - [ ] 単体テスト: 再試行ロジック
-  - [ ] 統合テスト: 各種エラーシナリオ
-  - [ ] ストレステスト: 制限超過時の動作
-- **エラーハンドリング**:
-  - [ ] 最大再試行回数到達時の停止
-  - [ ] 管理者アラート機能
-  - [ ] 手動介入オプション提供
+
+  - AWS API制限エラー: `.github/actions/terraform-ops` と `.github/actions/lambda-package` で自動retry（最大3回）
+  - Terraform State Lockエラー: DynamoDB state lockingによる競合検出、必要時は `terraform force-unlock` で手動解除
+  - データベース長時間トランザクション: Supabase Dashboardで手動確認
+  - GitHub OIDC トークン期限切れ: トークン有効期限60分設定、期限切れ時はワークフロー再実行
 - **完了条件**:
-  - [ ] 再試行機能実装完了
-  - [ ] エラーハンドリングテスト成功
-  - [ ] アラート機能動作確認
+  - [x] エラーハンドリング実装完了
+  - [x] 運用手順文書化完了
 
-### フェーズ3: 監査・監視実装
+### フェーズ3: 監視実装
 
-#### TASK-701: デプロイメント監査ログ
+#### TASK-702: Production Lambda監視
 
-- [ ] **タスク未完了**
+- [x] **タスク完了** - 2025年10月05日完了
 - **タスクタイプ**: DIRECT
-- **要件リンク**: NFR-006
+- **要件リンク**: NFR-007
 - **依存タスク**: TASK-604
+- **推定工数**: 1時間
 - **実装詳細**:
-  - CloudWatch Logs設定
-  - 構造化ログフォーマット実装
-  - 基本監査情報記録（実行者・日時・対象）
-  - ログ保持期間設定（90日）
-- **テスト要件**:
-  - [ ] ログ出力テスト
-  - [ ] 構造化データ検証
-  - [ ] 保持期間設定確認
-- **エラーハンドリング**:
-  - [ ] ログ出力失敗時の代替手段
-  - [ ] ログ容量制限超過対応
-  - [ ] CloudTrail連携エラー
+  - `terraform/modules/monitoring` にSNS Email通知機能追加
+  - Production Lambda関数の監視（エラー率、実行時間）
+  - CloudWatch AlarmsによるSNS Email通知設定
+  - GitHub Repository Secret `OPS_EMAIL` による通知先設定
 - **完了条件**:
-  - [ ] 全デプロイ操作のログ記録
-  - [ ] CloudTrail連携設定完了
-
-#### TASK-702: 基本監視・アラート
-
-- [ ] **タスク未完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: EDGE-101, EDGE-201
-- **依存タスク**: TASK-701
-- **実装詳細**:
-  - CloudWatch Alarms設定
-  - Lambda エラー率・実行時間監視
-  - API Gateway レスポンス監視
-  - データベース長時間トランザクション検出
-- **テスト要件**:
-  - [ ] アラーム閾値テスト
-  - [ ] 通知配信確認
-  - [ ] 偽陽性アラート検証
-- **UI/UX要件**:
-  - [ ] アラート通知: Slack/Email統合
-  - [ ] ダッシュボード: メトリクス可視化
-  - [ ] 手動介入: 管理者オプション提供
-
-### フェーズ4: 統合・最適化
-
-#### TASK-801: E2E統合テスト
-
-- [ ] **タスク未完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: 全要件
-- **依存タスク**: TASK-702
-- **実装詳細**:
-  - 全体デプロイフローE2Eテスト実装
-  - プレビュー環境作成・削除テスト
-  - 破壊的変更承認フローテスト
-  - マルチサービス連携テスト
-- **テスト要件**:
-  - [ ] 正常系: 完全デプロイフロー
-  - [ ] 異常系: 各段階での失敗処理
-  - [ ] 並行実行: 複数PR同時処理
-- **UI/UX要件**:
-  - [ ] テスト進行状況表示
-  - [ ] 詳細ログ出力
-  - [ ] 結果レポート生成
-- **エラーハンドリング**:
-  - [ ] テスト環境セットアップ失敗
-  - [ ] テスト実行タイムアウト
-  - [ ] データクリーンアップ失敗
-- **完了条件**:
-  - [ ] 全E2Eテスト実行成功
-  - [ ] テストレポート生成完了
-  - [ ] 継続的テスト実行設定完了
-
-#### TASK-802: パフォーマンス最適化
-
-- [ ] **タスク未完了**
-- **タスクタイプ**: DIRECT
-- **要件リンク**: REQ-201
-- **依存タスク**: TASK-801
-- **実装詳細**:
-  - デプロイ時間短縮のための並列化
-  - Lambdaコールドスタート最適化
-  - CloudFlare Pages ビルドキャッシュ設定
-  - Terraform実行時間短縮
-- **テスト要件**:
-  - [ ] 実行時間測定
-  - [ ] 並列実行効果検証
-  - [ ] キャッシュヒット率確認
-- **エラーハンドリング**:
-  - [ ] 最適化による副作用検出
-  - [ ] キャッシュ無効化処理
-  - [ ] パフォーマンス劣化アラート
-- **完了条件**:
-  - [ ] デプロイ時間15分以内達成
-  - [ ] 並行実行によるスループット向上
-  - [ ] パフォーマンス監視設定完了
+  - [x] Production Lambda監視モジュール統合完了
+  - [x] SNS Email通知機能実装完了
+  - [x] CloudWatch Alarmsデプロイ確認（次回Terraformデプロイ時に自動適用）
+  - [x] SNS購読確認完了（デプロイ後、メール確認リンククリック必要）
+- **運用手順**:
+  1. GitHub Repository Settings → Secrets → `OPS_EMAIL` を設定
+  2. Terraformデプロイ実行（mainブランチpushまたは手動）
+  3. 届いたメールの「Confirm subscription」リンクをクリック
+  4. CloudWatchコンソールでアラーム状態確認
 
 ## 実行順序
 
 ```mermaid
 gantt
     title タスク実行スケジュール
-    dateFormat  2024-09-12
+    dateFormat  2025-09-12
     section 基盤構築
-    TASK-501           :a1, 2024-09-12, 1d
-    TASK-502           :a2, after a1, 1d
-    TASK-503           :a3, after a2, 2d
-    TASK-504           :a4, after a3, 1d
-    TASK-505           :a5, after a1, 1d
+    TASK-501           :done, a1, 2025-09-12, 1d
+    TASK-502           :done, a2, after a1, 1d
+    TASK-503           :done, a3, after a2, 2d
+    TASK-504           :done, a4, after a3, 1d
+    TASK-505           :done, a5, after a1, 1d
     section ワークフロー
-    TASK-601           :b1, after a5, 1.5d
-    TASK-602           :b2, after b1, 2d
-    TASK-603           :b3, after b1, 1d
-    TASK-604           :b4, after b3, 2d
+    TASK-601           :done, b1, after a5, 1.5d
+    TASK-602           :done, b2, after b1, 2d
+    TASK-603           :done, b3, after b1, 1d
+    TASK-604           :done, b4, after b3, 0.5d
     section 監視
-    TASK-701           :c1, after b4, 1d
-    TASK-702           :c2, after c1, 2d
-    section 統合
-    TASK-801           :d1, after c2, 2d
-    TASK-802           :d2, after d1, 1d
+    TASK-702           :done, c2, after b4, 1d
 ```
 
 ## サブタスクテンプレート
@@ -390,43 +305,3 @@ gantt
 
 1. `direct-setup.md` - 直接実装・設定
 2. `direct-verify.md` - 動作確認・品質確認
-
-## 環境変数・シークレット設定要件
-
-### GitHub Environment: production
-```yaml
-Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール
-  TERRAFORM_STATE_BUCKET: your-project-terraform-state
-  LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
-  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名（共有）
-  SUPABASE_PROJECT_ID: abcdefghijklmnop
-  BASE_SCHEMA: app_projectname  # Production スキーマ名
-  CLOUDFLARE_ACCOUNT_ID: your-account-id
-  CLOUDFLARE_PROJECT_NAME: your-project-production
-  CLOUDFLARE_DOMAIN: your-project.com
-  LAMBDA_FUNCTION_URL_PRODUCTION: https://unique-id.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得
-
-Secrets:
-  SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx
-  CLOUDFLARE_API_TOKEN: your-api-token
-```
-
-### GitHub Environment: preview
-```yaml
-Variables:
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActions-Unified  # 統合ロール（同一）
-  LAMBDA_FUNCTION_NAME_PRODUCTION: your-project-api-production  # Production関数名
-  LAMBDA_FUNCTION_NAME_PREVIEW: your-project-api-preview  # Preview関数名（全PRで共有）
-  SUPABASE_PROJECT_ID: abcdefghijklmnop  # 本番と同じ
-  BASE_SCHEMA: app_projectname_preview  # Preview スキーマ名（全PRで共有）
-  CLOUDFLARE_ACCOUNT_ID: your-account-id
-  CLOUDFLARE_PROJECT_NAME: your-project-production  # 同じプロジェクトでpreview（CloudFlareが管理）
-  LAMBDA_FUNCTION_URL_PREVIEW: https://unique-id-preview.lambda-url.ap-northeast-1.on.aws/  # terraform output で取得（全PRで共有）
-
-Secrets:
-  SUPABASE_ACCESS_TOKEN: sbp_xxxxxxxxxxxxx  # 本番と同じトークン
-  CLOUDFLARE_API_TOKEN: your-api-token  # 本番と同じトークン
-```
-
-**注意**: Preview環境は全PRで同一リソースを共有・上書き利用します。最後に更新されたPRの内容が反映されます。

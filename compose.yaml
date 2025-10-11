@@ -14,6 +14,7 @@ services:
       - ACCESS_ALLOW_METHODS=${ACCESS_ALLOW_METHODS}
       - ACCESS_ALLOW_HEADERS=${ACCESS_ALLOW_HEADERS}
       - SUPABASE_URL=${SUPABASE_URL}
+      - METRICS_NAMESPACE=${METRICS_NAMESPACE}
       # テスト用のローカルDB設定
       - ENVIRONMENT=preview
       - BASE_SCHEMA=app_test
@@ -105,6 +106,7 @@ services:
       - TF_VAR_supabase_url=${SUPABASE_URL}
       - TF_VAR_database_url=${DATABASE_URL}
       - TF_VAR_base_schema=${BASE_SCHEMA}
+      - TF_VAR_metrics_namespace=${METRICS_NAMESPACE}
     command: tail -f /dev/null
 
   semgrep:
