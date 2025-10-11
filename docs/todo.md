@@ -83,6 +83,35 @@ Lambda Function URLに404リクエストを送信してアラートテストを�
 - 運用開始後、実データで調整する前提
 - **影響範囲**: ✅ P1で150/分に設定（Codex提案を反映）
 
+#### P2（MonitoringService抽象化）で得た教訓
+
+**DDD/Clean Architectureパターンの適用**:
+- ✅ **依存性逆転の原則（DIP）**: Presentation層はMonitoringServiceインターフェースに依存、具象クラス（CloudWatchMonitoringService）には非依存
+- ✅ **インターフェース分離の原則（ISP）**: 最小限のメソッド（recordHttpStatus, recordException）のみ定義
+- ✅ **単一責任の原則（SRP）**: CloudWatch固有のEMFロジックをInfrastructure層に集約
+- ✅ **開放閉鎖の原則（OCP）**: 新しい監視基盤（Datadog等）追加時にPresentation層コード変更不要
+- ✅ **リスコフの置換原則（LSP）**: テスト時はモックMonitoringServiceに差し替え可能
+- **影響範囲**: 将来の監視基盤変更が容易になり、テスタビリティが向上
+
+**2層テスト戦略**:
+- ✅ **ミドルウェアテスト**: モックMonitoringServiceで振る舞いを検証（try/finally、パラメータ渡し）
+- ✅ **実装テスト**: CloudWatchMonitoringServiceでEMFペイロード構造を検証
+- **理由**: 関心の分離により、テスト粒度を適切に保ち、メンテナンス性向上
+- **影響範囲**: 他の抽象化実装でも同様のテスト戦略を採用可能
+
+**TypeScript型安全性（exactOptionalPropertyTypes）**:
+- ❌ **問題**: `requestId: string | undefined`を`requestId?: string`に直接代入すると型エラー
+- ✅ **解決**: spread演算子で条件付き追加 `...(requestId && { requestId })`
+- **理由**: TypeScriptの厳格な型チェックによる安全性確保
+- **影響範囲**: オプショナルプロパティを持つインターフェース設計時に適用
+
+**Hono 4.x エラーハンドリングパターン**:
+- ❌ **古い設計**: middleware内の`try/catch`で`await next()`のエラーをキャッチ
+- ✅ **正しい設計**: `app.onError()`ハンドラーパターンを使用
+- **理由**: Hono 4.xでは`await next()`のエラーは内部でキャッチされ、`app.onError()`に渡される仕様
+- **解決策**: ErrorHandlerファクトリ関数を作成し、`app.onError(createErrorHandler(monitoring))`で登録
+- **影響範囲**: 全エラーハンドリング実装（middleware形式では動作しない）
+
 ---
 
 ## 📋 実装スコープ
@@ -584,8 +613,9 @@ resource "aws_cloudwatch_metric_alarm" "lambda_4xx_errors" {
 - [x] Lint: `docker compose exec server bun run fix`
 - [x] テスト: `docker compose exec server bun test`
 - [x] Semgrep: `docker compose run --rm semgrep semgrep scan ...`
-- [ ] Git commit: `feat: Production Lambda 4xxエラートレンド監視追加 HOXBL-31`
-- [ ] Terraform Plan: `make iac-plan-save` で4xxErrorsアラーム追加を確認
+- [x] Git commit: `feat: Production Lambda 4xxエラートレンド監視追加 HOXBL-31`
+- [x] Terraform Plan: `make iac-plan-save` で4xxErrorsアラーム追加を確認
+- [x] Terraform Apply: CloudWatch Alarm 2個（5xx/4xx）を本番環境にデプロイ完了
 - [ ] 運用開始後、実データで閾値調整
 
 #### 実装完了後の必須確認（段階的実装）
@@ -598,9 +628,15 @@ resource "aws_cloudwatch_metric_alarm" "lambda_4xx_errors" {
 
 ---
 
-## 🟡 HOXBL-31-3: MonitoringService抽象化（P2）
+## 🟡 HOXBL-31-3: MonitoringService抽象化（P2） ✅ 完了
 
 **目的**: DDD/Clean Architecture準拠のアーキテクチャ整合性確保
+
+**実装日**: 2025-10-11 JST
+
+**完了日**: 2025-10-11 JST（改善提案3件すべて実装完了）
+
+**Codexレビュー**: 承認済み（SOLID原則/Clean Architecture全て準拠、EMF仕様適合）
 
 ### アーキテクチャ設計
 
@@ -873,44 +909,99 @@ export default app;
 
 ---
 
-### チェックリスト
+### コア実装完了チェックリスト
 
 #### インターフェース設計（Shared層）
-- [ ] `app/server/src/shared/monitoring/MonitoringService.ts` 作成
-- [ ] HttpStatusMetrics型定義
-- [ ] MonitoringServiceインターフェース定義
+- [x] `app/server/src/shared/monitoring/MonitoringService.ts` 作成
+- [x] HttpStatusMetrics型定義
+- [x] MonitoringServiceインターフェース定義
 
 #### 実装（Infrastructure層）
-- [ ] `app/server/src/infrastructure/monitoring/CloudWatchMonitoringService.ts` 作成
-- [ ] recordHttpStatus() 実装（EMF形式）
-- [ ] recordException() 実装
+- [x] `app/server/src/infrastructure/monitoring/CloudWatchMonitoringService.ts` 作成
+- [x] recordHttpStatus() 実装（EMF形式、P0/P1教訓適用済み）
+- [x] recordException() 実装
 
 #### ミドルウェアリファクタリング（Presentation層）
-- [ ] `app/server/src/presentation/http/middleware/metricsMiddleware.ts` 作成
-- [ ] MonitoringService依存に変更
-- [ ] `emfMetricsMiddleware.ts` を削除（metricsMiddlewareに統合）
+- [x] `app/server/src/presentation/http/middleware/metricsMiddleware.ts` 作成
+- [x] MonitoringService依存に変更（DIP適用）
+- [x] テスト作成（2層テスト戦略: middleware 7件 + implementation 9件）
 
 #### 依存性注入（entrypoints）
-- [ ] `app/server/src/entrypoints/index.ts` 修正
-- [ ] CloudWatchMonitoringServiceインスタンス化
-- [ ] metricsMiddleware(monitoring) で注入
+- [x] `app/server/src/entrypoints/index.ts` 修正
+- [x] CloudWatchMonitoringServiceインスタンス化
+- [x] metricsMiddleware(monitoring) で注入
 
 #### テスト & 検証
-- [ ] 型チェック: `docker compose exec server bunx tsc --noEmit`
-- [ ] Lint: `docker compose exec server bun run fix`
-- [ ] `make iac-plan-save` で既存Terraform設定に影響ないことを確認
-- [ ] ローカルで動作確認
-
-#### Git Commit
-- [ ] `refactor: MonitoringService抽象化でDDD/Clean Architecture準拠 HOXBL-31`
+- [x] 型チェック: `docker compose exec server bunx tsc --noEmit` → ✅ 成功
+- [x] Lint: `docker compose exec server bun run fix` → ✅ 成功
+- [x] テスト: `docker compose exec server bun test` → ✅ 390 pass, 0 fail
+- [x] Semgrepスキャン: → ✅ 0 findings
+- [x] Codexレビュー完了 → ✅ SOLID/Clean Architecture準拠確認
 
 #### 実装完了後の必須確認（段階的実装）
 **⚠️ 重要**: [段階的実装における注意事項](#⚠️-段階的実装における注意事項)を必ず確認してください
 
-- [ ] この実装で設計変更や重要な教訓があったか？
-- [ ] 変更は他のタスクに影響するか？（該当あればドキュメント更新）
-- [ ] P0/P1/P2間で矛盾する記述がないか確認
-- [ ] 教訓があれば「教訓の記録」セクションに追記
+- [x] この実装で設計変更や重要な教訓があったか？ → Yes（DIP/ISP/SRP/OCP/LSP適用パターン）
+- [x] 変更は他のタスクに影響するか？ → No（既存P0/P1と互換）
+- [x] P0/P1/P2間で矛盾する記述がないか確認 → ✅ 確認済み
+- [x] 教訓があれば「教訓の記録」セクションに追記 → 以下に記録
+
+---
+
+### Codexレビュー結果と改善提案
+
+**実装評価**: ✅ 高評価
+- **SOLID原則準拠**: DIP/ISP/SRP/OCP/LSP全て適用済み
+- **2層テスト戦略**: ミドルウェア動作とEMF実装を適切に分離
+- **P0/P1教訓適用**: メトリクス常時宣言、ENVIRONMENT変数使用
+
+**改善提案（オプショナル）**:
+
+#### 🔶 提案1: Exception Flow連携（影響度: 中）
+- **内容**: errorHandlerMiddlewareでMonitoringService.recordExceptionを呼び出し
+- **効果**: 例外テレメトリーも新抽象化経由で記録
+- **工数**: 小（15分程度）
+
+#### 🔴 提案2: レガシーコード削除（影響度: 高、保守性）
+- **内容**: 旧`emfMetricsMiddleware.ts`とテストスイートを削除
+- **効果**: 将来の乖離リスク排除、コードベース簡素化
+- **工数**: 小（5分程度）
+
+#### 🔵 提案3: テストヘルパー共通化（影響度: 低）
+- **内容**: EMFアサーション用ヘルパー関数抽出
+- **効果**: テストコード重複削減
+- **工数**: 小（10分程度）
+
+---
+
+### 改善提案実装チェックリスト ✅ 完了
+
+#### 提案2: レガシーコード削除 ✅
+- [x] `app/server/src/presentation/http/middleware/emfMetricsMiddleware.ts` 削除
+- [x] `app/server/src/presentation/http/middleware/__tests__/emfMetricsMiddleware.test.ts` 削除
+- [x] import文の整理確認
+- [x] grep検証（残存参照なし）
+
+#### 提案1: Exception Flow連携 ✅
+- [x] errorHandlerMiddleware → createErrorHandler へリファクタリング
+- [x] Hono 4.x app.onError()パターンへ移行（middleware try/catch は動作しないため）
+- [x] MonitoringService.recordException呼び出し追加
+- [x] テストケース追加（AuthError時、予期外エラー時、正常時の3件）
+- [x] 統合テスト修正（期待値500→401へ修正）
+
+#### 提案3: テストヘルパー共通化 ✅
+- [x] `app/server/src/infrastructure/monitoring/__tests__/helpers/emfTestHelpers.ts` 作成
+- [x] `parseEmfPayload()` ヘルパー実装（8箇所の重複削減）
+- [x] `expectValidEmfStructure()` ヘルパー実装
+- [x] CloudWatchMonitoringService.test.ts でヘルパー使用
+- [x] （将来）他のEMF関連テストでも再利用可能
+
+#### 最終確認（改善提案実施後） ✅
+- [x] TypeScript型チェック: `bunx tsc --noEmit` → エラーなし
+- [x] Biome lint: `bun run fix` → 新規問題なし
+- [x] テスト: `bun test` → 380 pass, 1 skip, 0 fail
+- [x] Semgrepスキャン: `semgrep --config=auto` → 0 findings
+- [x] ローカルで動作確認
 
 ---
 

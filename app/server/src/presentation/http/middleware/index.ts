@@ -18,4 +18,4 @@ export { generateTestJWT, verifyJWT } from './auth/jwks';
 export { AuthError } from './errors/AuthError';
 
 // 【エラーハンドリング】: 統一エラーレスポンス変換
-export { errorHandlerMiddleware } from './errors/ErrorHandlerMiddleware';
+export { createErrorHandler } from './errors/ErrorHandlerMiddleware';
