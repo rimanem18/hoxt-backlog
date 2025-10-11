@@ -41,3 +41,9 @@ variable "access_allow_origin_preview" {
   description = "Preview CORS allow origin URL (supports wildcard)"
   type        = string
 }
+
+variable "metrics_namespace" {
+  description = "Metrics namespace for application monitoring (platform-agnostic)"
+  type        = string
+  default     = "Application/Monitoring"
+}

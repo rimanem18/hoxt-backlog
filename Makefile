@@ -71,6 +71,7 @@ iac-plan-save:
 		export TF_VAR_database_url=${DATABASE_URL} && \
 		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
 		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
+		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
@@ -97,6 +98,7 @@ iac-bootstrap-apply:
 		export TF_VAR_database_url=${DATABASE_URL} && \
 		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
 		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
+		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
 		cd bootstrap && \
 		terraform apply terraform.tfplan'
 	@echo "✅ Bootstrap構成の適用が完了しました。"

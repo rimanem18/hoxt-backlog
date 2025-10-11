@@ -112,3 +112,4 @@ jobs:
           TF_VAR_access_allow_origin_production: ${{ vars.ACCESS_ALLOW_ORIGIN_PRODUCTION }}
           TF_VAR_access_allow_origin_preview: ${{ vars.ACCESS_ALLOW_ORIGIN_PREVIEW }}
           TF_VAR_ops_email: ${{ secrets.OPS_EMAIL }}
+          TF_VAR_metrics_namespace: ${{ vars.METRICS_NAMESPACE }}
