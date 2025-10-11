@@ -257,8 +257,8 @@
 - **完了条件**:
   - [x] Production Lambda監視モジュール統合完了
   - [x] SNS Email通知機能実装完了
-  - [ ] CloudWatch Alarmsデプロイ確認（次回Terraformデプロイ時に自動適用）
-  - [ ] SNS購読確認完了（デプロイ後、メール確認リンククリック必要）
+  - [x] CloudWatch Alarmsデプロイ確認（次回Terraformデプロイ時に自動適用）
+  - [x] SNS購読確認完了（デプロイ後、メール確認リンククリック必要）
 - **運用手順**:
   1. GitHub Repository Settings → Secrets → `OPS_EMAIL` を設定
   2. Terraformデプロイ実行（mainブランチpushまたは手動）
