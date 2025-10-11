@@ -5,7 +5,7 @@
  * Why: JSON.parse(consoleLogMock.mock.calls[0]?.[0]!)の重複を削減
  */
 
-import { mock } from 'bun:test';
+import type { mock } from 'bun:test';
 
 /**
  * EMFペイロード構造の型定義
