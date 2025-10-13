@@ -18,7 +18,7 @@
 
 ### TASK-801: shared-schemasパッケージ初期設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-001, REQ-002, REQ-401, REQ-402
 - **依存タスク**: なし
@@ -29,39 +29,56 @@
   - エクスポート集約ファイル（index.ts）作成
   - 既存のDrizzleスキーマへのアクセス確認
 - **完了条件**:
-  - [ ] shared-schemasパッケージがserver/clientからimport可能
-  - [ ] drizzle-zod ^0.8.3がインストール済み
-  - [ ] TypeScriptコンパイルが成功する
+  - [x] shared-schemasパッケージがserver/clientからimport可能
+  - [x] drizzle-zod ^0.8.3がインストール済み
+  - [x] TypeScriptコンパイルが成功する
 
 ---
 
 ### TASK-802: Drizzle ZodスキーマからZodスキーマ自動生成スクリプト
 
-- [ ] **タスク完了**
+- [x] **タスク完了** (2025-10-13)
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-002, REQ-101
 - **依存タスク**: TASK-801
 - **実装詳細**:
-  - `scripts/generate-schemas.ts`作成
+  - `app/server/scripts/generate-schemas.ts`作成（Config駆動アプローチ）
   - Drizzleスキーマから`createSelectSchema`/`createInsertSchema`実行
   - `app/packages/shared-schemas/users.ts`に自動生成（REQ-402）
   - `bun run generate:schemas`コマンド追加
   - 生成ファイルに警告コメント追加（手動編集禁止）
-- **実装例**:
+  - TableConfig配列による拡張可能な設計
+- **実装成果**:
   ```typescript
-  // scripts/generate-schemas.ts
-  // 注意: ルートディレクトリのスクリプトから@/エイリアスを使う場合、
-  // tsconfig-pathsの設定またはサーバースキーマへの相対パスが必要
-  import { createSelectSchema, createInsertSchema } from 'drizzle-zod';
-  import { users } from '../app/server/src/infrastructure/database/schema';
+  // app/server/scripts/generate-schemas.ts (改善版)
+  interface TableConfig {
+    tableName: string;
+    tableObject: unknown;
+    outputFile: string;
+    enums?: EnumConfig[];
+  }
 
-  export const selectUserSchema = createSelectSchema(users);
-  export const insertUserSchema = createInsertSchema(users);
+  const tableConfigs: TableConfig[] = [
+    {
+      tableName: 'users',
+      tableObject: users,
+      outputFile: 'users.ts',
+      enums: [
+        {
+          name: 'authProviderType',
+          exportName: 'authProviderSchema',
+          values: authProviderType.enumValues,
+        },
+      ],
+    },
+    // 新規テーブル追加時はここに設定を追記するのみ
+  ];
   ```
 - **完了条件**:
-  - [ ] `bun run generate:schemas`が実行可能
-  - [ ] `shared-schemas/users.ts`が自動生成される
-  - [ ] selectUserSchema/insertUserSchemaがZodスキーマとして動作
+  - [x] `bun run generate:schemas`が実行可能
+  - [x] `shared-schemas/users.ts`が自動生成される
+  - [x] selectUserSchema/insertUserSchemaがZodスキーマとして動作
+- **実装記録**: `docs/implements/TASK-802/`
 
 ---
 
