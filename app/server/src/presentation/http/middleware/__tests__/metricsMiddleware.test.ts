@@ -37,7 +37,7 @@ describe('metricsMiddleware', () => {
     // Then: 正しいメトリクス情報が渡される
     const call = (mockMonitoring.recordHttpStatus as ReturnType<typeof mock>)
       .mock.calls[0];
-    const metrics = call![0];
+    const metrics = call?.[0];
     expect(metrics).toHaveProperty('status', 200);
     expect(metrics).toHaveProperty('path', '/test');
     expect(metrics).toHaveProperty('method', 'GET');
@@ -72,7 +72,7 @@ describe('metricsMiddleware', () => {
     // Then: status=500が渡される
     const call = (mockMonitoring.recordHttpStatus as ReturnType<typeof mock>)
       .mock.calls[0];
-    const metrics = call![0];
+    const metrics = call?.[0];
     expect(metrics).toHaveProperty('status', 500);
   });
 
@@ -102,7 +102,7 @@ describe('metricsMiddleware', () => {
     // Then: status=404が渡される
     const call = (mockMonitoring.recordHttpStatus as ReturnType<typeof mock>)
       .mock.calls[0];
-    const metrics = call![0];
+    const metrics = call?.[0];
     expect(metrics).toHaveProperty('status', 404);
   });
 
@@ -132,7 +132,7 @@ describe('metricsMiddleware', () => {
     // Then: requestIdが渡される
     const call = (mockMonitoring.recordHttpStatus as ReturnType<typeof mock>)
       .mock.calls[0];
-    const metrics = call![0];
+    const metrics = call?.[0];
     expect(metrics).toHaveProperty('requestId', 'test-request-id-123');
   });
 
@@ -159,7 +159,7 @@ describe('metricsMiddleware', () => {
     // Then: requestIdはundefined
     const call = (mockMonitoring.recordHttpStatus as ReturnType<typeof mock>)
       .mock.calls[0];
-    const metrics = call![0];
+    const metrics = call?.[0];
     expect(metrics.requestId).toBeUndefined();
   });
 
@@ -180,7 +180,7 @@ describe('metricsMiddleware', () => {
     // When/Then: リクエストを実行（例外は上位でキャッチされる）
     try {
       await app.request('http://localhost/test', { method: 'GET' });
-    } catch (error) {
+    } catch (_error) {
       // 例外を無視（メトリクス記録の検証が目的）
     }
 
