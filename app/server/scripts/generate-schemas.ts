@@ -2,7 +2,7 @@
  * Drizzle Zodスキーマ自動生成スクリプト（改善版）
  *
  * Drizzle ORMのスキーマ定義からZodスキーマを自動生成し、
- * shared-schemasパッケージに出力する。
+ * server/src/schemas/に出力する（server専用DBスキーマ）。
  *
  * 実行方法:
  *   bun run generate:schemas
@@ -190,7 +190,7 @@ async function main(): Promise<void> {
     console.log('🔄 Drizzle Zodスキーマの生成を開始します...');
     console.log('');
 
-    const outputDir = join(process.cwd(), '../packages/shared-schemas');
+    const outputDir = join(process.cwd(), './src/schemas');
     let successCount = 0;
 
     // 全テーブルを処理

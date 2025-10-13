@@ -1,19 +1,14 @@
 /**
  * shared-schemas エクスポート
  *
- * client/serverで共有するZodスキーマとTypeScript型定義
+ * client/server で共有する API コントラクトスキーマとTypeScript型定義
+ *
+ * 注意: DBスキーマ（selectUserSchema, insertUserSchema等）は
+ * server/src/schemas/ に配置され、ここでは export されません。
+ * このパッケージは API 間の契約（Request/Response型）のみを扱います。
  */
 
-// ユーザー関連（Drizzle Zod自動生成）
-export {
-  selectUserSchema,
-  insertUserSchema,
-  authProviderSchema,
-  type SelectUser,
-  type InsertUser,
-  type AuthProvider,
-} from './users';
-
-// 将来的に追加予定のスキーマ
-// export * from './auth';
-// export * from './common';
+// 将来的に追加予定の API コントラクトスキーマ
+// export * from './auth';    // 認証 API 型定義
+// export * from './users';   // ユーザー API 型定義
+// export * from './common';  // 共通レスポンス型

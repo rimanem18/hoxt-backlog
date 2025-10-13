@@ -1,7 +1,7 @@
 /**
  * このファイルは自動生成されました
  *
- * 生成日時: 2025-10-13T00:41:58.822Z
+ * 生成日時: 2025-10-13T12:26:51.035Z
  * 生成元: scripts/generate-schemas.ts
  *
  * ⚠️ 警告: このファイルを手動で編集しないでください ⚠️
@@ -9,10 +9,9 @@
  *   bun run generate:schemas
  */
 
-
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { users, authProviderType } from '@/infrastructure/database/schema';
+import { users } from '@/infrastructure/database/schema';
 
 /**
  * UserテーブルのSelectスキーマ（DB読み取り型）
@@ -20,7 +19,6 @@ import { users, authProviderType } from '@/infrastructure/database/schema';
  * Drizzle ORMのusersテーブルから自動生成された型安全なスキーマ。
  * データベースから取得したデータの検証に使用する。
  */
-// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
 export const selectUserSchema = createSelectSchema(users);
 
 /**
@@ -29,7 +27,6 @@ export const selectUserSchema = createSelectSchema(users);
  * Drizzle ORMのusersテーブルから自動生成された型安全なスキーマ。
  * データベースへの挿入データの検証に使用する。
  */
-// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
 export const insertUserSchema = createInsertSchema(users);
 
 /**
