@@ -4,23 +4,14 @@
  * client/serverで共有するZodスキーマとTypeScript型定義
  */
 
-// ユーザー関連
+// ユーザー関連（Drizzle Zod自動生成）
 export {
+  selectUserSchema,
+  insertUserSchema,
   authProviderSchema,
-  userBaseSchema,
-  createUserRequestSchema,
-  updateUserRequestSchema,
-  userResponseSchema,
-  getUserProfileResponseSchema,
-  authResponseSchema,
-  errorResponseSchema,
+  type SelectUser,
+  type InsertUser,
   type AuthProvider,
-  type CreateUserRequest,
-  type UpdateUserRequest,
-  type UserResponse,
-  type GetUserProfileResponse,
-  type AuthResponse,
-  type ErrorResponse,
 } from './users';
 
 // 将来的に追加予定のスキーマ

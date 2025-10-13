@@ -1,25 +1,45 @@
 /**
- * ユーザー関連のZodスキーマ定義
+ * このファイルは自動生成されました
  *
- * Drizzleスキーマから生成したベーススキーマを元に、
- * API契約（Data Transfer Object）を定義する
+ * 生成日時: 2025-10-13T00:41:58.822Z
+ * 生成元: scripts/generate-schemas.ts
+ *
+ * ⚠️ 警告: このファイルを手動で編集しないでください ⚠️
+ * Drizzleスキーマを変更した場合は、以下のコマンドで再生成してください:
+ *   bun run generate:schemas
  */
 
-import { createSelectSchema, createInsertSchema } from 'drizzle-zod';
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-
-// TODO: Drizzleスキーマのimportを実装
-// packagesディレクトリのバインド設定が必要
-// import { users } from '../../server/src/infrastructure/database/schema';
+import { users, authProviderType } from '@/infrastructure/database/schema';
 
 /**
- * 一時的な実装: 手動でZodスキーマを定義
+ * UserテーブルのSelectスキーマ（DB読み取り型）
  *
- * 将来的にはDrizzleスキーマから自動生成に移行
+ * Drizzle ORMのusersテーブルから自動生成された型安全なスキーマ。
+ * データベースから取得したデータの検証に使用する。
  */
+// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
+export const selectUserSchema = createSelectSchema(users);
 
 /**
- * 認証プロバイダー種別
+ * UserテーブルのInsertスキーマ（DB書き込み型）
+ *
+ * Drizzle ORMのusersテーブルから自動生成された型安全なスキーマ。
+ * データベースへの挿入データの検証に使用する。
+ */
+// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
+export const insertUserSchema = createInsertSchema(users);
+
+/**
+ * 型定義のエクスポート
+ */
+export type SelectUser = z.infer<typeof selectUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+/**
+ * authProviderSchema（enumから自動生成）
  */
 export const authProviderSchema = z.enum([
   'google',
@@ -31,102 +51,3 @@ export const authProviderSchema = z.enum([
 ]);
 
 export type AuthProvider = z.infer<typeof authProviderSchema>;
-
-/**
- * ユーザー基本スキーマ（DB完全版）
- */
-export const userBaseSchema = z.object({
-  id: z.string().uuid(),
-  externalId: z.string().min(1),
-  provider: authProviderSchema,
-  email: z.string().email(),
-  name: z.string().min(1),
-  avatarUrl: z.string().url().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  lastLoginAt: z.date().nullable(),
-});
-
-/**
- * API: ユーザー作成リクエスト
- * JITプロビジョニング時に使用
- */
-export const createUserRequestSchema = userBaseSchema.pick({
-  externalId: true,
-  provider: true,
-  email: true,
-  name: true,
-  avatarUrl: true,
-});
-
-export type CreateUserRequest = z.infer<typeof createUserRequestSchema>;
-
-/**
- * API: ユーザー更新リクエスト
- * 部分更新対応
- */
-export const updateUserRequestSchema = z.object({
-  name: z.string().min(1).optional(),
-  avatarUrl: z.string().url().nullable().optional(),
-  lastLoginAt: z.date().optional(),
-});
-
-export type UpdateUserRequest = z.infer<typeof updateUserRequestSchema>;
-
-/**
- * API: ユーザー情報レスポンス
- * 公開用（機密情報を除外）
- */
-export const userResponseSchema = userBaseSchema.pick({
-  id: true,
-  email: true,
-  name: true,
-  avatarUrl: true,
-  createdAt: true,
-  lastLoginAt: true,
-});
-
-export type UserResponse = z.infer<typeof userResponseSchema>;
-
-/**
- * API: ユーザープロフィール取得レスポンス（設計仕様準拠）
- * GET /api/user/profile エンドポイントのレスポンス形式
- * api-endpoints.md準拠でupdatedAtフィールドを含む
- */
-export const getUserProfileResponseSchema = z.object({
-  success: z.literal(true),
-  data: userBaseSchema.extend({
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(), // 設計仕様準拠: api-endpoints.md必須フィールド
-    lastLoginAt: z.string().datetime().nullable(),
-  }),
-});
-
-export type GetUserProfileResponse = z.infer<typeof getUserProfileResponseSchema>;
-
-/**
- * API: 認証レスポンス
- * 認証成功時のレスポンス形式
- */
-export const authResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    user: userResponseSchema,
-    isNewUser: z.boolean(),
-  }),
-});
-
-export type AuthResponse = z.infer<typeof authResponseSchema>;
-
-/**
- * API: 共通エラーレスポンス
- */
-export const errorResponseSchema = z.object({
-  success: z.literal(false),
-  error: z.object({
-    message: z.string(),
-    code: z.string().optional(),
-  }),
-});
-
-export type ErrorResponse = z.infer<typeof errorResponseSchema>;

@@ -12,11 +12,13 @@
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
-    "db:setup": "bun scripts/setup-database-schema.js"
+    "db:setup": "bun scripts/setup-database-schema.js",
+    "generate:schemas": "bun run scripts/generate-schemas.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",
     "drizzle-orm": "^0.44.4",
+    "drizzle-zod": "^0.8.3",
     "hono": "^4.9.0",
     "jose": "^6.1.0",
     "pg": "^8.12.0",
