@@ -67,7 +67,7 @@ OpenAPI 3.1、Zod、Drizzle Zodを活用して、フロントエンド・バッ�
 ### 制約要件
 
 - REQ-401: システムはDrizzle ORMのスキーマ定義を`app/server/src/infrastructure/database/schema.ts`に配置しなければならない
-- REQ-402: システムはZodスキーマを`app/packages/shared-schemas/`配下に配置しなければならない
+- REQ-402: システムはDBスキーマ（Drizzle Zod）を`app/server/src/schemas/`配下に配置し、APIコントラクトスキーマを`app/packages/shared-schemas/`配下に配置しなければならない
 - REQ-403: システムはOpenAPI仕様を`docs/api/openapi.yaml`または`docs/api/openapi.json`として出力しなければならない
 - REQ-404: システムはフロントエンドの型定義を`app/client/src/types/api/`配下に自動生成しなければならない
 - REQ-405: システムは既存のDDD + クリーンアーキテクチャ構造を維持しながら型安全性を強化しなければならない
@@ -157,7 +157,8 @@ OpenAPI 3.1、Zod、Drizzle Zodを活用して、フロントエンド・バッ�
 
 - **Drizzle Zod統合**:
   - `drizzle-zod`パッケージを使用してDrizzleスキーマからZodスキーマを自動生成
-  - `app/packages/shared-schemas/`にZodスキーマを出力
+  - `app/server/src/schemas/`にDBスキーマを出力（server専用）
+  - `app/packages/shared-schemas/`にAPIコントラクトスキーマを定義（server/client共有）
 
 - **Zod-to-OpenAPI統合**:
   - `@asteasolutions/zod-to-openapi`または`@hono/zod-openapi`を使用
@@ -184,11 +185,18 @@ OpenAPI 3.1、Zod、Drizzle Zodを活用して、フロントエンド・バッ�
   - 自動生成された型を使用してfetch/axios等のAPIクライアントを型安全に実装
   - React Queryと統合してキャッシュ・再検証を実装
 
+### バックエンドスキーマ（server/src/schemas）
+
+- **DBスキーマ定義**:
+  - Drizzle Zodで生成されたDBスキーマ（server専用）
+  - データベース読み取り・書き込み型定義（selectUserSchema, insertUserSchema）
+  - Repository層での型安全性保証
+
 ### 共通パッケージ（shared-schemas）
 
-- **Zodスキーマ定義**:
-  - Drizzle Zodで生成されたベーススキーマ
-  - API契約用のリクエスト・レスポンススキーマ
+- **APIコントラクトスキーマ定義**:
+  - API契約用のリクエスト・レスポンススキーマ（server/client共有）
+  - OpenAPI仕様生成の基礎スキーマ
   - 共通バリデーションルール（email、UUID等）
 
 ### ビルド・開発ワークフロー

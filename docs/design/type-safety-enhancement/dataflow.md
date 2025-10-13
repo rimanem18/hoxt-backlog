@@ -8,17 +8,21 @@
 ```mermaid
 flowchart TD
     A["データベーススキーマ変更<br/>Drizzle ORM schema.ts"] --> B["drizzle-zod<br/>createSelectSchema/createInsertSchema"]
-    B --> C["Zodスキーマ生成<br/>shared-schemas/"]
-    C --> D["@hono/zod-openapi<br/>OpenAPI 3.1仕様生成"]
-    C --> E["バックエンド<br/>Zodバリデーション"]
+    B --> C["DBスキーマ生成<br/>server/src/schemas/<br/>（server専用）"]
+    B --> C2["APIコントラクト定義<br/>shared-schemas/<br/>（server/client共有）"]
+    C --> E["バックエンドRepository<br/>Zodバリデーション"]
+    C2 --> D["@hono/zod-openapi<br/>OpenAPI 3.1仕様生成"]
+    C2 --> E2["バックエンドAPI<br/>Zodバリデーション"]
     D --> F["openapi-typescript<br/>TypeScript型定義生成"]
     F --> G["フロントエンド<br/>型安全なAPIクライアント"]
     E --> H["API Request/Response<br/>実行時検証"]
+    E2 --> H
     G --> H
     H --> I["型安全なAPI連携<br/>コンパイル時 + 実行時"]
 
     style A fill:#e1f5ff,stroke:#01579b
     style C fill:#fff9c4,stroke:#f57f17
+    style C2 fill:#fff9c4,stroke:#f57f17
     style D fill:#f3e5f5,stroke:#4a148c
     style F fill:#e8f5e9,stroke:#1b5e20
     style I fill:#ffebee,stroke:#b71c1c
