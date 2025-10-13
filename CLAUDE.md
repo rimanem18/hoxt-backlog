@@ -108,6 +108,43 @@ docker compose exec e2e npx playwright test
 docker compose exec server bun run dev
 ```
 
+## スキーマ駆動開発（Drizzle Zod）
+
+### Zodスキーマ自動生成
+
+データベーススキーマ（Drizzle ORM）から Zod スキーマを自動生成します。
+
+```bash
+# スキーマ自動生成
+docker compose exec server bun run generate:schemas
+```
+
+### 新規テーブル追加時の手順
+
+1. `app/server/src/infrastructure/database/schema.ts` にテーブル定義を追加
+2. `app/server/scripts/generate-schemas.ts` の `tableConfigs` 配列に設定を追加
+
+```typescript
+const tableConfigs: TableConfig[] = [
+  {
+    tableName: 'users',
+    tableObject: users,
+    outputFile: 'users.ts',
+    enums: [/* enum設定 */],
+  },
+  // 新規テーブルの設定を追加
+];
+```
+
+3. スキーマ生成コマンドを実行
+4. 生成されたファイルをコミット
+
+### 自動生成ファイルの取り扱い
+
+- **禁止**: `app/packages/shared-schemas/*.ts` の手動編集
+  - ファイル冒頭の警告コメントを確認
+  - スキーマ変更時は必ず `bun run generate:schemas` で再生成
+
 ## コード品質・フォーマット
 
 以下を考慮し、コードの品質を保ってください：
