@@ -180,19 +180,33 @@ export function useUser(userId: string) {
 }
 ```
 
+### バックエンドスキーマ（server/src/schemas）
+
+#### 役割
+- Drizzle Zodで生成されたDBスキーマの配置（server専用）
+- データベース読み取り・書き込み型定義
+- Repository層での型安全性保証
+
+#### ディレクトリ構成
+```
+app/server/src/schemas/
+├── users.ts          # DBスキーマ（selectUserSchema, insertUserSchema）
+└── index.ts          # エクスポート集約
+```
+
 ### 共通パッケージ（shared-schemas）
 
 #### 役割
-- Drizzle Zodで生成されたZodスキーマの配置
 - API契約用のリクエスト・レスポンススキーマ定義
 - フロントエンド・バックエンド間で共有される型定義
+- OpenAPI仕様生成の基礎スキーマ
 
 #### ディレクトリ構成
 ```
 app/packages/shared-schemas/
-├── users.ts          # ユーザー関連スキーマ
-├── auth.ts           # 認証関連スキーマ
-├── common.ts         # 共通型（UUID、Email等）
+├── users.ts          # ユーザーAPI型定義（GetUserProfileResponse等）
+├── auth.ts           # 認証API型定義
+├── common.ts         # 共通レスポンス型（ErrorResponse等）
 └── index.ts          # エクスポート集約
 ```
 

@@ -39,12 +39,12 @@
 
 - [x] **タスク完了** (2025-10-13)
 - **タスクタイプ**: DIRECT
-- **要件リンク**: REQ-002, REQ-101
+- **要件リンク**: REQ-002, REQ-101, REQ-402
 - **依存タスク**: TASK-801
 - **実装詳細**:
   - `app/server/scripts/generate-schemas.ts`作成（Config駆動アプローチ）
   - Drizzleスキーマから`createSelectSchema`/`createInsertSchema`実行
-  - `app/packages/shared-schemas/users.ts`に自動生成（REQ-402）
+  - `app/server/src/schemas/users.ts`に自動生成（server専用DBスキーマ）
   - `bun run generate:schemas`コマンド追加
   - 生成ファイルに警告コメント追加（手動編集禁止）
   - TableConfig配列による拡張可能な設計
@@ -82,27 +82,23 @@
 
 ---
 
-### TASK-803: 既存Zodスキーマの段階的置き換え
+### TASK-803: DBスキーマのserver内移動とimportパス更新
 
 - [ ] **タスク完了**
-- **タスクタイプ**: TDD
-- **要件リンク**: REQ-003
+- **タスクタイプ**: DIRECT
+- **要件リンク**: REQ-402
 - **依存タスク**: TASK-802
 - **実装詳細**:
-  - `app/packages/shared-schemas/users.ts`の既存TODOコメント解消
-  - 手動定義されたZodスキーマをDrizzle Zod生成スキーマで置き換え
-  - バックエンドでselectUserSchema/insertUserSchemaをimport
-  - 既存のバリデーションロジックが動作することを確認
-- **テスト要件**:
-  - [ ] 単体テスト: selectUserSchema.parse()が正しく動作
-  - [ ] 単体テスト: insertUserSchema.parse()でバリデーション成功
-  - [ ] 統合テスト: 既存APIエンドポイントでスキーマ検証が動作
-- **エラーハンドリング**:
-  - [ ] スキーマ不整合時にわかりやすいエラーメッセージ
-  - [ ] 既存のバリデーションロジックとの互換性確認
+  - TASK-802で誤って`shared-schemas/users.ts`に生成したDBスキーマを`server/src/schemas/users.ts`に移動
+  - `generate-schemas.ts`の出力先を`../src/schemas/`に変更
+  - UserControllerなどのimportパスを`@/schemas/users`に更新
+  - `shared-schemas/users.ts`から不要なDB関連エクスポートを削除
+  - server側のtsconfig.jsonパスエイリアス確認（`@/schemas/*`が解決可能か）
 - **完了条件**:
-  - [ ] 既存の手動Zodスキーマが削除されている
-  - [ ] 全テストが成功する
+  - [ ] DBスキーマが`server/src/schemas/users.ts`に配置されている
+  - [ ] `generate-schemas.ts`が正しいディレクトリに出力する
+  - [ ] server側の型チェックが成功する（`bunx tsc --noEmit`）
+  - [ ] client側の型チェックが成功する（`bunx tsc --noEmit`）
 
 ---
 
@@ -112,6 +108,7 @@
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-003
 - **依存タスク**: TASK-803
+- **重要度**: 高（shared-schemasの正しい使用方法を確立）
 - **実装詳細**:
   - `shared-schemas/auth.ts`作成（認証リクエスト・レスポンススキーマ）
   - `shared-schemas/common.ts`作成（共通型: UUID、Email等）
