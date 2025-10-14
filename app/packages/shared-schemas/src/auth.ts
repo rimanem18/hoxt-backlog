@@ -1,10 +1,96 @@
 /**
- * 認証関連の型定義とインターフェース
- * テストケースで参照される最小限の型定義のみを実装
+ * 認証API契約スキーマ
+ *
+ * 認証関連のリクエスト・レスポンススキーマを定義
+ * - POST /auth/callback: Supabase認証後のコールバック処理
+ *
+ * 注意: このファイルはAPI契約のみを定義します。
+ * DBスキーマ（selectUserSchema等）は server/src/schemas/ で定義され、
+ * 実装時にそちらを参照します。
+ */
+
+import { z } from 'zod';
+import { emailSchema, urlSchema, apiResponseSchema } from './common';
+
+/**
+ * 認証プロバイダー種別
+ *
+ * サポートする認証プロバイダーの種別
+ * 注意: この定義はDBスキーマ（auth_provider_type enum）と一致させる必要があります
+ */
+export const authProviderSchema = z.enum([
+  'google',
+  'apple',
+  'microsoft',
+  'github',
+  'facebook',
+  'line',
+]);
+
+export type AuthProvider = z.infer<typeof authProviderSchema>;
+
+/**
+ * 認証コールバックリクエストスキーマ
+ *
+ * POST /auth/callback のリクエストボディ
+ * Supabase認証後のユーザー情報を受け取る
+ *
+ * @property externalId - 外部プロバイダーでのユーザーID
+ * @property provider - 認証プロバイダー種別
+ * @property email - メールアドレス
+ * @property name - ユーザー名
+ * @property avatarUrl - アバターURL（オプション）
+ */
+export const authCallbackRequestSchema = z.object({
+  externalId: z
+    .string()
+    .min(1, 'externalIdは1文字以上である必要があります'),
+  provider: authProviderSchema,
+  email: emailSchema,
+  name: z.string().min(1, 'ユーザー名は1文字以上である必要があります'),
+  avatarUrl: urlSchema.optional(),
+});
+
+/**
+ * ユーザー情報スキーマ（API契約用）
+ *
+ * 認証コールバックレスポンスに含まれるユーザー情報
+ * 注意: 実装時はserver/src/schemas/users.tsのselectUserSchemaを使用
+ */
+export const userSchema = z.object({
+  id: z.string().uuid(),
+  externalId: z.string(),
+  provider: authProviderSchema,
+  email: emailSchema,
+  name: z.string(),
+  avatarUrl: z.string().url().nullable().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  lastLoginAt: z.string().datetime().nullable().optional(),
+});
+
+export type User = z.infer<typeof userSchema>;
+
+/**
+ * 認証コールバックレスポンススキーマ
+ *
+ * POST /auth/callback の成功レスポンス形式
+ * { success: true, data: User }
+ */
+export const authCallbackResponseSchema = apiResponseSchema(userSchema);
+
+/**
+ * 型定義のエクスポート
+ */
+export type AuthCallbackRequest = z.infer<typeof authCallbackRequestSchema>;
+export type AuthCallbackResponse = z.infer<typeof authCallbackResponseSchema>;
+
+/**
+ * 既存コードとの互換性のための型定義
  */
 
 /**
- * AuthenticateUserUseCase の入力型
+ * AuthenticateUserUseCase の入力型（既存コードとの互換性）
  * JWT検証・ユーザー認証処理の入力パラメータ
  */
 export interface AuthenticateUserUseCaseInput {
@@ -13,7 +99,7 @@ export interface AuthenticateUserUseCaseInput {
 }
 
 /**
- * AuthenticateUserUseCase の出力型
+ * AuthenticateUserUseCase の出力型（既存コードとの互換性）
  * JWT検証・ユーザー認証処理の出力結果
  */
 export interface AuthenticateUserUseCaseOutput {
@@ -24,44 +110,7 @@ export interface AuthenticateUserUseCaseOutput {
 }
 
 /**
- * ユーザーエンティティ型
- * ドメイン層のUserエンティティ表現
- */
-export interface User {
-  /** ユーザー固有ID（UUID v4） */
-  id: string;
-  /** 外部プロバイダーでのユーザーID */
-  externalId: string;
-  /** 認証プロバイダー種別 */
-  provider: AuthProvider;
-  /** メールアドレス */
-  email: string;
-  /** 表示名 */
-  name: string;
-  /** プロフィール画像URL（オプション） */
-  avatarUrl?: string | null;
-  /** アカウント作成日時（ISO 8601形式） */
-  createdAt: string;
-  /** 最終更新日時（ISO 8601形式） */
-  updatedAt: string;
-  /** 最終ログイン日時（ISO 8601形式、オプション） */
-  lastLoginAt?: string | null;
-}
-
-/**
- * 認証プロバイダー種別
- * サポートする認証プロバイダーの種別
- */
-export type AuthProvider = 
-  | 'google'
-  | 'apple'
-  | 'microsoft'
-  | 'github'
-  | 'facebook'
-  | 'line';
-
-/**
- * 認証成功レスポンス型
+ * 認証成功レスポンス型（既存コードとの互換性）
  * 認証成功時のAPIレスポンス形式
  */
 export interface AuthResponse {
@@ -72,19 +121,6 @@ export interface AuthResponse {
 }
 
 /**
- * エラーレスポンス型
- * エラー時のAPIレスポンス形式
+ * エラーレスポンス型（既存コードとの互換性）
  */
-export interface ErrorResponse {
-  /** 失敗フラグ */
-  success: false;
-  /** エラー情報 */
-  error: {
-    /** エラーコード */
-    code: string;
-    /** エラーメッセージ */
-    message: string;
-    /** 詳細情報（オプション） */
-    details?: string;
-  };
-}
+export type { ErrorResponse } from './common';
