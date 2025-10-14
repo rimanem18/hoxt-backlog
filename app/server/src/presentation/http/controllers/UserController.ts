@@ -14,32 +14,13 @@ import type {
   IGetUserProfileUseCase,
 } from '@/application/usecases/GetUserProfileUseCase';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
+import type { User as ApiUser } from '@/packages/shared-schemas/src/auth';
+import type {
+  ErrorResponse,
+  GetUserProfileResponse,
+} from '@/packages/shared-schemas/src/common';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
-
-// 一時的な型定義（TASK-804で shared-schemas に移行予定）
-interface GetUserProfileResponse {
-  success: true;
-  data: {
-    id: string;
-    externalId: string;
-    provider: string;
-    email: string;
-    name: string;
-    avatarUrl: string | null;
-    createdAt: string;
-    updatedAt: string;
-    lastLoginAt: string | null;
-  };
-}
-
-interface ErrorResponse {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-  };
-}
 
 /*
  * userID検証ガード関数
@@ -89,7 +70,7 @@ export class UserController {
       const result = await this.getUserProfileUseCase.execute(input);
 
       // 統一レスポンス生成
-      const responseData: GetUserProfileResponse = {
+      const responseData: GetUserProfileResponse<ApiUser> = {
         success: true,
         data: {
           id: result.user.id,
@@ -105,7 +86,7 @@ export class UserController {
       };
 
       // 型安全なJSONレスポンスを返却
-      return c.json<GetUserProfileResponse>(responseData, 200);
+      return c.json<GetUserProfileResponse<ApiUser>>(responseData, 200);
     } catch (error) {
       // エラー種別に応じたレスポンス生成
 
