@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import type { User } from '@/domain/user';
-import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
+import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/common';
 import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
 import { UserController } from '../UserController';
 
