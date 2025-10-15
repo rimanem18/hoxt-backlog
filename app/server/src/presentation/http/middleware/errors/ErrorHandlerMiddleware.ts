@@ -12,7 +12,7 @@
  */
 
 import type { ErrorHandler } from 'hono';
-import type { ErrorResponse } from '@/packages/shared-schemas/src/api';
+import type { ErrorResponse } from '@/packages/shared-schemas/src/common';
 import type { MonitoringService } from '@/shared/monitoring/MonitoringService';
 import { AuthError } from './AuthError';
 

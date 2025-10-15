@@ -11,7 +11,7 @@ import { UserEntity } from '@/domain/user/UserEntity';
 import type {
   ErrorResponse,
   GetUserProfileResponse,
-} from '@/packages/shared-schemas/src/api';
+} from '@/packages/shared-schemas/src/common';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { UserController } from '../UserController';
 

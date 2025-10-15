@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import type { IGetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
 import type { User } from '@/domain/user';
-import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/api';
+// 設計意図: API契約（JSON互換のstring型）とドメインエンティティ（ビジネスロジックのDate型）は
+// クリーンアーキテクチャの層分離により意図的に別型として定義されています
+// - ドメイン層User: ビジネスロジック・モックデータ用（Date型）
+// - API契約User: HTTP通信・レスポンス検証用（string型、ISO 8601）
+import type { User as ApiUser } from '@/packages/shared-schemas/src/auth';
+import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/common';
 import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
 import { UserController } from '../UserController';
 
@@ -113,7 +118,7 @@ describe('UserController - プロフィール取得成功テスト', () => {
     expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢
     expect(response.headers.get('Content-Type')).toBe('application/json'); // 【確認内容】: レスポンスヘッダーが適切なContent-Typeを持つことを確認 🟢
 
-    const responseBody: GetUserProfileResponse = await response.json();
+    const responseBody: GetUserProfileResponse<ApiUser> = await response.json();
 
     expect(responseBody.success).toBe(true); // 【確認内容】: APIレスポンスが成功を示すことを確認 🟢
     expect(responseBody.data).toBeDefined(); // 【確認内容】: ユーザーデータが返却されることを確認 🟢
