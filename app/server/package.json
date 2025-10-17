@@ -13,10 +13,12 @@
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:setup": "bun scripts/setup-database-schema.js",
-    "generate:schemas": "bun run scripts/generate-schemas.ts"
+    "generate:schemas": "bun run scripts/generate-schemas.ts",
+    "generate:openapi": "bun run scripts/generate-openapi.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",
+    "@hono/zod-openapi": "^1.1.3",
     "drizzle-orm": "^0.44.4",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.9.0",
@@ -28,7 +30,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.4",
     "@types/bun": "^1.2.22",
-    "@types/node": "^24.5.2",
+    "@types/node": "^24.7.2",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.9",
