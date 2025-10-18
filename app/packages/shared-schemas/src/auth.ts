@@ -48,7 +48,7 @@ export const authCallbackRequestSchema = z.object({
   provider: authProviderSchema,
   email: emailSchema,
   name: z.string().min(1, 'ユーザー名は1文字以上である必要があります'),
-  avatarUrl: urlSchema.optional(),
+  avatarUrl: urlSchema.nullable().optional(),
 });
 
 /**
