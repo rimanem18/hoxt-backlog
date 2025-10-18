@@ -36,7 +36,7 @@ async function generateOpenAPISpec(): Promise<void> {
 	const openAPISpec = {
 		openapi: "3.1.0",
 		info: {
-			title: "HOXT Backlog API",
+			title: process.env.PROJECT_NAME ? `${process.env.PROJECT_NAME} API` : "API Specification",
 			version: "1.0.0",
 			description:
 				"型安全性強化・API契約強化プロジェクトによるAPI仕様\n\n" +

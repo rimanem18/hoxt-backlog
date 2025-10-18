@@ -1,6 +1,6 @@
 openapi: "3.1.0"
 info:
-  title: "HOXT Backlog API"
+  title: "hoxbl API"
   version: "1.0.0"
   description: "型安全性強化・API契約強化プロジェクトによるAPI仕様
 

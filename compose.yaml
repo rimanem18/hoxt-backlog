@@ -16,6 +16,7 @@ services:
       - ACCESS_ALLOW_HEADERS=${ACCESS_ALLOW_HEADERS}
       - SUPABASE_URL=${SUPABASE_URL}
       - METRICS_NAMESPACE=${METRICS_NAMESPACE}
+      - PROJECT_NAME=${PROJECT_NAME}
       # テスト用のローカルDB設定
       - ENVIRONMENT=preview
       - BASE_SCHEMA=app_test
