@@ -177,7 +177,7 @@
 
 ### TASK-901: @hono/zod-openapi導入・設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-004, REQ-403
 - **依存タスク**: TASK-804
@@ -200,9 +200,9 @@
   });
   ```
 - **完了条件**:
-  - [ ] @hono/zod-openapiがインストール済み
-  - [ ] `bun run generate:openapi`が実行可能
-  - [ ] `docs/api/openapi.yaml`が生成される
+  - [x] @hono/zod-openapiがインストール済み
+  - [x] `bun run generate:openapi`が実行可能
+  - [x] `docs/api/openapi.yaml`が生成される
 
 ---
 
