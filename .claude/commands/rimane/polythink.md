@@ -10,6 +10,8 @@ description: 与えられた指示に対し、gemini, o3, codex と壁打ちし�
 - use o3-search MCP
 - use ask-gemini MCP
 
+codex 利用時は、prompt のみ送信してください。
+
 ## 実行内容
 
 - ユーザから憶測や提案が送られた場合、それも正しいか検証してください。
