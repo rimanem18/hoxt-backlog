@@ -13,13 +13,15 @@
     "test:e2e:headed": "playwright test --headed",
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:types": "bunx openapi-typescript /home/bun/docs/api/openapi.yaml -o src/types/api/generated.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "@supabase/supabase-js": "^2.56.0",
     "@tanstack/react-query": "^5.84.2",
     "next": "15.4.6",
+    "openapi-fetch": "^0.15.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-redux": "^9.2.0"
@@ -36,6 +38,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "jsdom": "^26.1.0",
+    "openapi-typescript": "^7.10.0",
     "playwright": "^1.55.0",
     "tailwindcss": "^4",
     "typescript": "^5"

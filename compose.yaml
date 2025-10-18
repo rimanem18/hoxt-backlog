@@ -8,6 +8,7 @@ services:
     volumes:
       - ./app/server:/home/bun/app/server
       - ./app/packages:/home/bun/app/packages
+      - ./docs/api:/home/bun/docs/api
     environment:
       - SERVER_PORT=${SERVER_PORT}
       - ACCESS_ALLOW_ORIGIN=${ACCESS_ALLOW_ORIGIN}
@@ -15,6 +16,7 @@ services:
       - ACCESS_ALLOW_HEADERS=${ACCESS_ALLOW_HEADERS}
       - SUPABASE_URL=${SUPABASE_URL}
       - METRICS_NAMESPACE=${METRICS_NAMESPACE}
+      - PROJECT_NAME=${PROJECT_NAME}
       # テスト用のローカルDB設定
       - ENVIRONMENT=preview
       - BASE_SCHEMA=app_test
@@ -33,6 +35,7 @@ services:
     volumes:
       - ./app/client:/home/bun/app/client
       - ./app/packages:/home/bun/app/packages
+      - ./docs/api:/home/bun/docs/api:ro
     environment:
       - CLIENT_PORT=${CLIENT_PORT}
       - NEXT_PUBLIC_TRUSTED_DOMAINS=http://localhost:${CLIENT_PORT},http://localhost:${SERVER_PORT}

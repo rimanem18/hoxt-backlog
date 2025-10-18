@@ -20,6 +20,9 @@
 | | Supabase | 2.44 | 認証・データベースサービス |
 | **スキーマ** | Zod | 4.0 | TypeScript スキーマ検証 |
 | | drizzle-zod | 0.8 | Drizzle と Zod の統合 |
+| | @hono/zod-openapi | 1.1 | Hono + Zod + OpenAPI 統合 |
+| | openapi-fetch | 0.15 | 型安全な API クライアント |
+| | openapi-typescript | 7.10 | OpenAPI から TypeScript 型定義生成 |
 | **開発ツール** | TypeScript | 5 | 型安全性 |
 | | Biome | 2.1 | リンター・フォーマッター |
 | | uuid | 11.1 | UUID 生成 |
@@ -74,3 +77,38 @@ make up
 ```sh
 make down
 ```
+
+## 完了した機能
+
+### TASK-901: 型安全性強化・API契約強化 - 環境構築
+
+- **実装日**: 2025-10-15
+- **概要**: スキーマ駆動開発のための基盤構築
+- **設定内容**:
+  - @hono/zod-openapi による OpenAPI 3.1 仕様自動生成
+  - openapi-fetch による型安全な API クライアント
+  - openapi-typescript による TypeScript 型定義自動生成
+  - Docker Compose バインドマウント設定（限定的・読み取り専用）
+- **動作確認**:
+  - OpenAPI 仕様生成: `docker compose exec server bun run generate:openapi`
+  - 型定義生成: `docker compose exec client bun run generate:types`（実装フェーズで使用）
+
+#### スキーマ駆動開発フロー
+
+```
+Drizzle ORM Schema (schema.ts)
+  ↓ drizzle-zod
+Zod Schemas (shared-schemas/)
+  ↓ @hono/zod-openapi
+OpenAPI 3.1 Spec (docs/api/openapi.yaml)
+  ↓ openapi-typescript
+TypeScript Types (client/src/types/api/generated.ts)
+```
+
+#### 型安全性の保証
+
+- **コンパイル時**: TypeScript 型チェック
+- **実行時**: Zod バリデーション
+- **ドキュメント**: OpenAPI 仕様から自動生成
+
+詳細は `docs/implements/TASK-901/setup-report.md` および `docs/implements/TASK-901/verify-report.md` を参照してください。

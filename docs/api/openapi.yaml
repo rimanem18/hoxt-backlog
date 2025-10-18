@@ -1,0 +1,25 @@
+openapi: "3.1.0"
+info:
+  title: "hoxbl API"
+  version: "1.0.0"
+  description: "型安全性強化・API契約強化プロジェクトによるAPI仕様
+
+Single Source of Truth: Drizzle ORM → Drizzle Zod → Zod → OpenAPI → TypeScript"
+servers:   -     url: "http://localhost:3001/api"
+    description: "開発環境"
+paths:
+
+components:
+  schemas:
+
+  securitySchemes:
+    BearerAuth:
+      type: "http"
+      scheme: "bearer"
+      bearerFormat: "JWT"
+      description: "Supabase Authで発行されたJWTトークン（RS256/ES256非対称鍵で署名）
+バックエンドはJWKS検証により署名を検証:
+- JWTヘッダーから kid を取得
+- Supabase JWKS エンドポイントから公開鍵セットを取得
+- kid に対応する公開鍵で署名検証"
+  responses:
