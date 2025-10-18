@@ -1,13 +1,12 @@
-import { Hono } from 'hono';
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { randomUUID } from 'node:crypto';
+import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
-import { AuthController } from '../controllers/AuthController';
 import {
   authCallbackRequestSchema,
   authCallbackResponseSchema,
 } from '@/packages/shared-schemas/src/auth';
 import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
+import { AuthController } from '../controllers/AuthController';
 
 /**
  * Auth API のルート定義
@@ -103,7 +102,8 @@ const authCallbackRoute = createRoute({
   path: '/auth/callback',
   tags: ['認証'],
   summary: 'Supabase認証後のコールバック処理',
-  description: 'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
+  description:
+    'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
   request: {
     body: {
       content: {

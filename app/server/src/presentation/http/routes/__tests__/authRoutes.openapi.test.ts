@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
+import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
 import {
   authCallbackRequestSchema,
   authCallbackResponseSchema,
@@ -77,7 +77,23 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
       app.openapi(route, async (c) => {
         // 【検証項目】: ハンドラ関数がダミーレスポンスを返せることを確認（実装はGreenフェーズで行う）
         // 🟢 この実装パターンは@hono/zod-openapiの公式サンプルに基づく
-        return c.json({ success: true, data: {} as any }, 200);
+        return c.json(
+          {
+            success: true,
+            data: {
+              id: '',
+              externalId: '',
+              provider: 'google' as const,
+              email: '',
+              name: '',
+              avatarUrl: null,
+              createdAt: '',
+              updatedAt: '',
+              lastLoginAt: '',
+            },
+          },
+          200,
+        );
       });
     }).not.toThrow(); // 【確認内容】: ルート登録処理が例外なく完了し、OpenAPIルートとして正常に機能する
   });
@@ -116,8 +132,10 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
 
     // 【実際の処理実行】: ルート定義からrequestスキーマとresponseスキーマを取得
     // 【処理内容】: createRouteの結果オブジェクトからスキーマ情報を抽出
-    const requestSchema = route.request?.body?.content?.['application/json']?.schema;
-    const responseSchema = route.responses?.[200]?.content?.['application/json']?.schema;
+    const requestSchema =
+      route.request?.body?.content?.['application/json']?.schema;
+    const responseSchema =
+      route.responses?.[200]?.content?.['application/json']?.schema;
 
     // 【結果検証】: リクエストスキーマとレスポンススキーマが正しく定義されていることを確認
     // 【期待値確認】: Zodスキーマオブジェクトが正しくルート定義に埋め込まれている理由は、createRouteがZodスキーマを受け入れる設計であるため
@@ -144,7 +162,8 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
       path: '/auth/callback',
       tags: ['認証'],
       summary: 'Supabase認証後のコールバック処理',
-      description: 'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
+      description:
+        'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
       request: {
         body: {
           content: {
@@ -174,6 +193,8 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
     // 【品質保証】: Swagger UIでの可読性向上とAPI文書化の品質を保証
     expect(route.tags).toEqual(['認証']); // 【確認内容】: タグが正しく設定され、Swagger UIでのグルーピングが機能する
     expect(route.summary).toBe('Supabase認証後のコールバック処理'); // 【確認内容】: サマリーが設定され、エンドポイント一覧で概要が表示される
-    expect(route.description).toBe('Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う'); // 【確認内容】: 詳細説明が設定され、API利用者が仕様を理解できる
+    expect(route.description).toBe(
+      'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
+    ); // 【確認内容】: 詳細説明が設定され、API利用者が仕様を理解できる
   });
 });

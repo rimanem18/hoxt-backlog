@@ -297,8 +297,12 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     expect(responseBody.data.provider).toBe('google'); // 【確認内容】: プロバイダーが正しく保存されることを確認 🟢 authProviderSchemaに基づく
     expect(responseBody.data.email).toBe('newuser@example.com'); // 【確認内容】: メールアドレスが正しく保存されることを確認 🟢 emailSchemaに基づく
     expect(responseBody.data.name).toBe('New User'); // 【確認内容】: ユーザー名が正しく保存されることを確認 🟢 リクエストデータと一致
-    expect(responseBody.data.avatarUrl).toBe('https://lh3.googleusercontent.com/a/default-user'); // 【確認内容】: avatarUrlが正しく保存されることを確認 🟢 urlSchemaに基づく
-    expect(responseBody.data.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i); // 【確認内容】: UUIDv4形式のIDが生成されることを確認 🟢 uuidSchemaに基づく
+    expect(responseBody.data.avatarUrl).toBe(
+      'https://lh3.googleusercontent.com/a/default-user',
+    ); // 【確認内容】: avatarUrlが正しく保存されることを確認 🟢 urlSchemaに基づく
+    expect(responseBody.data.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    ); // 【確認内容】: UUIDv4形式のIDが生成されることを確認 🟢 uuidSchemaに基づく
   });
 
   test('既存ユーザーのGitHub認証が成功し、lastLoginAtが更新される', async () => {
@@ -343,7 +347,14 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
 
     // 【テストデータ準備】: 各プロバイダーの典型的な認証情報を用意
     // 【初期条件設定】: authProviderSchemaで定義された6つの値すべてをテスト
-    const providers = ['google', 'apple', 'microsoft', 'github', 'facebook', 'line'] as const;
+    const providers = [
+      'google',
+      'apple',
+      'microsoft',
+      'github',
+      'facebook',
+      'line',
+    ] as const;
 
     for (const provider of providers) {
       // 【実際の処理実行】: 各プロバイダーごとにリクエストを送信
@@ -403,7 +414,9 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認 🟢 apiErrorResponseSchemaに基づく
     expect(responseBody.error.message).toBe('バリデーションエラー'); // 【確認内容】: ユーザー向けエラーメッセージが含まれることを確認
-    expect(responseBody.error.details.email).toBe('有効なメールアドレス形式である必要があります'); // 【確認内容】: フィールド単位のエラー詳細が含まれることを確認 🟢 REQ-104（詳細エラーメッセージ返却）に基づく
+    expect(responseBody.error.details.email).toBe(
+      '有効なメールアドレス形式である必要があります',
+    ); // 【確認内容】: フィールド単位のエラー詳細が含まれることを確認 🟢 REQ-104（詳細エラーメッセージ返却）に基づく
   });
 
   test('externalIdが空文字列の場合、400エラーが返る', async () => {
@@ -436,7 +449,9 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
-    expect(responseBody.error.details.externalId).toBe('externalIdは1文字以上である必要があります'); // 【確認内容】: 最小文字数制約違反を明示するエラーメッセージが含まれることを確認 🟢 authCallbackRequestSchemaのメッセージに基づく
+    expect(responseBody.error.details.externalId).toBe(
+      'externalIdは1文字以上である必要があります',
+    ); // 【確認内容】: 最小文字数制約違反を明示するエラーメッセージが含まれることを確認 🟢 authCallbackRequestSchemaのメッセージに基づく
   });
 
   test('providerが列挙型に存在しない値の場合、400エラーが返る', async () => {
@@ -503,7 +518,9 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
-    expect(responseBody.error.details.avatarUrl).toBe('有効なURL形式である必要があります'); // 【確認内容】: URL形式制約違反を明示するエラーメッセージが含まれることを確認 🟢 urlSchemaのメッセージに基づく
+    expect(responseBody.error.details.avatarUrl).toBe(
+      '有効なURL形式である必要があります',
+    ); // 【確認内容】: URL形式制約違反を明示するエラーメッセージが含まれることを確認 🟢 urlSchemaのメッセージに基づく
   });
 
   test('必須フィールドnameが欠落している場合、400エラーが返る', async () => {
