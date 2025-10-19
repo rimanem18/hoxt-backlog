@@ -1,0 +1,7 @@
+# Bun設定ファイル
+# https://bun.sh/docs/runtime/bunfig
+
+[test]
+# テスト実行前に必ず読み込むプリロードファイル
+# 環境変数の初期化を保証し、テストファイルのインポート順序に依存しない設定を実現
+preload = ["./test/setup-env.ts"]

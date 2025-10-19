@@ -6,7 +6,7 @@
     "start": "bun run src/entrypoints/bun.serve.ts",
     "start:node": "node --import tsx src/entrypoints/node.serve.ts",
     "build:lambda": "bun esbuild --bundle --minify --format=cjs --outfile=./dist/index.js --platform=node --target=node22 ./src/entrypoints/lambda.ts",
-    "test": "NODE_ENV=test CI=true bun test",
+    "test": "bun test",
     "test:local": "bun test",
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
@@ -25,7 +25,7 @@
     "jose": "^6.1.0",
     "pg": "^8.12.0",
     "postgres": "^3.4.7",
-    "zod": "^4.0.17"
+    "zod": "4.1.12"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.4",

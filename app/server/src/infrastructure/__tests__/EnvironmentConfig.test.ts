@@ -1,11 +1,28 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { getDatabaseConfig, validateConfig } from '../config/env';
 
 describe('EnvironmentConfig', () => {
-  // 各テスト前に環境変数をクリア
+  // 環境変数の元の値を保存
+  let originalBaseSchema: string | undefined;
+  let originalDatabaseUrl: string | undefined;
+
+  // 各テスト前に環境変数を保存してからクリア
   beforeEach(() => {
+    originalBaseSchema = process.env.BASE_SCHEMA;
+    originalDatabaseUrl = process.env.DATABASE_URL;
+
     delete process.env.BASE_SCHEMA;
     delete process.env.DATABASE_URL;
+  });
+
+  // 各テスト後に環境変数を復元（他のテストへの副作用を防ぐ）
+  afterEach(() => {
+    if (originalBaseSchema !== undefined) {
+      process.env.BASE_SCHEMA = originalBaseSchema;
+    }
+    if (originalDatabaseUrl !== undefined) {
+      process.env.DATABASE_URL = originalDatabaseUrl;
+    }
   });
 
   describe('getDatabaseConfig', () => {
