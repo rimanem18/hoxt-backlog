@@ -34,9 +34,9 @@ runs:
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: bun install
+      run: bun install --frozen-lockfile
 
     - name: Install shared-schemas dependencies
       shell: bash
       working-directory: ./app/packages/shared-schemas
-      run: bun install
+      run: bun install --frozen-lockfile
