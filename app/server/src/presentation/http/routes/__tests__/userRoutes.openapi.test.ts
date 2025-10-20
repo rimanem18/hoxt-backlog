@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
+import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
 import {
   getUserParamsSchema,
   getUserResponseSchema,
@@ -17,7 +18,6 @@ import {
   updateUserBodySchema,
   updateUserResponseSchema,
 } from '@/packages/shared-schemas/src/users';
-import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
 
 describe('GET /users/{id} - OpenAPIルート定義', () => {
   test('OpenAPIルートが正常に登録される', () => {
