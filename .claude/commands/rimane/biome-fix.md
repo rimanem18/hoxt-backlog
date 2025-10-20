@@ -17,7 +17,7 @@ description: import パスの修正や biome での lint & format を実施し�
     - コンテナ名に client が指定された場合に限り、`docker compose e2e exec npx playwright test` で E2E テストも実施
 5. `docker compose exec {コンテナ名} bunx tsc --noEmit` を実施
 6. 問題があれば修正
-7. `docker compose exec {コンテナ名} bun run fix` を実施
+7. `docker compose exec semgrep semgrep <args...>` を実施
 8. 層が異なる相対パスを絶対パスに修正
 9. 層が同じでも 3つ以上遡っている相対パスを絶対パスに修正
 
