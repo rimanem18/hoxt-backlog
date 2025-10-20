@@ -61,16 +61,13 @@ describe('GET /api/users/{id} 統合テスト', () => {
       const validJWT = 'mock-valid-jwt-token';
       const validUserId = '550e8400-e29b-41d4-a716-446655440000';
 
-      const request = new Request(
-        `http://localhost/api/users/${validUserId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${validJWT}`,
-            'Content-Type': 'application/json',
-          },
+      const request = new Request(`http://localhost/api/users/${validUserId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${validJWT}`,
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       // 【実際の処理実行】: ユーザー取得APIにリクエストを送信
       // 【処理内容】: OpenAPIルート → JWKS認証ミドルウェア → GetUserUseCase → UserRepository
@@ -103,16 +100,13 @@ describe('GET /api/users/{id} 統合テスト', () => {
       const validJWT = 'mock-valid-jwt-token';
       const validUserId = '550e8400-e29b-41d4-a716-446655440000';
 
-      const request = new Request(
-        `http://localhost/api/users/${validUserId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${validJWT}`,
-            'Content-Type': 'application/json',
-          },
+      const request = new Request(`http://localhost/api/users/${validUserId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${validJWT}`,
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       // 【実際の処理実行】: ユーザー取得APIにリクエストを送信
       const response = await app.request(request);
@@ -135,16 +129,13 @@ describe('GET /api/users/{id} 統合テスト', () => {
       const validJWT = 'mock-valid-jwt-token';
       const validUserId = '550e8400-e29b-41d4-a716-446655440000';
 
-      const request = new Request(
-        `http://localhost/api/users/${validUserId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${validJWT}`,
-            'Content-Type': 'application/json',
-          },
+      const request = new Request(`http://localhost/api/users/${validUserId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${validJWT}`,
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       // 【実際の処理実行】: レスポンス時間を測定しながらリクエストを送信
       const startTime = performance.now();
@@ -214,16 +205,13 @@ describe('GET /api/users/{id} 統合テスト', () => {
       const invalidJWT = 'mock-invalid-jwt-token';
       const validUserId = '550e8400-e29b-41d4-a716-446655440000';
 
-      const request = new Request(
-        `http://localhost/api/users/${validUserId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${invalidJWT}`,
-            'Content-Type': 'application/json',
-          },
+      const request = new Request(`http://localhost/api/users/${validUserId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${invalidJWT}`,
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       // 【実際の処理実行】: ユーザー取得APIにリクエストを送信
       // 【処理内容】: OpenAPIルート → JWKS認証ミドルウェア失敗 → 401 Unauthorized
@@ -354,13 +342,16 @@ describe('GET /api/users 統合テスト', () => {
       // 【テストデータ準備】: 有効なJWTトークンとproviderクエリパラメータを用意
       const validJWT = 'mock-valid-jwt-token';
 
-      const request = new Request('http://localhost/api/users?provider=google', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${validJWT}`,
-          'Content-Type': 'application/json',
+      const request = new Request(
+        'http://localhost/api/users?provider=google',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${validJWT}`,
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
 
       // 【実際の処理実行】: ユーザー一覧取得APIにリクエストを送信
       const response = await app.request(request);
@@ -369,7 +360,11 @@ describe('GET /api/users 統合テスト', () => {
       // 🟡 信頼性レベル: 黄信号（Greenフェーズ - ダミーデータ実装）
       expect(response.status).toBe(200);
       const responseBody = await response.json();
-      expect(responseBody.data.users.every((user: any) => user.provider === 'google')).toBe(true);
+      expect(
+        responseBody.data.users.every(
+          (user: { provider: string }) => user.provider === 'google',
+        ),
+      ).toBe(true);
     });
 
     test('[1-12] limit/offsetパラメータでページネーションが正しく機能する', async () => {

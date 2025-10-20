@@ -6,9 +6,8 @@
  * 🟢 信頼性レベル: TASK-902のauthRoutes.tsパターンと要件定義書に基づく実装
  */
 
-import { randomUUID } from 'node:crypto';
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
-import type { Context } from 'hono';
+import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
 import {
   getUserParamsSchema,
   getUserResponseSchema,
@@ -17,8 +16,6 @@ import {
   updateUserBodySchema,
   updateUserResponseSchema,
 } from '@/packages/shared-schemas/src/users';
-import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
-import { requireAuth } from '../middleware';
 
 /**
  * 【定数定義】: エラーコードとメッセージの一元管理
@@ -56,7 +53,7 @@ function handleInternalServerError(error: unknown, endpoint: string) {
 
   // 【内部情報隠蔽】: クライアントには実装詳細を露出しない
   return {
-    success: false,
+    success: false as const,
     error: {
       code: ERROR_CODES.INTERNAL_SERVER_ERROR,
       message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -336,7 +333,7 @@ users.openapi(listUsersRoute, async (c) => {
   try {
     // 【バリデーション済みクエリパラメータ取得】: Zodバリデーション成功後の値を取得
     // 【デフォルト値適用】: listUsersQuerySchemaでlimit=20, offset=0がデフォルト設定
-    const { provider, limit = 20, offset = 0 } = c.req.valid('query');
+    const { limit = 20, offset = 0 } = c.req.valid('query');
 
     // 【最小実装】: テストを通すためのダミーレスポンス（空の一覧）
     // 【TODO】: ListUsersUseCaseを統合してDBからユーザー一覧を取得（Refactorフェーズ）
