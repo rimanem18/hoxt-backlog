@@ -3,7 +3,7 @@ import { CloudWatchMonitoringService } from '@/infrastructure/monitoring/CloudWa
 import { createErrorHandler } from '@/presentation/http/middleware';
 import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
 import { metricsMiddleware } from '@/presentation/http/middleware/metricsMiddleware';
-import { auth, greet, health, user } from '@/presentation/http/routes';
+import { auth, docs, greet, health, user } from '@/presentation/http/routes';
 
 /**
  * Hono アプリケーションサーバーを作成する
@@ -38,6 +38,7 @@ const createServer = (): Hono => {
   app.route('/api', health);
   app.route('/api', auth);
   app.route('/api', user);
+  app.route('/api', docs);
 
   return app;
 };
