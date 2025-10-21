@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, type SQL, sql } from 'drizzle-orm';
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type {
   AuthProvider,
@@ -10,6 +10,18 @@ import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
 import { db } from './drizzle-client';
 import type { User as DrizzleUser } from './schema';
 import { users } from './schema';
+
+/**
+ * ユーザー更新時のペイロード型
+ *
+ * updatedAtフィールドにSQL関数（NOW()等）を許可するための型定義。
+ * その他のフィールドは既存の型安全性を維持する。
+ */
+type UsersUpdatePayload = Partial<
+  Omit<typeof users.$inferInsert, 'updatedAt'>
+> & {
+  updatedAt?: SQL<unknown> | Date;
+};
 
 /**
  * PostgreSQLユーザーリポジトリ実装（Drizzle ORM版）
@@ -282,8 +294,9 @@ export class PostgreSQLUserRepository implements IUserRepository {
   async update(id: string, input: UpdateUserInput): Promise<User> {
     try {
       // 部分更新用のオブジェクト構築
-      const updateData: Partial<typeof users.$inferInsert> = {
-        updatedAt: new Date(), // updated_atは常に更新
+      // PostgreSQLのNOW()を使用してタイムスタンプの単調増加を保証
+      const updateData: UsersUpdatePayload = {
+        updatedAt: sql`NOW()`, // データベース側でタイムスタンプ生成
       };
 
       if (input.name !== undefined) {
