@@ -5,6 +5,7 @@
  */
 
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
+import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 import {
   apiErrorResponseSchema,
@@ -21,6 +22,8 @@ import {
 } from '@/packages/shared-schemas/src/users';
 import { UserController } from '@/presentation/http/controllers/UserController';
 import { requireAuth } from '@/presentation/http/middleware';
+import { InfrastructureError } from '@/shared/errors/InfrastructureError';
+import { ValidationError } from '@/shared/errors/ValidationError';
 
 /**
  * エラーコードとメッセージの定数定義
@@ -34,6 +37,16 @@ const ERROR_MESSAGES = {
   VALIDATION_ERROR: 'バリデーションエラー',
   INTERNAL_SERVER_ERROR: '一時的にサービスが利用できません',
 } as const;
+
+/**
+ * userID検証ガード関数
+ * @param userId c.get('userId')から取得した値
+ * @returns string型のuserIDであることを保証
+ */
+function isValidUserId(userId: unknown): userId is string {
+  // null・undefined・空文字列・非文字列を排除
+  return typeof userId === 'string' && userId.length > 0;
+}
 
 /**
  * 500エラーのレスポンスを生成する
@@ -415,12 +428,102 @@ const userController = new UserController(
  * GET /user/profile ハンドラ
  *
  * requireAuth()ミドルウェアでJWT認証を強制し、
- * UserController.getProfile()に処理を委譲。
+ * UserController.getProfileData()にビジネスロジックを委譲。
+ * HTTPレスポンス形成はハンドラ内で実施。
  */
 users.use('/user/profile', requireAuth());
-users.openapi(
-  getUserProfileRoute,
-  async (c) => await userController.getProfile(c),
-);
+users.openapi(getUserProfileRoute, async (c) => {
+  try {
+    // 認証情報取得
+    const rawUserId = c.get('userId');
+
+    if (!isValidUserId(rawUserId)) {
+      // AuthMiddleware通過後にuserIDが無効な場合
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '認証状態が無効です',
+          },
+        },
+        400,
+      );
+    }
+
+    // ビジネスロジック委譲
+    const userData = await userController.getProfileData(rawUserId);
+
+    // 成功レスポンス
+    return c.json(
+      {
+        success: true,
+        data: userData,
+      },
+      200,
+    );
+  } catch (error) {
+    // エラー種別ごとのハンドリング
+    if (error instanceof UserNotFoundError) {
+      // 認証済みであるがユーザーがDBに存在しない
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'USER_NOT_FOUND',
+            message: 'ユーザーが見つかりません',
+          },
+        },
+        404,
+      );
+    }
+
+    if (error instanceof ValidationError) {
+      // 入力検証エラー
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: error.message,
+          },
+        },
+        400,
+      );
+    }
+
+    if (error instanceof InfrastructureError) {
+      // インフラ障害（DB接続エラー、外部サービス障害等）
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'INTERNAL_SERVER_ERROR',
+            message: '一時的にサービスが利用できません',
+          },
+        },
+        500,
+      );
+    }
+
+    // 予期外エラーの安全な処理
+    console.error('Unexpected error in /user/profile:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: '一時的にサービスが利用できません',
+        },
+      },
+      500,
+    );
+  }
+});
 
 export default users;

@@ -49,7 +49,34 @@ export class UserController {
   }
 
   /*
+   * ユーザープロフィールデータ取得
+   * @param userId 認証済みユーザーID
+   * @returns APIスキーマ準拠のユーザーオブジェクト
+   * @throws UserNotFoundError ユーザーが見つからない場合
+   * @throws InfrastructureError インフラ障害時
+   */
+  async getProfileData(userId: string) {
+    // UseCaseへの委譲
+    const input: GetUserProfileUseCaseInput = { userId };
+    const result = await this.getUserProfileUseCase.execute(input);
+
+    // ドメインモデル→APIスキーマへのマッピング
+    return {
+      id: result.user.id,
+      externalId: result.user.externalId,
+      provider: result.user.provider,
+      email: result.user.email,
+      name: result.user.name,
+      avatarUrl: result.user.avatarUrl,
+      createdAt: result.user.createdAt.toISOString(),
+      updatedAt: result.user.updatedAt.toISOString(),
+      lastLoginAt: result.user.lastLoginAt?.toISOString() || null,
+    };
+  }
+
+  /*
    * ユーザープロフィール取得エンドポイント
+   * @deprecated インラインハンドラへの移行を推奨。getProfileData()を使用してください
    * @param c HonoのContext（requireAuth()適用済み）
    * @returns JSON形式のレスポンス
    */
@@ -63,26 +90,13 @@ export class UserController {
         throw new ValidationError('認証状態が無効です');
       }
 
-      const userId = rawUserId;
-
-      // UseCaseへの委譲
-      const input: GetUserProfileUseCaseInput = { userId };
-      const result = await this.getUserProfileUseCase.execute(input);
+      // getProfileData()に処理を委譲してロジック重複を回避
+      const userData = await this.getProfileData(rawUserId);
 
       // 統一レスポンス生成
       const responseData: GetUserProfileResponse<ApiUser> = {
         success: true,
-        data: {
-          id: result.user.id,
-          externalId: result.user.externalId,
-          provider: result.user.provider,
-          email: result.user.email,
-          name: result.user.name,
-          avatarUrl: result.user.avatarUrl,
-          createdAt: result.user.createdAt.toISOString(),
-          updatedAt: result.user.updatedAt.toISOString(),
-          lastLoginAt: result.user.lastLoginAt?.toISOString() || null,
-        },
+        data: userData,
       };
 
       // 型安全なJSONレスポンスを返却
