@@ -1,8 +1,11 @@
 ---
+allowed-tools: Bash(make fmt:*), Bash(git diff:*)
 description: Jira のプロジェクトキー issue 番号を渡し、git add & git commit をします。
 ---
 
 ## 事前確認
+
+!`make fmt`
 
 - ステージング済の内容を確認します。
 - `git diff` をおこない、直前との差を確認します。
