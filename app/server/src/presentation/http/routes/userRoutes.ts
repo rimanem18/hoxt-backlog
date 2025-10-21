@@ -5,7 +5,11 @@
  */
 
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
-import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
+import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
+import {
+  apiErrorResponseSchema,
+  apiResponseSchema,
+} from '@/packages/shared-schemas/src/common';
 import {
   getUserParamsSchema,
   getUserResponseSchema,
@@ -13,7 +17,10 @@ import {
   listUsersResponseSchema,
   updateUserBodySchema,
   updateUserResponseSchema,
+  userSchema,
 } from '@/packages/shared-schemas/src/users';
+import { UserController } from '@/presentation/http/controllers/UserController';
+import { requireAuth } from '@/presentation/http/middleware';
 
 /**
  * エラーコードとメッセージの定数定義
@@ -256,6 +263,62 @@ const updateUserRoute = createRoute({
 });
 
 /**
+ * GET /user/profile のOpenAPIルート定義
+ *
+ * 認証済みユーザーの自身のプロフィール情報を取得する。
+ */
+const getUserProfileRoute = createRoute({
+  method: 'get',
+  path: '/user/profile',
+  tags: ['認証ユーザー'],
+  summary: '認証ユーザープロフィール取得',
+  description: 'JWT認証済みユーザーの自身のプロフィール情報を取得する',
+  security: [{ BearerAuth: [] }],
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: apiResponseSchema(userSchema),
+        },
+      },
+      description: 'プロフィール取得成功',
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'バリデーションエラー',
+    },
+    401: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'JWT認証失敗',
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'ユーザーが見つからない',
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'サーバーエラー',
+    },
+  },
+});
+
+/**
  * GET /users/{id} ハンドラ
  */
 users.openapi(getUserRoute, async (c) => {
@@ -337,5 +400,27 @@ users.openapi(updateUserRoute, async (c) => {
     return c.json(handleInternalServerError(error, '/api/users/{id}'), 500);
   }
 });
+
+/**
+ * UserControllerのインスタンス化
+ *
+ * AuthDIContainerから依存性を注入してUserControllerを生成。
+ * モジュールスコープで1回だけインスタンス化（リクエストごとではない）。
+ */
+const userController = new UserController(
+  AuthDIContainer.getUserProfileUseCase(),
+);
+
+/**
+ * GET /user/profile ハンドラ
+ *
+ * requireAuth()ミドルウェアでJWT認証を強制し、
+ * UserController.getProfile()に処理を委譲。
+ */
+users.use('/user/profile', requireAuth());
+users.openapi(
+  getUserProfileRoute,
+  async (c) => await userController.getProfile(c),
+);
 
 export default users;
