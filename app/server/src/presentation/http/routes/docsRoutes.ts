@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 import yaml from 'js-yaml';
 
@@ -94,7 +95,10 @@ docs.get('/openapi.json', async (c) => {
   }
 
   try {
-    const yamlPath = join('/home/bun/docs/api/openapi.yaml');
+    // Why: import.meta.urlでモジュール相対パス解決し環境非依存にする
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const yamlPath = join(__dirname, '../../../../../../docs/api/openapi.yaml');
     const yamlContent = await readFile(yamlPath, 'utf-8');
 
     const jsonContent = convertYAMLToJSON(yamlContent);
