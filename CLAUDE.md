@@ -251,3 +251,118 @@ mermaidフローチャートを記述する際の確認項目：
    - フローチャート: ノードラベルのダブルクォート、特殊文字（`@`, `/`, `-`, `.` 等）
    - シーケンス図: 複雑な記法の使用
 4. 上記のルールに従って修正
+
+
+# コメントガイドライン
+
+- 機能の「What」を明確に記述
+  - クラスDocコメント：冗長な説明を削除し、機能概要や使用例のみに簡潔化
+  - メソッドDocコメント：基本的な役割と引数・戻り値の説明に集約
+- 実装の「Why」を簡潔かつ明確に記述
+  - インラインコメント：実装の理由のみを簡潔に記述
+  - エラーメッセージ・定数の説明：機能を端的に表現
+- テストファイルは Given-When-Then パターンを意識した構造
+  - テストデータの準備（Given）
+  - 実際の処理の実行（When）
+  - 結果の検証（Then）
+  - **禁止**: テストファイルではなく実装ファイルに対する記載。
+- 過度な説明を削除し、コード本来の意図を明確化
+- TODOコメント：将来の改善点を明記
+- **禁止**: コマンドを使用した置換
+
+## 簡潔さと明確さの基準
+
+コメントを記載する必要があるか、あるいはコメントの詳細度に関しては、コードから読み取れるかどうかを基準にします:
+
+詳細度は5が最も高く、1が最も低いです。3がニュートラルで一般的な詳細度とします。
+コメントを残した基準はコメントにしないでください。
+
+- **不要**:ジュニアエンジニアであってもコードを読めば理解できる自明なコードに対しての記載
+- **詳細度3**:ミドルエンジニアであってもコードを読めば理解できる自明なコードに対しての記載
+- **詳細度4**:ミドルエンジニアであっても知らない可能性がある標準関数に対しての記載
+- **詳細度4**:シニアエンジニアならコードを読めば理解できる自明なコードに対しての記載
+- **詳細度4**:3つの別ファイルからの呼び出しをまたいでいるコードに対しての記載
+- **詳細度5**:4つ以上の別ファイルからの呼び出しをまたいでいるコードに対しての記載
+- **詳細度5**:シニアエンジニアでも調査が必要な複雑性を持つコードに対しての記載
+
+## 出力フォーマット例
+
+### テストファイル
+
+```typescript
+// example
+test('空文字列やnullトークンが適切に拒否される', async () => {
+  // Given: 空文字列のトークン
+  const emptyToken = '';
+
+  // When: JWT検証を実行
+  const result: JwtVerificationResult =
+    await authProvider.verifyToken(emptyToken);
+
+  // Then: 必須パラメータエラーを返す
+  expect(result.valid).toBe(false);
+  expect(result.error).toBeDefined();
+  expect(result.error).toContain('Token is required');
+  expect(result.payload).toBeUndefined();
+});
+```
+
+```typescript
+// example 短ければ When と Then を入れ子にしてもよい
+test('必須フィールド不足ペイロードでエラーが発生する', async () => {
+  // Given: 必須フィールド（sub）が不足したペイロード
+  const incompletePayload = {
+    // sub フィールドなし
+    email: 'test@example.com',
+    app_metadata: { provider: 'hoge', providers: ['hoge'] },
+    user_metadata: { name: 'Test User' },
+    iss: 'https://your-example.url',
+    iat: 1692780800,
+    exp: 1692784400,
+  } as JwtPayload;
+
+  // When & Then: ユーザー情報を抽出し、エラーが発生する
+  await expect(
+    authProvider.getExternalUserInfo(incompletePayload),
+  ).rejects.toThrow();
+});
+```
+
+### 実装ファイル
+````typescript
+/*
+ * IAuthProviderインターフェースのHoge向け実装。
+ * JWT検証とユーザー情報抽出を提供する。
+ * @example
+ * ```typescript
+ * const provider = new HogeAuthProvider();
+ * const result = await provider.verifyToken(jwtToken);
+ * if (result.valid) {
+ *   const userInfo = await provider.getExternalUserInfo(result.payload!);
+ * }
+ * ```
+ */
+export class HogeAuthProvider implements IAuthProvider {
+  /**
+   * HogeAuthProviderのコンストラクタ
+   *
+   * 環境変数からJWT秘密鍵を取得し、バリデーションを実行する。
+   */
+  constructor() {
+    this.jwtSecret = this.getJwtSecretFromEnvironment();
+    this.validateJwtSecret();
+  }
+
+   /**
+   * JWT秘密鍵の有効性を検証する
+   *
+   * @throws {Error} JWT秘密鍵が設定されていない場合
+   */
+  private validateJwtSecret(): void {
+    if (!this.jwtSecret.trim()) {
+      throw new Error(ERROR_MESSAGES.MISSING_JWT_SECRET);
+    }
+  }
+}
+````
+

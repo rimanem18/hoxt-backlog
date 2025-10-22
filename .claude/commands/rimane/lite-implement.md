@@ -25,7 +25,8 @@ codex 利用時は、 prompt のみ送信してください。
 1. Red - Green - Refactor のサイクルで実装します。Red は仕様に則り、Green, Refactor のときにはテストの意味自体が破壊されないようにします。
   - ただし、「TDD が適さないタスクである」と判断した場合は、DIRECT に実装して OK です。
 
-2. 実装を終えたら、test と lint, semgrep を実施します。問題があれば修正します。
+2. 実装を終えたら、test と lint, 型チェック, semgrep を実施します。問題があれば修正します。
+  - `docker compose exec {コンテナサービス名} bunx tsc --noEmit`
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
