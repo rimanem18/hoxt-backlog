@@ -1,14 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Hono } from 'hono';
+import yaml from 'js-yaml';
 
 /**
  * Swagger UI ドキュメントルート
  *
- * What: 開発環境のみでOpenAPI仕様書をSwagger UIで表示
- *
- * Why: API仕様の確認を容易にし、開発効率を向上させる
- * Why: 本番環境では404を返却することでセキュリティリスクを低減
+ * 開発環境のみでOpenAPI仕様書をSwagger UIで表示する。
+ * 本番環境では404を返却してセキュリティリスクを低減する。
  */
 const docs = new Hono();
 
@@ -19,9 +18,7 @@ const docs = new Hono();
  * @returns Swagger UI の HTML
  */
 function generateSwaggerHTML(openapiUrl: string): string {
-  // swagger-ui-dist の静的ファイルパスを取得
-  // Why: swagger-ui-dist パッケージは静的ファイルのみを提供するため、
-  // HTMLを動的に生成してSwagger UIを初期化する必要がある
+  // Why: swagger-ui-distは静的ファイルのみ提供のため動的HTML生成が必要
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -49,8 +46,6 @@ function generateSwaggerHTML(openapiUrl: string): string {
   <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
   <script>
     window.onload = function() {
-      // Why: Swagger UI の初期化設定
-      // Why: url パラメータでOpenAPI仕様書のパスを指定
       window.ui = SwaggerUIBundle({
         url: "${openapiUrl}",
         dom_id: '#swagger-ui',
@@ -73,16 +68,15 @@ function generateSwaggerHTML(openapiUrl: string): string {
 /**
  * GET /api/docs
  *
- * 開発環境のみでSwagger UIを提供
- * 本番環境では404を返却
+ * 開発環境のみでSwagger UIを提供する。
+ * 本番環境では404を返却する。
  */
 docs.get('/docs', async (c) => {
-  // Why: 本番環境では404を返却してセキュリティリスクを低減
+  // Why: 本番環境ではセキュリティリスク低減のため非公開
   if (process.env.NODE_ENV === 'production') {
     return c.notFound();
   }
 
-  // Why: OpenAPI仕様書のURLを動的に生成
   const html = generateSwaggerHTML('/api/openapi.json');
   return c.html(html);
 });
@@ -90,116 +84,52 @@ docs.get('/docs', async (c) => {
 /**
  * GET /api/openapi.json
  *
- * OpenAPI仕様書をJSON形式で提供
- * 開発環境のみ
+ * OpenAPI仕様書をJSON形式で提供する。
+ * 開発環境のみ有効。
  */
 docs.get('/openapi.json', async (c) => {
-  // Why: 本番環境では404を返却してセキュリティリスクを低減
+  // Why: 本番環境ではセキュリティリスク低減のため非公開
   if (process.env.NODE_ENV === 'production') {
     return c.notFound();
   }
 
   try {
-    // Why: YAML形式のOpenAPI仕様書を読み込んでJSON形式に変換
-    // Why: Swagger UIはJSON形式のOpenAPI仕様書を必要とする
     const yamlPath = join('/home/bun/docs/api/openapi.yaml');
     const yamlContent = await readFile(yamlPath, 'utf-8');
 
-    // Why: 簡易的なYAML→JSON変換（本格的な実装では yaml パッケージを使用）
-    // Why: 現時点ではキー: 値形式の簡単なYAMLのみをサポート
     const jsonContent = convertYAMLToJSON(yamlContent);
 
     return c.json(jsonContent);
   } catch (error) {
-    console.error('OpenAPI仕様書の読み込みに失敗しました:', error);
-    return c.json({ error: 'OpenAPI仕様書が見つかりません' }, { status: 404 });
+    // Why: ENOENTは404、その他のエラーは500で返却して原因を区別
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      console.error('OpenAPI仕様書が見つかりません:', error);
+      return c.json(
+        { error: 'OpenAPI仕様書が見つかりません' },
+        { status: 404 },
+      );
+    }
+
+    console.error('OpenAPI仕様書の解析に失敗しました:', error);
+    return c.json(
+      { error: 'OpenAPI仕様書の解析に失敗しました' },
+      { status: 500 },
+    );
   }
 });
 
 /**
- * 簡易的なYAML→JSON変換
+ * YAML→JSON変換
  *
- * Why: yamlパッケージの依存を避け、軽量な実装を提供
- * Why: 本格的な実装では yaml パッケージを使用することを推奨
+ * OpenAPI仕様書をYAML形式からJSON形式に変換する。
  *
  * @param yamlContent - YAML形式の文字列
  * @returns JSON形式のオブジェクト
+ * @throws {yaml.YAMLException} YAML構文エラーの場合
  */
 function convertYAMLToJSON(yamlContent: string): unknown {
-  // TODO: 本格的な実装では yaml パッケージを使用
-  // 現時点では、openapi.yaml が簡易的な形式であることを前提とした
-  // 最小限の変換のみ実装
-
-  // Why: 行ごとに処理して階層構造を再構築
-  const lines = yamlContent.split('\n');
-  const result: Record<string, unknown> = {};
-  const stack: Array<{ obj: Record<string, unknown>; indent: number }> = [
-    { obj: result, indent: -1 },
-  ];
-
-  for (const line of lines) {
-    if (line.trim() === '' || line.trim().startsWith('#')) {
-      // Why: 空行とコメント行をスキップ
-      continue;
-    }
-
-    const indent = line.search(/\S/);
-    const trimmed = line.trim();
-
-    if (trimmed.endsWith(':')) {
-      // Why: オブジェクトのキー
-      const key = trimmed.slice(0, -1);
-
-      // Why: インデントに基づいてスタックを調整
-      while (stack.length > 1) {
-        const top = stack[stack.length - 1];
-        if (top && top.indent >= indent) {
-          stack.pop();
-        } else {
-          break;
-        }
-      }
-
-      const currentStack = stack[stack.length - 1];
-      if (currentStack) {
-        const newObj: Record<string, unknown> = {};
-        currentStack.obj[key] = newObj;
-        stack.push({ obj: newObj, indent });
-      }
-    } else if (trimmed.includes(': ')) {
-      // Why: キー: 値のペア
-      const [key, ...valueParts] = trimmed.split(': ');
-      const value = valueParts.join(': ').replace(/^"|"$/g, '');
-
-      // Why: インデントに基づいてスタックを調整
-      while (stack.length > 1) {
-        const top = stack[stack.length - 1];
-        if (top && top.indent >= indent) {
-          stack.pop();
-        } else {
-          break;
-        }
-      }
-
-      const currentStack = stack[stack.length - 1];
-      if (currentStack && key) {
-        // Why: 数値・真偽値・nullの変換
-        if (value === 'null') {
-          currentStack.obj[key] = null;
-        } else if (value === 'true') {
-          currentStack.obj[key] = true;
-        } else if (value === 'false') {
-          currentStack.obj[key] = false;
-        } else if (!Number.isNaN(Number(value))) {
-          currentStack.obj[key] = Number(value);
-        } else {
-          currentStack.obj[key] = value;
-        }
-      }
-    }
-  }
-
-  return result;
+  // Why: FAILSAFE_SCHEMAで!!jsタグ等の危険な型を排除しJSON-safeな値のみ許可
+  return yaml.load(yamlContent, { schema: yaml.FAILSAFE_SCHEMA });
 }
 
 export default docs;

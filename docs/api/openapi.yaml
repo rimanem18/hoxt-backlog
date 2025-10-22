@@ -5,7 +5,8 @@ info:
   description: "型安全性強化・API契約強化プロジェクトによるAPI仕様
 
 Single Source of Truth: Drizzle ORM → Drizzle Zod → Zod → OpenAPI → TypeScript"
-servers:   -     url: "http://localhost:3001/api"
+servers:
+  - url: "http://localhost:3001/api"
     description: "開発環境"
 paths:
 
