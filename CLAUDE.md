@@ -1,3 +1,10 @@
+
+# 基本原則
+
+- 日本語で応答してください。
+- README.md には実装済み機能などを記載しないでください。
+- ホストマシンのユーザー名やプロジェクトよりも上位のディレクトリ名が露出しないようにハードコードを避けてください。記録が必要な場合はマスクしてください。
+
 # プロジェクト概要
 
 このプロジェクトは、Docker コンテナによって、バックエンドとフロントエンドがわかれています。
@@ -108,42 +115,6 @@ docker compose exec e2e npx playwright test
 docker compose exec server bun run dev
 ```
 
-## スキーマ駆動開発（Drizzle Zod）
-
-### Zodスキーマ自動生成
-
-データベーススキーマ（Drizzle ORM）から Zod スキーマを自動生成します。
-
-```bash
-# スキーマ自動生成
-docker compose exec server bun run generate:schemas
-```
-
-### 新規テーブル追加時の手順
-
-1. `app/server/src/infrastructure/database/schema.ts` にテーブル定義を追加
-2. `app/server/scripts/generate-schemas.ts` の `tableConfigs` 配列に設定を追加
-
-```typescript
-const tableConfigs: TableConfig[] = [
-  {
-    tableName: 'users',
-    tableObject: users,
-    outputFile: 'users.ts',
-    enums: [/* enum設定 */],
-  },
-  // 新規テーブルの設定を追加
-];
-```
-
-3. スキーマ生成コマンドを実行
-4. 生成されたファイルをコミット
-
-### 自動生成ファイルの取り扱い
-
-- **禁止**: `app/packages/shared-schemas/*.ts` の手動編集
-  - ファイル冒頭の警告コメントを確認
-  - スキーマ変更時は必ず `bun run generate:schemas` で再生成
 
 ## コード品質・フォーマット
 
@@ -172,6 +143,51 @@ const tableConfigs: TableConfig[] = [
 - **禁止**: `var` の使用
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
+
+# スキーマ駆動開発ガイドライン
+
+Drizzle ORM を Single Source of Truth のベースをしています:
+
+```bash
+# 1. データベーススキーマ変更後
+docker compose exec server bun run generate:schemas
+
+# 2. OpenAPI仕様生成
+docker compose exec server bun run generate:openapi
+
+# 3. TypeScript型定義生成
+docker compose exec client bun run generate:types
+
+# 4. 型チェック
+docker compose exec server bun run typecheck
+docker compose exec client bun run typecheck
+```
+
+## 新規テーブル追加時の手順
+
+1. `app/server/src/infrastructure/database/schema.ts` にテーブル定義を追加
+2. `app/server/scripts/generate-schemas.ts` の `tableConfigs` 配列に設定を追加
+
+```typescript
+const tableConfigs: TableConfig[] = [
+  {
+    tableName: 'users',
+    tableObject: users,
+    outputFile: 'users.ts',
+    enums: [/* enum設定 */],
+  },
+  // 新規テーブルの設定を追加
+];
+```
+
+3. スキーマ生成コマンドを実行
+
+## 自動生成ファイルの取り扱い
+
+- **必須**: 冒頭に手動編集禁止の警告コメントが残るように生成スクリプトを作成
+- **禁止**: 自動生成されたファイルの手動編集
+  - ファイル冒頭の警告コメントを確認
+  - スキーマ変更時は必ずスキーマ駆動開発のコマンドで再生成
 
 # IaC
 
