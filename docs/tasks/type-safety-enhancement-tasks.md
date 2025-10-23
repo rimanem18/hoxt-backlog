@@ -312,26 +312,37 @@
 
 ### TASK-1001: openapi-typescript導入・設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了** (2025-10-23)
 - **タスクタイプ**: DIRECT
 - **要件リンク**: REQ-005, REQ-404
 - **依存タスク**: TASK-904
 - **実装詳細**:
   - `openapi-typescript`パッケージインストール（クライアント側）
+  - `openapi-fetch`パッケージインストール（型安全なAPIクライアント）
   - OpenAPI仕様からTypeScript型定義生成スクリプト作成
   - `app/client/src/types/api/generated.ts`に出力
-  - `bun run generate:types`コマンド追加
+  - `bun run generate:types`コマンド追加（既に存在）
   - 生成ファイルに警告コメント追加（手動編集禁止）
+  - `generate-openapi.ts`を`js-yaml`を使用するように改善
 - **実装例**:
   ```bash
   docker compose exec client bunx openapi-typescript \
-    ../../docs/api/openapi.yaml \
+    /home/bun/docs/api/openapi.yaml \
     -o src/types/api/generated.ts
   ```
+- **実装成果**:
+  - `openapi-typescript@7.10.1`: TypeScript型定義生成ツール
+  - `openapi-fetch@0.15.0`: 型安全なAPIクライアント
+  - `app/client/src/types/api/generated.ts`: 自動生成された型定義
+  - `docs/api/openapi.yaml`: YAML形式のOpenAPI仕様
+  - `app/server/scripts/generate-openapi.ts`: js-yaml使用に改善
 - **完了条件**:
-  - [ ] `bun run generate:types`が実行可能
-  - [ ] `src/types/api/generated.ts`が自動生成される
-  - [ ] paths型がエクスポートされている
+  - [x] `bun run generate:types`が実行可能
+  - [x] `src/types/api/generated.ts`が自動生成される
+  - [x] paths型がエクスポートされている
+  - [x] YAML形式が正しい（js-yaml使用）
+  - [x] TypeScript型チェックが成功する
+- **実装記録**: `docs/implements/TASK-1001/`
 
 ---
 
