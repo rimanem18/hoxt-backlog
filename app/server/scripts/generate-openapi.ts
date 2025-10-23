@@ -20,6 +20,7 @@
 
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import yaml from "js-yaml";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -76,47 +77,14 @@ async function generateOpenAPISpec(): Promise<void> {
 	};
 
 	// YAML形式で出力
-	// 注意: 本来はyamlライブラリを使用するが、初期設定時はJSON形式で出力
-	const yamlContent = convertToYAML(openAPISpec);
+	const yamlContent = yaml.dump(openAPISpec, {
+		indent: 2,
+		lineWidth: 120,
+		noRefs: true,
+	});
 	await writeFile(outputPath, yamlContent, "utf-8");
 
 	console.log(`✓ OpenAPI仕様を生成しました: ${outputPath}`);
-}
-
-/**
- * オブジェクトを簡易的なYAML形式に変換
- *
- * 注意: 本格的な実装ではyamlライブラリを使用する
- * 現時点では最小限の変換のみ実装
- */
-function convertToYAML(obj: unknown, indent = 0): string {
-	if (obj === null) return "null";
-	if (typeof obj === "string") return `"${obj}"`;
-	if (typeof obj === "number" || typeof obj === "boolean") return String(obj);
-
-	if (Array.isArray(obj)) {
-		return obj
-			.map((item) => `${"  ".repeat(indent)}- ${convertToYAML(item, indent + 1)}`)
-			.join("\n");
-	}
-
-	if (typeof obj === "object") {
-		return Object.entries(obj as Record<string, unknown>)
-			.map(([key, value]) => {
-				const spaces = "  ".repeat(indent);
-				if (
-					typeof value === "object" &&
-					value !== null &&
-					!Array.isArray(value)
-				) {
-					return `${spaces}${key}:\n${convertToYAML(value, indent + 1)}`;
-				}
-				return `${spaces}${key}: ${convertToYAML(value, indent + 1)}`;
-			})
-			.join("\n");
-	}
-
-	return String(obj);
 }
 
 // スクリプト実行
