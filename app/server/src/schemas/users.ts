@@ -1,7 +1,7 @@
 /**
  * このファイルは自動生成されました
  *
- * 生成日時: 2025-10-13T12:26:51.035Z
+ * 生成日時: 2025-10-25T01:12:32.673Z
  * 生成元: scripts/generate-schemas.ts
  *
  * ⚠️ 警告: このファイルを手動で編集しないでください ⚠️
@@ -11,7 +11,7 @@
 
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { users } from '@/infrastructure/database/schema';
+import { authProviderType, users } from '@/infrastructure/database/schema';
 
 /**
  * UserテーブルのSelectスキーマ（DB読み取り型）

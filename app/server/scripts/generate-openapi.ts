@@ -2,25 +2,34 @@
  * OpenAPI仕様生成スクリプト
  *
  * @description
- * @hono/zod-openapiを使用してHonoアプリからOpenAPI 3.1仕様を生成し、
+ * @hono/zod-openapiを使用してOpenAPI 3.1仕様を生成し、
  * docs/api/openapi.yamlに出力する。
  *
  * 実行方法:
  *   docker compose exec server bun run generate:openapi
  *
  * 生成フロー:
- *   1. Honoアプリ（OpenAPIルート定義）を読み込み
- *   2. @hono/zod-openapiでOpenAPI仕様を生成
- *   3. YAML形式で/home/bun/docs/api/openapi.yamlに出力
+ *   1. OpenAPIルート定義（スキーマのみ）をインポート
+ *   2. 最小構成のOpenAPIHonoアプリを作成
+ *   3. app.getOpenAPIDocument()でOpenAPI仕様を取得
+ *   4. YAML形式で/home/bun/docs/api/openapi.yamlに出力
  *
- * 注意:
- *   - このスクリプトは実装フェーズ（TASK-902以降）で完全に機能する
- *   - 現時点ではスキーマのみ生成（ルート定義は未実装）
+ * Why: ルート定義（スキーマ）のみをインポートし、
+ * ハンドラ実装（DIコンテナ → DB接続）を避けることで、
+ * データベース接続なしでOpenAPI仕様を生成可能にする。
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import yaml from "js-yaml";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import {
+	getUserRoute,
+	getUserProfileRoute,
+	listUsersRoute,
+	updateUserRoute,
+} from "../src/presentation/http/routes/userRoutes.schema";
+import { authCallbackRoute } from "../src/presentation/http/routes/authRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -32,49 +41,41 @@ async function generateOpenAPISpec(): Promise<void> {
 	const outputPath = "/home/bun/docs/api/openapi.yaml";
 	await mkdir(dirname(outputPath), { recursive: true });
 
-	// 基本的なOpenAPI仕様（雛形）
-	// 実装フェーズでHonoアプリから自動生成されるようになる
-	const openAPISpec = {
+	// 最小構成のOpenAPIHonoアプリを作成
+	// Why: ルート定義のみを登録し、ハンドラは登録しない
+	const app = new OpenAPIHono();
+
+	// noopハンドラを定義（OpenAPI仕様生成専用）
+	// Why: 実際のハンドラ実装（DIコンテナ呼び出し）を避けてDB接続不要に
+	// Note: ダミーレスポンスのため、型安全性よりも簡潔性を優先
+	const noopHandler = (c: any) => c.json({ success: true, data: {} });
+
+	// ルート定義を登録（DB接続不要）
+	// Why: createRoute定義にはスキーマ情報のみが含まれ、
+	// 実装（DIコンテナ呼び出し）は含まれないため、DB接続不要
+	app.openapi(authCallbackRoute, noopHandler as any);
+	app.openapi(getUserRoute, noopHandler as any);
+	app.openapi(listUsersRoute, noopHandler as any);
+	app.openapi(updateUserRoute, noopHandler as any);
+	app.openapi(getUserProfileRoute, noopHandler as any);
+
+	// OpenAPI仕様を取得
+	const openAPISpec = app.getOpenAPIDocument({
 		openapi: "3.1.0",
 		info: {
-			title: process.env.PROJECT_NAME ? `${process.env.PROJECT_NAME} API` : "API Specification",
-			version: "1.0.0",
+			title: `${process.env.PROJECT_NAME} API Spec` || "API Specification",
+			version: process.env.API_VERSION || "1.0.0",
 			description:
 				"型安全性強化・API契約強化プロジェクトによるAPI仕様\n\n" +
 				"Single Source of Truth: Drizzle ORM → Drizzle Zod → Zod → OpenAPI → TypeScript",
 		},
 		servers: [
 			{
-				url: "http://localhost:3001/api",
+				url: process.env.API_BASE_URL || "http://localhost:3001/api",
 				description: "開発環境",
 			},
 		],
-		paths: {
-			// 実装フェーズでルート定義が追加される
-			// 例: /auth/callback, /users/{id}, /users 等
-		},
-		components: {
-			schemas: {
-				// 実装フェーズでZodスキーマから自動生成される
-			},
-			securitySchemes: {
-				BearerAuth: {
-					type: "http",
-					scheme: "bearer",
-					bearerFormat: "JWT",
-					description:
-						"Supabase Authで発行されたJWTトークン（RS256/ES256非対称鍵で署名）\n" +
-						"バックエンドはJWKS検証により署名を検証:\n" +
-						"- JWTヘッダーから kid を取得\n" +
-						"- Supabase JWKS エンドポイントから公開鍵セットを取得\n" +
-						"- kid に対応する公開鍵で署名検証",
-				},
-			},
-			responses: {
-				// 実装フェーズで共通レスポンス定義が追加される
-			},
-		},
-	};
+	});
 
 	// YAML形式で出力
 	const yamlContent = yaml.dump(openAPISpec, {
@@ -85,6 +86,7 @@ async function generateOpenAPISpec(): Promise<void> {
 	await writeFile(outputPath, yamlContent, "utf-8");
 
 	console.log(`✓ OpenAPI仕様を生成しました: ${outputPath}`);
+	console.log(`  - エンドポイント数: ${Object.keys(openAPISpec.paths || {}).length}`);
 }
 
 // スクリプト実行

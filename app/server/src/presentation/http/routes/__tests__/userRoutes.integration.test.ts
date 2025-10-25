@@ -12,12 +12,12 @@ import {
   expect,
   test,
 } from 'bun:test';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 import serverApp from '@/entrypoints';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 describe('GET /api/user/profile 統合テスト', () => {
-  let app: Hono;
+  let app: OpenAPIHono;
 
   beforeAll(async () => {
     // テスト環境変数を設定
