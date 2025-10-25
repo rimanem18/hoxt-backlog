@@ -1,4 +1,3 @@
-
 # 基本原則
 
 - 日本語で応答してください。
@@ -268,6 +267,89 @@ mermaidフローチャートを記述する際の確認項目：
    - フローチャート: ノードラベルのダブルクォート、特殊文字（`@`, `/`, `-`, `.` 等）
    - シーケンス図: 複雑な記法の使用
 4. 上記のルールに従って修正
+
+# テストガイドライン
+
+## テストファイル
+
+**Testing Policy - Bun 標準のみ**  
+`bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用する。  
+`jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在を禁止する。  
+
+依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする。  
+`mock.module()` は最後の手段としてのみ使用する。  
+テスト終了時は `mock.restore()` と `mock.clearAllMocks()` を徹底する。  
+
+---
+
+## 運用指針詳細
+
+### 1. 依存と型
+- `bun test` を前提とし、追加のテスティングランタイムは導入しない。
+- TypeScript は `tsconfig.json` の `types` に `["bun-types"]` を設定し、`@types/jest` を含めない。
+- すべてのテストファイルは `.test.ts` / `.test.tsx`。
+
+### 2. 使ってよい API（`bun:test` のみ）
+```ts
+import {
+  describe, it, test, expect,
+  beforeEach, afterEach,
+  mock, spyOn,
+  // 必要に応じて
+  // mock.module, setSystemTime
+} from "bun:test";
+```
+
+- **モック**: `mock(fn)` を用いる（Jest の `jest.fn` は禁止）。
+- **スパイ**: 既存オブジェクトには `spyOn(obj, "method")`。
+- **モジュール差し替え**: `mock.module()` は「どうしても DI ができない外部依存」などに限定。
+- **後片付け**: `afterEach(() => { mock.restore(); mock.clearAllMocks(); })` を共通化。
+
+### 3. 禁止事項
+- `jest` 名前空間の利用を禁止。
+- Jest エコシステム由来のパッケージを禁止。
+- `as unknown as` など乱暴なキャストでのモック化を禁止。
+
+### 4. 標準パターン
+（※現行の関数モック／spyOn／インターフェースモック／モジュール差し替え／共通フック例はそのまま）
+
+### 5. 設計原則
+- **まず DI**：可能な限り依存注入を優先し、直接 import した依存を差し替えるより、呼び出し側に抽象を注入してモックする。
+- 時刻・乱数・I/O などの外部性は **ラッパー関数** 経由にし、テストでそのラッパーをモック。
+- スナップショットは安定化処理をしてから比較。
+- 非同期は `await` を徹底。`done` コールバックは禁止。
+
+### 6. 既存コードからの移行ルール
+- `jest.fn()` → `mock(fn)`
+- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
+- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（※基本は非推奨、必要最小限に）
+- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
+- `jest.Mocked<T>` → `satisfies T` と `mock()` の組み合わせ
+
+### 7. DI 活用モック
+- **mockClear / mockReset が煩雑になるケースでは DI を利用する。**
+- **DI ではテストごとに新しいモックを生成**し、他テストに影響を及ぼすグローバル共有は避ける。
+- **Bun の `Mock` 型**を使って依存のメソッドを型安全にスタブできるようにする。
+- **DI パターンでは mockClear は通常不要**（毎テストで新規生成するため）。
+
+```ts
+type MockUserService = {
+  getUserProfile: Mock<[string], Promise<User>>;
+};
+
+let testUserService: MockUserService;
+
+beforeEach(() => {
+  testUserService = {
+    getUserProfile: mock().mockName("getUserProfile"),
+  };
+});
+```
+
+### 8. mock.module の注意点
+- **トップレベルでの使用は禁止**。  
+- **各 test 内でのみ宣言し、その後に動的 import** すること。  
+- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う。  
 
 
 # コメントガイドライン
