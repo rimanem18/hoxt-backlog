@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  '/api/auth/callback': {
+  '/auth/callback': {
     parameters: {
       query?: never;
       header?: never;
@@ -131,7 +131,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/users/{id}': {
+  '/users/{id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -288,7 +288,7 @@ export interface paths {
         };
         cookie?: never;
       };
-      requestBody?: {
+      requestBody: {
         content: {
           'application/json': {
             name?: string;
@@ -427,7 +427,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/users': {
+  '/users': {
     parameters: {
       query?: never;
       header?: never;
@@ -571,7 +571,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/user/profile': {
+  '/user/profile': {
     parameters: {
       query?: never;
       header?: never;

@@ -37,5 +37,5 @@ export function createApiClient(
  * 認証トークンは後で動的に設定する想定
  */
 export const apiClient = createApiClient(
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api',
 );

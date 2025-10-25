@@ -44,8 +44,24 @@ refactor まで実装とレビューが済んだら、チェックボックス�
 
 ### Phase 2: React Query統合（T004-T005）
 
-- [ ] **T004**: React QueryフックuseUserが正しい型を返す
-- [ ] **T005**: React QueryフックuseUpdateUserがキャッシュを適切に無効化する
+- [x] **T004**: React QueryフックuseUserが正しい型を返す
+  - Red: テスト作成完了 (`src/features/user/hooks/useUser.test.tsx`)
+  - Green: テスト成功（ApiClientContextからuseApiClientで取得）
+  - Refactor: エラーハンドリング強化、型安全性確認
+  - Codexレビュー実施: Minorな指摘に対応
+    - 未使用import削除（`createApiClient`）
+    - `UpdateUserBody`型をOpenAPI生成型から推論（手書き型を削除）
+  - 型チェック: ✅ 成功（5テスト、28アサーション全て成功）
+  - 実装ファイル: `src/features/user/hooks/useUser.ts`
+  - テストファイル: `src/features/user/hooks/useUser.test.tsx`
+
+- [x] **T005**: React QueryフックuseUpdateUserがキャッシュを適切に無効化する
+  - Red: テスト作成完了（キャッシュ無効化検証を含む）
+  - Green: テスト成功（onSuccessでinvalidateQueries実行）
+  - Refactor: エラーハンドリング強化、型安全性確認
+  - 型チェック: ✅ 成功（5テスト、28アサーション全て成功）
+  - 実装ファイル: `src/features/user/hooks/useUpdateUser.ts`
+  - テストファイル: `src/features/user/hooks/useUpdateUser.test.tsx`
 
 ### Phase 3: エラーハンドリング（T006-T008）
 
@@ -100,4 +116,22 @@ refactor まで実装とレビューが済んだら、チェックボックス�
 - **T002への波及改善**:
   - T003のレビューで得た知見をT002にも適用（リクエスト検証追加）
   - 一貫性のあるテスト構造により、保守性が向上
+
+### T004-T005の学び
+- **Context ProviderパターンによるDI**:
+  - APIクライアントをシングルトンで使うと、テストでmockFetchを注入できない
+  - `ApiClientProvider`を作成し、テスト時に`client`プロパティでモッククライアントを注入
+  - `useApiClient()`フックでContextからクライアントを取得し、本番とテストを統一
+- **React Queryのキャッシュ無効化検証**:
+  - `invalidateQueries()`をspyOnするとグローバル影響が発生
+  - `queryClient.getQueryState(['users', userId]).isInvalidated`で検証する方が安全
+  - 各テストで新しい`QueryClient`を作成し、キャッシュを分離することが重要
+- **OpenAPI生成型からの型推論**:
+  - 手書き型（例: `type UpdateUserBody = { name?: string; avatarUrl?: string }`）は、OpenAPI仕様と乖離するリスクがある
+  - `NonNullable<paths['/api/users/{id}']['put']['requestBody']>['content']['application/json']`で自動推論
+  - スキーマ変更時に自動的に型が追従し、保守性が向上
+- **エラーハンドリングの明示化**:
+  - `error`と`!data`の両方をチェックし、明確なエラーメッセージを返す
+  - React Queryの`error`状態にするため、`throw new Error()`を使用
+  - テストでは`result.current.error?.message`でエラーメッセージを検証
 

@@ -170,6 +170,7 @@ export const updateUserRoute = createRoute({
           schema: updateUserBodySchema,
         },
       },
+      required: true,
     },
   },
   responses: {
