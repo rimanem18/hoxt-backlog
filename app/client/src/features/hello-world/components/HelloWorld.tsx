@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { getApiBaseUrl } from '@/lib/env';
 
 /**
  * Hello World メッセージを表示するコンポーネント
@@ -8,9 +9,8 @@ export default function HelloWorld() {
   const { data, isPending, error } = useQuery({
     queryKey: ['helloWorld'],
     queryFn: () => {
-      // 環境変数からAPI Base URLを取得（/apiプレフィックス含む）
-      const apiBaseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+      // 環境変数からAPI Base URLを取得（/apiサフィックス付き）
+      const apiBaseUrl = getApiBaseUrl();
       // 末尾のスラッシュを除去してURL重複を防止
       const cleanBaseUrl = apiBaseUrl.replace(/\/+$/, '');
       const apiUrl = `${cleanBaseUrl}/greet`;

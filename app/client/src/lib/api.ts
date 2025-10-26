@@ -13,6 +13,7 @@
  */
 import createClient from 'openapi-fetch';
 import type { paths } from '@/types/api/generated';
+import { getApiBaseUrl } from './env';
 
 /**
  * APIクライアントインスタンスを作成
@@ -36,6 +37,4 @@ export function createApiClient(
  * 環境変数から設定を読み込み、APIクライアントを初期化する
  * 認証トークンは後で動的に設定する想定
  */
-export const apiClient = createApiClient(
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api',
-);
+export const apiClient = createApiClient(getApiBaseUrl());

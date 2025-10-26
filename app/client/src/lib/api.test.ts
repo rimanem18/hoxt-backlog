@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, type Mock, mock, test } from 'bun:test';
 import { apiClient, createApiClient } from './api';
+import { getApiBaseUrl } from './env';
 
-// テスト用のベースURL（環境変数から取得、/apiプレフィックス含む）
-const TEST_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+// テスト用のベースURL（環境変数から取得、/apiサフィックス付き）
+const TEST_BASE_URL = getApiBaseUrl();
 
 // DI方式のモックfetch（全テストで使用）
 type MockFetch = Mock<[input: Request], Promise<Response>>;
