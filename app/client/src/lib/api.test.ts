@@ -48,6 +48,7 @@ test('デフォルトのapiClientが環境変数から初期化される', () =>
 
 test('GETメソッドで型安全にユーザー情報を取得できる', async () => {
   // Given: モックfetchで成功レスポンスを返す設定
+  // T010: nullフィールド境界値テスト - avatarUrl, lastLoginAtがnullの場合を検証
   const userId = '550e8400-e29b-41d4-a716-446655440000';
   const mockUser = {
     id: userId,
@@ -55,10 +56,10 @@ test('GETメソッドで型安全にユーザー情報を取得できる', async
     provider: 'google' as const,
     email: 'test@example.com',
     name: 'Test User',
-    avatarUrl: null,
+    avatarUrl: null, // T010: nullableフィールドの境界値
     createdAt: '2025-01-25T00:00:00Z',
     updatedAt: '2025-01-25T00:00:00Z',
-    lastLoginAt: null,
+    lastLoginAt: null, // T010: nullableフィールドの境界値
   };
 
   mockFetch.mockResolvedValue(
@@ -99,6 +100,10 @@ test('GETメソッドで型安全にユーザー情報を取得できる', async
   expect(data?.data.id).toBe(userId);
   expect(data?.data.email).toBe('test@example.com');
   expect(data?.data.provider).toBe('google');
+
+  // T010: nullフィールド境界値検証 - nullable型が正しく推論される
+  expect(data?.data.avatarUrl).toBeNull();
+  expect(data?.data.lastLoginAt).toBeNull();
 });
 
 test('PUTメソッドで型安全にユーザー情報を更新できる', async () => {
