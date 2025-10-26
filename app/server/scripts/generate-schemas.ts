@@ -19,7 +19,6 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { join } from 'node:path';
 
 // BASE_SCHEMAが未設定の場合はデフォルト値を使用（開発環境用）
