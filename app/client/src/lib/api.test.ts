@@ -164,3 +164,126 @@ test('PUTメソッドで型安全にユーザー情報を更新できる', async
   expect(data?.data.avatarUrl).toBe('https://example.com/avatar.jpg');
   expect(data?.data.updatedAt).toBe('2025-01-25T01:00:00Z');
 });
+
+test('404エラー時に適切なエラーレスポンスを返す', async () => {
+  // Given: モックfetchで404エラーレスポンスを返す設定
+  const nonexistentId = 'nonexistent-uuid';
+  const mockErrorResponse = {
+    success: false,
+    error: {
+      code: 'USER_NOT_FOUND',
+      message: 'ユーザーが見つかりません',
+    },
+  };
+
+  mockFetch.mockResolvedValue(
+    new Response(JSON.stringify(mockErrorResponse), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+  // When: 存在しないユーザーIDでGETリクエスト送信
+  const client = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+  const { data, error } = await client.GET('/users/{id}', {
+    params: { path: { id: nonexistentId } },
+  });
+
+  // Then: 404エラーが正しく返却される
+  expect(data).toBeUndefined();
+  expect(error).toBeDefined();
+  expect(error?.success).toBe(false);
+  expect(error?.error.code).toBe('USER_NOT_FOUND');
+  expect(error?.error.message).toBe('ユーザーが見つかりません');
+
+  // mockFetchが正しく呼ばれたことを検証
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+  const request = mockFetch.mock.calls[0][0];
+  expect(request.method).toBe('GET');
+  expect(request.url).toBe(`${TEST_BASE_URL}/users/${nonexistentId}`);
+});
+
+test('ネットワークエラー時に適切にエラーハンドリングする', async () => {
+  // Given: モックfetchでネットワークエラー（reject）を返す設定
+  const networkError = new Error('Network error');
+  mockFetch.mockRejectedValue(networkError);
+
+  // When: ネットワークエラー発生状態でGETリクエスト送信
+  const client = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+
+  // Then: openapi-fetchがエラーを投げる
+  try {
+    await client.GET('/users/{id}', {
+      params: { path: { id: '550e8400-e29b-41d4-a716-446655440000' } },
+    });
+    // エラーが投げられなかった場合、テスト失敗
+    expect(true).toBe(false);
+  } catch (error) {
+    // ネットワークエラーが正しく投げられたことを検証
+    expect(error).toBeDefined();
+    expect(error).toBe(networkError);
+  }
+
+  // mockFetchが正しく呼ばれたことを検証
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+});
+
+test('公開エンドポイントは認証トークンなしでアクセスできる', async () => {
+  // Given: モックfetchで認証コールバック成功レスポンスを返す設定
+  const mockAuthResponse = {
+    success: true,
+    data: {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      externalId: 'google-user-123',
+      provider: 'google' as const,
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: null,
+      createdAt: '2025-01-25T00:00:00Z',
+      updatedAt: '2025-01-25T00:00:00Z',
+      lastLoginAt: '2025-01-25T00:00:00Z',
+    },
+  };
+
+  mockFetch.mockResolvedValue(
+    new Response(JSON.stringify(mockAuthResponse), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+  // When: 認証トークンなしでPOST /auth/callbackを実行
+  const client = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+  const { data, error } = await client.POST('/auth/callback', {
+    body: {
+      externalId: 'google-user-123',
+      provider: 'google',
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: null,
+    },
+  });
+
+  // Then: 認証トークンなしでも正常にレスポンスが返却される
+  expect(error).toBeUndefined();
+  expect(data).toEqual(mockAuthResponse);
+
+  // mockFetchが正しく呼ばれたことを検証
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+  const request = mockFetch.mock.calls[0][0];
+  expect(request.method).toBe('POST');
+  expect(request.url).toBe(`${TEST_BASE_URL}/auth/callback`);
+
+  // Authorizationヘッダーが設定されていないことを検証
+  expect(request.headers.get('Authorization')).toBeNull();
+
+  // 型安全性の検証: dataの各フィールドが正しい型として推論される
+  expect(data?.data.id).toBe('550e8400-e29b-41d4-a716-446655440000');
+  expect(data?.data.provider).toBe('google');
+});
