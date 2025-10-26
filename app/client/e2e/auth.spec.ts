@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import {
-  setupAuthenticatedTestEnvironment,
   setupUnauthenticatedApiMocks,
   cleanupTestState,
   DEFAULT_TEST_USER

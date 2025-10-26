@@ -1,12 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
-import {
-  authCallbackRequestSchema,
-  authCallbackResponseSchema,
-} from '@/packages/shared-schemas/src/auth';
-import { apiErrorResponseSchema } from '@/packages/shared-schemas/src/common';
 import { AuthController } from '../controllers/AuthController';
+import { authCallbackRoute } from './authRoutes.schema';
 
 /**
  * 認証APIルート定義
@@ -86,56 +82,6 @@ auth.post('/auth/verify', async (c) => {
       500,
     );
   }
-});
-
-/**
- * OpenAPIルート定義: POST /auth/callback
- *
- * Supabase認証後のコールバック処理。
- * Zodスキーマによる自動バリデーションとOpenAPI仕様生成を提供。
- */
-const authCallbackRoute = createRoute({
-  method: 'post',
-  path: '/auth/callback',
-  tags: ['認証'],
-  summary: 'Supabase認証後のコールバック処理',
-  description:
-    'Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う',
-  request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: authCallbackRequestSchema,
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: authCallbackResponseSchema,
-        },
-      },
-      description: '認証成功',
-    },
-    400: {
-      content: {
-        'application/json': {
-          schema: apiErrorResponseSchema,
-        },
-      },
-      description: 'バリデーションエラー',
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: apiErrorResponseSchema,
-        },
-      },
-      description: 'サーバーエラー',
-    },
-  },
 });
 
 /**

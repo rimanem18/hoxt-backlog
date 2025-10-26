@@ -3,7 +3,725 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = Record<string, never>;
+export interface paths {
+  '/auth/callback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Supabase認証後のコールバック処理
+     * @description Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': {
+            externalId: string;
+            /** @enum {string} */
+            provider:
+              | 'google'
+              | 'apple'
+              | 'microsoft'
+              | 'github'
+              | 'facebook'
+              | 'line';
+            /** Format: email */
+            email: string;
+            name: string;
+            /** Format: uri */
+            avatarUrl?: string | null;
+          };
+        };
+      };
+      responses: {
+        /** @description 認証成功 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: true;
+              data: {
+                /** Format: uuid */
+                id: string;
+                externalId: string;
+                /** @enum {string} */
+                provider:
+                  | 'google'
+                  | 'apple'
+                  | 'microsoft'
+                  | 'github'
+                  | 'facebook'
+                  | 'line';
+                /** Format: email */
+                email: string;
+                name: string;
+                /** Format: uri */
+                avatarUrl?: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+                /** Format: date-time */
+                lastLoginAt?: string | null;
+              };
+            };
+          };
+        };
+        /** @description バリデーションエラー */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description サーバーエラー */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/users/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * ユーザー情報取得
+     * @description ユーザーIDでユーザー情報を取得する
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description ユーザー情報取得成功 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: true;
+              data: {
+                /** Format: uuid */
+                id: string;
+                externalId: string;
+                /** @enum {string} */
+                provider:
+                  | 'google'
+                  | 'apple'
+                  | 'microsoft'
+                  | 'github'
+                  | 'facebook'
+                  | 'line';
+                /** Format: email */
+                email: string;
+                name: string;
+                /** Format: uri */
+                avatarUrl?: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+                /** Format: date-time */
+                lastLoginAt?: string | null;
+              };
+            };
+          };
+        };
+        /** @description バリデーションエラー */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description JWKS検証失敗 */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description ユーザーが見つからない */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description サーバーエラー */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * ユーザー情報更新
+     * @description ユーザー情報を更新する（名前・アバターURL）
+     */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            name?: string;
+            /** Format: uri */
+            avatarUrl?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description ユーザー情報更新成功 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: true;
+              data: {
+                /** Format: uuid */
+                id: string;
+                externalId: string;
+                /** @enum {string} */
+                provider:
+                  | 'google'
+                  | 'apple'
+                  | 'microsoft'
+                  | 'github'
+                  | 'facebook'
+                  | 'line';
+                /** Format: email */
+                email: string;
+                name: string;
+                /** Format: uri */
+                avatarUrl?: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+                /** Format: date-time */
+                lastLoginAt?: string | null;
+              };
+            };
+          };
+        };
+        /** @description バリデーションエラー */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description JWKS検証失敗 */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description ユーザーが見つからない */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description サーバーエラー */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/users': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * ユーザー一覧取得
+     * @description ユーザー一覧を取得する（ページネーション・フィルタリング対応）
+     */
+    get: {
+      parameters: {
+        query?: {
+          provider?:
+            | 'google'
+            | 'apple'
+            | 'microsoft'
+            | 'github'
+            | 'facebook'
+            | 'line';
+          limit?: number;
+          offset?: number | null;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description ユーザー一覧取得成功 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: true;
+              data: {
+                users: {
+                  /** Format: uuid */
+                  id: string;
+                  externalId: string;
+                  /** @enum {string} */
+                  provider:
+                    | 'google'
+                    | 'apple'
+                    | 'microsoft'
+                    | 'github'
+                    | 'facebook'
+                    | 'line';
+                  /** Format: email */
+                  email: string;
+                  name: string;
+                  /** Format: uri */
+                  avatarUrl?: string | null;
+                  /** Format: date-time */
+                  createdAt: string;
+                  /** Format: date-time */
+                  updatedAt: string;
+                  /** Format: date-time */
+                  lastLoginAt?: string | null;
+                }[];
+                total: number;
+                limit: number;
+                offset: number;
+              };
+            };
+          };
+        };
+        /** @description バリデーションエラー */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description JWKS検証失敗 */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description サーバーエラー */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/user/profile': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * 認証ユーザープロフィール取得
+     * @description JWT認証済みユーザーの自身のプロフィール情報を取得する
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description プロフィール取得成功 */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: true;
+              data: {
+                /** Format: uuid */
+                id: string;
+                externalId: string;
+                /** @enum {string} */
+                provider:
+                  | 'google'
+                  | 'apple'
+                  | 'microsoft'
+                  | 'github'
+                  | 'facebook'
+                  | 'line';
+                /** Format: email */
+                email: string;
+                name: string;
+                /** Format: uri */
+                avatarUrl?: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+                /** Format: date-time */
+                lastLoginAt?: string | null;
+              };
+            };
+          };
+        };
+        /** @description バリデーションエラー */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description JWT認証失敗 */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description ユーザーが見つからない */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+        /** @description サーバーエラー */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              success: false;
+              error: {
+                code: string;
+                message: string;
+                details?:
+                  | {
+                      [key: string]: string;
+                    }
+                  | string;
+              };
+            };
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+}
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: never;

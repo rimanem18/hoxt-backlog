@@ -8,8 +8,8 @@ import type { User } from '@/domain/user';
 // - API契約User: HTTP通信・レスポンス検証用（string型、ISO 8601）
 import type { User as ApiUser } from '@/packages/shared-schemas/src/auth';
 import type { GetUserProfileResponse } from '@/packages/shared-schemas/src/common';
-import { authMiddleware } from '../../middleware/auth/AuthMiddleware';
-import { UserController } from '../UserController';
+import { UserController } from '@/presentation/http/controllers/UserController';
+import { authMiddleware } from '@/presentation/http/middleware/auth/AuthMiddleware';
 
 /**
  * TDD Red フェーズ: ユーザープロフィール取得成功テスト

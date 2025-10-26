@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: hoxbl API
+  title: hoxbl API Spec
   version: 1.0.0
   description: |-
     型安全性強化・API契約強化プロジェクトによるAPI仕様
@@ -9,18 +9,952 @@ info:
 servers:
   - url: http://localhost:3001/api
     description: 開発環境
-paths: {}
 components:
   schemas: {}
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: |-
-        Supabase Authで発行されたJWTトークン（RS256/ES256非対称鍵で署名）
-        バックエンドはJWKS検証により署名を検証:
-        - JWTヘッダーから kid を取得
-        - Supabase JWKS エンドポイントから公開鍵セットを取得
-        - kid に対応する公開鍵で署名検証
-  responses: {}
+  parameters: {}
+paths:
+  /auth/callback:
+    post:
+      tags:
+        - 認証
+      summary: Supabase認証後のコールバック処理
+      description: Supabase認証後のユーザー情報を受け取り、ユーザー作成または更新を行う
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                externalId:
+                  type: string
+                  minLength: 1
+                provider:
+                  type: string
+                  enum:
+                    - google
+                    - apple
+                    - microsoft
+                    - github
+                    - facebook
+                    - line
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                  minLength: 1
+                avatarUrl:
+                  type: string
+                  nullable: true
+                  format: uri
+              required:
+                - externalId
+                - provider
+                - email
+                - name
+      responses:
+        '200':
+          description: 認証成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      externalId:
+                        type: string
+                      provider:
+                        type: string
+                        enum:
+                          - google
+                          - apple
+                          - microsoft
+                          - github
+                          - facebook
+                          - line
+                      email:
+                        type: string
+                        format: email
+                      name:
+                        type: string
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      lastLoginAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                    required:
+                      - id
+                      - externalId
+                      - provider
+                      - email
+                      - name
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /users/{id}:
+    get:
+      tags:
+        - ユーザー管理
+      summary: ユーザー情報取得
+      description: ユーザーIDでユーザー情報を取得する
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        '200':
+          description: ユーザー情報取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      externalId:
+                        type: string
+                      provider:
+                        type: string
+                        enum:
+                          - google
+                          - apple
+                          - microsoft
+                          - github
+                          - facebook
+                          - line
+                      email:
+                        type: string
+                        format: email
+                      name:
+                        type: string
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      lastLoginAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                    required:
+                      - id
+                      - externalId
+                      - provider
+                      - email
+                      - name
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '401':
+          description: JWKS検証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    put:
+      tags:
+        - ユーザー管理
+      summary: ユーザー情報更新
+      description: ユーザー情報を更新する（名前・アバターURL）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                avatarUrl:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: ユーザー情報更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      externalId:
+                        type: string
+                      provider:
+                        type: string
+                        enum:
+                          - google
+                          - apple
+                          - microsoft
+                          - github
+                          - facebook
+                          - line
+                      email:
+                        type: string
+                        format: email
+                      name:
+                        type: string
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      lastLoginAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                    required:
+                      - id
+                      - externalId
+                      - provider
+                      - email
+                      - name
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '401':
+          description: JWKS検証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /users:
+    get:
+      tags:
+        - ユーザー管理
+      summary: ユーザー一覧取得
+      description: ユーザー一覧を取得する（ページネーション・フィルタリング対応）
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - google
+              - apple
+              - microsoft
+              - github
+              - facebook
+              - line
+          required: false
+          name: provider
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: integer
+            nullable: true
+            minimum: 0
+            default: 0
+          required: false
+          name: offset
+          in: query
+      responses:
+        '200':
+          description: ユーザー一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            externalId:
+                              type: string
+                            provider:
+                              type: string
+                              enum:
+                                - google
+                                - apple
+                                - microsoft
+                                - github
+                                - facebook
+                                - line
+                            email:
+                              type: string
+                              format: email
+                            name:
+                              type: string
+                            avatarUrl:
+                              type: string
+                              nullable: true
+                              format: uri
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            lastLoginAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                          required:
+                            - id
+                            - externalId
+                            - provider
+                            - email
+                            - name
+                            - createdAt
+                            - updatedAt
+                      total:
+                        type: integer
+                        minimum: 0
+                      limit:
+                        type: integer
+                        minimum: 1
+                        maximum: 100
+                      offset:
+                        type: integer
+                        minimum: 0
+                    required:
+                      - users
+                      - total
+                      - limit
+                      - offset
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '401':
+          description: JWKS検証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /user/profile:
+    get:
+      tags:
+        - 認証ユーザー
+      summary: 認証ユーザープロフィール取得
+      description: JWT認証済みユーザーの自身のプロフィール情報を取得する
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: プロフィール取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      externalId:
+                        type: string
+                      provider:
+                        type: string
+                        enum:
+                          - google
+                          - apple
+                          - microsoft
+                          - github
+                          - facebook
+                          - line
+                      email:
+                        type: string
+                        format: email
+                      name:
+                        type: string
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      lastLoginAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                    required:
+                      - id
+                      - externalId
+                      - provider
+                      - email
+                      - name
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '401':
+          description: JWT認証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error

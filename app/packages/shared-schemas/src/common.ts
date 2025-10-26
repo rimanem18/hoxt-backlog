@@ -6,7 +6,11 @@
  * - APIレスポンス構造（成功・エラー）
  */
 
+import { extendZodWithOpenApi } from '@hono/zod-openapi';
 import { z } from 'zod';
+
+// ZodスキーマをOpenAPI対応に拡張
+extendZodWithOpenApi(z);
 
 /**
  * 共通UUID型

@@ -15,13 +15,13 @@ import {
   expect,
   test,
 } from 'bun:test';
-import type { Hono } from 'hono';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 import serverApp from '@/entrypoints';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 import { getUserResponseSchema } from '@/packages/shared-schemas/src/users';
 
 describe('GET /api/users/{id} 統合テスト', () => {
-  let app: Hono;
+  let app: OpenAPIHono;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
@@ -145,7 +145,7 @@ describe('GET /api/users/{id} 統合テスト', () => {
           code: 'VALIDATION_ERROR',
           message: 'バリデーションエラー',
           details: {
-            id: '有効なUUID v4形式である必要があります',
+            id: 'Invalid UUID',
           },
         },
       });
@@ -217,7 +217,7 @@ describe('GET /api/users/{id} 統合テスト', () => {
 });
 
 describe('GET /api/users 統合テスト', () => {
-  let app: Hono;
+  let app: OpenAPIHono;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';

@@ -19,7 +19,7 @@ import { userSchema, authProviderSchema } from './auth';
  */
 export const getUserParamsSchema = z.object({
   id: uuidSchema,
-});
+}).openapi('GetUserParams');
 
 /**
  * ユーザー取得レスポンススキーマ

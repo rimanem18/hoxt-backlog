@@ -19,7 +19,6 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { join } from 'node:path';
 
 // BASE_SCHEMAが未設定の場合はデフォルト値を使用（開発環境用）
@@ -161,7 +160,6 @@ import { ${tableName}${enumImports} } from '@/infrastructure/database/schema';
  * Drizzle ORMの${tableName}テーブルから自動生成された型安全なスキーマ。
  * データベースから取得したデータの検証に使用する。
  */
-// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
 export const select${capitalizedName}Schema = createSelectSchema(${tableName});
 
 /**
@@ -170,7 +168,6 @@ export const select${capitalizedName}Schema = createSelectSchema(${tableName});
  * Drizzle ORMの${tableName}テーブルから自動生成された型安全なスキーマ。
  * データベースへの挿入データの検証に使用する。
  */
-// @ts-expect-error - Drizzle Zod型定義の互換性問題（実行時は正常に動作）
 export const insert${capitalizedName}Schema = createInsertSchema(${tableName});
 
 /**
