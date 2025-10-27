@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, type Mock, mock, test } from 'bun:test';
-import { apiClient, createApiClient } from './api';
-import { getApiBaseUrl } from './env';
+import { apiClient, createApiClient } from '../api';
+import { getApiBaseUrl } from '../env';
 
 // テスト用のベースURL（環境変数から取得、/apiサフィックス付き）
 const TEST_BASE_URL = getApiBaseUrl();

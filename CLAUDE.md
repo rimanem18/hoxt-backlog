@@ -458,3 +458,181 @@ export class HogeAuthProvider implements IAuthProvider {
 }
 ````
 
+# テストファイル配置ルール
+
+プロジェクト全体でテストファイルの配置を統一し、可読性と保守性を向上させます。
+
+## 基本方針
+
+- **サーバー側**: `__tests__`ディレクトリによる集約型
+- **クライアント側**: feature配下の`__tests__`ディレクトリ集約型
+- **テストケース数に応じた柔軟な構造化**
+
+## サーバー側 (app/server/src/)
+
+### 配置ルール
+
+各ディレクトリに`__tests__`ディレクトリを作成し、そこにテストファイルを集約します。
+
+```
+app/server/src/
+├── domain/
+│   ├── user/
+│   │   ├── __tests__/
+│   │   │   ├── UserEntity.test.ts
+│   │   │   └── errors.test.ts
+│   │   ├── UserEntity.ts
+│   │   └── errors/
+│   └── services/
+│       ├── __tests__/
+│       │   └── AuthenticationDomainService.test.ts
+│       └── AuthenticationDomainService.ts
+│
+├── application/
+│   └── usecases/
+│       ├── __tests__/
+│       │   ├── authenticate-user/          # 大規模(11個以上)
+│       │   │   ├── validation.test.ts
+│       │   │   ├── success-password.test.ts
+│       │   │   └── ...
+│       │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
+│       │   ├── GetUserProfile.errors.test.ts
+│       │   └── contracts/
+│       │       └── auth-provider.contract.test.ts
+│       ├── AuthenticateUserUseCase.ts
+│       └── GetUserProfileUseCase.ts
+│
+├── infrastructure/
+│   ├── __tests__/
+│   │   ├── DatabaseConnection.test.ts
+│   │   └── BaseSchemaValidation.test.ts
+│   └── auth/
+│       ├── __tests__/
+│       │   ├── SupabaseJwtVerifier.test.ts
+│       │   └── MockJwtVerifier.test.ts
+│       └── SupabaseJwtVerifier.ts
+│
+└── presentation/
+    └── http/
+        ├── controllers/
+        │   ├── __tests__/
+        │   │   ├── AuthController.test.ts
+        │   │   └── UserController.test.ts
+        │   └── AuthController.ts
+        ├── routes/
+        │   ├── __tests__/
+        │   │   ├── authRoutes.test.ts
+        │   │   └── userRoutes.integration.test.ts
+        │   └── authRoutes.ts
+        └── middleware/
+            ├── __tests__/
+            │   └── metricsMiddleware.test.ts
+            └── metricsMiddleware.ts
+```
+
+### テストケース数による使い分け
+
+#### 小規模(テストケース10個以下)
+- **ファイル名**: `[対象名].[関心事].test.ts`
+- **例**: `GetUserProfile.success.test.ts`, `GetUserProfile.validation.test.ts`
+- **利点**: ファイル数が少なく、検索・移動が容易
+
+#### 大規模(テストケース11個以上)
+- **ディレクトリ名**: `__tests__/[対象名]/`(小文字ケバブケース)
+- **ファイル名**: `[シナリオ名].test.ts`
+- **例**: `__tests__/authenticate-user/validation.test.ts`
+- **利点**: 階層が深くならず整理しやすい
+
+#### 契約テスト
+- **ディレクトリ**: `__tests__/contracts/`
+- **例**: `__tests__/contracts/auth-provider.contract.test.ts`
+
+## クライアント側 (app/client/src/)
+
+### 配置ルール
+
+各feature配下に`__tests__`ディレクトリを作成し、feature全体のテストを集約します。
+
+```
+app/client/src/
+├── features/
+│   ├── auth/
+│   │   ├── __tests__/
+│   │   │   ├── sessionRestore.test.ts
+│   │   │   ├── errorHandling.test.ts
+│   │   │   ├── authProviderInterface.test.ts
+│   │   │   └── ui-ux/
+│   │   │       └── LoadingState.test.tsx
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── services/
+│   │
+│   ├── google-auth/
+│   │   ├── __tests__/
+│   │   │   ├── authSlice.test.ts
+│   │   │   └── UserProfile.test.tsx
+│   │   ├── components/
+│   │   └── store/
+│   │
+│   └── user/
+│       ├── __tests__/
+│       │   ├── useUser.test.tsx
+│       │   └── useUpdateUser.test.tsx
+│       ├── components/
+│       ├── hooks/
+│       │   ├── useUser.ts
+│       │   └── useUpdateUser.ts
+│       └── services/
+│
+└── lib/
+    ├── __tests__/
+    │   └── api.test.ts
+    └── api.ts
+```
+
+### ルール詳細
+
+- **必須**: 各feature配下に`__tests__`ディレクトリを作成
+- **UI/UX別テスト**: UIに特化したテストは`__tests__/ui-ux/`にサブディレクトリ化
+- **hooks/utils**: feature内の`__tests__`に集約(ファイル隣接ではなく)
+- **lib/shared**: 同様に`__tests__`ディレクトリに集約
+
+## shared-schemas
+
+```
+app/packages/shared-schemas/
+├── __tests__/
+│   ├── userSchema.test.ts
+│   └── authSchema.test.ts
+├── userSchema.ts
+└── authSchema.ts
+```
+
+スキーマのバリデーションテストは`__tests__`に集約します。
+
+## 命名規則
+
+### テストファイル命名
+
+| パターン | 命名例 | 用途 |
+|---------|--------|------|
+| 単一対象 | `UserEntity.test.ts` | 単一クラス/関数のテスト |
+| 関心事別 | `AuthenticateUser.validation.test.ts` | 関心事で分割 |
+| シナリオ別 | `success-password.test.ts` | サブディレクトリ内 |
+| 統合テスト | `userRoutes.integration.test.ts` | 統合テスト明示 |
+| 契約テスト | `auth-provider.contract.test.ts` | 契約テスト明示 |
+
+### テストディレクトリ命名
+
+- **小文字ケバブケース**: `__tests__/authenticate-user/`
+- **関心事サブディレクトリ**: `__tests__/ui-ux/`, `__tests__/contracts/`
+
+## 禁止事項
+
+- **禁止**: 実装ファイルと同じディレクトリにテストを配置
+  - ❌ `hooks/useUser.ts`, `hooks/useUser.test.tsx`
+  - ✅ `hooks/useUser.ts`, `__tests__/useUser.test.tsx`
+- **禁止**: `__tests__`外へのテストファイル配置
+- **禁止**: テストファイルの拡張子を`.spec.ts`にする
+  - 必ず`.test.ts`または`.test.tsx`を使用
+

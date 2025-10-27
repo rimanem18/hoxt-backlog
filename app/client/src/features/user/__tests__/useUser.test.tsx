@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
-import { useUser } from './useUser';
+import { useUser } from '../hooks/useUser';
 
 // DI方式のモックfetch
 type MockFetch = Mock<[input: Request], Promise<Response>>;
