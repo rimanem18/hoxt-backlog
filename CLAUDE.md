@@ -264,21 +264,15 @@ mermaidフローチャートを記述する際の確認項目：
 
 # テストガイドライン
 
-## テストファイル
-
-**Testing Policy - Bun 標準のみ**  
-`bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用する。  
-`jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在を禁止する。  
-
-依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする。  
-`mock.module()` は最後の手段としてのみ使用する。  
-テスト終了時は `mock.restore()` と `mock.clearAllMocks()` を徹底する。  
-
----
-
 ## 運用指針詳細
 
+- **必須**: `bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用
+- **推奨**: テスト終了時は `mock.restore()` と `mock.clearAllMocks()`
+- **推奨**: 依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする 
+- **非推奨**: `mock.module()` の使用
 - **非推奨**: `data-testid` の使用
+- **非推奨**: 動的 import の使用
+- **禁止**: `jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在
 - **禁止**: テストの `.skip`
   - 意図的な未実装は TODO コメントで
 - **禁止**: `fireEvent` の使用
@@ -350,7 +344,6 @@ beforeEach(() => {
 - **トップレベルでの使用は禁止**。  
 - **各 test 内でのみ宣言し、その後に動的 import** すること。  
 - 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う。  
-
 
 # コメントガイドライン
 
