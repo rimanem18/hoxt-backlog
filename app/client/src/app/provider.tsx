@@ -8,7 +8,7 @@ import {
   handleExpiredToken,
   logout,
   restoreAuthState,
-} from '@/features/google-auth/store/authSlice';
+} from '@/features/auth/store/authSlice';
 import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { store } from '@/store';
 

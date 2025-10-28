@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { authSlice } from '@/features/google-auth/store/authSlice';
+import { authSlice } from '@/features/auth/store/authSlice';
 import { supabase } from '@/lib/supabase';
 import { useAppDispatch } from '@/store/hooks';
 

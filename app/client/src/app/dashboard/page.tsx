@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
+import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
 import { UserProfile } from '@/features/google-auth/components/UserProfile';
-import { handleExpiredToken } from '@/features/google-auth/store/authSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
