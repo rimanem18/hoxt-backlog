@@ -13,9 +13,9 @@ import Image from 'next/image';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
+import { logout } from '@/features/auth/store/authSlice';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/packages/shared-schemas/src/auth';
-import { logout } from '../store/authSlice';
 
 /**
  * UserProfileコンポーネントのProps型定義

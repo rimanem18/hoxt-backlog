@@ -337,53 +337,62 @@ handleExpiredToken: (state) => {
 
 ### **Phase 2: UI コンポーネントの統合**
 
-#### [ ] Task 4: UserProfile.tsx の移動
+#### [x] Task 4: UserProfile.tsx とテストファイルの移動
 **目的**: ユーザープロフィール UI を `auth` feature に集約
 
-**移動**: `features/google-auth/components/UserProfile.tsx` → `features/auth/components/UserProfile.tsx`
+**移動対象**:
+1. コンポーネント: `features/google-auth/components/UserProfile.tsx` → `features/auth/components/UserProfile.tsx`
+2. テストファイル: `features/google-auth/__tests__/UserProfile.test.tsx` → `features/auth/__tests__/UserProfile.test.tsx`
 
 **変更内容**:
-- L18: `import { authSlice } from '@/features/google-auth/store/authSlice';` → `@/features/auth/store/authSlice`
+1. `UserProfile.tsx` の L18:
+   - `import { authSlice } from '@/features/google-auth/store/authSlice';`
+   - → `@/features/auth/store/authSlice`
 
-**影響**: なし（まだどこからも参照されていない）
+2. `UserProfile.test.tsx` の import パス:
+   - `@/features/google-auth/...` → `@/features/auth/...` へ全て更新
+
+**検証**:
+- `docker compose exec client bunx tsc --noEmit`
+- `docker compose exec client bun test UserProfile`
+- `docker compose exec client bun run fix`
+
+**影響**: テストファイルの移動により、Phase 2 完了後も既存テストが正常動作
 
 ---
 
-#### [ ] Task 5: LoginButton の Provider DI 対応
-**目的**: 複数 Provider に対応できるよう、DI で Provider を切り替え可能にする
+#### [x] Task 5: LoginButton の Provider DI 対応（完了済み）
+**目的**: 既存の `authService` DI パスを維持しつつ、Provider 抽象化の準備
 
-**更新**: `features/auth/components/LoginButton.tsx`
+**結論**: **既に実装済みのため追加作業不要**
 
-**変更内容** (L1-L115):
+**実装確認結果**:
+1. ✅ `LoginButton` は既に `provider: AuthProvider` を Props で受け取っている
+2. ✅ `authService` は `AuthServiceInterface` で抽象化され、DI 可能
+3. ✅ テスト（`ui-ux/LoadingState.test.tsx`）が `authService` DI を検証済み
+4. ✅ 型定義は `authConfig.ts` の `AuthProvider` 型を使用
+
+**現在の実装内容**:
 ```typescript
-// Before
-const handleLogin = async () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const redirectUrl = `${window.location.origin}/auth/callback`;
-
-  window.location.href = `${supabaseUrl}/auth/v1/authorize?...`;
-};
-
-// After
-import { GoogleAuthProvider } from '@/features/auth/services/providers/googleAuthProvider';
-
-const LoginButton = ({ provider = 'google' }: LoginButtonProps) => {
-  const authProvider = new GoogleAuthProvider(); // 将来は DI で切り替え
-
-  const handleLogin = async () => {
-    await authProvider.signIn();
-  };
-
-  // ...
-};
-
-type LoginButtonProps = {
-  provider?: 'google' | 'github' | 'microsoft'; // 将来の拡張用
-};
+// LoginButton.tsx (L26-L46)
+interface LoginButtonProps {
+  provider: AuthProvider; // authConfig.ts の型を使用
+  disabled?: boolean;
+  onAuthStart?: () => void;
+  onAuthSuccess?: (data: unknown) => void;
+  onAuthError?: (errorMessage: string) => void;
+  className?: string;
+  authService?: AuthServiceInterface; // DI 可能
+}
 ```
 
-**影響**: なし（内部実装の変更のみ）
+**Provider 抽象化は Phase 3 で実施**:
+- Task 6: authProviderInterface の拡張（callback 処理追加）
+- Task 7: googleAuthProvider の callback 処理実装
+- Task 8: mockAuthProvider の分離
+- これらのタスクで `authService` 内部で Provider を使用する実装を追加
+
+**影響**: なし（既に完了している機能の確認のみ）
 
 ---
 
