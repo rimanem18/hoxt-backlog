@@ -398,7 +398,7 @@ interface LoginButtonProps {
 
 ### **Phase 3: Provider 抽象化の完成**
 
-#### [ ] Task 6: authProviderInterface の拡張
+#### [x] Task 6: authProviderInterface の拡張
 **目的**: callback 処理とモック処理を interface に追加
 
 **更新**: `features/auth/services/providers/authProviderInterface.ts`
@@ -453,7 +453,7 @@ export type AuthCallbackResult = {
 
 ---
 
-#### [ ] Task 7: googleAuthProvider の callback 処理実装
+#### [x] Task 7: googleAuthProvider の callback 処理実装
 **目的**: `app/auth/callback/page.tsx` (L52-L131) の Google 固有処理を Provider へ移動
 
 **更新**: `features/auth/services/providers/googleAuthProvider.ts`
@@ -536,7 +536,7 @@ export class GoogleAuthProvider implements IAuthProvider {
 
 ---
 
-#### [ ] Task 8: mockAuthProvider の分離
+#### [x] Task 8: mockAuthProvider の分離
 **目的**: E2E テスト用のモック処理を専用 Provider として分離
 
 **新規作成**: `features/auth/services/providers/mockAuthProvider.ts`
@@ -615,7 +615,7 @@ export class MockAuthProvider implements IAuthProvider {
 
 ---
 
-#### [ ] Task 9: useOAuthCallback フックの実装
+#### [x] Task 9: useOAuthCallback フックの実装
 **目的**: callback 処理を抽象化し、`app/auth/callback/page.tsx` をシンプル化
 
 **新規作成**: `features/auth/hooks/useOAuthCallback.ts`
@@ -743,7 +743,7 @@ export const useOAuthCallback = () => {
 
 ---
 
-#### [ ] Task 10: app/auth/callback/page.tsx のリファクタリング
+#### [x] Task 10: app/auth/callback/page.tsx のリファクタリング
 **目的**: Provider 抽象化により、callback ページをシンプル化
 
 **更新**: `app/auth/callback/page.tsx` (L1-L273)

@@ -296,6 +296,89 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     };
   }
 
+  /**
+   * トークンの基本的な形式を検証する
+   *
+   * モックトークンを拒否し、JWT形式の基本チェックを行う。
+   * 完全な署名検証はSupabaseに委譲する。
+   */
+  validateToken(token: string): boolean {
+    // 空文字列やモックトークンを拒否
+    if (!token || token === 'mock_access_token') {
+      return false;
+    }
+
+    // JWT基本形式チェック（header.payload.signature）
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    // 各パートが空でないことを確認
+    return parts.every((part) => part.length > 0);
+  }
+
+  /**
+   * Google OAuth コールバック処理
+   * Supabase セッション確立とユーザー情報取得を実施
+   */
+  async handleCallback(
+    hashParams: URLSearchParams,
+  ): Promise<import('./authProviderInterface').AuthCallbackResult> {
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
+    // エラーハンドリング
+    if (!accessToken) {
+      const error = hashParams.get('error');
+      const errorDescription = hashParams.get('error_description');
+
+      if (error === 'access_denied') {
+        // ユーザーキャンセルは success=false で返す（エラーではない）
+        return { success: false, user: undefined, isNewUser: false };
+      }
+
+      throw new Error(
+        errorDescription || error || '認証トークンが見つかりません',
+      );
+    }
+
+    // Supabase セッション確立
+    const { error: sessionError } = await this.supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken || '',
+    });
+
+    if (sessionError) {
+      throw new Error(`Supabaseセッション確立エラー: ${sessionError.message}`);
+    }
+
+    // ユーザー情報取得
+    const { data: userData, error: userError } =
+      await this.supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      throw new Error(
+        `ユーザー情報取得エラー: ${userError?.message || 'ユーザーが見つかりません'}`,
+      );
+    }
+
+    // User オブジェクト構築
+    const user: import('@/packages/shared-schemas/src/auth').User = {
+      id: userData.user.id,
+      externalId: userData.user.id,
+      provider: 'google',
+      email: userData.user.email || '',
+      name: userData.user.user_metadata.full_name || userData.user.email || '',
+      avatarUrl: userData.user.user_metadata.avatar_url || null,
+      createdAt: userData.user.created_at || new Date().toISOString(),
+      updatedAt: userData.user.updated_at || new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    return { success: true, user, isNewUser: false };
+  }
+
   // resetPasswordメソッドは削除済み
   // Google OAuthではパスワードリセットは適用外のため、
   // 将来的にEmailPasswordAuthProviderクラスで実装予定

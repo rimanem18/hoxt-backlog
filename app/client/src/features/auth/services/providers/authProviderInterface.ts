@@ -34,6 +34,20 @@ export interface SessionInfo {
 }
 
 /**
+ * OAuth コールバック処理の結果
+ */
+export interface AuthCallbackResult {
+  /** 認証成功フラグ */
+  success: boolean;
+  /** 認証済みユーザー情報（成功時のみ） */
+  user?: User;
+  /** 新規ユーザーかどうか */
+  isNewUser: boolean;
+  /** エラーメッセージ（失敗時のみ） */
+  error?: string;
+}
+
+/**
  * 認証プロバイダーの統一インターフェース。
  * 依存性逆転の原則に基づき、複数認証プロバイダーを抽象化する。
  *
@@ -74,6 +88,20 @@ export interface AuthProviderInterface {
    * @returns プロバイダー識別子（'google', 'apple' 等）
    */
   getProviderName(): string;
+
+  /**
+   * OAuth コールバック処理を実行する
+   * @param hashParams - URL フラグメントから取得したパラメータ
+   * @returns 認証結果（成功時はユーザー情報、失敗時はエラー）
+   */
+  handleCallback(hashParams: URLSearchParams): Promise<AuthCallbackResult>;
+
+  /**
+   * トークンの妥当性を検証する
+   * @param token - アクセストークン
+   * @returns トークンが有効な場合 true（モックトークンは false）
+   */
+  validateToken(token: string): boolean;
 }
 
 /**
@@ -92,6 +120,10 @@ export abstract class BaseAuthProvider implements AuthProviderInterface {
   abstract signOut(): Promise<AuthResult>;
   abstract getUser(): Promise<{ user: User | null }>;
   abstract getSession(): Promise<SessionInfo | null>;
+  abstract handleCallback(
+    hashParams: URLSearchParams,
+  ): Promise<AuthCallbackResult>;
+  abstract validateToken(token: string): boolean;
 
   /**
    * プロバイダー名を取得する
