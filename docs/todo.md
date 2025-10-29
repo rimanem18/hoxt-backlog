@@ -852,12 +852,12 @@ export default function AuthCallbackPage(): React.ReactNode {
 
 ### **Phase 4: テストの移動と追加**
 
-#### [ ] Task 11: テストファイルの移動
+#### [x] Task 11: テストファイルの移動
 **目的**: `google-auth/__tests__/` を `auth/__tests__/` へ集約
 
 **移動**:
 - `features/google-auth/__tests__/authSlice.test.ts` → `features/auth/__tests__/authSlice.test.ts`
-- `features/google-auth/__tests__/UserProfile.test.tsx` → `features/auth/__tests__/UserProfile.test.tsx`
+- `features/google-auth/__tests__/UserProfile.test.tsx` → `features/auth/__tests__/UserProfile.test.tsx`（Phase 2で完了済み）
 
 **更新内容**:
 - import パスを `@/features/auth/...` へ変更
@@ -867,7 +867,7 @@ export default function AuthCallbackPage(): React.ReactNode {
 
 ---
 
-#### [ ] Task 12: sessionPersistence のテスト追加
+#### [x] Task 12: sessionPersistence のテスト追加
 **目的**: LocalStorage 操作のテストカバレッジを確保
 
 **新規作成**: `features/auth/__tests__/sessionPersistence.test.ts`
@@ -977,7 +977,7 @@ describe('sessionPersistence', () => {
 
 ---
 
-#### [ ] Task 13: sessionListener のテスト追加
+#### [x] Task 13: sessionListener のテスト追加
 **目的**: Redux Listener Middleware の動作検証
 
 **新規作成**: `features/auth/__tests__/sessionListener.test.ts`
