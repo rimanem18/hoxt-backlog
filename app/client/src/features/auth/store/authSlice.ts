@@ -218,51 +218,6 @@ export const authSlice = createSlice({
     },
 
     /**
-     * テスト用認証状態設定
-     * E2Eテスト専用の状態設定アクション
-     *
-     * @param state - 現在の認証状態
-     * @param action - テスト用の認証状態
-     */
-    setAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
-      // 開発環境とテスト環境でのみ使用可能
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('本番環境では setAuthState は使用できません');
-        return;
-      }
-
-      const { isAuthenticated, user, isLoading, error, authError } =
-        action.payload;
-      if (isAuthenticated !== undefined)
-        state.isAuthenticated = isAuthenticated;
-      if (user !== undefined) state.user = user;
-      if (isLoading !== undefined) state.isLoading = isLoading;
-      if (error !== undefined) state.error = error;
-      if (authError !== undefined) state.authError = authError;
-
-      // テスト用状態設定時もLocalStorageに保存
-      if (isAuthenticated && user && typeof window !== 'undefined') {
-        const mockJwt = [
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
-          'eyJzdWIiOiJ0ZXN0LXVzZXIiLCJleHAiOjk5OTk5OTk5OTl9', // Payload
-          'test_signature', // Signature
-        ].join('.');
-
-        const authData = {
-          access_token: mockJwt,
-          refresh_token: 'test_refresh_token',
-          expires_at: Date.now() + 3600 * 1000,
-          user: user,
-        };
-        localStorage.setItem(
-          'sb-localhost-auth-token',
-          JSON.stringify(authData),
-        );
-        console.log('Test authentication state saved to localStorage');
-      }
-    },
-
-    /**
      * JWT期限切れ専用のエラーハンドリング
      *
      * トークン期限切れを検出した際に認証状態をクリアし、適切なエラー情報を設定
@@ -292,7 +247,6 @@ export const {
   authFailure,
   logout,
   clearAuthState,
-  setAuthState,
   restoreAuthState,
   finishAuthRestore,
   handleExpiredToken,

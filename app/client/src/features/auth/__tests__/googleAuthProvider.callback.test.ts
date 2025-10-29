@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { GoogleAuthProvider } from '@/features/auth/services/providers/googleAuthProvider';
+import { createMockJwt } from '@/testing/jwtFactory';
 
 describe('GoogleAuthProvider - callback処理', () => {
   let mockSupabase: SupabaseClient;
@@ -30,10 +31,9 @@ describe('GoogleAuthProvider - callback処理', () => {
       expect(result).toBe(false);
     });
 
-    it('JWT形式のトークンの場合は true を返す', () => {
+    it('JWT形式のトークンの場合は true を返す', async () => {
       // Given: JWT形式のトークン（header.payload.signature）
-      const jwtToken =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+      const jwtToken = await createMockJwt({ sub: '1234567890' });
 
       // When: トークン検証を実行
       const result = googleProvider.validateToken(jwtToken);

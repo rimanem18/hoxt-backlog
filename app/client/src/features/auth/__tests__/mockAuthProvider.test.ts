@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { MockAuthProvider } from '@/features/auth/services/providers/mockAuthProvider';
+import { createMockJwt } from '@/testing/jwtFactory';
 
 describe('MockAuthProvider', () => {
   let mockProvider: MockAuthProvider;
@@ -20,9 +21,9 @@ describe('MockAuthProvider', () => {
       expect(result).toBe(true);
     });
 
-    it('通常のトークンの場合は false を返す', () => {
+    it('通常のトークンの場合は false を返す', async () => {
       // Given: 通常のトークン
-      const realToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+      const realToken = await createMockJwt({ sub: '1234567890' });
 
       // When: トークン検証を実行
       const result = mockProvider.validateToken(realToken);
@@ -63,9 +64,8 @@ describe('MockAuthProvider', () => {
 
     it('JWT形式のトークンでは失敗する（モックトークンのみ許可）', async () => {
       // Given: JWT形式のトークン（モックではない）
-      const hashParams = new URLSearchParams(
-        'access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U',
-      );
+      const jwtToken = await createMockJwt({ sub: '1234567890' });
+      const hashParams = new URLSearchParams(`access_token=${jwtToken}`);
 
       // When & Then: モックトークンではないため失敗
       await expect(mockProvider.handleCallback(hashParams)).rejects.toThrow(
