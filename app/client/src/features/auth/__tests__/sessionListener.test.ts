@@ -3,12 +3,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import * as sessionPersistenceModule from '@/features/auth/services/sessionPersistence';
 import { authSlice } from '@/features/auth/store/authSlice';
 import { authListenerMiddleware } from '@/features/auth/store/sessionListener';
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@/features/auth/types/auth';
 
 describe('sessionListener', () => {
   let store: ReturnType<typeof configureStore>;
   let saveSpy: ReturnType<typeof mock>;
   let clearSpy: ReturnType<typeof mock>;
+  let originalSave: typeof sessionPersistenceModule.sessionPersistence.save;
+  let originalClear: typeof sessionPersistenceModule.sessionPersistence.clear;
 
   const mockUser: User = {
     id: 'test-user-id',
@@ -23,7 +25,11 @@ describe('sessionListener', () => {
   };
 
   beforeEach(() => {
-    // sessionPersistenceのメソッドをモック化
+    // 元の実装を保存
+    originalSave = sessionPersistenceModule.sessionPersistence.save;
+    originalClear = sessionPersistenceModule.sessionPersistence.clear;
+
+    // sessionPersistence のメソッドをモック化
     saveSpy = mock(() => {});
     clearSpy = mock(() => {});
     sessionPersistenceModule.sessionPersistence.save = saveSpy;
@@ -40,48 +46,48 @@ describe('sessionListener', () => {
   });
 
   afterEach(() => {
+    // 元の実装を復元
+    sessionPersistenceModule.sessionPersistence.save = originalSave;
+    sessionPersistenceModule.sessionPersistence.clear = originalClear;
     mock.restore();
   });
 
-  it('authSuccess時にLocalStorageへ保存される', async () => {
-    // When: authSuccessアクションをディスパッチ
+  it('authSuccess時にLocalStorageへ保存される', () => {
+    // Given: 初期状態
+
+    // When: authSuccess アクションをディスパッチ
     store.dispatch(
       authSlice.actions.authSuccess({ user: mockUser, isNewUser: false }),
     );
 
-    // Then: 非同期処理を待機してsessionPersistence.saveが呼ばれる
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Then: sessionPersistence.save が呼ばれる
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(saveSpy).toHaveBeenCalledWith(mockUser);
   });
 
-  it('logout時にLocalStorageがクリアされる', async () => {
+  it('logout時にLocalStorageがクリアされる', () => {
     // Given: 認証済み状態
     store.dispatch(
       authSlice.actions.authSuccess({ user: mockUser, isNewUser: false }),
     );
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // When: logoutアクションをディスパッチ
+    // When: logout アクションをディスパッチ
     store.dispatch(authSlice.actions.logout());
 
-    // Then: sessionPersistence.clearが呼ばれる
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Then: sessionPersistence.clear が呼ばれる
     expect(clearSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('handleExpiredToken時にLocalStorageがクリアされる', async () => {
+  it('handleExpiredToken時にLocalStorageがクリアされる', () => {
     // Given: 認証済み状態
     store.dispatch(
       authSlice.actions.authSuccess({ user: mockUser, isNewUser: false }),
     );
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // When: handleExpiredTokenアクションをディスパッチ
+    // When: handleExpiredToken アクションをディスパッチ
     store.dispatch(authSlice.actions.handleExpiredToken());
 
-    // Then: sessionPersistence.clearが呼ばれる
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Then: sessionPersistence.clear が呼ばれる
     expect(clearSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -98,7 +104,17 @@ describe('sessionListener', () => {
     // Then: Reducer内では副作用が実行されない（Listenerで実行される）
     expect(state.isAuthenticated).toBe(true);
     expect(state.user).toEqual(mockUser);
-    // Listenerは非同期で実行されるため、この時点ではまだ呼ばれていない
     expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it('無関係なアクションではLocalStorageに影響しない', () => {
+    // Given: 初期状態
+
+    // When: authStart アクションをディスパッチ（副作用を持たないアクション）
+    store.dispatch(authSlice.actions.authStart());
+
+    // Then: sessionPersistence が呼ばれない
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(clearSpy).not.toHaveBeenCalled();
   });
 });

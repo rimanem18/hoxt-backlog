@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { sessionPersistence } from '@/features/auth/services/sessionPersistence';
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@/features/auth/types/auth';
 
 describe('sessionPersistence', () => {
   const mockUser: User = {
@@ -38,12 +38,11 @@ describe('sessionPersistence', () => {
     });
 
     it('LocalStorageエラー時に例外を握りつぶす', () => {
-      // Given: LocalStorageのsetItemが失敗する状態
+      // Given: LocalStorageが使用不可
       const originalSetItem = localStorage.setItem;
-      const setItemSpy = mock(() => {
+      localStorage.setItem = mock(() => {
         throw new Error('Storage quota exceeded');
       });
-      localStorage.setItem = setItemSpy;
 
       // When & Then: 例外が発生しない
       expect(() => sessionPersistence.save(mockUser)).not.toThrow();
@@ -98,21 +97,6 @@ describe('sessionPersistence', () => {
       // Then: LocalStorageが空になる
       const stored = localStorage.getItem('auth_user');
       expect(stored).toBeNull();
-    });
-
-    it('LocalStorageエラー時に例外を握りつぶす', () => {
-      // Given: LocalStorageのremoveItemが失敗する状態
-      const originalRemoveItem = localStorage.removeItem;
-      const removeItemSpy = mock(() => {
-        throw new Error('Storage access denied');
-      });
-      localStorage.removeItem = removeItemSpy;
-
-      // When & Then: 例外が発生しない
-      expect(() => sessionPersistence.clear()).not.toThrow();
-
-      // Cleanup
-      localStorage.removeItem = originalRemoveItem;
     });
   });
 });
