@@ -204,7 +204,7 @@ docker compose run --rm semgrep semgrep scan --config=auto app/client/src
 
 ### Phase 2: アーキテクチャ改善
 
-#### - [ ]  Task 2.1: DIコンテナからテストモックの除去
+#### - [x]  Task 2.1: DIコンテナからテストモックの除去
 
 **ファイル**: `app/server/src/infrastructure/di/AuthDIContainer.ts:6-40`
 
@@ -212,35 +212,46 @@ docker compose run --rm semgrep semgrep scan --config=auto app/client/src
 **違反**: クリーンアーキテクチャの境界原則
 
 **修正内容**:
-1. テスト用DIコンテナを `AuthDIContainer.test.ts` に分離
+1. テスト用DIコンテナを `__tests__/AuthDIContainer.test.ts` に分離
 2. 本番コードから `__tests__` のimportを完全削除
 3. モック生成ヘルパーを `test-helpers/` に移動
+4. 既存テストのimportパスを更新
+5. tsconfig/ビルド設定でtest-onlyパスが本番ビルドから除外されていることを確認
 
+**実装方針**: DIRECT
 **優先度**: 🟡 High
 **見積もり**: 45分
 
 ---
 
-#### - [ ]  Task 2.2: 未使用sessionPersistenceの削除または統合
+#### - [x]  Task 2.2: 未使用sessionPersistenceの削除または統合
 
 **ファイル**: `app/client/src/features/auth/services/sessionPersistence.ts:3-62`
 
-**問題**: `auth_user` に書き込むが、誰も読まない
+**問題**: `auth_user` に書き込むが、誰も読まない（デッドコード）
 
-**修正内容**（2つの選択肢）:
-- **選択肢A**: 完全削除（推奨）
-- **選択肢B**: 復元ロジックと統合し、実際に使用する設計に変更
+**修正内容**（選択肢A: 完全削除を実施）:
+1. `sessionPersistence.ts` の完全削除
+2. import参照の検索（barrel files含む）
+3. 型チェックで未使用確認
+4. tree-shaking検証
 
+**実装方針**: DIRECT
 **優先度**: 🟡 High
-**見積もり**: 30分（選択肢A）/ 60分（選択肢B）
+**見積もり**: 30分
 
 ---
 
-#### - [ ]  Task 2.3: サーバー側環境変数の検証レイヤー追加
+#### - [x]  Task 2.3: サーバー側環境変数の検証レイヤー追加
 
 **ファイル**: `app/server/src/infrastructure/config/env.ts:1-64`
 
 **修正内容**:
+1. `validateEnv()` 関数の実装
+2. `app/server/src/index.ts` でSupabase初期化**前**に呼び出し
+3. テストで `process.env` のスナップショット/復元を実装
+4. 必須環境変数: `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `DATABASE_URL`
+
 ```typescript
 export const validateEnv = (): void => {
   const required = [
@@ -257,23 +268,27 @@ export const validateEnv = (): void => {
     );
   }
 };
-
-// app/server/src/index.ts の起動時に呼び出し
-validateEnv();
 ```
 
+**実装方針**: TDD
 **優先度**: 🟡 High
 **見積もり**: 30分
 
 ---
 
-#### - [ ]  Task 2.4: クライアント側環境変数の検証レイヤー追加
+#### - [x]  Task 2.4: クライアント側環境変数の検証レイヤー追加
 
 **ファイル**: `app/client/src/app/provider.tsx`
 
 **修正内容**:
+1. `validateClientEnv()` 関数の実装
+2. Provider初期化時に実行（SSR/ブラウザ両対応）
+3. `NODE_ENV` の実行時定義確認
+4. CIでのconsole.error検出確認
+5. Next.js静的生成時の実行タイミング考慮
+6. 必須環境変数: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`
+
 ```typescript
-// Provider初期化時に検証
 const validateClientEnv = (): void => {
   const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
@@ -293,6 +308,7 @@ const validateClientEnv = (): void => {
 };
 ```
 
+**実装方針**: TDD
 **優先度**: 🟡 High
 **見積もり**: 20分
 
