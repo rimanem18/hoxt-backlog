@@ -13,6 +13,22 @@ import {
 } from './authProviderInterface';
 
 /**
+ * ドメイン文字列を正規化する
+ * プロトコル、www、空白、末尾スラッシュを削除し、小文字化する
+ *
+ * @param domain - 正規化対象のドメイン文字列
+ * @returns 正規化されたドメイン文字列
+ */
+export function normalizeDomain(domain: string): string {
+  return domain
+    .trim() // 前後空白除去
+    .replace(/^https?:\/\//i, '') // プロトコル除去（ケースインセンシティブ）
+    .replace(/^www\./i, '') // www. 除去（ケースインセンシティブ）
+    .replace(/\/$/, '') // 末尾スラッシュ除去
+    .toLowerCase(); // 小文字化
+}
+
+/**
  * Google OAuth認証プロバイダー。
  * オープンリダイレクト脆弱性対策とパフォーマンス最適化を実装。
  *
@@ -55,7 +71,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       process.env.NEXT_PUBLIC_TRUSTED_DOMAINS,
     );
     this.trustedDomains = new Set(
-      trusted_domains_raw.map((domain) => domain.toLowerCase()),
+      trusted_domains_raw.map((domain) => normalizeDomain(domain)),
     );
   }
 
@@ -87,18 +103,18 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       throw new Error('許可されていないプロトコルです');
     }
 
-    // ホスト名を小文字に正規化してケースインセンシティブ攻撃を防ぐ
-    const redirectHostname = parsedUrl.hostname.toLowerCase();
+    // ホスト名（ポート含む）を小文字に正規化してケースインセンシティブ攻撃を防ぐ
+    const redirectHost = parsedUrl.host.toLowerCase();
 
     // 信頼ドメインリストとの厳密な照合でオープンリダイレクト攻撃を防止
     const isTrusted = Array.from(this.trustedDomains).some((trustedDomain) => {
-      // 完全一致チェック
-      if (redirectHostname === trustedDomain) {
+      // 完全一致チェック（ポート含む）
+      if (redirectHost === trustedDomain) {
         return true;
       }
       // 正規のサブドメインかチェック（evil.com.trusted.comのような偽装を防ぐ）
-      if (redirectHostname.endsWith(`.${trustedDomain}`)) {
-        return redirectHostname.length > trustedDomain.length + 1;
+      if (redirectHost.endsWith(`.${trustedDomain}`)) {
+        return redirectHost.length > trustedDomain.length + 1;
       }
       return false;
     });

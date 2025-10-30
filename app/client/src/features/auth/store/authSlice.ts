@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 
 /**
  * 認証状態を管理するRedux Toolkit slice。
@@ -149,7 +150,8 @@ export const authSlice = createSlice({
 
       // 認証失敗時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
+        const storageKey = getSupabaseStorageKey();
+        localStorage.removeItem(storageKey);
       }
     },
 
@@ -182,7 +184,8 @@ export const authSlice = createSlice({
 
       // セキュリティクリアランス時もLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
+        const storageKey = getSupabaseStorageKey();
+        localStorage.removeItem(storageKey);
       }
 
       // セキュリティクリアランス用のログ

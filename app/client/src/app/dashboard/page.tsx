@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { UserProfile } from '@/features/auth/components/UserProfile';
 import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
+import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
@@ -69,14 +70,17 @@ export default function DashboardPage(): React.ReactNode {
   // JWT期限切れの監視のみを実行（認証状態復元はprovider.tsxで実施）
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedAuthData = localStorage.getItem('sb-localhost-auth-token');
+      const storageKey = getSupabaseStorageKey();
+      const savedAuthData = localStorage.getItem(storageKey);
       if (savedAuthData) {
         try {
           const parsedAuthData = JSON.parse(savedAuthData);
           const expiresAt = Number(parsedAuthData.expires_at);
 
           // 期限切れチェックのみ実行
-          if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+          // expires_atは秒単位なのでミリ秒に変換して比較
+          const expiresAtMs = expiresAt * 1000;
+          if (Number.isNaN(expiresAt) || expiresAtMs <= Date.now()) {
             handleTokenExpiration();
           }
         } catch {
