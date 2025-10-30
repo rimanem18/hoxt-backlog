@@ -78,3 +78,25 @@ export function getDatabaseConfig(): DatabaseConfig {
 export function validateConfig(): void {
   getDatabaseConfig();
 }
+
+/**
+ * 認証関連の環境変数を検証する
+ *
+ * アプリケーション起動時（Supabase初期化前）に呼び出され、
+ * 必要な環境変数がすべて設定されているかを確認する。
+ *
+ * @throws 必須環境変数が不足している場合の詳細エラー
+ */
+export function validateEnv(): void {
+  const required = ['SUPABASE_URL', 'SUPABASE_JWT_SECRET', 'DATABASE_URL'];
+
+  const missing = required.filter(
+    (key) => !process.env[key] || process.env[key]?.trim() === '',
+  );
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`,
+    );
+  }
+}

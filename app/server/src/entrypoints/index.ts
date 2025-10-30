@@ -1,4 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { validateEnv } from '@/infrastructure/config/env';
 import { CloudWatchMonitoringService } from '@/infrastructure/monitoring/CloudWatchMonitoringService';
 import { createErrorHandler } from '@/presentation/http/middleware';
 import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
@@ -16,6 +17,12 @@ import { auth, docs, greet, health, user } from '@/presentation/http/routes';
  * 本番環境ではCloudWatch実装を注入できる（リスコフの置換原則）
  */
 const createServer = (): OpenAPIHono => {
+  // 環境変数検証（Supabase初期化前に実行）
+  // Why: 起動時に環境変数の不足を早期検出し、明確なエラーメッセージを提供
+  if (process.env.NODE_ENV !== 'test') {
+    validateEnv();
+  }
+
   const app = new OpenAPIHono();
 
   // 依存性注入: CloudWatch監視サービスをインスタンス化

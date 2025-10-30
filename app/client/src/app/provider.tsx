@@ -10,7 +10,11 @@ import {
   restoreAuthState,
 } from '@/features/auth/store/authSlice';
 import { validateStoredAuth } from '@/shared/utils/authValidation';
+import { validateClientEnv } from '@/shared/utils/validateClientEnv';
 import { store } from '@/store';
+
+// Provider初期化時に環境変数を検証
+validateClientEnv();
 
 type ProviderProps = {
   children: React.ReactNode;
