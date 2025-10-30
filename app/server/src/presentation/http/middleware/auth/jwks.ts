@@ -13,12 +13,17 @@ import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
  * JWKS (JSON Web Key Set) を使用したRS256/ES256署名検証
  *
  * @param token Bearer認証で送信されたJWTトークン
+ * @param authProvider オプショナル: カスタムAuthProvider（テスト時のモック注入）
  * @returns 検証済みのJWTペイロード
  * @throws Error 認証失敗時
  */
-export async function verifyJWT(token: string): Promise<JWTPayload> {
+export async function verifyJWT(
+  token: string,
+  authProvider?: IAuthProvider,
+): Promise<JWTPayload> {
   try {
-    const verifier: IAuthProvider = AuthDIContainer.getAuthProvider();
+    const verifier: IAuthProvider =
+      authProvider || AuthDIContainer.getAuthProvider();
     const result = await verifier.verifyToken(token);
 
     if (result.valid && result.payload) {
