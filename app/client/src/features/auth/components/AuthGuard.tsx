@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
+import { useAuthValidation } from '../hooks/useAuthValidation';
 
 /**
  * 認証保護コンポーネント
@@ -13,6 +14,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     (state) => state.auth,
   );
   const router = useRouter();
+
+  // 保護されたページのマウント時にlocalStorageの認証情報を検証
+  useAuthValidation();
 
   useEffect(() => {
     // 認証状態復元が完了していて、未認証またはトークン期限切れの場合のみリダイレクト
