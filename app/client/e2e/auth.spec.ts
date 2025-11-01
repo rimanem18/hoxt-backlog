@@ -197,6 +197,9 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
 
     await page.addInitScript(({ userData, key, expiresAt }) => {
+      // addInitScript実行確認フラグ
+      window.__TEST_INIT_SCRIPT_RAN__ = true;
+
       const mockExpiredJwt = [
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
         'eyJzdWIiOiJleHBpcmVkLXVzZXItOTk5IiwiZXhwIjoxfQ', // Payload: expired
@@ -224,22 +227,19 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
     await expect(loginButton).toBeVisible();
 
+    // addInitScriptが実行されたことを確認
+    const scriptRan = await page.evaluate(() => window.__TEST_INIT_SCRIPT_RAN__);
+    expect(scriptRan).toBe(true);
+
     // 期限切れトークンがlocalStorageに残っていることを確認
-    const debugInfo = await page.evaluate(({ key }) => {
+    // （リダイレクト後の/ページではuseAuthValidationが実行されないため削除されない）
+    const finalState = await page.evaluate(({ key }) => {
       const authData = localStorage.getItem(key);
-      // すべてのlocalStorageキーを確認
-      const allKeys = Object.keys(localStorage);
-      return {
-        requestedKey: key,
-        allKeys: allKeys,
-        authData: authData ? JSON.parse(authData) : null,
-      };
+      return authData ? JSON.parse(authData) : null;
     }, { key: storageKey });
 
-    console.log('[T006 Debug]', JSON.stringify(debugInfo, null, 2));
-
-    expect(debugInfo.authData).toBeTruthy();
-    expect(debugInfo.authData.expires_at).toBeDefined();
+    expect(finalState).toBeTruthy();
+    expect(finalState.expires_at).toBeDefined();
   });
 
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
