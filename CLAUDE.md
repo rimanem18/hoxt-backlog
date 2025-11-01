@@ -294,46 +294,20 @@ docker compose exec client bun test
 
 ### 運用指針詳細
 
-#### 【必須】項目
-- **`bun:test`の組込みAPIのみ使用**: `describe` / `it` / `expect` / `mock` / `spyOn`
-- **`user-event`を標準とする**: `fireEvent`は禁止、実際のユーザー操作を忠実に再現
-- **ユーザー中心のクエリ使用**: React Testing Libraryのクエリ優先順位に従う
-  1. `getByRole`（最優先・アクセシビリティ）
-  2. `getByLabelText`（フォーム要素）
-  3. `getByPlaceholderText`
-  4. `getByText`
-  5. `getByTestId`（最終手段）
-
-#### 【推奨】項目
-- **テスト終了時のクリーンアップ**: `mock.restore()`と`mock.clearAllMocks()`
-- **依存注入を優先**: DI可能な設計を心がけ、必要な差し替えは`mock()` / `spyOn()`
-- **カスタムマッチャー活用**: 共通マッチャーは`__tests__/helpers`に配置
-- **DIパターンでのモック生成**: テストごとに新しいモックを生成
-
-```ts
-type MockUserService = {
-  getUserProfile: Mock<[string], Promise<User>>;
-};
-
-let testUserService: MockUserService;
-
-beforeEach(() => {
-  testUserService = {
-    getUserProfile: mock().mockName("getUserProfile"),
-  };
-});
-```
-
-#### 【非推奨】項目
-- **`mock.module()`の使用**: DI不可能な外部依存のみに限定
-- **`data-testid`の使用**: ユーザー中心のクエリを優先
-- **動的importの使用**: テストの複雑さを増やす
-
-#### 【禁止】項目
-- **`jest`名前空間の使用**: `@jest/*`, `@types/jest`, Jestエコシステムの導入禁止
-- **テストの`.skip`**: 意図的な未実装はTODOコメントで対応
-- **`fireEvent`の使用**: `@testing-library/user-event`で代用
-- **`as unknown as`などの乱暴なキャスト**: 型安全性を損なう
+- **必須**: `bun:test`の組込みAPIのみ使用（`describe` / `it` / `expect` / `mock` / `spyOn`）
+- **必須**: `user-event`を標準とする（`fireEvent`は禁止）
+- **必須**: ユーザー中心のクエリ使用（`getByRole` > `getByLabelText` > `getByPlaceholderText` > `getByText` > `getByTestId`）
+- **推奨**: テスト終了時のクリーンアップ（`mock.restore()`と`mock.clearAllMocks()`）
+- **推奨**: 依存注入を優先（DI可能な設計、差し替えは`mock()` / `spyOn()`）
+- **推奨**: カスタムマッチャー活用（共通マッチャーは`__tests__/helpers`に配置）
+- **推奨**: DIパターンでのモック生成（テストごとに新しいモックを生成）
+- **非推奨**: `mock.module()`の使用（DI不可能な外部依存のみに限定）
+- **非推奨**: `data-testid`の使用（ユーザー中心のクエリを優先）
+- **非推奨**: 動的importの使用
+- **禁止**: `jest`名前空間の使用（`@jest/*`, `@types/jest`, Jestエコシステム）
+- **禁止**: テストの`.skip`（意図的な未実装はTODOコメント）
+- **禁止**: `fireEvent`の使用（`@testing-library/user-event`で代用）
+- **禁止**: `as unknown as`などの乱暴なキャスト
 
 ### 依存と型
 - `bun test`を前提とし、追加のテスティングランタイムは導入しない
@@ -380,130 +354,15 @@ docker compose exec e2e npx playwright test
 
 ### 運用指針詳細
 
-#### 【必須】項目
-
-##### storageState APIの使用
-ブラウザコンテキストの初期状態（認証情報など）を設定する際は、`storageState` APIを使用します。
-
-```typescript
-const context = await browser.newContext({
-  storageState: {
-    cookies: [],
-    origins: [
-      {
-        origin: baseURL,
-        localStorage: [
-          { name: 'auth-token', value: JSON.stringify(authData) }
-        ],
-      },
-    ],
-  },
-});
-
-const page = await context.newPage();
-```
-
-**理由**: ハイドレーション前に確実に設定され、レース条件を根本的に回避します。
-
-##### Locatorsの優先利用
-要素の特定には`page.locator()`を使用し、自動待機機能を活用します。
-
-```typescript
-const button = page.locator('button[role="submit"]');
-await button.click(); // 自動で要素が利用可能になるまで待機
-```
-
-##### Web First Assertions
-Playwrightが提供する自動リトライ付きアサーションを使用します。
-
-```typescript
-await expect(page.getByRole('heading')).toBeVisible();
-```
-
-**禁止**: `expect(await locator.isVisible()).toBe(true)` のような手動待機
-
-##### テスト独立性の確保
-`test.afterEach`でクリーンアップを徹底します。
-
-```typescript
-test.afterEach(async ({ page }) => {
-  await page.unrouteAll();
-  await page.evaluate(() => localStorage.clear());
-});
-```
-
-#### 【推奨】項目
-
-##### リダイレクト検証はDOM要素待機
-URLの変更を待つだけでなく、リダイレクト後のページ要素の表示を待機します。
-
-```typescript
-// ❌ 非推奨: ハイドレーション完了を保証しない
-await page.waitForURL('/dashboard');
-
-// ✅ 推奨: UIが操作可能になったことを確認
-await expect(page.getByRole('button', { name: /ログイン/i }))
-  .toBeVisible({ timeout: 15000 });
-await expect(page).toHaveURL('/dashboard');
-```
-
-**理由**: Next.jsなどのフレームワークでは、URL変更後もハイドレーションやデータ取得が続き、UIが操作可能になるまでタイムラグがあります。
-
-##### APIによるテストデータセットアップ
-テストに必要なデータは、UI操作ではなくAPIを直接呼び出して準備します。
-
-```typescript
-// テスト前にAPIでデータ準備
-await request.post('/api/test-data', { data: testUser });
-```
-
-**理由**: テストが高速化し、UIの変更から隔離されます。
-
-##### Trace Viewerの積極的活用
-CI失敗時のデバッグを効率化するため、トレース記録を設定します。
-
-```typescript
-// playwright.config.ts
-use: {
-  trace: 'on-first-retry',
-  screenshot: 'only-on-failure',
-  video: 'retain-on-failure',
-}
-```
-
-**使用方法**:
-1. CIの成果物から`trace.zip`をダウンロード
-2. `npx playwright show-trace trace.zip`で確認
-
-#### 【非推奨】項目
-
-##### addInitScriptによるlocalStorage設定
-タイミング依存が発生しやすいため、`addInitScript`でのlocalStorage設定は避けます。
-
-```typescript
-// ❌ 非推奨: ハイドレーションと競合
-await page.addInitScript(() => {
-  localStorage.setItem('key', 'value');
-});
-```
-
-**代替**: `storageState` APIを使用
-
-#### 【禁止】項目
-
-##### ハイドレーションタイミングへの依存
-固定の待機時間やハイドレーション完了タイミングに依存するコードは禁止です。
-
-```typescript
-// ❌ 禁止: CI環境で不安定
-await page.waitForTimeout(1000);
-```
-
-**代替**: DOM要素の出現を待機
-```typescript
-// ✅ 正しい
-await expect(page.getByRole('heading')).toBeVisible();
-```
+- **必須**: `storageState` APIの使用（ハイドレーション前に確実に設定、レース条件回避）
+- **必須**: Locatorsの優先利用（`page.locator()`で自動待機機能を活用）
+- **必須**: Web First Assertions（`expect(locator).toBeVisible()`で自動リトライ）
+- **必須**: テスト独立性の確保（`test.afterEach`でクリーンアップ徹底）
+- **推奨**: リダイレクト検証はDOM要素待機（`waitForURL()`だけでなくページ要素の表示も待機）
+- **推奨**: APIによるテストデータセットアップ（UI操作ではなくAPI直接呼び出し）
+- **推奨**: Trace Viewerの積極的活用（`trace: 'on-first-retry'`設定、CI失敗時の視覚的デバッグ）
+- **非推奨**: `addInitScript`によるlocalStorage設定（タイミング依存、ハイドレーション競合）
+- **禁止**: ハイドレーションタイミングへの依存（`waitForTimeout()`など固定待機時間は禁止）
 
 ### CI環境への配慮
 - **直列実行**: `workers: 1`で安定性重視（`playwright.config.ts`）
@@ -515,7 +374,84 @@ await expect(page.getByRole('heading')).toBeVisible();
 1. **ローカル**: `npx playwright test --debug`で実行
 2. **CI失敗時**: Trace Viewerでartifactを確認
 3. **視覚的確認**: スクリーンショット・動画を活用
-4. **ヘッドフルモード**: `npx playwright test --headed`で実際のブラウザ動作確認  
+4. **ヘッドフルモード**: `npx playwright test --headed`で実際のブラウザ動作確認
+
+---
+
+## 実装パターン例
+
+### フロントエンドユニット/統合テスト
+
+#### DIパターンでのモック生成
+```typescript
+type MockUserService = {
+  getUserProfile: Mock<[string], Promise<User>>;
+};
+
+let testUserService: MockUserService;
+
+beforeEach(() => {
+  testUserService = {
+    getUserProfile: mock().mockName("getUserProfile"),
+  };
+});
+```
+
+### E2Eテスト（Playwright）
+
+#### storageState APIの使用
+```typescript
+const context = await browser.newContext({
+  storageState: {
+    cookies: [],
+    origins: [{
+      origin: baseURL,
+      localStorage: [
+        { name: 'auth-token', value: JSON.stringify(authData) }
+      ],
+    }],
+  },
+});
+const page = await context.newPage();
+```
+
+#### リダイレクト検証の正しい書き方
+```typescript
+// ❌ 非推奨: ハイドレーション完了を保証しない
+await page.waitForURL('/dashboard');
+
+// ✅ 推奨: UIが操作可能になったことを確認
+await expect(page.getByRole('button', { name: /ログイン/i }))
+  .toBeVisible({ timeout: 15000 });
+await expect(page).toHaveURL('/dashboard');
+```
+
+#### ハイドレーション待機の正しい書き方
+```typescript
+// ❌ 禁止: 固定待機時間
+await page.waitForTimeout(1000);
+
+// ✅ 正しい: DOM要素の出現を待機
+await expect(page.getByRole('heading')).toBeVisible();
+```
+
+#### テスト独立性の確保
+```typescript
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll();
+  await page.evaluate(() => localStorage.clear());
+});
+```
+
+#### Trace Viewerの設定
+```typescript
+// playwright.config.ts
+use: {
+  trace: 'on-first-retry',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+}
+```
 
 # コメントガイドライン
 
