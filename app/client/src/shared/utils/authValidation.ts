@@ -7,6 +7,38 @@
 import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
+ * 環境に応じたSupabaseストレージキーを動的に生成
+ *
+ * @returns Supabaseセッションストレージキー
+ */
+export function getSupabaseStorageKey(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  // デバッグログ（開発環境のみ）
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    console.log('[getSupabaseStorageKey] NEXT_PUBLIC_SUPABASE_URL:', url);
+  }
+
+  if (!url) return 'sb-localhost-auth-token';
+
+  // .supabase.co, .supabase.net, カスタムドメイン対応
+  const projectRef = url.match(
+    /https:\/\/(.+?)\.(?:supabase\.(?:co|net)|[^/]+)/,
+  )?.[1];
+
+  const key = projectRef
+    ? `sb-${projectRef}-auth-token`
+    : 'sb-localhost-auth-token';
+
+  // デバッグログ（開発環境のみ）
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    console.log('[getSupabaseStorageKey] Generated key:', key);
+  }
+
+  return key;
+}
+
+/**
  * 認証データの基本構造を定義
  * localStorage から取得される認証データの型定義
  */
@@ -50,7 +82,8 @@ export function validateStoredAuth(): AuthValidationResult {
   try {
     // localStorage からの認証データ取得
     // データ不存在の場合は早期リターン
-    const persistedState = localStorage.getItem('sb-localhost-auth-token');
+    const storageKey = getSupabaseStorageKey();
+    const persistedState = localStorage.getItem(storageKey);
     if (!persistedState) {
       return {
         isValid: false,
@@ -84,7 +117,9 @@ export function validateStoredAuth(): AuthValidationResult {
     // 期限切れトークンの使用を防止
     const expiresAt = authData.expires_at as number;
     const currentTime = Date.now();
-    if (expiresAt <= currentTime) {
+    // expires_atは秒単位なのでミリ秒に変換して比較
+    const expiresAtMs = expiresAt * 1000;
+    if (expiresAtMs <= currentTime) {
       return {
         isValid: false,
         reason: 'expired',
@@ -92,17 +127,14 @@ export function validateStoredAuth(): AuthValidationResult {
     }
 
     // access_token の存在と形式確認
-    // 無効トークン文字列の検出
     // 基本的なJWT形式（3つのパート）の確認
     const tokenExists = !!authData.access_token;
     const tokenIsString = typeof authData.access_token === 'string';
     const tokenHasThreeParts =
       authData.access_token && authData.access_token.split('.').length === 3;
-    const tokenNotInvalid =
-      authData.access_token && !authData.access_token.includes('INVALID');
 
     const isValidAccessToken =
-      tokenExists && tokenIsString && tokenHasThreeParts && tokenNotInvalid;
+      tokenExists && tokenIsString && tokenHasThreeParts;
 
     if (!isValidAccessToken) {
       return {
@@ -166,7 +198,8 @@ export function getAuthErrorMessage(reason: string): string {
  */
 export function clearStoredAuth(): void {
   try {
-    localStorage.removeItem('sb-localhost-auth-token');
+    const storageKey = getSupabaseStorageKey();
+    localStorage.removeItem(storageKey);
   } catch (error) {
     // localStorage へのアクセス失敗時も安全に処理
     console.error('認証データクリア中にエラーが発生:', error);

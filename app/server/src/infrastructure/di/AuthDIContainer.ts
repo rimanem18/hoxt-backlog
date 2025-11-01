@@ -3,8 +3,6 @@ import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseC
 import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { AuthenticationDomainService } from '@/domain/services/AuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
-import { MockAuthProvider } from '@/infrastructure/auth/__tests__/MockAuthProvider';
-import { MockJwtVerifier } from '@/infrastructure/auth/__tests__/MockJwtVerifier';
 import { SupabaseJwtVerifier } from '@/infrastructure/auth/SupabaseJwtVerifier';
 import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
 import type { Logger } from '@/shared/logging/Logger';
@@ -32,6 +30,7 @@ export class AuthDIContainer {
    * 【設計方針】: シングルトンパターンで効率的なインスタンス管理
    * 【パフォーマンス】: 必要時のみインスタンス生成（遅延初期化）
    * 【保守性】: 依存関係の注入を一箇所に集約
+   * 【注意】: テスト環境では使用不可（getAuthProvider()がエラーを投げる）
    * 🟢 信頼性レベル: 既存実装を踏襲した安定性重視の実装
    */
   static getAuthenticateUserUseCase(): AuthenticateUserUseCase {
@@ -106,35 +105,39 @@ export class AuthDIContainer {
 
   /**
    * 【機能概要】: AuthProviderの共有インスタンスを返す
-   * 【改善内容】: JWKS検証器を標準として使用
-   * 【設計方針】: テスト環境ではMock、本番環境ではJWKS検証を使用
+   * 【改善内容】: クリーンアーキテクチャの境界原則に準拠し、本番コードからテストモックを分離
+   * 【設計方針】: 本番・開発環境ではJWKS検証を使用。テスト環境では明示的注入が必要
    * 【パフォーマンス】: 重複インスタンス生成を防止
    * 【保守性】: 認証関連設定を一箇所で管理
    * 🟢 信頼性レベル: JWKS (JSON Web Key Set) 検証による高セキュリティ実装
    */
   public static getAuthProvider(): IAuthProvider {
-    if (!AuthDIContainer.authProviderInstance) {
-      // テスト環境またはCI環境ではモック検証器を使用
-      if (process.env.NODE_ENV === 'test' || process.env.CI === 'true') {
-        // JWT検証の種類によってモック選択
-        if (process.env.TEST_USE_JWKS_MOCK === 'true') {
-          AuthDIContainer.authProviderInstance = new MockJwtVerifier();
-        } else {
-          AuthDIContainer.authProviderInstance = new MockAuthProvider();
-        }
-      } else {
-        // 本番・開発環境ではJWKS検証器を使用
-        AuthDIContainer.authProviderInstance = new SupabaseJwtVerifier();
-      }
+    // テスト環境で明示的に設定されたプロバイダーがあればそれを返す
+    if (AuthDIContainer.authProviderInstance) {
+      return AuthDIContainer.authProviderInstance;
     }
+
+    // テスト環境ではsetAuthProviderForTesting()で明示的に注入すべき
+    // 注: CI環境でもE2E/smoke testで実際の認証を使う場合があるため、NODE_ENV=testのみチェック
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(
+        'AuthDIContainer.getAuthProvider() cannot be used in test environment. ' +
+          'Please use AuthDIContainer.setAuthProviderForTesting() to inject a mock IAuthProvider.',
+      );
+    }
+
+    // 本番・開発・CI環境ではJWKS検証器を使用
+    AuthDIContainer.authProviderInstance = new SupabaseJwtVerifier();
 
     return AuthDIContainer.authProviderInstance;
   }
 
   /**
    * 【機能概要】: テスト用のインスタンスリセット機能
-   * 【使用目的】: 統合テスト実行時のDI設定を環境変数に基づいて再初期化
-   * 🔧 信頼性レベル: テスト環境での動的プロバイダー切り替えサポート
+   * 【使用目的】: 統合テスト実行時のDI設定をリセット
+   * 【注意】: テスト環境ではgetAuthProvider()がエラーを投げるため、
+   *          モックAuthProviderは明示的にDI注入すること
+   * 🔧 信頼性レベル: テスト環境専用機能
    */
   public static resetForTesting(): void {
     if (process.env.NODE_ENV !== 'test') {
@@ -146,6 +149,35 @@ export class AuthDIContainer {
     AuthDIContainer.userRepositoryInstance = null;
     AuthDIContainer.authProviderInstance = null;
     AuthDIContainer.loggerInstance = null;
+  }
+
+  /**
+   * 【機能概要】: テスト用のAuthProviderを明示的に設定
+   * 【使用目的】: 統合テスト実行時にモックAuthProviderを注入
+   * 【注意】: テスト環境専用。本番環境では使用不可
+   * 【重要】: このメソッド呼び出し後は、resetForTesting()を呼んで
+   *          キャッシュされたUseCaseを再生成することを推奨
+   * 🔧 信頼性レベル: テスト環境専用機能
+   */
+  public static setAuthProviderForTesting(provider: IAuthProvider): void {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error(
+        'setAuthProviderForTesting is only available in test environment',
+      );
+    }
+
+    AuthDIContainer.authProviderInstance = provider;
+
+    // UseCase等のキャッシュがあれば警告
+    if (
+      AuthDIContainer.authenticateUserUseCaseInstance ||
+      AuthDIContainer.getUserProfileUseCaseInstance
+    ) {
+      console.warn(
+        '[AuthDIContainer] setAuthProviderForTesting: Cached UseCases detected. ' +
+          'Consider calling resetForTesting() first to avoid stale dependencies.',
+      );
+    }
   }
 
   /**

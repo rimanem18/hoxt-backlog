@@ -5,6 +5,7 @@
 
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
+import type { IAuthProvider } from '@/domain/services/IAuthProvider';
 import { AuthError } from '../errors/AuthError';
 import { verifyJWT } from './jwks';
 
@@ -17,6 +18,9 @@ export interface AuthMiddlewareOptions {
 
   // カスタムトークン取得関数（テスト時のモック認証で使用）
   getToken?: (c: Context) => string | null;
+
+  // カスタムAuthProvider（テスト時のモック注入で使用）
+  authProvider?: IAuthProvider;
 
   // テスト用モックペイロード（JWT検証をバイパス）
   mockPayload?: {
@@ -65,7 +69,8 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       }
 
       // JWT検証実行（テスト用モックペイロードがあれば使用）
-      const payload = options.mockPayload || (await verifyJWT(token));
+      const payload =
+        options.mockPayload || (await verifyJWT(token, options.authProvider));
 
       // ユーザーID抽出
       const userId = payload.sub;

@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 
 /**
  * 認証状態を管理するRedux Toolkit slice。
@@ -120,7 +121,6 @@ export const authSlice = createSlice({
 
     /**
      * 認証成功時の状態更新
-     * LocalStorageへの認証情報保存も実行
      *
      * @param state - 現在の認証状態
      * @param action - 認証成功時のユーザー情報を含むアクション
@@ -129,30 +129,10 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.isLoading = false;
-      state.isAuthRestoring = false; // 認証成功時は復元完了とみなす
+      state.isAuthRestoring = false;
       state.error = null;
       state.authError = null;
-
-      // LocalStorageに認証状態を保存してページリロード時に復元可能にする
-      if (typeof window !== 'undefined') {
-        // JWT形式（3部構成）のトークンを生成してauthValidation.tsとの互換性を保つ
-        const mockJwtToken = [
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // header
-          'eyJzdWIiOiJkZXYtdXNlciIsImV4cCI6OTk5OTk5OTk5OX0', // payload (dev user, long expiry)
-          'dev_signature', // signature
-        ].join('.');
-        const authData = {
-          access_token: mockJwtToken,
-          refresh_token: 'mock_refresh_token_for_test',
-          expires_at: Date.now() + 3600 * 1000, // 1時間後
-          user: action.payload.user,
-        };
-        localStorage.setItem(
-          'sb-localhost-auth-token',
-          JSON.stringify(authData),
-        );
-        console.log('Authentication state saved to localStorage');
-      }
+      // LocalStorage操作を削除（sessionListenerで処理）
     },
 
     /**
@@ -170,13 +150,13 @@ export const authSlice = createSlice({
 
       // 認証失敗時はLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
+        const storageKey = getSupabaseStorageKey();
+        localStorage.removeItem(storageKey);
       }
     },
 
     /**
      * ログアウト時の状態更新
-     * LocalStorageクリア機能も実行
      *
      * @param state - 現在の認証状態
      */
@@ -186,12 +166,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.authError = null;
-
-      // ログアウト時はLocalStorageから認証情報を削除
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
-        console.log('Authentication state cleared from localStorage');
-      }
+      // LocalStorage操作を削除（sessionListenerで処理）
     },
 
     /**
@@ -209,7 +184,8 @@ export const authSlice = createSlice({
 
       // セキュリティクリアランス時もLocalStorageから認証情報を削除
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
+        const storageKey = getSupabaseStorageKey();
+        localStorage.removeItem(storageKey);
       }
 
       // セキュリティクリアランス用のログ
@@ -245,87 +221,25 @@ export const authSlice = createSlice({
     },
 
     /**
-     * テスト用認証状態設定
-     * E2Eテスト専用の状態設定アクション
-     *
-     * @param state - 現在の認証状態
-     * @param action - テスト用の認証状態
-     */
-    setAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
-      // 開発環境とテスト環境でのみ使用可能
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('本番環境では setAuthState は使用できません');
-        return;
-      }
-
-      const { isAuthenticated, user, isLoading, error, authError } =
-        action.payload;
-      if (isAuthenticated !== undefined)
-        state.isAuthenticated = isAuthenticated;
-      if (user !== undefined) state.user = user;
-      if (isLoading !== undefined) state.isLoading = isLoading;
-      if (error !== undefined) state.error = error;
-      if (authError !== undefined) state.authError = authError;
-
-      // テスト用状態設定時もLocalStorageに保存
-      if (isAuthenticated && user && typeof window !== 'undefined') {
-        const mockJwt = [
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
-          'eyJzdWIiOiJ0ZXN0LXVzZXIiLCJleHAiOjk5OTk5OTk5OTl9', // Payload
-          'test_signature', // Signature
-        ].join('.');
-
-        const authData = {
-          access_token: mockJwt,
-          refresh_token: 'test_refresh_token',
-          expires_at: Date.now() + 3600 * 1000,
-          user: user,
-        };
-        localStorage.setItem(
-          'sb-localhost-auth-token',
-          JSON.stringify(authData),
-        );
-        console.log('Test authentication state saved to localStorage');
-      }
-    },
-
-    /**
      * JWT期限切れ専用のエラーハンドリング
+     *
      * トークン期限切れを検出した際に認証状態をクリアし、適切なエラー情報を設定
-     * 情報漏洩防止とセッションハイジャック対策を重視した設計
      *
      * @param state - 現在の認証状態
      */
     handleExpiredToken: (state) => {
-      // 認証状態の完全な初期化で情報漏洩防止
       state.isAuthenticated = false;
       state.user = null;
       state.isLoading = false;
-      state.isAuthRestoring = false; // 期限切れ検出で復元処理完了とみなす
+      state.isAuthRestoring = false;
       state.error = null;
 
-      // 期限切れ専用のエラー情報を適切な型で設定
-      // セキュリティインシデント追跡のための詳細情報保持
       state.authError = {
         code: 'EXPIRED',
         timestamp: Date.now(),
         message: 'セッションの有効期限が切れました',
       };
-
-      // LocalStorageからの期限切れトークン削除
-      // 不正使用防止のための確実なトークン削除
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-localhost-auth-token');
-        // 関連するセッション情報も削除
-        localStorage.removeItem('sb-localhost-refresh-token');
-        localStorage.removeItem('sb-localhost-auth-expires');
-        console.log('Expired authentication tokens removed from localStorage');
-      }
-
-      // インシデント追跡とセキュリティ分析のための詳細ログ
-      // セキュリティ要件に基づく適切な監査ログ出力
-      console.info('JWT token has expired and authentication state cleared');
-      console.info(`Expiration handled at ${new Date().toISOString()}`);
+      // LocalStorage操作とconsole.logを削除（sessionListenerで処理）
     },
   },
 });
@@ -336,7 +250,6 @@ export const {
   authFailure,
   logout,
   clearAuthState,
-  setAuthState,
   restoreAuthState,
   finishAuthRestore,
   handleExpiredToken,

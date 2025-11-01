@@ -14,6 +14,7 @@ import {
 } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import serverApp from '@/entrypoints';
+import { MockJwtVerifier } from '@/infrastructure/auth/__tests__/MockJwtVerifier';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 describe('GET /api/user/profile 統合テスト', () => {
@@ -22,10 +23,13 @@ describe('GET /api/user/profile 統合テスト', () => {
   beforeAll(async () => {
     // テスト環境変数を設定
     process.env.NODE_ENV = 'test';
-    process.env.TEST_USE_JWKS_MOCK = 'true'; // JWKSモックを使用
 
-    // DIコンテナをリセットして環境変数設定を反映
+    // DIコンテナをリセット
     AuthDIContainer.resetForTesting();
+
+    // モックAuthProviderを明示的に注入
+    const mockAuthProvider = new MockJwtVerifier();
+    AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
 
     // 本番サーバー実装を使用
     app = serverApp;

@@ -4,9 +4,10 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
+import { authSlice } from '@/features/auth/store/authSlice';
 import errorReducer from '@/features/auth/store/errorSlice';
 import oauthErrorReducer from '@/features/auth/store/oauthErrorSlice';
-import { authSlice } from '@/features/google-auth/store/authSlice';
+import { authListenerMiddleware } from '@/features/auth/store/sessionListener';
 
 /**
  * Redux Store構成
@@ -34,7 +35,7 @@ export const store = configureStore({
         // Redux Toolkitで問題となりうるアクションを除外
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }),
+    }).prepend(authListenerMiddleware.middleware),
 });
 
 /**

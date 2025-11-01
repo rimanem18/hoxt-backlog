@@ -120,8 +120,10 @@ export async function setMockAuthSession(
 ): Promise<void> {
   // ページが読み込まれてからLocalStorageにアクセス
   await page.goto('/');
-  
-  await page.evaluate((userData) => {
+
+  const storageKey = getSupabaseStorageKey();
+
+  await page.evaluate(({ userData, key }) => {
     try {
       const mockSession = {
         access_token: 'mock_jwt_token_for_e2e_test',
@@ -138,15 +140,12 @@ export async function setMockAuthSession(
         },
       };
 
-      // Supabaseが使用するLocalStorageキー
-      localStorage.setItem(
-        'sb-localhost-auth-token',
-        JSON.stringify(mockSession)
-      );
+      // Supabaseが使用するLocalStorageキー（環境に応じて動的生成）
+      localStorage.setItem(key, JSON.stringify(mockSession));
     } catch (error) {
       console.warn('LocalStorage設定に失敗:', error);
     }
-  }, user);
+  }, { userData: user, key: storageKey });
 }
 
 /**
@@ -171,6 +170,32 @@ export async function cleanupTestState(page: Page): Promise<void> {
   } catch (error) {
     console.warn('テスト状態クリーンアップに失敗:', error);
   }
+}
+
+/**
+ * Supabase LocalStorageキーを生成
+ * 
+ * 実装コード（authValidation.ts）と同じロジックでstorageKeyを生成する。
+ * 環境変数NEXT_PUBLIC_SUPABASE_URLからプロジェクト参照を抽出し、
+ * 適切なキー形式を返す。
+ * 
+ * @returns Supabase LocalStorageキー
+ */
+export function getSupabaseStorageKey(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (!url) return 'sb-localhost-auth-token';
+
+  // .supabase.co, .supabase.net, カスタムドメイン対応
+  const projectRef = url.match(
+    /https:\/\/(.+?)\.(?:supabase\.(?:co|net)|[^/]+)/,
+  )?.[1];
+
+  const key = projectRef
+    ? `sb-${projectRef}-auth-token`
+    : 'sb-localhost-auth-token';
+
+  return key;
 }
 
 /**

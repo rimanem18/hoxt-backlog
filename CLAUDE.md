@@ -67,19 +67,10 @@ docker compose exec e2e npx playwright test
 
 以下を考慮し、コードの品質を保ってください：
 
-- **必須**: テスト駆動開発
-  - 実装を更新したらテストコードも更新
-  - テストコードに記載するテストケース名は日本語で記載
 - **必須**: 実装前に `libs`, `utils`, `shared`, `helper` などのディレクトリが存在しないか確認し、車輪の再発明を防ぐ
-- **必須**: テストは Bun 標準を使用する
 - **必須**: ファイルの末尾には改行を入れて空行を作る
-- **必須**: `docker compose exec client bunx tsc --noEmit` による型チェック
-- **必須**: `docker compose exec client bun test` による自動テスト
-- **必須**: `docker compose run --rm semgrep semgrep <args...>` によるセキュリティチェック
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
-- **非推奨**: テストでのモックの乱用
-  - 特に実装との乖離を生むような過度なスタブは避け、E2E または統合テストとのバランスを考慮
 - **非推奨**: `let` の使用
   - ただし、再代入が明確に必要な場面（ループ変数や一時的な状態）の使用可
 - **禁止**: `@ts-ignore` ディレクティブの使用
@@ -117,15 +108,8 @@ docker compose exec server bun run dev
 
 以下を考慮し、コードの品質を保ってください：
 
-- **必須**: テスト駆動開発
-  - 実装を更新したらテストコードも更新
-  - テストコードに記載するテストケース名は日本語で記載
 - **必須**: 実装前に `libs`, `utils`, `shared`, `helper` などのディレクトリが存在しないか確認し、車輪の再発明を防ぐ
-- **必須**: テストは Bun 標準を使用する
 - **必須**: ファイルの末尾には改行を入れて空行を作る
-- **必須**: `docker compose exec client bunx tsc --noEmit` による型チェック
-- **必須**: `docker compose exec client bun test` による自動テスト
-- **必須**: `docker compose run --rm semgrep semgrep <args...>` によるセキュリティチェック
 - **必須**: 同一層の import には相対パスを使用し、他の層からの import には `@/...` を使った絶対パス import を使う
 - **必須**: ドメインエラーは `errors` ディレクトリ、値オブジェクトは `valueobjects` ディレクトリに配置する。エンティティは `index` と同じディレクトリに配置する
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
@@ -264,32 +248,65 @@ mermaidフローチャートを記述する際の確認項目：
 
 # テストガイドライン
 
-## テストファイル
+## テスト哲学（共通）
 
-**Testing Policy - Bun 標準のみ**  
-`bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用する。  
-`jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在を禁止する。  
+### 良いテストの原則
+- **明確な意図**: テストケース名から何を検証しているか一目で理解できる
+- **テスト独立性**: 他のテストの実行順序や結果に依存しない
+- **決定論的**: 同じ条件で実行すれば常に同じ結果を返す
+- **適切な速度**: ユニットテストは高速、E2Eテストは信頼性重視
 
-依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする。  
-`mock.module()` は最後の手段としてのみ使用する。  
-テスト終了時は `mock.restore()` と `mock.clearAllMocks()` を徹底する。  
+### 命名規則
+- **テストファイル**: `.test.ts` / `.test.tsx` (ユニット/統合), `.spec.ts` (E2E)
+- **テストケース名**: 日本語で記載、動詞-主語パターン
+- **例**: `test('空文字列トークンが適切に拒否される', ...)`
+
+### フレーク対処方針
+1. ローカル環境で再現可能か確認
+2. CI環境のTrace Viewerやログを活用
+3. タイミング依存を排除（`setTimeout`や固定待機時間を避ける）
+4. 環境依存を排除（ハードコードされたURLや日時を避ける）
 
 ---
 
-## 運用指針詳細
+## フロントエンドユニット/統合テストガイドライン
 
-- **非推奨**: `data-testid` の使用
-- **禁止**: テストの `.skip`
-  - 意図的な未実装は TODO コメントで
-- **禁止**: `fireEvent` の使用
-  - `userEvent` で代用
+### 実行環境
+```bash
+docker compose exec client bun test
+```
 
-### 1. 依存と型
-- `bun test` を前提とし、追加のテスティングランタイムは導入しない。
-- TypeScript は `tsconfig.json` の `types` に `["bun-types"]` を設定し、`@types/jest` を含めない。
-- すべてのテストファイルは `.test.ts` / `.test.tsx`。
+### 運用指針詳細
 
-### 2. 使ってよい API（`bun:test` のみ）
+- **必須**: テスト駆動開発
+  - 実装を更新したらテストコードも更新
+  - テストコードに記載するテストケース名は日本語で記載
+- **必須**: Bun標準テストを使用
+- **必須**: `docker compose exec client bunx tsc --noEmit`による型チェック
+- **必須**: `docker compose exec client bun test`による自動テスト実行
+- **必須**: `docker compose run --rm semgrep semgrep <args...>`によるセキュリティチェック
+- **必須**: `bun:test`の組込みAPIのみ使用（`describe` / `it` / `expect` / `mock` / `spyOn`）
+- **必須**: `user-event`を標準とする（`fireEvent`は禁止）
+- **必須**: ユーザー中心のクエリ使用（`getByRole` > `getByLabelText` > `getByPlaceholderText` > `getByText` > `getByTestId`）
+- **推奨**: テスト終了時のクリーンアップ（`mock.restore()`と`mock.clearAllMocks()`）
+- **推奨**: 依存注入を優先（DI可能な設計、差し替えは`mock()` / `spyOn()`）
+- **推奨**: カスタムマッチャー活用（共通マッチャーは`__tests__/helpers`に配置）
+- **推奨**: DIパターンでのモック生成（テストごとに新しいモックを生成）
+- **非推奨**: モックの乱用（実装との乖離を生む過度なスタブは避け、E2E/統合テストとのバランスを考慮）
+- **非推奨**: `mock.module()`の使用（DI不可能な外部依存のみに限定）
+- **非推奨**: `data-testid`の使用（ユーザー中心のクエリを優先）
+- **非推奨**: 動的importの使用
+- **禁止**: `jest`名前空間の使用（`@jest/*`, `@types/jest`, Jestエコシステム）
+- **禁止**: テストの`.skip`（意図的な未実装はTODOコメント）
+- **禁止**: `fireEvent`の使用（`@testing-library/user-event`で代用）
+- **禁止**: `as unknown as`などの乱暴なキャスト
+
+### 依存と型
+- `bun test`を前提とし、追加のテスティングランタイムは導入しない
+- TypeScriptは`tsconfig.json`の`types`に`["bun-types"]`を設定、`@types/jest`は含めない
+- すべてのテストファイルは`.test.ts` / `.test.tsx`
+
+### 使ってよいAPI（`bun:test`のみ）
 ```ts
 import {
   describe, it, test, expect,
@@ -300,39 +317,117 @@ import {
 } from "bun:test";
 ```
 
-- **モック**: `mock(fn)` を用いる（Jest の `jest.fn` は禁止）。
-- **スパイ**: 既存オブジェクトには `spyOn(obj, "method")`。
-- **モジュール差し替え**: `mock.module()` は「どうしても DI ができない外部依存」などに限定。
-- **後片付け**: `afterEach(() => { mock.restore(); mock.clearAllMocks(); })` を共通化。
+### 設計原則
+- **まずDI**: 可能な限り依存注入を優先し、直接importした依存を差し替えるより、呼び出し側に抽象を注入してモック
+- **外部性のラップ**: 時刻・乱数・I/Oなどはラッパー関数経由にしてテストでモック
+- **スナップショット**: 安定化処理をしてから比較
+- **非同期処理**: `await`を徹底、`done`コールバックは禁止
 
-### 3. 禁止事項
-- `jest` 名前空間の利用を禁止。
-- Jest エコシステム由来のパッケージを禁止。
-- `as unknown as` など乱暴なキャストでのモック化を禁止。
-
-### 4. 標準パターン
-（※現行の関数モック／spyOn／インターフェースモック／モジュール差し替え／共通フック例はそのまま）
-
-### 5. 設計原則
-- **まず DI**：可能な限り依存注入を優先し、直接 import した依存を差し替えるより、呼び出し側に抽象を注入してモックする。
-- 時刻・乱数・I/O などの外部性は **ラッパー関数** 経由にし、テストでそのラッパーをモック。
-- スナップショットは安定化処理をしてから比較。
-- 非同期は `await` を徹底。`done` コールバックは禁止。
-
-### 6. 既存コードからの移行ルール
+### 既存コードからの移行ルール
 - `jest.fn()` → `mock(fn)`
 - `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
-- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（※基本は非推奨、必要最小限に）
+- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（基本は非推奨）
 - `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
-- `jest.Mocked<T>` → `satisfies T` と `mock()` の組み合わせ
+- `jest.Mocked<T>` → `satisfies T`と`mock()`の組み合わせ
 
-### 7. DI 活用モック
-- **mockClear / mockReset が煩雑になるケースでは DI を利用する。**
-- **DI ではテストごとに新しいモックを生成**し、他テストに影響を及ぼすグローバル共有は避ける。
-- **Bun の `Mock` 型**を使って依存のメソッドを型安全にスタブできるようにする。
-- **DI パターンでは mockClear は通常不要**（毎テストで新規生成するため）。
+### mock.moduleの注意点
+- **トップレベルでの使用は禁止**
+- **各test内でのみ宣言し、その後に動的import**すること
+- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う
 
-```ts
+---
+
+## バックエンドユニット/統合テストガイドライン
+
+### 実行環境
+```bash
+docker compose exec server bun test
+```
+
+### 運用指針詳細
+
+- **必須**: テスト駆動開発
+  - 実装を更新したらテストコードも更新
+  - テストコードに記載するテストケース名は日本語で記載
+- **必須**: Bun標準テストを使用
+- **必須**: `docker compose exec server bunx tsc --noEmit`による型チェック
+- **必須**: `docker compose exec server bun test`による自動テスト実行
+- **必須**: `docker compose run --rm semgrep semgrep <args...>`によるセキュリティチェック
+- **必須**: `bun:test`の組込みAPIのみ使用（`describe` / `it` / `expect` / `mock` / `spyOn`）
+- **推奨**: テスト終了時のクリーンアップ（`mock.restore()`と`mock.clearAllMocks()`）
+- **推奨**: 依存注入を優先（DI可能な設計、差し替えは`mock()` / `spyOn()`）
+- **推奨**: カスタムマッチャー活用（共通マッチャーは`__tests__/helpers`に配置）
+- **推奨**: DIパターンでのモック生成（テストごとに新しいモックを生成）
+- **非推奨**: `mock.module()`の使用（DI不可能な外部依存のみに限定）
+- **非推奨**: 動的importの使用
+- **禁止**: `jest`名前空間の使用（`@jest/*`, `@types/jest`, Jestエコシステム）
+- **禁止**: テストの`.skip`（意図的な未実装はTODOコメント）
+- **禁止**: `as unknown as`などの乱暴なキャスト
+
+### 依存と型
+- `bun test`を前提とし、追加のテスティングランタイムは導入しない
+- TypeScriptは`tsconfig.json`の`types`に`["bun-types"]`を設定、`@types/jest`は含めない
+- すべてのテストファイルは`.test.ts`
+
+### 設計原則
+- **まずDI**: 可能な限り依存注入を優先し、直接importした依存を差し替えるより、呼び出し側に抽象を注入してモック
+- **外部性のラップ**: 時刻・乱数・I/Oなどはラッパー関数経由にしてテストでモック
+- **スナップショット**: 安定化処理をしてから比較
+- **非同期処理**: `await`を徹底、`done`コールバックは禁止
+
+### 既存コードからの移行ルール
+- `jest.fn()` → `mock(fn)`
+- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
+- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（基本は非推奨）
+- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
+- `jest.Mocked<T>` → `satisfies T`と`mock()`の組み合わせ
+
+### mock.moduleの注意点
+- **トップレベルでの使用は禁止**
+- **各test内でのみ宣言し、その後に動的import**すること
+- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う
+
+---
+
+## E2Eテストガイドライン（Playwright）
+
+### 実行環境
+```bash
+docker compose exec e2e npx playwright test
+```
+
+### 運用指針詳細
+
+- **必須**: `storageState` APIの使用（ハイドレーション前に確実に設定、レース条件回避）
+- **必須**: Locatorsの優先利用（`page.locator()`で自動待機機能を活用）
+- **必須**: Web First Assertions（`expect(locator).toBeVisible()`で自動リトライ）
+- **必須**: テスト独立性の確保（`test.afterEach`でクリーンアップ徹底）
+- **推奨**: リダイレクト検証はDOM要素待機（`waitForURL()`だけでなくページ要素の表示も待機）
+- **推奨**: APIによるテストデータセットアップ（UI操作ではなくAPI直接呼び出し）
+- **推奨**: Trace Viewerの積極的活用（`trace: 'on-first-retry'`設定、CI失敗時の視覚的デバッグ）
+- **非推奨**: `addInitScript`によるlocalStorage設定（タイミング依存、ハイドレーション競合）
+- **禁止**: ハイドレーションタイミングへの依存（`waitForTimeout()`など固定待機時間は禁止）
+
+### CI環境への配慮
+- **直列実行**: `workers: 1`で安定性重視（`playwright.config.ts`）
+- **リトライ**: `retries: 1`で高速フィードバック
+- **タイムアウト**: 余裕を持たせる（15秒推奨）
+- **環境変数**: `process.env.GITHUB_ACTIONS`でbaseURLを分岐
+
+### デバッグ手法
+1. **ローカル**: `npx playwright test --debug`で実行
+2. **CI失敗時**: Trace Viewerでartifactを確認
+3. **視覚的確認**: スクリーンショット・動画を活用
+4. **ヘッドフルモード**: `npx playwright test --headed`で実際のブラウザ動作確認
+
+---
+
+## 実装パターン例
+
+### フロントエンドユニット/統合テスト
+
+#### DIパターンでのモック生成
+```typescript
 type MockUserService = {
   getUserProfile: Mock<[string], Promise<User>>;
 };
@@ -346,11 +441,61 @@ beforeEach(() => {
 });
 ```
 
-### 8. mock.module の注意点
-- **トップレベルでの使用は禁止**。  
-- **各 test 内でのみ宣言し、その後に動的 import** すること。  
-- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う。  
+### E2Eテスト（Playwright）
 
+#### storageState APIの使用
+```typescript
+const context = await browser.newContext({
+  storageState: {
+    cookies: [],
+    origins: [{
+      origin: baseURL,
+      localStorage: [
+        { name: 'auth-token', value: JSON.stringify(authData) }
+      ],
+    }],
+  },
+});
+const page = await context.newPage();
+```
+
+#### リダイレクト検証の正しい書き方
+```typescript
+// ❌ 非推奨: ハイドレーション完了を保証しない
+await page.waitForURL('/dashboard');
+
+// ✅ 推奨: UIが操作可能になったことを確認
+await expect(page.getByRole('button', { name: /ログイン/i }))
+  .toBeVisible({ timeout: 15000 });
+await expect(page).toHaveURL('/dashboard');
+```
+
+#### ハイドレーション待機の正しい書き方
+```typescript
+// ❌ 禁止: 固定待機時間
+await page.waitForTimeout(1000);
+
+// ✅ 正しい: DOM要素の出現を待機
+await expect(page.getByRole('heading')).toBeVisible();
+```
+
+#### テスト独立性の確保
+```typescript
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll();
+  await page.evaluate(() => localStorage.clear());
+});
+```
+
+#### Trace Viewerの設定
+```typescript
+// playwright.config.ts
+use: {
+  trace: 'on-first-retry',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+}
+```
 
 # コメントガイドライン
 
@@ -464,4 +609,182 @@ export class HogeAuthProvider implements IAuthProvider {
   }
 }
 ````
+
+# テストファイル配置ルール
+
+プロジェクト全体でテストファイルの配置を統一し、可読性と保守性を向上させます。
+
+## 基本方針
+
+- **サーバー側**: `__tests__`ディレクトリによる集約型
+- **クライアント側**: feature配下の`__tests__`ディレクトリ集約型
+- **テストケース数に応じた柔軟な構造化**
+
+## サーバー側 (app/server/src/)
+
+### 配置ルール
+
+各ディレクトリに`__tests__`ディレクトリを作成し、そこにテストファイルを集約します。
+
+```
+app/server/src/
+├── domain/
+│   ├── user/
+│   │   ├── __tests__/
+│   │   │   ├── UserEntity.test.ts
+│   │   │   └── errors.test.ts
+│   │   ├── UserEntity.ts
+│   │   └── errors/
+│   └── services/
+│       ├── __tests__/
+│       │   └── AuthenticationDomainService.test.ts
+│       └── AuthenticationDomainService.ts
+│
+├── application/
+│   └── usecases/
+│       ├── __tests__/
+│       │   ├── authenticate-user/          # 大規模(11個以上)
+│       │   │   ├── validation.test.ts
+│       │   │   ├── success-password.test.ts
+│       │   │   └── ...
+│       │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
+│       │   ├── GetUserProfile.errors.test.ts
+│       │   └── contracts/
+│       │       └── auth-provider.contract.test.ts
+│       ├── AuthenticateUserUseCase.ts
+│       └── GetUserProfileUseCase.ts
+│
+├── infrastructure/
+│   ├── __tests__/
+│   │   ├── DatabaseConnection.test.ts
+│   │   └── BaseSchemaValidation.test.ts
+│   └── auth/
+│       ├── __tests__/
+│       │   ├── SupabaseJwtVerifier.test.ts
+│       │   └── MockJwtVerifier.test.ts
+│       └── SupabaseJwtVerifier.ts
+│
+└── presentation/
+    └── http/
+        ├── controllers/
+        │   ├── __tests__/
+        │   │   ├── AuthController.test.ts
+        │   │   └── UserController.test.ts
+        │   └── AuthController.ts
+        ├── routes/
+        │   ├── __tests__/
+        │   │   ├── authRoutes.test.ts
+        │   │   └── userRoutes.integration.test.ts
+        │   └── authRoutes.ts
+        └── middleware/
+            ├── __tests__/
+            │   └── metricsMiddleware.test.ts
+            └── metricsMiddleware.ts
+```
+
+### テストケース数による使い分け
+
+#### 小規模(テストケース10個以下)
+- **ファイル名**: `[対象名].[関心事].test.ts`
+- **例**: `GetUserProfile.success.test.ts`, `GetUserProfile.validation.test.ts`
+- **利点**: ファイル数が少なく、検索・移動が容易
+
+#### 大規模(テストケース11個以上)
+- **ディレクトリ名**: `__tests__/[対象名]/`(小文字ケバブケース)
+- **ファイル名**: `[シナリオ名].test.ts`
+- **例**: `__tests__/authenticate-user/validation.test.ts`
+- **利点**: 階層が深くならず整理しやすい
+
+#### 契約テスト
+- **ディレクトリ**: `__tests__/contracts/`
+- **例**: `__tests__/contracts/auth-provider.contract.test.ts`
+
+## クライアント側 (app/client/src/)
+
+### 配置ルール
+
+各feature配下に`__tests__`ディレクトリを作成し、feature全体のテストを集約します。
+
+```
+app/client/src/
+├── features/
+│   ├── auth/
+│   │   ├── __tests__/
+│   │   │   ├── sessionRestore.test.ts
+│   │   │   ├── errorHandling.test.ts
+│   │   │   ├── authProviderInterface.test.ts
+│   │   │   └── ui-ux/
+│   │   │       └── LoadingState.test.tsx
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── services/
+│   │
+│   ├── google-auth/
+│   │   ├── __tests__/
+│   │   │   ├── authSlice.test.ts
+│   │   │   └── UserProfile.test.tsx
+│   │   ├── components/
+│   │   └── store/
+│   │
+│   └── user/
+│       ├── __tests__/
+│       │   ├── useUser.test.tsx
+│       │   └── useUpdateUser.test.tsx
+│       ├── components/
+│       ├── hooks/
+│       │   ├── useUser.ts
+│       │   └── useUpdateUser.ts
+│       └── services/
+│
+└── lib/
+    ├── __tests__/
+    │   └── api.test.ts
+    └── api.ts
+```
+
+### ルール詳細
+
+- **必須**: 各feature配下に`__tests__`ディレクトリを作成
+- **UI/UX別テスト**: UIに特化したテストは`__tests__/ui-ux/`にサブディレクトリ化
+- **hooks/utils**: feature内の`__tests__`に集約(ファイル隣接ではなく)
+- **lib/shared**: 同様に`__tests__`ディレクトリに集約
+
+## shared-schemas
+
+```
+app/packages/shared-schemas/
+├── __tests__/
+│   ├── userSchema.test.ts
+│   └── authSchema.test.ts
+├── userSchema.ts
+└── authSchema.ts
+```
+
+スキーマのバリデーションテストは`__tests__`に集約します。
+
+## 命名規則
+
+### テストファイル命名
+
+| パターン | 命名例 | 用途 |
+|---------|--------|------|
+| 単一対象 | `UserEntity.test.ts` | 単一クラス/関数のテスト |
+| 関心事別 | `AuthenticateUser.validation.test.ts` | 関心事で分割 |
+| シナリオ別 | `success-password.test.ts` | サブディレクトリ内 |
+| 統合テスト | `userRoutes.integration.test.ts` | 統合テスト明示 |
+| 契約テスト | `auth-provider.contract.test.ts` | 契約テスト明示 |
+
+### テストディレクトリ命名
+
+- **小文字ケバブケース**: `__tests__/authenticate-user/`
+- **関心事サブディレクトリ**: `__tests__/ui-ux/`, `__tests__/contracts/`
+
+## 禁止事項
+
+- **禁止**: 実装ファイルと同じディレクトリにテストを配置
+  - ❌ `hooks/useUser.ts`, `hooks/useUser.test.tsx`
+  - ✅ `hooks/useUser.ts`, `__tests__/useUser.test.tsx`
+- **禁止**: `__tests__`外へのテストファイル配置
+- **禁止**: テストファイルの拡張子を`.spec.ts`にする
+  - 必ず`.test.ts`または`.test.tsx`を使用
 

@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test';
+import { createMockJwt } from '@/testing/jwtFactory';
 import type { ValidationResult } from '../services/environmentValidator';
 
 // テストファイル: errorHandling.test.ts
@@ -52,19 +53,15 @@ describe('認証エラーハンドリング', () => {
     expect(typeof networkHandler.scheduleRetry).toBe('function'); // スケジュール化されたリトライ機能が実装されている
   });
 
-  test('JWT期限切れ時の自動ログアウト処理', () => {
+  test('JWT期限切れ時の自動ログアウト処理', async () => {
     // Given: 期限切れしたJWTトークンを持つ認証済み状態
     const expiredTime = Math.floor(Date.now() / 1000) - 1; // 1秒前に期限切れ
-    const jwtPayload = {
-      sub: '111',
-      email: 'expired@test.com',
-      exp: expiredTime, // Unix時刻での期限切れ
-    };
-    const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString(
-      'base64',
-    );
     const expiredJWT = {
-      token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${encodedPayload}.signature`,
+      token: await createMockJwt({
+        sub: '111',
+        email: 'expired@test.com',
+        exp: expiredTime,
+      }),
       expiresAt: Date.now() - 1000, // 1秒前に期限切れ
       user: {
         id: '111',

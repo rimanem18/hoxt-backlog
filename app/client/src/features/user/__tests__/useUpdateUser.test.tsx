@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
-import { useUpdateUser } from './useUpdateUser';
+import { useUpdateUser } from '../hooks/useUpdateUser';
 
 // DI方式のモックfetch
 type MockFetch = Mock<[input: Request], Promise<Response>>;
@@ -155,4 +155,65 @@ test('ユーザー更新時にエラーが発生した場合に適切に処理�
   expect(result.current.data).toBeUndefined();
   expect(result.current.error).toBeDefined();
   expect(result.current.error?.message).toContain('バリデーション');
+});
+
+test('バリデーションエラー時に詳細なエラーメッセージを返す', async () => {
+  // T007: バリデーションエラー詳細メッセージテスト
+  // Given: 不正なリクエストボディ（nameが空文字列、avatarUrlが不正なURL）
+  const userId = '550e8400-e29b-41d4-a716-446655440000';
+  const invalidUpdateData = {
+    name: '', // 最小長1の制約違反
+    avatarUrl: 'invalid-url', // URL形式の制約違反
+  };
+
+  const detailedErrorResponse = {
+    success: false,
+    error: {
+      code: 'VALIDATION_ERROR',
+      message:
+        'バリデーションエラー: nameは1文字以上である必要があります, avatarUrlは有効なURL形式である必要があります',
+      fields: {
+        name: 'nameは1文字以上である必要があります',
+        avatarUrl: 'avatarUrlは有効なURL形式である必要があります',
+      },
+    },
+  };
+
+  mockFetch.mockResolvedValue(
+    new Response(JSON.stringify(detailedErrorResponse), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+  const mockClient = createApiClient('http://localhost:3001/api', undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
+    </QueryClientProvider>
+  );
+
+  // When: 不正なデータでmutateを実行
+  const { result } = renderHook(() => useUpdateUser(), { wrapper });
+
+  await act(async () => {
+    result.current.mutate({
+      userId,
+      data: invalidUpdateData,
+    });
+  });
+
+  // Then: バリデーションエラーが詳細メッセージとして返却される
+  await waitFor(() => expect(result.current.isError).toBe(true));
+
+  expect(result.current.data).toBeUndefined();
+  expect(result.current.error).toBeDefined();
+  // エラーメッセージに「バリデーションエラー」文字列が含まれる
+  expect(result.current.error?.message).toContain('バリデーションエラー');
+  // エラーメッセージに各フィールドの不正内容が含まれる
+  expect(result.current.error?.message).toContain('name');
+  expect(result.current.error?.message).toContain('avatarUrl');
 });

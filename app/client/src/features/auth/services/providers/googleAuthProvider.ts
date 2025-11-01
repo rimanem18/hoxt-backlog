@@ -13,6 +13,22 @@ import {
 } from './authProviderInterface';
 
 /**
+ * ドメイン文字列を正規化する
+ * プロトコル、www、空白、末尾スラッシュを削除し、小文字化する
+ *
+ * @param domain - 正規化対象のドメイン文字列
+ * @returns 正規化されたドメイン文字列
+ */
+export function normalizeDomain(domain: string): string {
+  return domain
+    .trim() // 前後空白除去
+    .replace(/^https?:\/\//i, '') // プロトコル除去（ケースインセンシティブ）
+    .replace(/^www\./i, '') // www. 除去（ケースインセンシティブ）
+    .replace(/\/$/, '') // 末尾スラッシュ除去
+    .toLowerCase(); // 小文字化
+}
+
+/**
  * Google OAuth認証プロバイダー。
  * オープンリダイレクト脆弱性対策とパフォーマンス最適化を実装。
  *
@@ -55,7 +71,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       process.env.NEXT_PUBLIC_TRUSTED_DOMAINS,
     );
     this.trustedDomains = new Set(
-      trusted_domains_raw.map((domain) => domain.toLowerCase()),
+      trusted_domains_raw.map((domain) => normalizeDomain(domain)),
     );
   }
 
@@ -87,18 +103,18 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       throw new Error('許可されていないプロトコルです');
     }
 
-    // ホスト名を小文字に正規化してケースインセンシティブ攻撃を防ぐ
-    const redirectHostname = parsedUrl.hostname.toLowerCase();
+    // ホスト名（ポート含む）を小文字に正規化してケースインセンシティブ攻撃を防ぐ
+    const redirectHost = parsedUrl.host.toLowerCase();
 
     // 信頼ドメインリストとの厳密な照合でオープンリダイレクト攻撃を防止
     const isTrusted = Array.from(this.trustedDomains).some((trustedDomain) => {
-      // 完全一致チェック
-      if (redirectHostname === trustedDomain) {
+      // 完全一致チェック（ポート含む）
+      if (redirectHost === trustedDomain) {
         return true;
       }
       // 正規のサブドメインかチェック（evil.com.trusted.comのような偽装を防ぐ）
-      if (redirectHostname.endsWith(`.${trustedDomain}`)) {
-        return redirectHostname.length > trustedDomain.length + 1;
+      if (redirectHost.endsWith(`.${trustedDomain}`)) {
+        return redirectHost.length > trustedDomain.length + 1;
       }
       return false;
     });
@@ -294,6 +310,89 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     return () => {
       subscription.unsubscribe();
     };
+  }
+
+  /**
+   * トークンの基本的な形式を検証する
+   *
+   * モックトークンを拒否し、JWT形式の基本チェックを行う。
+   * 完全な署名検証はSupabaseに委譲する。
+   */
+  validateToken(token: string): boolean {
+    // 空文字列やモックトークンを拒否
+    if (!token || token === 'mock_access_token') {
+      return false;
+    }
+
+    // JWT基本形式チェック（header.payload.signature）
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    // 各パートが空でないことを確認
+    return parts.every((part) => part.length > 0);
+  }
+
+  /**
+   * Google OAuth コールバック処理
+   * Supabase セッション確立とユーザー情報取得を実施
+   */
+  async handleCallback(
+    hashParams: URLSearchParams,
+  ): Promise<import('./authProviderInterface').AuthCallbackResult> {
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
+    // エラーハンドリング
+    if (!accessToken) {
+      const error = hashParams.get('error');
+      const errorDescription = hashParams.get('error_description');
+
+      if (error === 'access_denied') {
+        // ユーザーキャンセルは success=false で返す（エラーではない）
+        return { success: false, user: undefined, isNewUser: false };
+      }
+
+      throw new Error(
+        errorDescription || error || '認証トークンが見つかりません',
+      );
+    }
+
+    // Supabase セッション確立
+    const { error: sessionError } = await this.supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken || '',
+    });
+
+    if (sessionError) {
+      throw new Error(`Supabaseセッション確立エラー: ${sessionError.message}`);
+    }
+
+    // ユーザー情報取得
+    const { data: userData, error: userError } =
+      await this.supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      throw new Error(
+        `ユーザー情報取得エラー: ${userError?.message || 'ユーザーが見つかりません'}`,
+      );
+    }
+
+    // User オブジェクト構築
+    const user: import('@/packages/shared-schemas/src/auth').User = {
+      id: userData.user.id,
+      externalId: userData.user.id,
+      provider: 'google',
+      email: userData.user.email || '',
+      name: userData.user.user_metadata.full_name || userData.user.email || '',
+      avatarUrl: userData.user.user_metadata.avatar_url || null,
+      createdAt: userData.user.created_at || new Date().toISOString(),
+      updatedAt: userData.user.updated_at || new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    return { success: true, user, isNewUser: false };
   }
 
   // resetPasswordメソッドは削除済み
