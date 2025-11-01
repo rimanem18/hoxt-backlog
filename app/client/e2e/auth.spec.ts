@@ -190,8 +190,8 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // ヘルパー関数でstorageKeyを生成
-    const storageKey = getSupabaseStorageKey();
+    // テスト用に明示的なキーを使用（環境差異を排除）
+    const storageKey = 'sb-localhost-auth-token';
 
     // Node.js側で期限切れの時刻を計算
     const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
@@ -225,13 +225,21 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(loginButton).toBeVisible();
 
     // 期限切れトークンがlocalStorageに残っていることを確認
-    const authState = await page.evaluate(({ key }) => {
+    const debugInfo = await page.evaluate(({ key }) => {
       const authData = localStorage.getItem(key);
-      return authData ? JSON.parse(authData) : null;
+      // すべてのlocalStorageキーを確認
+      const allKeys = Object.keys(localStorage);
+      return {
+        requestedKey: key,
+        allKeys: allKeys,
+        authData: authData ? JSON.parse(authData) : null,
+      };
     }, { key: storageKey });
 
-    expect(authState).toBeTruthy();
-    expect(authState.expires_at).toBeDefined();
+    console.log('[T006 Debug]', JSON.stringify(debugInfo, null, 2));
+
+    expect(debugInfo.authData).toBeTruthy();
+    expect(debugInfo.authData.expires_at).toBeDefined();
   });
 
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
