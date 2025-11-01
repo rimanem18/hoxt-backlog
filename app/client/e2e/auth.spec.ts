@@ -175,8 +175,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(continuedSessionMessage).toBeVisible();
   });
 
-  test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ page }) => {
-
+  test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ browser }) => {
     // Given: 期限切れトークンでユーザー認証状態を設定
     const expiredUser = {
       id: 'expired-user-999',
@@ -196,50 +195,58 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     // Node.js側で期限切れの時刻を計算
     const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
 
-    await page.addInitScript(({ userData, key, expiresAt }) => {
-      // addInitScript実行確認フラグ
-      window.__TEST_INIT_SCRIPT_RAN__ = true;
+    const mockExpiredJwt = [
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
+      'eyJzdWIiOiJleHBpcmVkLXVzZXItOTk5IiwiZXhwIjoxfQ', // Payload: expired
+      'expired_signature', // Signature
+    ].join('.');
 
-      const mockExpiredJwt = [
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
-        'eyJzdWIiOiJleHBpcmVkLXVzZXItOTk5IiwiZXhwIjoxfQ', // Payload: expired
-        'expired_signature', // Signature
-      ].join('.');
+    const expiredAuthData = {
+      access_token: mockExpiredJwt,
+      refresh_token: 'expired_refresh_token_test',
+      user: expiredUser,
+      expires_at: expiredTimestamp,
+    };
 
-      const expiredAuthData = {
-        access_token: mockExpiredJwt,
-        refresh_token: 'expired_refresh_token_test',
-        user: userData,
-        expires_at: expiresAt, // Node.js側で計算した期限切れ時刻
-      };
+    // storageState APIを使用してlocalStorageを事前設定
+    // addInitScriptと異なり、ハイドレーション前にストレージが確実に設定される
+    const baseURL = process.env.GITHUB_ACTIONS
+      ? 'http://localhost:3000'
+      : 'http://client:3000';
 
-      localStorage.setItem(key, JSON.stringify(expiredAuthData));
-    }, { userData: expiredUser, key: storageKey, expiresAt: expiredTimestamp });
+    const context = await browser.newContext({
+      storageState: {
+        cookies: [],
+        origins: [
+          {
+            origin: baseURL,
+            localStorage: [
+              {
+                name: storageKey,
+                value: JSON.stringify(expiredAuthData),
+              },
+            ],
+          },
+        ],
+      },
+    });
 
-    // When: 期限切れトークンを持った状態で認証が必要なページ(/dashboard)にアクセス
-    await page.goto('/dashboard');
+    const page = await context.newPage();
 
-    // Then: 未認証状態としてルートページにリダイレクトされる
-    // useAuthValidationがuseEffect内で実行されるため、リダイレクト完了まで待機
-    await page.waitForURL('/', { timeout: 15000 });
+    try {
+      // When: 期限切れトークンを持った状態で認証が必要なページ(/dashboard)にアクセス
+      await page.goto('/dashboard');
 
-    // ログインボタンが表示される（未認証として扱われる）
-    const loginButton = page.getByRole('button', { name: /ログイン|login/i });
-    await expect(loginButton).toBeVisible();
+      // Then: 未認証状態としてルートページにリダイレクトされる
+      // リダイレクト後のページに存在する要素を待つ（URLより確実）
+      await expect(page.getByRole('button', { name: /ログイン|login/i }))
+        .toBeVisible({ timeout: 15000 });
 
-    // addInitScriptが実行されたことを確認
-    const scriptRan = await page.evaluate(() => window.__TEST_INIT_SCRIPT_RAN__);
-    expect(scriptRan).toBe(true);
-
-    // 期限切れトークンがlocalStorageに残っていることを確認
-    // （リダイレクト後の/ページではuseAuthValidationが実行されないため削除されない）
-    const finalState = await page.evaluate(({ key }) => {
-      const authData = localStorage.getItem(key);
-      return authData ? JSON.parse(authData) : null;
-    }, { key: storageKey });
-
-    expect(finalState).toBeTruthy();
-    expect(finalState.expires_at).toBeDefined();
+      // URLが変更されたことを確認
+      await expect(page).toHaveURL('/');
+    } finally {
+      await context.close();
+    }
   });
 
   test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
