@@ -218,10 +218,10 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
 
     // When: 期限切れトークンを持った状態で認証が必要なページ(/dashboard)にアクセス
     await page.goto('/dashboard');
-    await page.waitForLoadState('domcontentloaded');
 
     // Then: 未認証状態としてルートページにリダイレクトされる
-    await expect(page).toHaveURL('/', { timeout: 10000 });
+    // useAuthValidationがuseEffect内で実行されるため、リダイレクト完了まで待機
+    await page.waitForURL('/', { timeout: 15000 });
 
     // ログインボタンが表示される（未認証として扱われる）
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });
