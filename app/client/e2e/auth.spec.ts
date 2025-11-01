@@ -193,7 +193,10 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     // ヘルパー関数でstorageKeyを生成
     const storageKey = getSupabaseStorageKey();
 
-    await page.addInitScript(({ userData, key }) => {
+    // Node.js側で期限切れの時刻を計算
+    const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
+
+    await page.addInitScript(({ userData, key, expiresAt }) => {
       const mockExpiredJwt = [
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // Header
         'eyJzdWIiOiJleHBpcmVkLXVzZXItOTk5IiwiZXhwIjoxfQ', // Payload: expired
@@ -204,11 +207,11 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
         access_token: mockExpiredJwt,
         refresh_token: 'expired_refresh_token_test',
         user: userData,
-        expires_at: Math.floor(Date.now() / 1000) - 1, // Expired 1 second ago (in seconds)
+        expires_at: expiresAt, // Node.js側で計算した期限切れ時刻
       };
 
       localStorage.setItem(key, JSON.stringify(expiredAuthData));
-    }, { userData: expiredUser, key: storageKey });
+    }, { userData: expiredUser, key: storageKey, expiresAt: expiredTimestamp });
 
     // When: 期限切れトークンを持った状態で認証が必要なページ(/dashboard)にアクセス
     await page.goto('/dashboard');
