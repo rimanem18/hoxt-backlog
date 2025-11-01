@@ -264,67 +264,51 @@ mermaidフローチャートを記述する際の確認項目：
 
 # テストガイドライン
 
-## 運用指針詳細
+## テスト哲学（共通）
 
-- **必須**: `bun:test` の組込み API（`describe` / `it` / `expect` / `mock` / `spyOn` / `mock.module` ほか）だけを使用
-- **推奨**: テスト終了時は `mock.restore()` と `mock.clearAllMocks()`
-- **推奨**: 依存注入と関数ラップを優先し、必要な差し替えは `mock()` / `spyOn()` を基本とする 
-- **非推奨**: `mock.module()` の使用
-- **非推奨**: `data-testid` の使用
-- **非推奨**: 動的 import の使用
-- **禁止**: `jest` 名前空間・`@jest/*`・`@types/jest`・Jest エコシステムの導入・記法の混在
-- **禁止**: テストの `.skip`
-  - 意図的な未実装は TODO コメントで
-- **禁止**: `fireEvent` の使用
-  - `userEvent` で代用
+### 良いテストの原則
+- **明確な意図**: テストケース名から何を検証しているか一目で理解できる
+- **テスト独立性**: 他のテストの実行順序や結果に依存しない
+- **決定論的**: 同じ条件で実行すれば常に同じ結果を返す
+- **適切な速度**: ユニットテストは高速、E2Eテストは信頼性重視
 
-### 1. 依存と型
-- `bun test` を前提とし、追加のテスティングランタイムは導入しない。
-- TypeScript は `tsconfig.json` の `types` に `["bun-types"]` を設定し、`@types/jest` を含めない。
-- すべてのテストファイルは `.test.ts` / `.test.tsx`。
+### 命名規則
+- **テストファイル**: `.test.ts` / `.test.tsx` (ユニット/統合), `.spec.ts` (E2E)
+- **テストケース名**: 日本語で記載、動詞-主語パターン
+- **例**: `test('空文字列トークンが適切に拒否される', ...)`
 
-### 2. 使ってよい API（`bun:test` のみ）
-```ts
-import {
-  describe, it, test, expect,
-  beforeEach, afterEach,
-  mock, spyOn,
-  // 必要に応じて
-  // mock.module, setSystemTime
-} from "bun:test";
+### フレーク対処方針
+1. ローカル環境で再現可能か確認
+2. CI環境のTrace Viewerやログを活用
+3. タイミング依存を排除（`setTimeout`や固定待機時間を避ける）
+4. 環境依存を排除（ハードコードされたURLや日時を避ける）
+
+---
+
+## フロントエンドユニット/統合テストガイドライン
+
+### 実行環境
+```bash
+docker compose exec client bun test
 ```
 
-- **モック**: `mock(fn)` を用いる（Jest の `jest.fn` は禁止）。
-- **スパイ**: 既存オブジェクトには `spyOn(obj, "method")`。
-- **モジュール差し替え**: `mock.module()` は「どうしても DI ができない外部依存」などに限定。
-- **後片付け**: `afterEach(() => { mock.restore(); mock.clearAllMocks(); })` を共通化。
+### 運用指針詳細
 
-### 3. 禁止事項
-- `jest` 名前空間の利用を禁止。
-- Jest エコシステム由来のパッケージを禁止。
-- `as unknown as` など乱暴なキャストでのモック化を禁止。
+#### 【必須】項目
+- **`bun:test`の組込みAPIのみ使用**: `describe` / `it` / `expect` / `mock` / `spyOn`
+- **`user-event`を標準とする**: `fireEvent`は禁止、実際のユーザー操作を忠実に再現
+- **ユーザー中心のクエリ使用**: React Testing Libraryのクエリ優先順位に従う
+  1. `getByRole`（最優先・アクセシビリティ）
+  2. `getByLabelText`（フォーム要素）
+  3. `getByPlaceholderText`
+  4. `getByText`
+  5. `getByTestId`（最終手段）
 
-### 4. 標準パターン
-（※現行の関数モック／spyOn／インターフェースモック／モジュール差し替え／共通フック例はそのまま）
-
-### 5. 設計原則
-- **まず DI**：可能な限り依存注入を優先し、直接 import した依存を差し替えるより、呼び出し側に抽象を注入してモックする。
-- 時刻・乱数・I/O などの外部性は **ラッパー関数** 経由にし、テストでそのラッパーをモック。
-- スナップショットは安定化処理をしてから比較。
-- 非同期は `await` を徹底。`done` コールバックは禁止。
-
-### 6. 既存コードからの移行ルール
-- `jest.fn()` → `mock(fn)`
-- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
-- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（※基本は非推奨、必要最小限に）
-- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
-- `jest.Mocked<T>` → `satisfies T` と `mock()` の組み合わせ
-
-### 7. DI 活用モック
-- **mockClear / mockReset が煩雑になるケースでは DI を利用する。**
-- **DI ではテストごとに新しいモックを生成**し、他テストに影響を及ぼすグローバル共有は避ける。
-- **Bun の `Mock` 型**を使って依存のメソッドを型安全にスタブできるようにする。
-- **DI パターンでは mockClear は通常不要**（毎テストで新規生成するため）。
+#### 【推奨】項目
+- **テスト終了時のクリーンアップ**: `mock.restore()`と`mock.clearAllMocks()`
+- **依存注入を優先**: DI可能な設計を心がけ、必要な差し替えは`mock()` / `spyOn()`
+- **カスタムマッチャー活用**: 共通マッチャーは`__tests__/helpers`に配置
+- **DIパターンでのモック生成**: テストごとに新しいモックを生成
 
 ```ts
 type MockUserService = {
@@ -340,10 +324,198 @@ beforeEach(() => {
 });
 ```
 
-### 8. mock.module の注意点
-- **トップレベルでの使用は禁止**。  
-- **各 test 内でのみ宣言し、その後に動的 import** すること。  
-- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う。  
+#### 【非推奨】項目
+- **`mock.module()`の使用**: DI不可能な外部依存のみに限定
+- **`data-testid`の使用**: ユーザー中心のクエリを優先
+- **動的importの使用**: テストの複雑さを増やす
+
+#### 【禁止】項目
+- **`jest`名前空間の使用**: `@jest/*`, `@types/jest`, Jestエコシステムの導入禁止
+- **テストの`.skip`**: 意図的な未実装はTODOコメントで対応
+- **`fireEvent`の使用**: `@testing-library/user-event`で代用
+- **`as unknown as`などの乱暴なキャスト**: 型安全性を損なう
+
+### 依存と型
+- `bun test`を前提とし、追加のテスティングランタイムは導入しない
+- TypeScriptは`tsconfig.json`の`types`に`["bun-types"]`を設定、`@types/jest`は含めない
+- すべてのテストファイルは`.test.ts` / `.test.tsx`
+
+### 使ってよいAPI（`bun:test`のみ）
+```ts
+import {
+  describe, it, test, expect,
+  beforeEach, afterEach,
+  mock, spyOn,
+  // 必要に応じて
+  // mock.module, setSystemTime
+} from "bun:test";
+```
+
+### 設計原則
+- **まずDI**: 可能な限り依存注入を優先し、直接importした依存を差し替えるより、呼び出し側に抽象を注入してモック
+- **外部性のラップ**: 時刻・乱数・I/Oなどはラッパー関数経由にしてテストでモック
+- **スナップショット**: 安定化処理をしてから比較
+- **非同期処理**: `await`を徹底、`done`コールバックは禁止
+
+### 既存コードからの移行ルール
+- `jest.fn()` → `mock(fn)`
+- `jest.spyOn(obj, "m")` → `spyOn(obj, "m")`
+- `jest.mock("mod", factory)` → `mock.module("mod", factory)`（基本は非推奨）
+- `jest.clearAllMocks()` / `jest.restoreAllMocks()` → `mock.clearAllMocks()` / `mock.restore()`
+- `jest.Mocked<T>` → `satisfies T`と`mock()`の組み合わせ
+
+### mock.moduleの注意点
+- **トップレベルでの使用は禁止**
+- **各test内でのみ宣言し、その後に動的import**すること
+- 並列実行やグローバル共有を避け、**最小限の最後の手段**として扱う
+
+---
+
+## E2Eテストガイドライン（Playwright）
+
+### 実行環境
+```bash
+docker compose exec e2e npx playwright test
+```
+
+### 運用指針詳細
+
+#### 【必須】項目
+
+##### storageState APIの使用
+ブラウザコンテキストの初期状態（認証情報など）を設定する際は、`storageState` APIを使用します。
+
+```typescript
+const context = await browser.newContext({
+  storageState: {
+    cookies: [],
+    origins: [
+      {
+        origin: baseURL,
+        localStorage: [
+          { name: 'auth-token', value: JSON.stringify(authData) }
+        ],
+      },
+    ],
+  },
+});
+
+const page = await context.newPage();
+```
+
+**理由**: ハイドレーション前に確実に設定され、レース条件を根本的に回避します。
+
+##### Locatorsの優先利用
+要素の特定には`page.locator()`を使用し、自動待機機能を活用します。
+
+```typescript
+const button = page.locator('button[role="submit"]');
+await button.click(); // 自動で要素が利用可能になるまで待機
+```
+
+##### Web First Assertions
+Playwrightが提供する自動リトライ付きアサーションを使用します。
+
+```typescript
+await expect(page.getByRole('heading')).toBeVisible();
+```
+
+**禁止**: `expect(await locator.isVisible()).toBe(true)` のような手動待機
+
+##### テスト独立性の確保
+`test.afterEach`でクリーンアップを徹底します。
+
+```typescript
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll();
+  await page.evaluate(() => localStorage.clear());
+});
+```
+
+#### 【推奨】項目
+
+##### リダイレクト検証はDOM要素待機
+URLの変更を待つだけでなく、リダイレクト後のページ要素の表示を待機します。
+
+```typescript
+// ❌ 非推奨: ハイドレーション完了を保証しない
+await page.waitForURL('/dashboard');
+
+// ✅ 推奨: UIが操作可能になったことを確認
+await expect(page.getByRole('button', { name: /ログイン/i }))
+  .toBeVisible({ timeout: 15000 });
+await expect(page).toHaveURL('/dashboard');
+```
+
+**理由**: Next.jsなどのフレームワークでは、URL変更後もハイドレーションやデータ取得が続き、UIが操作可能になるまでタイムラグがあります。
+
+##### APIによるテストデータセットアップ
+テストに必要なデータは、UI操作ではなくAPIを直接呼び出して準備します。
+
+```typescript
+// テスト前にAPIでデータ準備
+await request.post('/api/test-data', { data: testUser });
+```
+
+**理由**: テストが高速化し、UIの変更から隔離されます。
+
+##### Trace Viewerの積極的活用
+CI失敗時のデバッグを効率化するため、トレース記録を設定します。
+
+```typescript
+// playwright.config.ts
+use: {
+  trace: 'on-first-retry',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+}
+```
+
+**使用方法**:
+1. CIの成果物から`trace.zip`をダウンロード
+2. `npx playwright show-trace trace.zip`で確認
+
+#### 【非推奨】項目
+
+##### addInitScriptによるlocalStorage設定
+タイミング依存が発生しやすいため、`addInitScript`でのlocalStorage設定は避けます。
+
+```typescript
+// ❌ 非推奨: ハイドレーションと競合
+await page.addInitScript(() => {
+  localStorage.setItem('key', 'value');
+});
+```
+
+**代替**: `storageState` APIを使用
+
+#### 【禁止】項目
+
+##### ハイドレーションタイミングへの依存
+固定の待機時間やハイドレーション完了タイミングに依存するコードは禁止です。
+
+```typescript
+// ❌ 禁止: CI環境で不安定
+await page.waitForTimeout(1000);
+```
+
+**代替**: DOM要素の出現を待機
+```typescript
+// ✅ 正しい
+await expect(page.getByRole('heading')).toBeVisible();
+```
+
+### CI環境への配慮
+- **直列実行**: `workers: 1`で安定性重視（`playwright.config.ts`）
+- **リトライ**: `retries: 1`で高速フィードバック
+- **タイムアウト**: 余裕を持たせる（15秒推奨）
+- **環境変数**: `process.env.GITHUB_ACTIONS`でbaseURLを分岐
+
+### デバッグ手法
+1. **ローカル**: `npx playwright test --debug`で実行
+2. **CI失敗時**: Trace Viewerでartifactを確認
+3. **視覚的確認**: スクリーンショット・動画を活用
+4. **ヘッドフルモード**: `npx playwright test --headed`で実際のブラウザ動作確認  
 
 # コメントガイドライン
 
