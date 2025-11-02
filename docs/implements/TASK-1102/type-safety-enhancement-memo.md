@@ -2,13 +2,13 @@
 
 - `@docs/spec/type-safety-enhancement-requirements.md`
 - `@docs/design/type-safety-enhancement/*`
-- `@docs/implements/TASK-1102/migration-requirements.md`
-- `@docs/implements/TASK-1102/migration-testcases.md`
+- `@docs/implements/TASK-1102/*-requirements.md`
+- `@docs/implements/TASK-1102/*-testcases.md`
 
 2. テスト要件を参考にテストケースを実装してください。テストケースの実装状況をチェックボックスリストにして記録してください。
 3. 記載漏れがあれば、テストケースのチェックボックスを追加してください。
 4. refactor まで実装とレビューが済んだら、チェックボックスを埋めてユーザーに報告してください。
-5. 信頼度や信号や【】などは記載せず、 シンプルかつオンボーディングしたばかりのエンジニアにもわかりやすく明記したGiven-When-Thenパターンのコメントのみを記載してください。
+5. 信頼度や信号や【】などは記載せず、 シンプルかつオンボーディングしたばかりのエンジニアにもわかりやすく明記したコメントのみを記載してください。
 
 ---- ここから下にチェックボックスリストを作成 ----
 
