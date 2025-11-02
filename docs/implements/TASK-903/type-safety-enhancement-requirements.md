@@ -104,7 +104,7 @@ Content-Type: application/json
 ```
 
 **バリデーション制約**:
-- `id`: UUID v4形式（z.string().uuid()）
+- `id`: UUID v4形式（z.uuid()）
 
 #### レスポンス仕様
 

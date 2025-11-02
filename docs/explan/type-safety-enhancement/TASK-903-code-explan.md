@@ -237,7 +237,7 @@ export const authProviderSchema = z.enum([
 
 // ユーザー情報のスキーマ（API契約用）
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   externalId: z.string(),
   provider: authProviderSchema,
   email: emailSchema,

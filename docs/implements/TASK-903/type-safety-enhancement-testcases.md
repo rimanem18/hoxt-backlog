@@ -50,7 +50,7 @@
     method: 'get',
     path: '/users/{id}',
     request: {
-      params: z.object({ id: z.string().uuid() }),
+      params: z.object({ id: z.uuid() }),
     },
     responses: {
       200: {
@@ -122,7 +122,7 @@
     method: 'put',
     path: '/users/{id}',
     request: {
-      params: z.object({ id: z.string().uuid() }),
+      params: z.object({ id: z.uuid() }),
       body: {
         content: {
           'application/json': {

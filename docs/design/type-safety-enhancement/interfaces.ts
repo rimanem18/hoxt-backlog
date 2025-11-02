@@ -87,13 +87,13 @@ export const authProviderSchema = z.enum([
  * 実際は: createSelectSchema(users)
  */
 export const selectUserSchema = z.object({
-  id: z.string().uuid().describe('ユーザーID（UUID v4）'),
+  id: z.uuid().describe('ユーザーID（UUID v4）'),
   externalId: z
     .string()
     .min(1)
     .describe('外部認証プロバイダーでのユーザーID'),
   provider: authProviderSchema.describe('認証プロバイダー種別'),
-  email: z.string().email().describe('メールアドレス（RFC 5321準拠）'),
+  email: z.email().describe('メールアドレス（RFC 5321準拠）'),
   name: z.string().min(1).describe('ユーザー名'),
   avatarUrl: z.string().url().nullable().describe('アバターURL'),
   createdAt: z.date().describe('作成日時（タイムゾーン付き）'),
@@ -111,7 +111,7 @@ export const insertUserSchema = z.object({
     .min(1)
     .describe('外部認証プロバイダーでのユーザーID'),
   provider: authProviderSchema.describe('認証プロバイダー種別'),
-  email: z.string().email().describe('メールアドレス'),
+  email: z.email().describe('メールアドレス'),
   name: z.string().min(1).describe('ユーザー名'),
   avatarUrl: z.string().url().optional().describe('アバターURL'),
 });
@@ -156,7 +156,7 @@ export const authCallbackRequestSchema = z.object({
     .min(1)
     .describe('外部認証プロバイダーでのユーザーID'),
   provider: authProviderSchema.describe('認証プロバイダー種別'),
-  email: z.string().email().describe('メールアドレス'),
+  email: z.email().describe('メールアドレス'),
   name: z.string().min(1).describe('ユーザー名'),
   avatarUrl: z.string().url().optional().describe('アバターURL'),
 });
@@ -178,7 +178,7 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
  * ユーザー取得リクエストパラメータ
  */
 export const getUserParamsSchema = z.object({
-  id: z.string().uuid().describe('ユーザーID（UUID v4）'),
+  id: z.uuid().describe('ユーザーID（UUID v4）'),
 });
 
 export type GetUserParams = z.infer<typeof getUserParamsSchema>;
