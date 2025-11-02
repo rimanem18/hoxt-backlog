@@ -291,4 +291,301 @@ describe('responseValidationMiddleware', () => {
     expect(logMeta).toHaveProperty('timestamp');
     expect(typeof logMeta.timestamp).toBe('string');
   });
+
+  /**
+   * TC003: レスポンスバリデーション有効化（テスト環境）
+   *
+   * テスト環境では開発環境と同様にレスポンスバリデーションが有効化されることを確認する。
+   * NODE_ENV=testの場合、不正なデータでバリデーションが実行され500エラーが返る。
+   */
+  test('テスト環境でレスポンスバリデーションが有効化される', async () => {
+    // Given: テスト環境を設定
+    process.env.NODE_ENV = 'test';
+
+    // Given: UUID形式を要求するZodスキーマを定義
+    const responseSchema = z.object({
+      success: z.boolean(),
+      data: z.object({
+        id: z.uuid(),
+      }),
+    });
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: 不正なUUID形式のレスポンスを返すエンドポイントを準備
+    const app = new Hono();
+    app.use(
+      '*',
+      createResponseValidationMiddleware(responseSchema, mockLogger),
+    );
+    app.get('/test', (c) =>
+      c.json({
+        success: true,
+        data: {
+          id: 'invalid-uuid', // UUID形式ではない
+        },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 500 Internal Server Errorが返る（バリデーションが実行されたことを証明）
+    expect(response.status).toBe(500);
+
+    // Then: クライアントには安全なエラーメッセージのみ返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '一時的にサービスが利用できません',
+      },
+    });
+
+    // Then: バリデーション失敗の詳細がログに記録される
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * TC102: レスポンスバリデーション失敗（必須フィールド欠落）
+   *
+   * 開発環境で必須フィールドが欠落したレスポンスデータがバリデーションに失敗することを確認する。
+   * 必須フィールド欠落時は500エラーを返し、詳細はログのみに記録する。
+   */
+  test('開発環境で必須フィールドが欠落したレスポンスデータがバリデーションに失敗する', async () => {
+    // Given: 開発環境を設定
+    process.env.NODE_ENV = 'development';
+
+    // Given: 必須フィールドを含むZodスキーマを定義
+    const responseSchema = z.object({
+      success: z.boolean(),
+      data: z.object({
+        id: z.uuid(),
+        externalId: z.string(),
+        provider: z.string(),
+        email: z.email(),
+        name: z.string(),
+      }),
+    });
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: 必須フィールドが欠落したレスポンスを返すエンドポイントを準備
+    const app = new Hono();
+    app.use(
+      '*',
+      createResponseValidationMiddleware(responseSchema, mockLogger),
+    );
+    app.get('/test', (c) =>
+      c.json({
+        success: true,
+        data: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          externalId: 'google_user_123',
+          provider: 'google',
+          // email フィールドが欠落
+          name: 'Test User',
+        },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 500 Internal Server Errorが返る
+    expect(response.status).toBe(500);
+
+    // Then: クライアントには安全なエラーメッセージのみ返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '一時的にサービスが利用できません',
+      },
+    });
+
+    // Then: バリデーション失敗の詳細がログに記録される
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * TC103: レスポンスバリデーション失敗（型の不一致）
+   *
+   * 開発環境でフィールドの型が不正なレスポンスデータがバリデーションに失敗することを確認する。
+   * 型の不一致時は500エラーを返し、詳細はログのみに記録する。
+   */
+  test('開発環境でフィールドの型が不正なレスポンスデータがバリデーションに失敗する', async () => {
+    // Given: 開発環境を設定
+    process.env.NODE_ENV = 'development';
+
+    // Given: 型を厳密に定義するZodスキーマを定義
+    const responseSchema = z.object({
+      success: z.boolean(),
+      data: z.object({
+        id: z.uuid(),
+        externalId: z.string(),
+        provider: z.string(),
+        email: z.email(),
+        name: z.string(),
+      }),
+    });
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: 型が不一致のレスポンスを返すエンドポイントを準備
+    const app = new Hono();
+    app.use(
+      '*',
+      createResponseValidationMiddleware(responseSchema, mockLogger),
+    );
+    app.get('/test', (c) =>
+      c.json({
+        success: true,
+        data: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          externalId: 12345, // 数値型（string型であるべき）
+          provider: 'google',
+          email: 'test@example.com',
+          name: 'Test User',
+        },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 500 Internal Server Errorが返る
+    expect(response.status).toBe(500);
+
+    // Then: クライアントには安全なエラーメッセージのみ返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '一時的にサービスが利用できません',
+      },
+    });
+
+    // Then: バリデーション失敗の詳細がログに記録される
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+
+    // Then: ログに型の不一致エラーが含まれる
+    const call = (mockLogger.error as ReturnType<typeof mock>).mock.calls[0];
+    const logMeta = call?.[1];
+    expect(logMeta.error.issues).toBeDefined();
+    expect(logMeta.error.issues.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * TC203: null値を含むレスポンスデータ
+   *
+   * nullable フィールドに null が含まれるレスポンスデータがバリデーションに成功することを確認する。
+   * null は有効な値として扱われ、正常にレスポンスが返却される。
+   */
+  test('nullableフィールドにnullを含むレスポンスデータがバリデーションに成功する', async () => {
+    // Given: 開発環境を設定
+    process.env.NODE_ENV = 'development';
+
+    // Given: nullableフィールドを含むZodスキーマを定義
+    const responseSchema = z.object({
+      success: z.boolean(),
+      data: z.object({
+        id: z.uuid(),
+        externalId: z.string(),
+        provider: z.string(),
+        email: z.email(),
+        name: z.string(),
+        avatarUrl: z.string().nullable(),
+        createdAt: z.string(),
+        updatedAt: z.string(),
+        lastLoginAt: z.string().nullable(),
+      }),
+    });
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: nullableフィールドにnullを含むレスポンスを返すエンドポイントを準備
+    const app = new Hono();
+    app.use(
+      '*',
+      createResponseValidationMiddleware(responseSchema, mockLogger),
+    );
+    app.get('/test', (c) =>
+      c.json({
+        success: true,
+        data: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          externalId: 'google_user_123',
+          provider: 'google',
+          email: 'test@example.com',
+          name: 'Test User',
+          avatarUrl: null,
+          createdAt: '2025-11-02T10:00:00Z',
+          updatedAt: '2025-11-02T10:00:00Z',
+          lastLoginAt: null,
+        },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 200 OKが返る
+    expect(response.status).toBe(200);
+
+    // Then: nullを含むレスポンスデータが正常に返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: true,
+      data: {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        externalId: 'google_user_123',
+        provider: 'google',
+        email: 'test@example.com',
+        name: 'Test User',
+        avatarUrl: null,
+        createdAt: '2025-11-02T10:00:00Z',
+        updatedAt: '2025-11-02T10:00:00Z',
+        lastLoginAt: null,
+      },
+    });
+
+    // Then: エラーログが出力されない
+    expect(mockLogger.error).not.toHaveBeenCalled();
+  });
 });
