@@ -43,8 +43,8 @@ describe('responseValidationMiddleware', () => {
     const responseSchema = z.object({
       success: z.boolean(),
       data: z.object({
-        id: z.string().uuid(),
-        email: z.string().email(),
+        id: z.uuid(),
+        email: z.email(),
         name: z.string(),
       }),
     });
@@ -111,7 +111,7 @@ describe('responseValidationMiddleware', () => {
     const responseSchema = z.object({
       success: z.boolean(),
       data: z.object({
-        id: z.string().uuid(),
+        id: z.uuid(),
       }),
     });
 
@@ -174,7 +174,7 @@ describe('responseValidationMiddleware', () => {
     const responseSchema = z.object({
       success: z.boolean(),
       data: z.object({
-        id: z.string().uuid(),
+        id: z.uuid(),
       }),
     });
 
@@ -237,8 +237,8 @@ describe('responseValidationMiddleware', () => {
     const responseSchema = z.object({
       success: z.boolean(),
       data: z.object({
-        id: z.string().uuid(),
-        email: z.string().email(),
+        id: z.uuid(),
+        email: z.email(),
       }),
     });
 

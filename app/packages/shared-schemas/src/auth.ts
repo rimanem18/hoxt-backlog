@@ -46,7 +46,7 @@ export const authCallbackRequestSchema = z.object({
  * DB実装時はserver/src/schemas/users.tsのselectUserSchemaを使用。
  */
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   externalId: z.string(),
   provider: authProviderSchema,
   email: emailSchema,
