@@ -588,4 +588,297 @@ describe('responseValidationMiddleware', () => {
     // Then: エラーログが出力されない
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
+
+  /**
+   * TC201: レスポンススキーマ未定義エンドポイント
+   *
+   * スキーマが未定義（undefined）の場合、バリデーションをスキップし、
+   * 警告ログを出力することを確認する。
+   */
+  test('スキーマ未定義の場合バリデーションをスキップし警告ログを出力する', async () => {
+    // Given: 開発環境を設定
+    process.env.NODE_ENV = 'development';
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: スキーマ未定義（undefined）のミドルウェアを適用したエンドポイントを準備
+    const app = new Hono();
+    app.use('*', createResponseValidationMiddleware(undefined, mockLogger));
+    app.get('/new-endpoint', (c) =>
+      c.json({
+        success: true,
+        data: { message: 'This is a new endpoint without schema' },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/new-endpoint', {
+      method: 'GET',
+    });
+
+    // Then: 200 OKが返る（バリデーションスキップ）
+    expect(response.status).toBe(200);
+
+    // Then: レスポンスデータが正常に返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: true,
+      data: { message: 'This is a new endpoint without schema' },
+    });
+
+    // Then: 警告ログが出力される
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    const warnCall = (mockLogger.warn as ReturnType<typeof mock>).mock.calls[0];
+    expect(warnCall?.[0]).toBe('Response schema not defined');
+    expect(warnCall?.[1]).toHaveProperty('endpoint', '/new-endpoint');
+    expect(warnCall?.[1]).toHaveProperty('method', 'GET');
+
+    // Then: エラーログは出力されない
+    expect(mockLogger.error).not.toHaveBeenCalled();
+  });
+
+  /**
+   * TC202: 環境変数未設定時のデフォルト動作
+   *
+   * NODE_ENVが未設定の場合、開発環境として扱いバリデーションを実行することを確認する。
+   */
+  test('NODE_ENV未設定時は開発環境として扱いバリデーションを実行する', async () => {
+    // Given: NODE_ENVを削除（未設定状態）
+    delete process.env.NODE_ENV;
+
+    // Given: UUID形式を要求するZodスキーマを定義
+    const responseSchema = z.object({
+      success: z.boolean(),
+      data: z.object({
+        id: z.uuid(),
+      }),
+    });
+
+    // Given: モックLoggerを準備
+    const mockLogger: Logger = {
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+      debug: mock(() => {}),
+    };
+
+    // Given: 不正なUUID形式のレスポンスを返すエンドポイントを準備
+    const app = new Hono();
+    app.use(
+      '*',
+      createResponseValidationMiddleware(responseSchema, mockLogger),
+    );
+    app.get('/test', (c) =>
+      c.json({
+        success: true,
+        data: {
+          id: 'invalid-uuid', // UUID形式ではない
+        },
+      }),
+    );
+
+    // When: エンドポイントにリクエストを送信
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+    });
+
+    // Then: 500 Internal Server Errorが返る（バリデーションが実行されたことを証明）
+    expect(response.status).toBe(500);
+
+    // Then: クライアントには安全なエラーメッセージのみ返却される
+    const body = await response.json();
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: '一時的にサービスが利用できません',
+      },
+    });
+
+    // Then: バリデーション失敗の詳細がログに記録される
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * TC301: Zodバリデーションのレスポンスタイムへの影響測定
+   *
+   * 開発環境でZodバリデーションによるレスポンスタイムへの影響が
+   * 許容範囲内（150ms以内）であることを確認する。
+   * ウォームアップを含めてベンチマーク測定を実施する。
+   */
+  test.skipIf(process.env.SKIP_PERF_TESTS === 'true')(
+    'Zodバリデーションの平均実行時間が150ms以内である',
+    async () => {
+      // Given: 開発環境を設定
+      process.env.NODE_ENV = 'development';
+
+      // Given: 複雑なZodスキーマを定義
+      const responseSchema = z.object({
+        success: z.boolean(),
+        data: z.object({
+          id: z.uuid(),
+          externalId: z.string(),
+          provider: z.string(),
+          email: z.email(),
+          name: z.string(),
+          avatarUrl: z.string().nullable(),
+          createdAt: z.string(),
+          updatedAt: z.string(),
+          lastLoginAt: z.string().nullable(),
+        }),
+      });
+
+      // Given: テストデータを準備
+      const testData = {
+        success: true,
+        data: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          externalId: 'google_user_123',
+          provider: 'google',
+          email: 'test@example.com',
+          name: 'Test User',
+          avatarUrl: 'https://example.com/avatar.jpg',
+          createdAt: '2025-11-02T10:00:00Z',
+          updatedAt: '2025-11-02T10:00:00Z',
+          lastLoginAt: '2025-11-02T10:00:00Z',
+        },
+      };
+
+      // Given: ウォームアップ（100回）
+      for (let i = 0; i < 100; i++) {
+        responseSchema.safeParse(testData);
+      }
+
+      // When: 1000回のバリデーション実行時間を測定
+      const iterations = 1000;
+      const start = performance.now();
+      for (let i = 0; i < iterations; i++) {
+        responseSchema.safeParse(testData);
+      }
+      const elapsed = performance.now() - start;
+      const avgTime = elapsed / iterations;
+
+      // Then: 平均バリデーション時間が150ms以内
+      expect(avgTime).toBeLessThan(150);
+
+      // パフォーマンス情報をログ出力（デバッグ用）
+      // biome-ignore lint/suspicious/noConsole: パフォーマンス測定結果の出力
+      console.log(
+        `Zod validation performance: ${avgTime.toFixed(4)}ms per iteration (${iterations} iterations, total: ${elapsed.toFixed(2)}ms)`,
+      );
+    },
+  );
+
+  /**
+   * TC302: 本番環境でのバリデーションスキップによるパフォーマンス最適化
+   *
+   * 本番環境でバリデーションがスキップされ、
+   * オーバーヘッドがゼロに近いことを確認する。
+   * スパイを使用してsafeParseが呼ばれないことも検証する。
+   */
+  test.skipIf(process.env.SKIP_PERF_TESTS === 'true')(
+    '本番環境でバリデーションがスキップされパフォーマンスへの影響がゼロである',
+    async () => {
+      // Given: Zodスキーマを定義
+      const responseSchema = z.object({
+        success: z.boolean(),
+        data: z.object({
+          id: z.uuid(),
+        }),
+      });
+
+      // Given: スキーマのsafeParseにスパイを設定
+      const safeParseOriginal = responseSchema.safeParse.bind(responseSchema);
+      let devSafeParseCallCount = 0;
+      let prodSafeParseCallCount = 0;
+
+      // Given: モックLoggerを準備
+      const mockLogger: Logger = {
+        info: mock(() => {}),
+        warn: mock(() => {}),
+        error: mock(() => {}),
+        debug: mock(() => {}),
+      };
+
+      // Given: 開発環境でのレスポンスタイムを測定
+      process.env.NODE_ENV = 'development';
+      responseSchema.safeParse = (data) => {
+        devSafeParseCallCount++;
+        return safeParseOriginal(data);
+      };
+
+      const devApp = new Hono();
+      devApp.use(
+        '*',
+        createResponseValidationMiddleware(responseSchema, mockLogger),
+      );
+      devApp.get('/test', (c) =>
+        c.json({
+          success: true,
+          data: { id: '550e8400-e29b-41d4-a716-446655440000' },
+        }),
+      );
+
+      const devIterations = 100;
+      const devStart = performance.now();
+      for (let i = 0; i < devIterations; i++) {
+        await devApp.request('http://localhost/test', { method: 'GET' });
+      }
+      const devElapsed = performance.now() - devStart;
+      const devAvgTime = devElapsed / devIterations;
+
+      // Given: 本番環境でのレスポンスタイムを測定
+      process.env.NODE_ENV = 'production';
+      responseSchema.safeParse = (data) => {
+        prodSafeParseCallCount++;
+        return safeParseOriginal(data);
+      };
+
+      const prodApp = new Hono();
+      prodApp.use(
+        '*',
+        createResponseValidationMiddleware(responseSchema, mockLogger),
+      );
+      prodApp.get('/test', (c) =>
+        c.json({
+          success: true,
+          data: { id: '550e8400-e29b-41d4-a716-446655440000' },
+        }),
+      );
+
+      const prodIterations = 100;
+      const prodStart = performance.now();
+      for (let i = 0; i < prodIterations; i++) {
+        await prodApp.request('http://localhost/test', { method: 'GET' });
+      }
+      const prodElapsed = performance.now() - prodStart;
+      const prodAvgTime = prodElapsed / prodIterations;
+
+      // Then: 本番環境のレスポンスタイムが開発環境と同等またはそれ以下
+      // バリデーションオーバーヘッドがないため、本番環境の方が高速であるべき
+      expect(prodAvgTime).toBeLessThanOrEqual(devAvgTime);
+
+      // パフォーマンス比較情報をログ出力（デバッグ用）
+      // biome-ignore lint/suspicious/noConsole: パフォーマンス測定結果の出力
+      console.log(
+        `Performance comparison: Dev=${devAvgTime.toFixed(4)}ms, Prod=${prodAvgTime.toFixed(4)}ms (overhead: ${(devAvgTime - prodAvgTime).toFixed(4)}ms)`,
+      );
+
+      // Then: 本番環境ではバリデーションが実行されないことを確認
+      // モックLoggerのerror/warnが呼ばれていないことで間接的に検証
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+
+      // Then: 本番環境ではsafeParseが呼ばれないことを確認
+      expect(prodSafeParseCallCount).toBe(0);
+      // Then: 開発環境ではsafeParseが呼ばれることを確認（参考情報）
+      expect(devSafeParseCallCount).toBe(devIterations);
+    },
+  );
 });

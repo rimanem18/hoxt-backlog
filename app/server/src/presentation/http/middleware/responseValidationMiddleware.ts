@@ -17,17 +17,27 @@ import type { Logger } from '@/shared/logging/Logger';
  * 開発環境では実行時型安全性を保証し、バリデーション失敗時は詳細をログ記録する。
  * ファクトリーパターンでスキーマとLoggerを注入し、テスタビリティを確保する。
  *
- * @param responseSchema - レスポンス検証用のZodスキーマ
+ * @param responseSchema - レスポンス検証用のZodスキーマ（未定義の場合はバリデーションスキップ）
  * @param logger - ログ出力インターフェース
  * @returns Hono MiddlewareHandler関数
  */
 export const createResponseValidationMiddleware = (
-  responseSchema: z.ZodTypeAny,
+  responseSchema: z.ZodTypeAny | undefined,
   logger: Logger,
 ): MiddlewareHandler => {
   return async (c, next) => {
     // 本番環境ではバリデーションをスキップ（パフォーマンス優先）
     if (process.env.NODE_ENV === 'production') {
+      await next();
+      return;
+    }
+
+    // スキーマ未定義の場合はバリデーションをスキップ（警告ログ出力）
+    if (!responseSchema) {
+      logger.warn('Response schema not defined', {
+        endpoint: c.req.path,
+        method: c.req.method,
+      });
       await next();
       return;
     }
