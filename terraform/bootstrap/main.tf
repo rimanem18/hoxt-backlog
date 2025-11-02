@@ -74,6 +74,7 @@ resource "aws_lambda_function" "production" {
       NODE_ENV                  = "production"
       BASE_SCHEMA               = "app_${local.project_name}"
       DATABASE_URL              = var.database_url
+      SUPABASE_URL              = var.next_public_supabase_url
       ACCESS_ALLOW_ORIGIN       = var.access_allow_origin_production
       ACCESS_ALLOW_METHODS      = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
       ACCESS_ALLOW_HEADERS      = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
@@ -105,6 +106,7 @@ resource "aws_lambda_function" "preview" {
       NODE_ENV                  = "development"
       BASE_SCHEMA               = "app_${local.project_name}_preview"
       DATABASE_URL              = var.database_url
+      SUPABASE_URL              = var.next_public_supabase_url
       ACCESS_ALLOW_ORIGIN       = var.access_allow_origin_preview
       ACCESS_ALLOW_METHODS      = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
       ACCESS_ALLOW_HEADERS      = "Content-Type,Authorization,X-Requested-With,Accept,Origin"

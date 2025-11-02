@@ -53,6 +53,8 @@ jobs:
           # データベーススキーマ設定（環境別）
           BASE_SCHEMA: ${{ inputs.environment-type == 'production' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Supabase設定
+          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           # CORS設定
           ACCESS_ALLOW_ORIGIN: ${{ inputs.cors-allow-origin }}
           ACCESS_ALLOW_METHODS: ${{ vars.ACCESS_ALLOW_METHODS }}
