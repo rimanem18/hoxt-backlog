@@ -123,6 +123,7 @@ docker compose exec server bun run dev
 - **禁止**: `any` 型の使用
   - ただし、型が取得不能な外部ライブラリや JSON パースなどの場合に限り、理由コメントを添えて明示的に使用可
 - **禁止**: `var` の使用
+- **禁止**: Supabase JWT Secret 認証の使用（現在非推奨、 JWKS 認証で代用）
 
 # スキーマ駆動開発ガイドライン
 
