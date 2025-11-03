@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
+import { formatZodError } from '@/shared/utils/zodErrorFormatter';
 import { AuthController } from '../controllers/AuthController';
 import { authCallbackRoute } from './authRoutes.schema';
 
@@ -29,21 +30,13 @@ const auth = new OpenAPIHono({
       return;
     }
 
-    // Zodエラーをフィールド単位のエラーマップに変換
     return c.json(
       {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
           message: 'バリデーションエラー',
-          details: result.error.issues.reduce(
-            (acc: Record<string, string>, issue) => {
-              const field = issue.path.join('.');
-              acc[field] = issue.message;
-              return acc;
-            },
-            {},
-          ),
+          details: formatZodError(result.error.issues),
         },
       },
       400,

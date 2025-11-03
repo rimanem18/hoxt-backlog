@@ -11,6 +11,7 @@ import { UserController } from '@/presentation/http/controllers/UserController';
 import { requireAuth } from '@/presentation/http/middleware';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';
 import { ValidationError } from '@/shared/errors/ValidationError';
+import { formatZodError } from '@/shared/utils/zodErrorFormatter';
 import {
   getUserProfileRoute,
   getUserRoute,
@@ -79,21 +80,13 @@ const users = new OpenAPIHono({
       return;
     }
 
-    // Zodのエラー形式をapiErrorResponseSchema形式に変換
     return c.json(
       {
         success: false,
         error: {
           code: ERROR_CODES.VALIDATION_ERROR,
           message: ERROR_MESSAGES.VALIDATION_ERROR,
-          details: result.error.issues.reduce(
-            (acc: Record<string, string>, issue) => {
-              const field = issue.path.join('.');
-              acc[field] = issue.message;
-              return acc;
-            },
-            {},
-          ),
+          details: formatZodError(result.error.issues),
         },
       },
       400,
