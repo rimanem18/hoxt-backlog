@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { formatZodError } from '@/shared/utils/zodErrorFormatter';
 
 /**
  * データベース設定のスキーマ
@@ -56,8 +57,9 @@ export function getDatabaseConfig(): DatabaseConfig {
     return databaseConfigSchema.parse(rawConfig);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.issues
-        .map((issue) => issue.message)
+      const formattedErrors = formatZodError(error.issues);
+      const errorMessages = Object.entries(formattedErrors)
+        .map(([field, message]) => `${field}: ${message}`)
         .join(', ');
       throw new Error(`環境変数設定エラー: ${errorMessages}`);
     }
