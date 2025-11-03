@@ -120,11 +120,28 @@ function createInvalidStringMessage(issue: ZodIssue, field: string): string {
 
 /**
  * too_small エラーのメッセージ生成
+ *
+ * カスタムメッセージが指定されている場合はそれを優先
  */
 function createTooSmallMessage(issue: ZodIssue, field: string): string {
   const minimum = (issue as any).minimum;
   const type = (issue as any).type;
   const inclusive = (issue as any).inclusive;
+
+  // Zodのデフォルト英語メッセージかどうかを判定
+  const isDefaultMessage =
+    issue.message.startsWith('String must contain at least') ||
+    issue.message.startsWith('Array must contain at least') ||
+    issue.message.startsWith('Number must be greater than') ||
+    issue.message.startsWith('BigInt must be greater than') ||
+    issue.message.startsWith('Date must be greater than') ||
+    issue.message.startsWith('Expected');
+
+  // カスタムメッセージが指定されている場合は優先
+  if (!isDefaultMessage) {
+    return issue.message;
+  }
+
   const comparator = inclusive ? '以上' : 'より大きい値';
 
   switch (type) {
@@ -144,11 +161,29 @@ function createTooSmallMessage(issue: ZodIssue, field: string): string {
 
 /**
  * too_big エラーのメッセージ生成
+ *
+ * カスタムメッセージが指定されている場合はそれを優先
  */
 function createTooBigMessage(issue: ZodIssue, field: string): string {
   const maximum = (issue as any).maximum;
   const type = (issue as any).type;
   const inclusive = (issue as any).inclusive;
+
+  // Zodのデフォルト英語メッセージかどうかを判定
+  const isDefaultMessage =
+    issue.message.startsWith('String must contain at most') ||
+    issue.message.startsWith('Array must contain at most') ||
+    issue.message.startsWith('Number must be less than') ||
+    issue.message.startsWith('BigInt must be less than') ||
+    issue.message.startsWith('Date must be') ||
+    issue.message.startsWith('Too big') ||
+    issue.message.includes('expected number to be');
+
+  // カスタムメッセージが指定されている場合は優先
+  if (!isDefaultMessage) {
+    return issue.message;
+  }
+
   const comparator = inclusive ? '以下' : '未満';
 
   switch (type) {
