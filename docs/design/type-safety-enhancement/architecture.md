@@ -100,7 +100,7 @@ app.openapi(
     method: 'get',
     path: '/users/{id}',
     request: {
-      params: z.object({ id: z.string().uuid() }),
+      params: z.object({ id: z.uuid() }),
     },
     responses: {
       200: {
@@ -402,7 +402,7 @@ import { z } from 'zod';
 import { selectUserSchema } from '@/packages/shared-schemas/users';
 
 const getUserInputSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
 });
 
 const getUserOutputSchema = z.object({
@@ -436,7 +436,7 @@ app.openapi(
   createRoute({
     method: 'get',
     path: '/users/{id}',
-    request: { params: z.object({ id: z.string().uuid() }) },
+    request: { params: z.object({ id: z.uuid() }) },
     responses: {
       200: {
         content: { 'application/json': { schema: getUserResponseSchema } },

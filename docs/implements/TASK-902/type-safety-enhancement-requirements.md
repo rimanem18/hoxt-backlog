@@ -109,7 +109,7 @@ Content-Type: application/json
 **バリデーション制約**:
 - `externalId`: 1文字以上の文字列
 - `provider`: 6つの値のいずれか
-- `email`: メールアドレス形式（`z.string().email()`）
+- `email`: メールアドレス形式（`z.email()`）
 - `name`: 1文字以上の文字列
 - `avatarUrl`: URL形式（オプション）
 

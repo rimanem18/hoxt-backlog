@@ -549,7 +549,7 @@ type User = { id: number; name: string; };  // idの型が違う！
 ```typescript
 // Zodスキーマから自動生成
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
 });
 

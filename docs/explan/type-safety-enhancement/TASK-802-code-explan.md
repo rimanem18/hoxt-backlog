@@ -423,8 +423,8 @@ A: Zodスキーマから**TypeScriptの型を逆算する**機能です。
 ```typescript
 // 例: こんなZodスキーマがあるとき
 const userSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   name: z.string(),
 });
 

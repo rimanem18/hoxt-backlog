@@ -88,7 +88,7 @@ export function validateConfig(): void {
  * @throws 必須環境変数が不足している場合の詳細エラー
  */
 export function validateEnv(): void {
-  const required = ['SUPABASE_URL', 'SUPABASE_JWT_SECRET', 'DATABASE_URL'];
+  const required = ['SUPABASE_URL', 'DATABASE_URL'];
 
   const missing = required.filter(
     (key) => !process.env[key] || process.env[key]?.trim() === '',

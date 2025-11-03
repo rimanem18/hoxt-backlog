@@ -386,7 +386,10 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       provider: 'google',
       email: userData.user.email || '',
       name: userData.user.user_metadata.full_name || userData.user.email || '',
-      avatarUrl: userData.user.user_metadata.avatar_url || null,
+      avatarUrl:
+        userData.user.user_metadata?.avatar_url ||
+        userData.user.user_metadata?.picture ||
+        null,
       createdAt: userData.user.created_at || new Date().toISOString(),
       updatedAt: userData.user.updated_at || new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),

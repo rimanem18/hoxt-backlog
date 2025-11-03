@@ -47,3 +47,9 @@ variable "metrics_namespace" {
   type        = string
   default     = "Application/Monitoring"
 }
+
+variable "next_public_supabase_url" {
+  description = "Supabase project URL for authentication (shared with frontend)"
+  type        = string
+  sensitive   = true
+}

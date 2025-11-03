@@ -223,7 +223,7 @@ export const authCallbackRequestSchema = z.object({
 **ユーザー情報スキーマ**:
 ```typescript
 export const userSchema = z.object({
-  id: z.string().uuid(),             // UUID形式
+  id: z.uuid(),             // UUID形式
   externalId: z.string(),            // 外部プロバイダーのID
   provider: authProviderSchema,      // 認証プロバイダー
   email: emailSchema,                // メールアドレス

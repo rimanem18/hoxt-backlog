@@ -139,7 +139,7 @@
     avatarUrl: urlSchema.optional(),
   });
   export const userSchema = z.object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     externalId: z.string(),
     provider: authProviderSchema,
     email: emailSchema,
