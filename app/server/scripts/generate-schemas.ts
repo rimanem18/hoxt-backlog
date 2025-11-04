@@ -94,11 +94,9 @@ function capitalize(str: string): string {
  * @returns 生成ファイルの警告コメント
  */
 function generateFileHeader(): string {
-  const timestamp = new Date().toISOString();
   return `/**
  * このファイルは自動生成されました
  *
- * 生成日時: ${timestamp}
  * 生成元: scripts/generate-schemas.ts
  *
  * ⚠️ 警告: このファイルを手動で編集しないでください ⚠️
