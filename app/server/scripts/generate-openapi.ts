@@ -12,7 +12,7 @@
  *   1. OpenAPIルート定義（スキーマのみ）をインポート
  *   2. 最小構成のOpenAPIHonoアプリを作成
  *   3. app.getOpenAPIDocument()でOpenAPI仕様を取得
- *   4. YAML形式で/home/bun/docs/api/openapi.yamlに出力
+ *   4. YAML形式でdocs/api/openapi.yamlに出力（プロジェクトルート基準）
  *
  * Why: ルート定義（スキーマ）のみをインポートし、
  * ハンドラ実装（DIコンテナ → DB接続）を避けることで、
@@ -20,7 +20,8 @@
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import {
@@ -37,8 +38,10 @@ import { authCallbackRoute } from "../src/presentation/http/routes/authRoutes.sc
 async function generateOpenAPISpec(): Promise<void> {
 	console.log("OpenAPI仕様生成を開始します...");
 
-	// 出力先ディレクトリを作成
-	const outputPath = "/home/bun/docs/api/openapi.yaml";
+	// スクリプトファイルの位置から出力先パスを解決
+	// Why: process.cwd()に依存せず、実行コンテキストに関わらず正しいパスを解決
+	const scriptDir = dirname(fileURLToPath(import.meta.url));
+	const outputPath = join(scriptDir, "../../../docs/api/openapi.yaml");
 	await mkdir(dirname(outputPath), { recursive: true });
 
 	// 最小構成のOpenAPIHonoアプリを作成
