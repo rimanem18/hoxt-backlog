@@ -39,8 +39,17 @@ export const getUserResponseSchema = apiResponseSchema(userSchema);
  */
 export const listUsersQuerySchema = z.object({
   provider: authProviderSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, 'limitは最小値1以上である必要があります')
+    .max(100, 'limitは最大値100以下である必要があります')
+    .default(20),
+  offset: z.coerce
+    .number()
+    .int()
+    .min(0, 'offsetは最小値0以上である必要があります')
+    .default(0),
 });
 
 /**

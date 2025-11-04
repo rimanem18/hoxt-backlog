@@ -39,10 +39,43 @@ export function getSupabaseStorageKey(): string {
 }
 
 /**
+ * Supabase から取得される生のユーザーメタデータ構造
+ * OAuth プロバイダーから提供される情報を含む
+ */
+interface SupabaseUserMetadata {
+  avatar_url?: string;
+  picture?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Supabase から取得される生のユーザー構造
+ * user_metadata を含む完全な構造
+ */
+interface SupabaseUser {
+  id: string;
+  email?: string;
+  user_metadata?: SupabaseUserMetadata;
+  [key: string]: unknown;
+}
+
+/**
  * 認証データの基本構造を定義
  * localStorage から取得される認証データの型定義
  */
 export interface StoredAuthData {
+  user: User | SupabaseUser;
+  expires_at: number | string;
+  access_token?: string;
+  isNewUser?: boolean;
+}
+
+/**
+ * 検証済み認証データの構造を定義
+ * validateStoredAuth 関数が返す検証済みデータの型定義
+ * StoredAuthData と異なり、user フィールドは必ず User 型
+ */
+export interface ValidatedAuthData {
   user: User;
   expires_at: number | string;
   access_token?: string;
@@ -51,11 +84,11 @@ export interface StoredAuthData {
 
 /**
  * 認証検証の結果を表すインターフェース
- * 検証成功時はデータを含み、失敗時はエラー理由を含む
+ * 検証成功時は ValidatedAuthData を含み、失敗時はエラー理由を含む
  */
 export interface AuthValidationResult {
   isValid: boolean;
-  data?: StoredAuthData;
+  data?: ValidatedAuthData;
   reason?:
     | 'missing'
     | 'parse_error'
@@ -153,10 +186,25 @@ export function validateStoredAuth(): AuthValidationResult {
       };
     }
 
+    // Supabase の user_metadata を User 型に変換
+    // OAuth プロバイダーから取得した avatar_url を avatarUrl に変換
+    const supabaseUser = authData.user as SupabaseUser;
+    const transformedUser: User = {
+      ...(authData.user as User),
+      avatarUrl:
+        supabaseUser.user_metadata?.avatar_url ||
+        supabaseUser.user_metadata?.picture ||
+        (authData.user as User).avatarUrl ||
+        null,
+    };
+
     // すべての検証を通過した場合
     return {
       isValid: true,
-      data: authData,
+      data: {
+        ...authData,
+        user: transformedUser,
+      },
     };
   } catch (error) {
     // 予期しないエラー処理として localStorage アクセスエラー等

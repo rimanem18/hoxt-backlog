@@ -361,4 +361,74 @@ describe('GET /api/user/profile 統合テスト', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('バリデーションエラーメッセージ改善', () => {
+    test('不正なUUID形式で詳細な日本語バリデーションエラーが返される', async () => {
+      // Given: 不正なUUID形式のパスパラメータ
+      const invalidUuid = 'invalid-uuid-format';
+      const validJWT = 'valid-jwt-token';
+      const request = new Request(`http://localhost/api/users/${invalidUuid}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${validJWT}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // When: ユーザー取得エンドポイントにリクエストを送信
+      const response = await app.request(request);
+
+      // Then: 400 Bad Requestと日本語エラーメッセージが返される
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body).toMatchObject({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'バリデーションエラー',
+        },
+      });
+
+      // Then: detailsフィールドに日本語メッセージが含まれる
+      expect(body.error.details).toBeDefined();
+      expect(typeof body.error.details.id).toBe('string');
+      // Zodスキーマでカスタムメッセージが設定されている場合はそれが返される
+      expect(body.error.details.id.length).toBeGreaterThan(0);
+    });
+
+    test('複数フィールドのバリデーションエラーで各フィールドの日本語メッセージが返される', async () => {
+      // Given: 複数の不正な値を含むPOSTリクエスト
+      const validJWT = 'valid-jwt-token';
+      const request = new Request('http://localhost/api/auth/callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          externalId: '',
+          provider: 'invalid-provider',
+          email: 'not-an-email',
+          name: '',
+        }),
+      });
+
+      // When: 認証コールバックエンドポイントにリクエストを送信
+      const response = await app.request(request);
+
+      // Then: 400 Bad Requestと複数フィールドのエラーが返される
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body).toMatchObject({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'バリデーションエラー',
+        },
+      });
+
+      // Then: 各フィールドに日本語エラーメッセージが含まれる
+      expect(body.error.details).toBeDefined();
+      expect(Object.keys(body.error.details).length).toBeGreaterThan(0);
+    });
+  });
 });

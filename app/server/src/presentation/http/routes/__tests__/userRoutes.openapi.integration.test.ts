@@ -340,7 +340,7 @@ describe('GET /api/users 統合テスト', () => {
           code: 'VALIDATION_ERROR',
           message: 'バリデーションエラー',
           details: {
-            limit: 'Too big: expected number to be <=100',
+            limit: 'limitは最大値100以下である必要があります',
           },
         },
       });
