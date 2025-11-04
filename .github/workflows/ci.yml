@@ -20,6 +20,17 @@ env:
   ACTIONS_STEP_DEBUG: false
 
 jobs:
+  # 型定義最新性チェック
+  schema-check:
+    name: Schema Check
+    # 実行条件:
+    # 1. workflow_call で呼び出された場合（Productionデプロイ時）
+    # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    if: |
+      github.event_name == 'workflow_call' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+    uses: ./.github/workflows/schema-check.yml
+
   # Client (Next.js) のユニットテスト
   client-test:
     name: Client Unit Tests
@@ -72,7 +83,12 @@ jobs:
     if: |
       github.event_name == 'workflow_call' ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
-    needs: [client-test, server-test, e2e-test]
+    needs: [schema-check, client-test, server-test, e2e-test]
     steps:
       - name: Check all tests passed
-        run: echo "✅ All tests (client, server, e2e) passed successfully"
+        run: |
+          echo "✅ All checks passed successfully"
+          echo "✅ Schema check: 型定義が最新"
+          echo "✅ Client tests: 成功"
+          echo "✅ Server tests: 成功"
+          echo "✅ E2E tests: 成功"
