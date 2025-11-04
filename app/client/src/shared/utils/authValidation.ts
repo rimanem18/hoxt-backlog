@@ -71,12 +71,24 @@ export interface StoredAuthData {
 }
 
 /**
+ * 検証済み認証データの構造を定義
+ * validateStoredAuth 関数が返す検証済みデータの型定義
+ * StoredAuthData と異なり、user フィールドは必ず User 型
+ */
+export interface ValidatedAuthData {
+  user: User;
+  expires_at: number | string;
+  access_token?: string;
+  isNewUser?: boolean;
+}
+
+/**
  * 認証検証の結果を表すインターフェース
- * 検証成功時はデータを含み、失敗時はエラー理由を含む
+ * 検証成功時は ValidatedAuthData を含み、失敗時はエラー理由を含む
  */
 export interface AuthValidationResult {
   isValid: boolean;
-  data?: StoredAuthData;
+  data?: ValidatedAuthData;
   reason?:
     | 'missing'
     | 'parse_error'
