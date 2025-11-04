@@ -519,7 +519,7 @@
 
 ### TASK-1201: 型定義自動生成スクリプト統合
 
-- [x] **タスク完了** (2025-10-26)
+- [x] **タスク完了** (2025-11-04)
 - **タスクタイプ**: DIRECT
 - **要件リンク**: NFR-101, REQ-101, REQ-102, REQ-103
 - **依存タスク**: TASK-1002
@@ -528,26 +528,33 @@
     - `generate:schemas` - Drizzle ZodからZodスキーマ生成
     - `generate:openapi` - ZodスキーマからOpenAPI仕様生成
     - `generate:types` - OpenAPI仕様からTypeScript型定義生成
-    - `generate:all` - 上記を順次実行
-  - エラーハンドリング（EDGE-002）
+  - Makefileに`generate-all`ターゲット追加:
+    - 上記3スクリプトを順次実行
+    - 生成後に自動フォーマット実行（`bun run fix`）
+    - エラーハンドリング（各ステップでエラー時に停止）
 - **実装例**:
-  ```json
-  {
-    "scripts": {
-      "generate:schemas": "bun run scripts/generate-schemas.ts",
-      "generate:openapi": "bun run scripts/generate-openapi.ts",
-      "generate:types": "bunx openapi-typescript docs/api/openapi.yaml -o src/types/api/generated.ts",
-      "generate:all": "bun run generate:schemas && bun run generate:openapi && bun run generate:types"
-    }
-  }
+  ```makefile
+  generate-all:
+  	@echo "型定義自動生成を開始します..."
+  	@echo "🔄 Step 1/3: Generating Zod schemas from Drizzle..."
+  	docker compose exec server bun run generate:schemas
+  	@echo "🔄 Step 2/3: Generating OpenAPI spec..."
+  	docker compose exec server bun run generate:openapi
+  	@echo "🔄 Step 3/3: Generating TypeScript types..."
+  	docker compose exec client bun run generate:types
+  	@echo "🔧 Formatting generated files..."
+  	docker compose exec server bun run fix
+  	docker compose exec client bun run fix
+  	@echo "✅ All type definitions generated successfully"
   ```
 - **完了条件**:
-  - [x] `bun run generate:all`で全型定義が生成される
+  - [x] `make generate-all`で全型定義が生成される
+  - [x] 生成後に自動フォーマットが実行される
   - [x] エラー発生時にビルドが停止する
 - **実装成果**:
   - `app/server/package.json:16-17`: `generate:schemas`, `generate:openapi`スクリプト
   - `app/client/package.json:17`: `generate:types`スクリプト
-  - ⚠️ `generate:all`スクリプトは未実装（ルートpackage.jsonへの追加を推奨）
+  - `Makefile:160-176`: `generate-all`ターゲット（format統合済み）
 
 ---
 
@@ -559,20 +566,22 @@
 - **依存タスク**: TASK-1201
 - **実装詳細**:
   - GitHub Actionsワークフロー作成
-  - 型定義自動生成実行
+  - `make generate-all`を実行（型定義生成+フォーマット）
   - 生成ファイルの差分チェック（git diff --exit-code）
   - 差分がある場合はCIエラー
 - **実装例**:
   ```yaml
   - name: Check generated types are up to date
     run: |
-      bun run generate:all
+      make generate-all
       git diff --exit-code docs/api/openapi.yaml
       git diff --exit-code app/client/src/types/api/generated.ts
+      git diff --exit-code app/server/src/schemas/
   ```
 - **完了条件**:
   - [ ] PRマージ前に型定義の最新性がチェックされる
   - [ ] 古い型定義のマージがブロックされる
+  - [ ] フォーマット後の状態で差分チェックが実行される
 
 ---
 
@@ -670,7 +679,8 @@ gantt
 ## 受け入れ基準
 
 ### 全体の受け入れ基準
-- [ ] Drizzleスキーマ変更時、`bun run generate:all`で全型定義が更新される
+- [x] Drizzleスキーマ変更時、`make generate-all`で全型定義が更新される
+- [x] 生成された型定義が自動的にフォーマットされる
 - [ ] フロントエンド・バックエンド間の型定義が完全に一致する
 - [ ] Zodバリデーションによるレスポンスタイムへの影響が著しくない
 - [ ] OpenAPI仕様書が最新の状態でSwagger UIに表示される

@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server client e2e db iac iac-init iac-plan-save iac-bootstrap-apply iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production frontend-deploy-preview
+.PHONY: build up down server client e2e db iac iac-init iac-plan-save iac-bootstrap-apply iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production frontend-deploy-preview generate-all
 
 up:
 	docker compose up -d
@@ -157,3 +157,20 @@ amend:
 init:
 	test -f .git/hooks/pre-commit || cp scripts/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
+generate-all:
+	@echo "型定義自動生成を開始します..."
+	@echo ""
+	@echo "🔄 Step 1/3: Generating Zod schemas from Drizzle..."
+	docker compose exec server bun run generate:schemas
+	@echo ""
+	@echo "🔄 Step 2/3: Generating OpenAPI spec..."
+	docker compose exec server bun run generate:openapi
+	@echo ""
+	@echo "🔄 Step 3/3: Generating TypeScript types..."
+	docker compose exec client bun run generate:types
+	@echo ""
+	@echo "🔧 Formatting generated files..."
+	docker compose exec server bun run fix
+	docker compose exec client bun run fix
+	@echo ""
+	@echo "✅ All type definitions generated successfully"
