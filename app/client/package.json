@@ -14,7 +14,7 @@
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit",
-    "generate:types": "bunx openapi-typescript /home/bun/docs/api/openapi.yaml -o src/types/api/generated.ts"
+    "generate:types": "bunx openapi-typescript ../../docs/api/openapi.yaml -o src/types/api/generated.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",

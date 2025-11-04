@@ -116,6 +116,13 @@ jobs:
         env:
           HIGH_CRITICAL_COUNT: ${{ steps.scan.outputs.high_critical_count }}
 
+  # 型定義最新性チェック
+  schema-check:
+    name: Schema Check
+    needs: security-check
+    if: needs.security-check.outputs.can-deploy == 'true'
+    uses: ./.github/workflows/schema-check.yml
+
   # Client テスト実行
   client-test:
     name: Run Client Tests
@@ -240,12 +247,13 @@ jobs:
     name: Deploy Preview Infrastructure
     if: |
       needs.security-check.outputs.can-deploy == 'true' &&
+      needs.schema-check.result == 'success' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
       needs.trufflehog.result == 'success' &&
       needs.semgrep.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
       terraform-version: 1.6.0
@@ -258,12 +266,13 @@ jobs:
     name: Deploy Preview Database
     if: |
       needs.security-check.outputs.can-deploy == 'true' &&
+      needs.schema-check.result == 'success' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
       needs.trufflehog.result == 'success' &&
       needs.semgrep.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     uses: ./.github/workflows/deploy-database.yml
     with:
       timeout-minutes: 10
@@ -275,12 +284,13 @@ jobs:
     name: Deploy Preview Backend
     if: |
       needs.security-check.outputs.can-deploy == 'true' &&
+      needs.schema-check.result == 'success' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
       needs.trufflehog.result == 'success' &&
       needs.semgrep.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database]
     uses: ./.github/workflows/deploy-backend.yml
     with:
       lambda-function-name: ${{ needs.deploy-infrastructure.outputs.lambda-function-name-preview }}
@@ -294,12 +304,13 @@ jobs:
     name: Deploy Preview Frontend
     if: |
       needs.security-check.outputs.can-deploy == 'true' &&
+      needs.schema-check.result == 'success' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
       needs.trufflehog.result == 'success' &&
       needs.semgrep.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure]
     uses: ./.github/workflows/deploy-frontend.yml
     with:
       environment-type: 'preview'
@@ -320,7 +331,7 @@ jobs:
       needs.e2e-test.result == 'success' &&
       needs.trufflehog.result == 'success' &&
       needs.semgrep.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -349,6 +360,7 @@ jobs:
     name: Comment Preview URLs
     if: |
       needs.security-check.outputs.can-deploy == 'true' &&
+      needs.schema-check.result == 'success' &&
       needs.client-test.result == 'success' &&
       needs.server-test.result == 'success' &&
       needs.e2e-test.result == 'success' &&
@@ -358,7 +370,7 @@ jobs:
       needs.deploy-database.result == 'success' &&
       needs.deploy-backend.result == 'success' &&
       needs.deploy-frontend.result == 'success'
-    needs: [security-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
+    needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, deploy-infrastructure, deploy-database, deploy-backend, deploy-frontend]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

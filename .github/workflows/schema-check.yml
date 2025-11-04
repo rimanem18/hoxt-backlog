@@ -1,0 +1,150 @@
+name: Schema Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/server/src/infrastructure/database/schema.ts'
+      - 'app/server/scripts/generate-schemas.ts'
+      - 'app/server/scripts/generate-openapi.ts'
+      - 'app/packages/shared-schemas/**'
+      - 'docs/api/openapi.yaml'
+      - 'app/client/src/types/api/generated.ts'
+      - 'app/server/src/schemas/**'
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-schema-sync:
+    name: Check Generated Types are Up to Date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            app/server/node_modules
+            app/client/node_modules
+            app/packages/shared-schemas/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies (server)
+        working-directory: ./app/server
+        run: bun install --frozen-lockfile
+
+      - name: Install dependencies (client)
+        working-directory: ./app/client
+        run: bun install --frozen-lockfile
+
+      - name: Install dependencies (shared-schemas)
+        working-directory: ./app/packages/shared-schemas
+        run: bun install --frozen-lockfile
+
+      - name: Set BASE_SCHEMA environment variable
+        run: echo "BASE_SCHEMA=test_schema" >> $GITHUB_ENV
+
+      - name: Generate Zod schemas from Drizzle
+        working-directory: ./app/server
+        run: bun run generate:schemas
+
+      - name: Generate OpenAPI specification
+        working-directory: ./app/server
+        env:
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+        run: bun run generate:openapi
+
+      - name: Generate TypeScript types from OpenAPI
+        working-directory: ./app/client
+        run: bun run generate:types
+
+      - name: Format generated files (server)
+        working-directory: ./app/server
+        run: bun run fix
+
+      - name: Format generated files (client)
+        working-directory: ./app/client
+        run: bun run fix
+
+      - name: Check for schema changes (Drizzle Zod)
+        run: |
+          if ! git diff --exit-code app/server/src/schemas/; then
+            echo "❌ Drizzle Zodスキーマが最新ではありません"
+            echo ""
+            echo "以下のコマンドを実行してスキーマを更新してください:"
+            echo "  docker compose exec server bun run generate:schemas"
+            echo ""
+            echo "または、以下のコマンドですべての型定義を一括生成できます:"
+            echo "  make generate-all"
+            echo ""
+            echo "変更内容:"
+            git --no-pager diff app/server/src/schemas/
+            exit 1
+          fi
+
+      - name: Check for schema changes (OpenAPI)
+        run: |
+          if ! git diff --exit-code docs/api/openapi.yaml; then
+            echo "❌ OpenAPI仕様書が最新ではありません"
+            echo ""
+            echo "以下のコマンドを実行してOpenAPI仕様書を更新してください:"
+            echo "  docker compose exec server bun run generate:openapi"
+            echo ""
+            echo "または、以下のコマンドですべての型定義を一括生成できます:"
+            echo "  make generate-all"
+            echo ""
+            echo "変更内容:"
+            git --no-pager diff docs/api/openapi.yaml
+            exit 1
+          fi
+
+      - name: Check for schema changes (TypeScript types)
+        run: |
+          if ! git diff --exit-code app/client/src/types/api/generated.ts; then
+            echo "❌ TypeScript型定義が最新ではありません"
+            echo ""
+            echo "以下のコマンドを実行して型定義を更新してください:"
+            echo "  docker compose exec client bun run generate:types"
+            echo ""
+            echo "または、以下のコマンドですべての型定義を一括生成できます:"
+            echo "  make generate-all"
+            echo ""
+            echo "変更内容:"
+            git --no-pager diff app/client/src/types/api/generated.ts
+            exit 1
+          fi
+
+      - name: Verify TypeScript compilation (server)
+        working-directory: ./app/server
+        run: bun run typecheck
+
+      - name: Verify TypeScript compilation (client)
+        working-directory: ./app/client
+        run: bun run typecheck
+
+      - name: All schema checks passed
+        run: |
+          echo "✅ すべての型定義が最新です"
+          echo "✅ Drizzle Zodスキーマ: app/server/src/schemas/"
+          echo "✅ OpenAPI仕様書: docs/api/openapi.yaml"
+          echo "✅ TypeScript型定義: app/client/src/types/api/generated.ts"
+          echo "✅ TypeScriptコンパイル: 成功"
