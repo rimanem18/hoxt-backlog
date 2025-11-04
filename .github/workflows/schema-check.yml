@@ -69,6 +69,8 @@ jobs:
 
       - name: Generate OpenAPI specification
         working-directory: ./app/server
+        env:
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
         run: bun run generate:openapi
 
       - name: Generate TypeScript types from OpenAPI

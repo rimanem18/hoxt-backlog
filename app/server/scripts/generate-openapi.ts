@@ -66,16 +66,16 @@ async function generateOpenAPISpec(): Promise<void> {
 	const openAPISpec = app.getOpenAPIDocument({
 		openapi: "3.1.0",
 		info: {
-			title: `${process.env.PROJECT_NAME} API Spec` || "API Specification",
-			version: process.env.API_VERSION || "1.0.0",
+			title: `${process.env.PROJECT_NAME || "API"} Spec`,
+			version: "1.0.0",
 			description:
 				"型安全性強化・API契約強化プロジェクトによるAPI仕様\n\n" +
 				"Single Source of Truth: Drizzle ORM → Drizzle Zod → Zod → OpenAPI → TypeScript",
 		},
 		servers: [
 			{
-				url: process.env.API_BASE_URL || "http://localhost:3001/api",
-				description: "開発環境",
+				url: "/api",
+				description: "API Server",
 			},
 		],
 	});
