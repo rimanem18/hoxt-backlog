@@ -1,0 +1,380 @@
+# TODO リストアプリ - Phase 4: バックエンドInfrastructure層実装
+
+## 📄 フェーズ情報
+
+- **要件名**: TODO リストアプリ
+- **フェーズ**: Phase 4 / 8
+- **期間**: 5日間（40時間）
+- **担当**: バックエンド
+- **目標**: リポジトリ実装、JWT検証、データベース接続
+
+## 🎯 フェーズ概要
+
+### 目的
+
+Infrastructure層にITaskRepositoryの実装を追加し、Drizzle ORMを使用したデータアクセスを実現。
+JWT検証ミドルウェアとRLS設定を実装。
+
+### 成果物
+
+- ✅ PostgreSQLTaskRepository（Drizzle ORM実装）
+- ✅ SupabaseJwtVerifier（JWT検証）
+- ✅ DatabaseConnection（DB接続管理）
+- ✅ RLS設定ヘルパー（app.current_user_id設定）
+- ✅ 統合テスト（実際のDBを使用）
+
+### 依存関係
+
+- **前提条件**: Phase 2, 3完了（ITaskRepository, UseCases）
+- **このフェーズ完了後に開始可能**: Phase 5（Presentation層）
+
+## 📅 週次計画
+
+### Week 1（5日間）
+
+**Day 1**: TASK-1317 - DatabaseConnection実装
+**Day 2**: TASK-1318 - PostgreSQLTaskRepository実装（基本CRUD）
+**Day 3**: TASK-1319 - PostgreSQLTaskRepository実装（フィルタ・ソート）
+**Day 4**: TASK-1320 - SupabaseJwtVerifier実装
+**Day 5**: TASK-1321 - RLS設定ヘルパー実装
+
+## 📋 タスク一覧
+
+### TASK-1317: DatabaseConnection実装
+
+- [ ] **タスク完了**
+- **タスクタイプ**: TDD
+- **推定工数**: 8時間
+- **依存タスク**: TASK-1316
+- **要件名**: TODO リストアプリ
+
+#### 実装詳細
+
+ファイル: `app/server/src/infrastructure/database/DatabaseConnection.ts`
+
+```typescript
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema';
+
+export class DatabaseConnection {
+  private static instance: ReturnType<typeof drizzle> | null = null;
+
+  public static getInstance() {
+    if (!this.instance) {
+      const connectionString = process.env.DATABASE_URL!;
+      const client = postgres(connectionString);
+      this.instance = drizzle(client, { schema });
+    }
+    return this.instance;
+  }
+
+  public static async setCurrentUser(userId: string): Promise<void> {
+    const db = this.getInstance();
+    await db.execute(`SET LOCAL app.current_user_id = '${userId}'`);
+  }
+}
+```
+
+テストケース:
+- 正常系: シングルトンパターン
+- 正常系: RLS設定
+
+#### 完了条件
+
+- [ ] DatabaseConnectionが実装される
+- [ ] テストカバレッジ80%以上
+
+#### 参照
+
+- 技術スタック: Drizzle ORM, PostgreSQL
+
+---
+
+### TASK-1318: PostgreSQLTaskRepository実装（基本CRUD）
+
+- [ ] **タスク完了**
+- **タスクタイプ**: TDD
+- **推定工数**: 8時間
+- **依存タスク**: TASK-1317
+- **要件名**: TODO リストアプリ
+
+#### 実装詳細
+
+ファイル: `app/server/src/infrastructure/repositories/PostgreSQLTaskRepository.ts`
+
+```typescript
+export class PostgreSQLTaskRepository implements ITaskRepository {
+  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+
+  async save(task: TaskEntity): Promise<TaskEntity> {
+    const result = await this.db.insert(tasks).values({
+      id: task.getId(),
+      userId: task.getUserId(),
+      title: task.getTitle(),
+      description: task.getDescription(),
+      priority: task.getPriority(),
+      status: task.getStatus(),
+      createdAt: task.getCreatedAt(),
+      updatedAt: task.getUpdatedAt(),
+    }).returning();
+
+    return this.toDomain(result[0]);
+  }
+
+  async findById(userId: string, taskId: string): Promise<TaskEntity | null> {
+    const result = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+      .limit(1);
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
+  async update(userId: string, taskId: string, input: UpdateTaskInput): Promise<TaskEntity | null> {
+    const result = await this.db
+      .update(tasks)
+      .set(input)
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+      .returning();
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
+  async delete(userId: string, taskId: string): Promise<boolean> {
+    const result = await this.db
+      .delete(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)));
+
+    return result.rowCount > 0;
+  }
+
+  private toDomain(row: typeof tasks.$inferSelect): TaskEntity {
+    return TaskEntity.reconstruct({
+      id: row.id,
+      userId: row.userId,
+      title: TaskTitle.create(row.title),
+      description: row.description,
+      priority: TaskPriority.create(row.priority),
+      status: TaskStatus.create(row.status),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  }
+}
+```
+
+テストケース:
+- 正常系: タスク作成・取得・更新・削除
+- 異常系: タスクが見つからない
+
+#### 完了条件
+
+- [ ] PostgreSQLTaskRepositoryが実装される（基本CRUD）
+- [ ] 統合テストが通る
+- [ ] テストカバレッジ80%以上
+
+#### 参照
+
+- 要件: REQ-001, REQ-002, REQ-003
+
+---
+
+### TASK-1319: PostgreSQLTaskRepository実装（フィルタ・ソート）
+
+- [ ] **タスク完了**
+- **タスクタイプ**: TDD
+- **推定工数**: 8時間
+- **依存タスク**: TASK-1318
+- **要件名**: TODO リストアプリ
+
+#### 実装詳細
+
+```typescript
+async findByUserId(userId: string, filters: TaskFilters, sort: TaskSortBy): Promise<TaskEntity[]> {
+  let query = this.db.select().from(tasks).where(eq(tasks.userId, userId));
+
+  // フィルタ適用
+  if (filters.priority) {
+    query = query.where(eq(tasks.priority, filters.priority));
+  }
+  if (filters.status && filters.status.length > 0) {
+    query = query.where(inArray(tasks.status, filters.status));
+  }
+
+  // ソート適用
+  switch (sort) {
+    case 'created_at_desc':
+      query = query.orderBy(desc(tasks.createdAt));
+      break;
+    case 'created_at_asc':
+      query = query.orderBy(asc(tasks.createdAt));
+      break;
+    case 'priority_desc':
+      query = query.orderBy(
+        sql`CASE ${tasks.priority} WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END`,
+        desc(tasks.createdAt)
+      );
+      break;
+  }
+
+  const results = await query;
+  return results.map(row => this.toDomain(row));
+}
+```
+
+テストケース:
+- 正常系: 優先度フィルタ
+- 正常系: ステータスフィルタ（複数）
+- 正常系: 作成日時ソート
+- 正常系: 優先度ソート
+
+#### 完了条件
+
+- [ ] フィルタ・ソートが実装される
+- [ ] 統合テストが通る
+- [ ] テストカバレッジ80%以上
+
+#### 参照
+
+- 要件: REQ-201, REQ-202, REQ-203
+
+---
+
+### TASK-1320: SupabaseJwtVerifier実装
+
+- [ ] **タスク完了**
+- **タスクタイプ**: TDD
+- **推定工数**: 8時間
+- **依存タスク**: TASK-1319
+- **要件名**: TODO リストアプリ
+
+#### 実装詳細
+
+ファイル: `app/server/src/infrastructure/auth/SupabaseJwtVerifier.ts`
+
+```typescript
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+export class SupabaseJwtVerifier {
+  private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
+
+  constructor() {
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const jwksUrl = `${supabaseUrl}/auth/v1/jwks`;
+    this.jwks = createRemoteJWKSet(new URL(jwksUrl));
+  }
+
+  async verify(token: string): Promise<{ userId: string }> {
+    const { payload } = await jwtVerify(token, this.jwks);
+
+    if (!payload.sub) {
+      throw new Error('JWT検証失敗: subクレームが存在しません');
+    }
+
+    return { userId: payload.sub };
+  }
+}
+```
+
+テストケース:
+- 正常系: 有効なJWTが検証される
+- 異常系: 無効なJWT
+- 異常系: subクレームなし
+
+#### 完了条件
+
+- [ ] SupabaseJwtVerifierが実装される
+- [ ] テストカバレッジ80%以上
+
+#### 参照
+
+- 要件: REQ-402, NFR-103
+- 技術スタック: jose 6.1.0
+
+---
+
+### TASK-1321: RLS設定ヘルパー実装
+
+- [ ] **タスク完了**
+- **タスクタイプ**: TDD
+- **推定工数**: 8時間
+- **依存タスク**: TASK-1320
+- **要件名**: TODO リストアプリ
+
+#### 実装詳細
+
+ファイル: `app/server/src/infrastructure/database/RlsHelper.ts`
+
+```typescript
+export class RlsHelper {
+  public static async setCurrentUser(
+    db: ReturnType<typeof drizzle>,
+    userId: string
+  ): Promise<void> {
+    await db.execute(sql.raw(`SET LOCAL app.current_user_id = '${userId}'`));
+  }
+
+  public static async clearCurrentUser(db: ReturnType<typeof drizzle>): Promise<void> {
+    await db.execute(sql.raw(`SET LOCAL app.current_user_id = ''`));
+  }
+}
+```
+
+テストケース:
+- 正常系: RLS設定が適用される
+- 正常系: RLS解除が動作する
+- 統合テスト: 他ユーザーのタスクにアクセス不可
+
+#### 完了条件
+
+- [ ] RlsHelperが実装される
+- [ ] 統合テストが通る
+- [ ] テストカバレッジ80%以上
+
+#### 参照
+
+- 要件: REQ-403, NFR-102
+
+---
+
+## 🎉 フェーズ完了チェックリスト
+
+### リポジトリ実装
+
+- [ ] PostgreSQLTaskRepository実装完了
+- [ ] 基本CRUDが動作する
+- [ ] フィルタ・ソートが動作する
+
+### 認証・セキュリティ
+
+- [ ] SupabaseJwtVerifier実装完了
+- [ ] RlsHelper実装完了
+- [ ] JWT検証が動作する
+- [ ] RLS設定が動作する
+
+### テスト
+
+- [ ] 統合テストが通る
+- [ ] テストカバレッジ80%以上
+- [ ] Biomeチェック合格
+- [ ] 型チェック合格
+
+---
+
+## 📚 参考資料
+
+- [Drizzle ORM公式ドキュメント](https://orm.drizzle.team/)
+- [Supabase Auth公式ドキュメント](https://supabase.com/docs/guides/auth)
+- [PostgreSQL Row-Level Security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
+
+---
+
+## 📝 メモ
+
+### 実装時の注意事項
+
+1. **RLS設定**: 必ずトランザクション内で実行
+2. **JWT検証**: JWKS認証を使用（JWT Secret非推奨）
+3. **統合テスト**: 実際のDBを使用、テスト後にクリーンアップ
