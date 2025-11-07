@@ -50,7 +50,7 @@ Drizzle ORM → Zod → OpenAPI → TypeScript型定義の自動生成パイプ�
 
 ### TASK-1301: tasksテーブル作成
 
-- [x] **タスク完了**
+- [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: なし
@@ -174,7 +174,7 @@ docker compose exec server bun run db:push
 
 ### TASK-1302: Zodスキーマ自動生成設定
 
-- [x] **タスク完了**
+- [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1301
@@ -267,7 +267,7 @@ docker compose exec server bun run generate:schemas
 
 ### TASK-1303: OpenAPI仕様自動生成
 
-- [x] **タスク完了**
+- [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1302
@@ -377,7 +377,7 @@ docker compose exec server bun run generate:openapi
 
 ### TASK-1304: フロントエンド型定義自動生成
 
-- [x] **タスク完了**
+- [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1303
@@ -464,7 +464,7 @@ export const apiClient = createClient<paths>({
 
 ### TASK-1305: スキーマ駆動開発フロー確認
 
-- [x] **タスク完了**
+- [ ] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1304
