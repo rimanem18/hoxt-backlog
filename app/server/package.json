@@ -11,6 +11,8 @@
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:setup": "bun scripts/setup-database-schema.js",
     "generate:schemas": "bun run scripts/generate-schemas.ts",

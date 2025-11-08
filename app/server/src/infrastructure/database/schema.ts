@@ -66,13 +66,13 @@ export function getBaseSchema(): string {
   }
 }
 
+// スキーマオブジェクトの作成
 const schemaName = getBaseSchema();
 const schema = pgSchema(schemaName);
 
 /**
  * 認証プロバイダー種別のenum定義
  * 将来的な拡張を考慮した設計
- * スキーマ内に定義することで環境分離を実現
  */
 export const authProviderType = schema.enum('auth_provider_type', [
   'google',
@@ -172,37 +172,116 @@ export type NewUser = typeof users.$inferInsert;
 export type AuthProvider = (typeof authProviderType.enumValues)[number];
 
 /**
+ * タスクテーブル
+ * TODOリストアプリのタスクを管理するメインテーブル
+ */
+export const tasks = schema.table(
+  'tasks',
+  {
+    // プライマリキー（UUID v4）
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // ユーザーID（外部キー）
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // タイトル（1-100文字、必須）
+    title: varchar('title', { length: 100 }).notNull(),
+
+    // 説明（Markdown形式、任意）
+    description: text('description'),
+
+    // 優先度（high, medium, low）
+    priority: varchar('priority', { length: 10 }).notNull().default('medium'),
+
+    // ステータス（not_started, in_progress, in_review, completed）
+    status: varchar('status', { length: 20 }).notNull().default('not_started'),
+
+    // タイムスタンプ
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => {
+    return {
+      // ユーザーごとのタスク検索用インデックス（最頻クエリ）
+      userIdIdx: index('idx_tasks_user_id').on(table.userId),
+
+      // 作成日時でのソート用インデックス（降順）
+      createdAtIdx: index('idx_tasks_created_at').on(table.createdAt.desc()),
+
+      // 優先度フィルタ用インデックス
+      priorityIdx: index('idx_tasks_priority').on(table.priority),
+
+      // ステータスフィルタ用インデックス
+      statusIdx: index('idx_tasks_status').on(table.status),
+
+      // 複合インデックス: user_id + created_at
+      userCreatedIdx: index('idx_tasks_user_created').on(
+        table.userId,
+        table.createdAt.desc(),
+      ),
+
+      // 複合インデックス: user_id + priority
+      userPriorityIdx: index('idx_tasks_user_priority').on(
+        table.userId,
+        table.priority,
+      ),
+
+      // 複合インデックス: user_id + status
+      userStatusIdx: index('idx_tasks_user_status').on(
+        table.userId,
+        table.status,
+      ),
+
+      // CHECK制約: 優先度の値制限
+      validPriority: check(
+        'valid_priority',
+        sql`${table.priority} IN ('high', 'medium', 'low')`,
+      ),
+
+      // CHECK制約: ステータスの値制限
+      validStatus: check(
+        'valid_status',
+        sql`${table.status} IN ('not_started', 'in_progress', 'in_review', 'completed')`,
+      ),
+
+      // CHECK制約: タイトルの空文字チェック
+      nonEmptyTitle: check(
+        'non_empty_title',
+        sql`length(trim(${table.title})) > 0`,
+      ),
+
+      // CHECK制約: タイトルの文字数制限
+      titleLength: check('title_length', sql`length(${table.title}) <= 100`),
+    };
+  },
+);
+
+/**
+ * tasksテーブルの型定義
+ * Drizzleから自動推論される型
+ */
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
+
+/**
  * Row-Level Security (RLS) ポリシー定義
  *
- * Supabaseの認証システムと連携してテーブルレベルのセキュリティを実現
+ * 注意: RLSポリシーはマイグレーション完了後に手動で適用する必要があります
+ * Drizzle ORMのスキーマ定義には含めず、別途SQLで実行します
+ *
+ * tasksテーブルへのRLS適用手順:
+ * 1. マイグレーション実行: bun run db:push
+ * 2. RLS有効化SQLを手動実行（下記参照）
+ *
+ * RLS有効化SQL:
+ * ALTER TABLE app_test.tasks ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Users can only access their own tasks" ON app_test.tasks
+ *   FOR ALL
+ *   USING (user_id = current_setting('app.current_user_id')::uuid);
  */
-export const rlsPolicies = {
-  /**
-   * usersテーブル用RLSポリシー
-   * 認証済みユーザーのみアクセス可能
-   */
-  enableUsersRLS: sql`
-    -- usersテーブルのRLSを有効化
-    ALTER TABLE ${users} ENABLE ROW LEVEL SECURITY;
-
-    -- 認証済みユーザーのみアクセス可能なポリシー
-    CREATE POLICY "authenticated_users_policy" ON ${users}
-      FOR ALL USING (auth.uid() IS NOT NULL);
-
-    -- 自分のレコードのみアクセス可能なポリシー（将来的な拡張用）
-    CREATE POLICY "users_own_records_policy" ON ${users}
-      FOR ALL USING (auth.uid()::text = id::text);
-  `,
-
-  /**
-   * RLSポリシーの無効化（開発・テスト用）
-   */
-  disableUsersRLS: sql`
-    -- usersテーブルのポリシーを削除
-    DROP POLICY IF EXISTS "authenticated_users_policy" ON ${users};
-    DROP POLICY IF EXISTS "users_own_records_policy" ON ${users};
-
-    -- RLSを無効化
-    ALTER TABLE ${users} DISABLE ROW LEVEL SECURITY;
-  `,
-};

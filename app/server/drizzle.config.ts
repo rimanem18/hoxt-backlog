@@ -10,8 +10,8 @@ export default defineConfig({
   // スキーマファイルの場所
   schema: './src/infrastructure/database/schema.ts',
 
-  // pushベースでマイグレーション管理（migrationsディレクトリ不使用）
-  // out: './src/infrastructure/database/migrations',
+  // マイグレーションファイルの出力先
+  out: './src/infrastructure/database/migrations',
 
   // データベース情報
   dialect: 'postgresql',
@@ -23,7 +23,7 @@ export default defineConfig({
     ssl: process.env.NODE_ENV === 'production' ? true : false,
   },
 
-  // スキーマ指定（環境別の分離対応）
+  // スキーマフィルタ
   schemaFilter: [process.env.BASE_SCHEMA || 'public'],
 
   // デバッグ設定
