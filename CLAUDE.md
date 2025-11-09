@@ -791,3 +791,90 @@ app/packages/shared-schemas/
 - **禁止**: テストファイルの拡張子を`.spec.ts`にする
   - 必ず`.test.ts`または`.test.tsx`を使用
 
+# データベース運用ガイドライン
+
+## 環境別のマイグレーション戦略
+
+### ローカル/CI環境（app_test）
+- **運用方式**: drizzle-kit push（スキーマ同期）
+- **BASE_SCHEMA**: `app_test`
+- **特徴**:
+  - マイグレーションファイル生成不要
+  - スキーマ変更を即座にDBに反映
+  - マイグレーション履歴は Git 管理しない
+
+```bash
+# ローカル開発時のスキーマ同期
+docker compose exec server bun run db:push:test
+```
+
+### Preview/Production環境
+- **運用方式**: drizzle-kit generate → migrate（マイグレーション管理）
+- **BASE_SCHEMA**:
+  - Preview: `app_${PROJECT_NAME}_preview`
+  - Production: `app_${PROJECT_NAME}`
+- **特徴**:
+  - マイグレーションファイルをGitで管理
+  - 本番環境での計画的なマイグレーション実行
+  - ロールバック可能な履歴管理
+
+```bash
+# 開発時：マイグレーションファイル生成
+docker compose exec server bun run db:generate
+
+# 生成されたファイルをコミット
+git add app/server/src/infrastructure/database/migrations/
+git commit -m "feat: add new migration for XXX"
+
+# CD環境：マイグレーション実行
+docker compose exec server bun run db:migrate:preview  # or :production
+docker compose exec server bun run db:setup
+```
+
+## CI/CDでの運用フロー
+
+### CI（Pull Request時）
+
+マイグレーション同期チェックを実行し、generate漏れを防止：
+
+```bash
+# マイグレーション同期チェック
+docker compose exec server bash scripts/check-migration-sync.sh
+```
+
+**チェック内容**:
+1. `db:generate` を実行
+2. Git diff で `migrations/` に差分がないか確認
+3. 差分があればエラー終了（generate漏れ）
+
+### CD（Deploy時）
+
+#### Preview環境
+```bash
+export BASE_SCHEMA=app_${PROJECT_NAME}_preview
+
+# マイグレーション実行
+docker compose exec server bun run db:migrate:preview
+
+# RLSポリシー適用
+docker compose exec server bun run db:setup
+```
+
+#### Production環境
+```bash
+export BASE_SCHEMA=app_${PROJECT_NAME}
+
+# マイグレーション実行
+docker compose exec server bun run db:migrate:production
+
+# RLSポリシー適用
+docker compose exec server bun run db:setup
+```
+
+## RLSポリシー管理
+
+Row Level Security (RLS) ポリシーは `db:setup` で適用
+
+```bash
+docker compose exec server bun run db:setup
+```
