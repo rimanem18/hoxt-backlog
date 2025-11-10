@@ -7,9 +7,9 @@ description: どのような仕様変更をおこないたいか伝えて要件�
 - use serena MCP
 
 ## 前提条件
-- 要件定義書 `docs/spec/{要件名}-requirements.md` が存在する
+- 要件定義書 `docs/spec/{要件名}-*.md` が存在する
 - 技術設計 `docs/design/{要件名}/*` が存在する
-- タスク `docs/tasks/{要件名}-tasks.md` が存在する
+- タスク `docs/tasks/{要件名}-*.md` が存在する
 
 ## 実行内容
 

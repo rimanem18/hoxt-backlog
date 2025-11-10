@@ -7,7 +7,7 @@ description: issue 番号と要件名、TASK-ID を与えてブランチ名を�
 {大文字の英字列-数字} を与えます。これを Jira に紐つく {PROJECT-KEY} と認識します。
 
 ### 事前確認
-- `docs/tasks/{要件名}-tasks.md` を確認
+- `docs/tasks/{要件名}-*.md` を確認
 - `{TASK-ID}` をもとに、このタスクで実施する内容を理解
 - 簡潔かつ明確な機能名を考える
 
