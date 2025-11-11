@@ -84,7 +84,7 @@ runs:
         PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "CREATE SCHEMA IF NOT EXISTS $BASE_SCHEMA"
 
         echo "=== Drizzle push ==="
-        bunx drizzle-kit push --config=drizzle.config.ts
+        bunx drizzle-kit push --config=drizzle.config.ts --force
 
         echo "=== Database schema setup ==="
         bun run db:setup
