@@ -73,20 +73,14 @@ runs:
         
         echo "=== Testing database access ==="
         PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" || echo "Database connection failed"
-        
-        echo "=== Drizzle introspect ==="
-        bunx drizzle-kit introspect --config=drizzle.config.ts || echo "Introspect failed - first time setup"
-
-        echo "=== Drizzle generate ==="
-        bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
 
         echo "=== Create schema ==="
         PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "CREATE SCHEMA IF NOT EXISTS $BASE_SCHEMA"
 
-        echo "=== Drizzle push ==="
+        echo "=== Drizzle push (schema sync) ==="
         bunx drizzle-kit push --config=drizzle.config.ts --force
 
-        echo "=== Database schema setup ==="
+        echo "=== Database schema setup (RLS policies) ==="
         bun run db:setup
         
         echo "=== Verify table creation ==="
