@@ -1,4 +1,14 @@
-CREATE TYPE "app_hoxbl_preview"."auth_provider_type" AS ENUM('google', 'apple', 'microsoft', 'github', 'facebook', 'line');--> statement-breakpoint
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'auth_provider_type' AND n.nspname = 'app_hoxbl_preview'
+    ) THEN
+        CREATE TYPE "app_hoxbl_preview"."auth_provider_type" AS ENUM('google', 'apple', 'microsoft', 'github', 'facebook', 'line');
+    END IF;
+END$$;--> statement-breakpoint
 CREATE TABLE "app_hoxbl_preview"."tasks" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
