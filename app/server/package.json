@@ -17,7 +17,7 @@
     "db:migrate:preview": "BASE_SCHEMA=app_${PROJECT_NAME}_preview drizzle-kit migrate",
     "db:migrate:production": "BASE_SCHEMA=app_${PROJECT_NAME} drizzle-kit migrate",
     "db:push:test": "BASE_SCHEMA=app_test drizzle-kit push",
-    "db:setup": "bun scripts/setup-rls.ts",
+    "db:setup": "bun scripts/setup-rls.ts && bun scripts/setup-triggers.ts",
     "generate:schemas": "bun run scripts/generate-schemas.ts",
     "generate:openapi": "bun run scripts/generate-openapi.ts"
   },
