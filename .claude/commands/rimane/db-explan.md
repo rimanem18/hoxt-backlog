@@ -3,7 +3,7 @@ description: DB の設計について、詳しくないユーザーにもわか�
 ---
 
 ## 前提条件
-- `docs/spec/{要件名}-requirements.md` の要件定義書が存在する
+- `docs/spec/{要件名}-*.md` の要件定義書が存在する
 - `docs/design/{要件名}/` に設計文書が存在する
 
 ## 実行内容

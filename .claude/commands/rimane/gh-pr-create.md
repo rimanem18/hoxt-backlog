@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr create:*)
+allowed-tools: Bash(git push:*), Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr create:*)
 description: 現在のブランチとプッシュ先のブランチの diff を確認し、テンプレートに従ってプルリクを出します。
 ---
 

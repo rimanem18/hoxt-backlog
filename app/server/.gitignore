@@ -1,2 +1,5 @@
 # deps
 node_modules/
+
+# ローカルテスト用マイグレーションは除外
+src/infrastructure/database/migrations/app_test/

@@ -84,7 +84,13 @@ jobs:
           
           echo "=== Drizzle generate ==="
           bunx drizzle-kit generate --config=drizzle.config.ts || echo "No new migrations to generate"
-          
+
+          echo "=== Create schema ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "CREATE SCHEMA IF NOT EXISTS $BASE_SCHEMA"
+
+          echo "=== Drizzle push ==="
+          bunx drizzle-kit push --config=drizzle.config.ts
+
           echo "=== Database schema setup ==="
           bun run db:setup
           

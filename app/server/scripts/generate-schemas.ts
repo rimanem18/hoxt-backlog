@@ -28,6 +28,7 @@ process.env.BASE_SCHEMA = process.env.BASE_SCHEMA || 'test_schema';
 import {
   authProviderType,
   users,
+  tasks,
 } from '../src/infrastructure/database/schema';
 
 /**
@@ -68,13 +69,12 @@ const tableConfigs: TableConfig[] = [
       },
     ],
   },
-  // 将来的なテーブル追加例（コメントアウト）
-  // {
-  //   tableName: 'posts',
-  //   tableObject: posts,
-  //   outputFile: 'posts.ts',
-  //   enums: [],
-  // },
+  {
+    tableName: 'tasks',
+    tableObject: tasks,
+    outputFile: 'tasks.ts',
+    enums: [],
+  },
 ];
 
 /**

@@ -48,36 +48,77 @@ jobs:
         timeout-minutes: ${{ inputs.timeout-minutes }}
         env:
           TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
-          DATABASE_URL: ${{ inputs.database-url || secrets.DATABASE_URL_MIGRATE }}
-          BASE_SCHEMA: ${{ inputs.environment-type == 'production' && format('app_{0}', vars.PROJECT_NAME) || format('app_{0}_preview', vars.PROJECT_NAME) }}
+          DATABASE_URL_INPUT: ${{ inputs.database-url }}
+          DATABASE_URL_PROD: ${{ secrets.DATABASE_URL_MIGRATE }}
+          DATABASE_URL_PREVIEW: ${{ secrets.DATABASE_URL_MIGRATE_PREVIEW }}
+          PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+          ENVIRONMENT_TYPE: ${{ inputs.environment-type }}
         run: |
-          echo "データベースマイグレーションを開始します..."
-          
-          # drizzle-kit pushによるマイグレーション実行（要件REQ-007, REQ-008準拠）
-          echo "drizzle-kit pushによるスキーマ適用を実行中..."
-          
-          # タイムアウト設定付きでマイグレーション実行
-          if timeout "${TIMEOUT_MINUTES}m" bun run db:push; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "✅ データベースマイグレーションが正常に完了しました"
-          else
-            EXIT_CODE=$?
-            echo "status=failed" >> $GITHUB_OUTPUT
-            
-            if [ $EXIT_CODE -eq 124 ]; then
-              echo "❌ データベースマイグレーションがタイムアウトしました（${TIMEOUT_MINUTES}分）"
-              echo "💡 ヒント: 長時間ブロッキングトランザクションが発生している可能性があります"
-              echo "💡 対処法: データベース管理者に連絡してロック状況を確認してください"
+          set -euo pipefail
+
+          # environment-type の厳密な検証と環境変数設定
+          case "${ENVIRONMENT_TYPE}" in
+            production)
+              export BASE_SCHEMA="app_${PROJECT_NAME}"
+              MIGRATION_CMD="db:migrate:production"
+              DB_URL="${DATABASE_URL_INPUT:-${DATABASE_URL_PROD}}"
+              export DATABASE_URL="${DB_URL}"
+              ;;
+            preview)
+              export BASE_SCHEMA="app_${PROJECT_NAME}_preview"
+              MIGRATION_CMD="db:migrate:preview"
+              DB_URL="${DATABASE_URL_INPUT:-${DATABASE_URL_PREVIEW}}"
+              export DATABASE_URL="${DB_URL}"
+              ;;
+            *)
+              echo "❌ Error: Invalid environment-type '${ENVIRONMENT_TYPE}'"
+              echo "   Valid values: 'production', 'preview'"
+              exit 1
+              ;;
+          esac
+
+          echo "=== データベースマイグレーション開始 ==="
+          echo "Environment: ${ENVIRONMENT_TYPE}"
+          echo "BASE_SCHEMA: ${BASE_SCHEMA}"
+          echo "Command: bun run ${MIGRATION_CMD}"
+
+          # マイグレーション実行関数（タイムアウト処理の一元化）
+          run_with_timeout() {
+            local cmd="$1"
+            local description="$2"
+
+            if timeout "${TIMEOUT_MINUTES}m" bun run "${cmd}"; then
+              echo "✅ ${description}が完了しました"
+              return 0
             else
-              echo "❌ データベースマイグレーションが失敗しました（終了コード: $EXIT_CODE）"
+              local exit_code=$?
+              echo "status=failed" >> "$GITHUB_OUTPUT"
+
+              if [ $exit_code -eq 124 ]; then
+                echo "❌ ${description}がタイムアウトしました（${TIMEOUT_MINUTES}分）"
+              else
+                echo "❌ ${description}が失敗しました（終了コード: $exit_code）"
+              fi
+
+              return $exit_code
             fi
-            
-            exit $EXIT_CODE
+          }
+
+          # 1. マイグレーション実行
+          if ! run_with_timeout "${MIGRATION_CMD}" "マイグレーション"; then
+            exit 1
           fi
+
+          # 2. RLSポリシー適用
+          if ! run_with_timeout "db:setup" "RLSポリシー適用"; then
+            exit 1
+          fi
+
+          echo "status=success" >> "$GITHUB_OUTPUT"
+          echo "=== データベースマイグレーション完了 ==="
 
       - name: Migration Completion Log
         if: steps.migrate.outputs.status == 'success'
         shell: bash
         run: |
-          echo "🎯 データベースマイグレーションが正常に完了しました"
-          echo "✅ drizzle-kit pushによるスキーマ適用が完了"
+          echo "🎯 データベース運用フローが正常に完了しました"
