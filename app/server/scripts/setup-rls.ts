@@ -18,6 +18,12 @@ const ERROR_MESSAGES = {
 } as const;
 
 /**
+ * テスト環境で使用するスキーマ名のセット
+ * これらのスキーマではSupabaseのauth.uid()が利用できないため、RLS適用をスキップ
+ */
+const TEST_SCHEMAS = new Set(["app_test", "test_schema"]);
+
+/**
  * RLSポリシーを適用する
  */
 async function applyRlsPolicies(): Promise<void> {
@@ -36,12 +42,32 @@ async function applyRlsPolicies(): Promise<void> {
 		process.exit(1);
 	}
 
+	if (!/^[a-zA-Z0-9_]+$/.test(BASE_SCHEMA)) {
+		console.error(
+			"エラー: BASE_SCHEMAに不正な文字が含まれています。英数字とアンダースコアのみ使用可能です。",
+		);
+		process.exit(1);
+	}
+
+	const isTestSchema = TEST_SCHEMAS.has(BASE_SCHEMA);
+
 	const maskedUrl = DATABASE_URL.replace(
 		/:\/\/([^:]+):([^@]+)@/,
 		"://$1:***@",
 	);
 	console.log(`DATABASE_URL: ${maskedUrl}`);
 	console.log(`BASE_SCHEMA: ${BASE_SCHEMA}`);
+
+	if (isTestSchema) {
+		console.warn(
+			`BASE_SCHEMA "${BASE_SCHEMA}" はテスト環境のためRLSポリシー適用をスキップします。`,
+		);
+		console.warn(
+			"Supabaseのauthスキーマを前提とするauth.uid()はCIのPostgreSQLでは利用できません。",
+		);
+		console.log("=== RLSポリシー適用完了 ===");
+		return;
+	}
 
 	const client = new Client({
 		connectionString: DATABASE_URL,
@@ -79,18 +105,42 @@ async function applyRlsPolicies(): Promise<void> {
         FOR ALL USING (auth.uid()::text = id::text)
     `);
 
+		console.log("tasksテーブルのRLSを有効化中...");
+		await client.query(
+			`ALTER TABLE "${BASE_SCHEMA}".tasks ENABLE ROW LEVEL SECURITY`,
+		);
+
+		console.log("既存タスクポリシーを削除（冪等性確保）...");
+		await client.query(
+			`DROP POLICY IF EXISTS "users_own_tasks_policy" ON "${BASE_SCHEMA}".tasks`,
+		);
+
+		console.log("ユーザー自身のタスクのみアクセス可能なポリシーを作成中...");
+		await client.query(`
+      CREATE POLICY "users_own_tasks_policy" ON "${BASE_SCHEMA}".tasks
+        FOR ALL USING (auth.uid()::text = user_id::text)
+    `);
+
 		console.log("RLSポリシー適用完了");
 	} catch (error) {
 		console.error(
 			`${ERROR_MESSAGES.RLS_APPLICATION_FAILED}:`,
 			error instanceof Error ? error.message : String(error),
 		);
-		console.log(
-			"注意: Supabase認証が必要な環境では、auth.uid()関数が利用できない場合があります",
-		);
-		console.log(
-			"テスト環境ではRLSポリシーなしでも動作します。警告として記録し、処理を継続します。",
-		);
+
+		if (isTestSchema) {
+			console.log(
+				"注意: Supabase認証が必要な環境では、auth.uid()関数が利用できない場合があります",
+			);
+			console.log(
+				"テスト環境ではRLSポリシーなしでも動作します。警告として記録し、処理を継続します。",
+			);
+		} else {
+			console.error(
+				"本番/Preview環境でRLSポリシーの適用に失敗しました。処理を中断します。",
+			);
+			process.exit(1);
+		}
 	} finally {
 		await client.end();
 	}
