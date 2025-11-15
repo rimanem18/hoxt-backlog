@@ -38,6 +38,21 @@ interface EnumConfig {
   name: string; // Drizzleスキーマでのenum変数名（例: 'authProviderType'）
   exportName: string; // エクスポート時のZodスキーマ名（例: 'authProviderSchema'）
   values: readonly string[]; // enum値の配列
+  description?: string; // enumの説明（オプション）
+}
+
+/**
+ * カスタムバリデーション設定の型定義
+ */
+interface CustomValidationConfig {
+  min?: number;
+  max?: number;
+  optional?: boolean;
+  defaultValue?: string;
+  errorMessages?: {
+    min?: string;
+    max?: string;
+  };
 }
 
 /**
@@ -48,6 +63,7 @@ interface TableConfig {
   tableObject: unknown; // Drizzleテーブルオブジェクト
   outputFile: string; // 出力ファイル名（例: 'users.ts'）
   enums?: EnumConfig[]; // 関連するenum設定（オプション）
+  customValidations?: Record<string, CustomValidationConfig>; // カスタムバリデーション（オプション）
 }
 
 /**
@@ -73,7 +89,44 @@ const tableConfigs: TableConfig[] = [
     tableName: 'tasks',
     tableObject: tasks,
     outputFile: 'tasks.ts',
-    enums: [],
+    enums: [
+      {
+        name: 'taskPriority',
+        exportName: 'taskPrioritySchema',
+        values: ['high', 'medium', 'low'] as const,
+        description: 'タスクの優先度',
+      },
+      {
+        name: 'taskStatus',
+        exportName: 'taskStatusSchema',
+        values: [
+          'not_started',
+          'in_progress',
+          'in_review',
+          'completed',
+        ] as const,
+        description: 'タスクのステータス',
+      },
+    ],
+    customValidations: {
+      title: {
+        min: 1,
+        max: 100,
+        errorMessages: {
+          min: 'タイトルを入力してください',
+          max: 'タイトルは100文字以内で入力してください',
+        },
+      },
+      description: {
+        optional: true,
+      },
+      priority: {
+        defaultValue: 'medium',
+      },
+      status: {
+        defaultValue: 'not_started',
+      },
+    },
   },
 ];
 
@@ -113,11 +166,14 @@ function generateFileHeader(): string {
  * @returns 生成されたenumコード
  */
 function generateEnumCode(enumConfig: EnumConfig): string {
-  const { exportName, values } = enumConfig;
+  const { exportName, values, description } = enumConfig;
   const valuesStr = values.map((v) => `  '${v}',`).join('\n');
+  const descriptionComment = description
+    ? `\n * ${description}`
+    : '';
 
   return `/**
- * ${exportName}（enumから自動生成）
+ * ${exportName}（enumから自動生成）${descriptionComment}
  */
 export const ${exportName} = z.enum([
 ${valuesStr}
@@ -127,13 +183,71 @@ export type ${capitalize(exportName.replace('Schema', ''))} = z.infer<typeof ${e
 }
 
 /**
+ * カスタムバリデーションスキーマコードを生成
+ *
+ * @param tableName テーブル名
+ * @param capitalizedName キャピタライズされたテーブル名
+ * @param customValidations カスタムバリデーション設定
+ * @returns 生成されたカスタムバリデーションコード
+ */
+function generateCustomValidationCode(
+  tableName: string,
+  capitalizedName: string,
+  customValidations?: Record<string, CustomValidationConfig>,
+): string {
+  if (!customValidations || Object.keys(customValidations).length === 0) {
+    return '';
+  }
+
+  const schemaLines: string[] = [];
+
+  for (const [field, config] of Object.entries(customValidations)) {
+    const validations: string[] = [];
+
+    if (config.min !== undefined) {
+      const errorMsg = config.errorMessages?.min
+        ? `, { message: '${config.errorMessages.min}' }`
+        : '';
+      validations.push(`.min(${config.min}${errorMsg})`);
+    }
+
+    if (config.max !== undefined) {
+      const errorMsg = config.errorMessages?.max
+        ? `, { message: '${config.errorMessages.max}' }`
+        : '';
+      validations.push(`.max(${config.max}${errorMsg})`);
+    }
+
+    if (validations.length > 0) {
+      schemaLines.push(`    ${field}: z.string()${validations.join('')},`);
+    }
+  }
+
+  if (schemaLines.length === 0) {
+    return '';
+  }
+
+  return `
+/**
+ * ${capitalizedName}作成用のカスタムバリデーションスキーマ
+ *
+ * API リクエストのバリデーションに使用する
+ */
+export const create${capitalizedName}Schema = z.object({
+${schemaLines.join('\n')}
+});
+
+export type Create${capitalizedName} = z.infer<typeof create${capitalizedName}Schema>;`;
+}
+
+/**
  * テーブル設定から型安全なZodスキーマファイルを生成
  *
  * @param config テーブル設定
  * @returns 生成されたスキーマファイルの内容
  */
 function generateSchemaFile(config: TableConfig): string {
-  const { tableName, enums = [] } = config;
+  const { tableName, enums = [], customValidations } = config;
 
   // キャピタライズされたテーブル名（User, Post等）
   // 注意: 単数形を維持（users → User）
@@ -143,8 +257,23 @@ function generateSchemaFile(config: TableConfig): string {
   // enum部分のコード生成
   const enumsCode = enums.map((enumConfig) => generateEnumCode(enumConfig)).join('\n\n');
 
-  // importするenum名のリスト
-  const enumImports = enums.length > 0 ? `, ${enums.map((e) => e.name).join(', ')}` : '';
+  // カスタムバリデーション部分のコード生成
+  const customValidationCode = generateCustomValidationCode(
+    tableName,
+    capitalizedName,
+    customValidations,
+  );
+
+  // importするenum名のリスト（実際にDrizzleスキーマに存在するもののみ）
+  // 注意: taskPriority, taskStatus は Drizzle enum ではなくカスタム enum のため import しない
+  const actualEnumImports = enums
+    .filter((e) => {
+      // authProviderType は実際に schema.ts に存在する
+      // taskPriority, taskStatus は存在しないのでスキップ
+      return e.name !== 'taskPriority' && e.name !== 'taskStatus';
+    })
+    .map((e) => e.name);
+  const enumImports = actualEnumImports.length > 0 ? `, ${actualEnumImports.join(', ')}` : '';
 
   return `${generateFileHeader()}
 
@@ -173,7 +302,7 @@ export const insert${capitalizedName}Schema = createInsertSchema(${tableName});
  */
 export type Select${capitalizedName} = z.infer<typeof select${capitalizedName}Schema>;
 export type Insert${capitalizedName} = z.infer<typeof insert${capitalizedName}Schema>;
-${enumsCode ? '\n' + enumsCode : ''}
+${enumsCode ? '\n' + enumsCode : ''}${customValidationCode}
 `;
 }
 
