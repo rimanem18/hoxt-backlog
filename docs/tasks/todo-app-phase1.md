@@ -50,7 +50,7 @@ Drizzle ORM → Zod → OpenAPI → TypeScript型定義の自動生成パイプ�
 
 ### TASK-1301: tasksテーブル作成
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: なし
@@ -158,11 +158,11 @@ docker compose exec server bun run db:push
 
 #### 完了条件
 
-- [ ] tasksテーブルが作成される
-- [ ] すべてのインデックスが作成される
-- [ ] CHECK制約が正常に動作する（不正な値で INSERT エラー）
-- [ ] RLSポリシーが有効（他ユーザーのタスクにアクセス不可）
-- [ ] updated_at が自動更新される
+- [x] tasksテーブルが作成される
+- [x] すべてのインデックスが作成される
+- [x] CHECK制約が正常に動作する（不正な値で INSERT エラー）
+- [x] RLSポリシーが有効（他ユーザーのタスクにアクセス不可）
+- [x] updated_at が自動更新される
 
 #### 参照
 
@@ -174,7 +174,7 @@ docker compose exec server bun run db:push
 
 ### TASK-1302: Zodスキーマ自動生成設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了** ✅ 完了 (2025-11-15)
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1301
@@ -251,11 +251,11 @@ docker compose exec server bun run generate:schemas
 
 #### 完了条件
 
-- [ ] shared-schemas/tasks.ts が自動生成される
-- [ ] TaskPriority, TaskStatus enum が定義される
-- [ ] すべてのバリデーションスキーマが含まれる
-- [ ] 型チェックが通る（`bun run typecheck`）
-- [ ] ファイル冒頭に手動編集禁止の警告コメントがある
+- [x] shared-schemas/tasks.ts が自動生成される
+- [x] TaskPriority, TaskStatus enum が定義される
+- [x] すべてのバリデーションスキーマが含まれる
+- [x] 型チェックが通る（`bun run typecheck`）
+- [x] ファイル冒頭に手動編集禁止の警告コメントがある
 
 #### 参照
 
