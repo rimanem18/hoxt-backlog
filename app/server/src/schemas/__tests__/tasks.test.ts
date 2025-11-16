@@ -82,7 +82,7 @@ describe('createTaskSchema', () => {
       createTaskSchema.parse(invalidData);
     } catch (error) {
       const zodError = error as { issues: Array<{ message: string }> };
-      expect(zodError.issues[0].message).toBe('タイトルを入力してください');
+      expect(zodError.issues[0]?.message).toBe('タイトルを入力してください');
     }
   });
 
@@ -92,7 +92,7 @@ describe('createTaskSchema', () => {
       createTaskSchema.parse(invalidData);
     } catch (error) {
       const zodError = error as { issues: Array<{ message: string }> };
-      expect(zodError.issues[0].message).toBe(
+      expect(zodError.issues[0]?.message).toBe(
         'タイトルは100文字以内で入力してください',
       );
     }
