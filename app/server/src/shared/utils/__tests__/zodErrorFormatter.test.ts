@@ -1,19 +1,19 @@
 import { describe, expect, test } from 'bun:test';
-import type { ZodIssue } from 'zod';
 import { formatZodError } from '../zodErrorFormatter';
 
 describe('formatZodError', () => {
   test('invalid_type エラーで期待値・実際の値を含む日本語メッセージが生成される', () => {
     // Given: 型エラーのZodIssue
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_type',
         expected: 'string',
         received: 'number',
         path: ['userId'],
         message: 'Expected string, received number',
-      } as any,
-    ];
+      },
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When: フォーマット処理を実行
     const result = formatZodError(issues);
@@ -26,14 +26,14 @@ describe('formatZodError', () => {
 
   test('invalid_string (UUID) エラーで詳細な日本語メッセージが生成される', () => {
     // Given: UUID検証エラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_string',
         validation: 'uuid',
         path: ['id'],
         message: 'Invalid uuid',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -43,14 +43,14 @@ describe('formatZodError', () => {
 
   test('invalid_string (email) エラーで詳細な日本語メッセージが生成される', () => {
     // Given: email検証エラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_string',
         validation: 'email',
         path: ['email'],
         message: 'Invalid email',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -60,7 +60,7 @@ describe('formatZodError', () => {
 
   test('too_small エラーで最小値を含む日本語メッセージが生成される', () => {
     // Given: 最小値違反エラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'too_small',
         minimum: 1,
@@ -69,8 +69,8 @@ describe('formatZodError', () => {
         exact: false,
         path: ['name'],
         message: 'String must contain at least 1 character(s)',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -80,7 +80,7 @@ describe('formatZodError', () => {
 
   test('too_big エラーで最大値を含む日本語メッセージが生成される', () => {
     // Given: 最大値違反エラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'too_big',
         maximum: 100,
@@ -89,8 +89,8 @@ describe('formatZodError', () => {
         exact: false,
         path: ['description'],
         message: 'String must contain at most 100 character(s)',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -100,15 +100,15 @@ describe('formatZodError', () => {
 
   test('ネストされたフィールドパスが正しく結合される', () => {
     // Given: ネストされたパスを持つエラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_type',
         expected: 'string',
         received: 'undefined',
         path: ['user', 'profile', 'name'],
         message: 'Required',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -118,21 +118,21 @@ describe('formatZodError', () => {
 
   test('複数のエラーが正しく変換される', () => {
     // Given: 複数のバリデーションエラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_type',
         expected: 'string',
         received: 'number',
         path: ['userId'],
         message: 'Expected string, received number',
-      } as any,
+      },
       {
         code: 'invalid_string',
         validation: 'email',
         path: ['email'],
         message: 'Invalid email',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -143,13 +143,13 @@ describe('formatZodError', () => {
 
   test('想定外のエラーコードでfallbackメッセージが生成される', () => {
     // Given: 想定外のエラーコード
-    const issues: ZodIssue[] = [
+    const issues = [
       {
-        code: 'custom' as any,
+        code: 'custom',
         path: ['customField'],
         message: 'Custom validation failed',
       },
-    ];
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
@@ -159,15 +159,15 @@ describe('formatZodError', () => {
 
   test('空のパスでルートレベルのエラーが処理される', () => {
     // Given: パスが空のエラー
-    const issues: ZodIssue[] = [
+    const issues = [
       {
         code: 'invalid_type',
         expected: 'object',
         received: 'null',
         path: [],
         message: 'Expected object, received null',
-      } as any,
-    ];
+      },
+    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
 
     // When & Then
     const result = formatZodError(issues);
