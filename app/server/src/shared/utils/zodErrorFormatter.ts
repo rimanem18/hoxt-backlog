@@ -69,10 +69,18 @@ function createErrorMessage(issue: ZodIssue, field: string): string {
  * invalid_type エラーのメッセージ生成
  */
 function createInvalidTypeMessage(issue: ZodIssue, field: string): string {
-  const expected = (issue as any).expected;
-  const received = (issue as any).received;
-  const expectedType = translateType(expected);
-  const receivedType = translateType(received);
+  // ZodIssueは型安全性の観点から、プロパティアクセス時に型拡張が必要
+  const typedIssue = issue as {
+    expected?: string;
+    received?: string;
+  };
+
+  if (!typedIssue.expected || !typedIssue.received) {
+    return `${field}の型が正しくありません`;
+  }
+
+  const expectedType = translateType(typedIssue.expected);
+  const receivedType = translateType(typedIssue.received);
   return `${field}は${expectedType}型である必要がありますが、${receivedType}型が入力されました`;
 }
 
@@ -80,7 +88,20 @@ function createInvalidTypeMessage(issue: ZodIssue, field: string): string {
  * invalid_string エラーのメッセージ生成
  */
 function createInvalidStringMessage(issue: ZodIssue, field: string): string {
-  const validation = (issue as any).validation;
+  // ZodIssueのvalidationプロパティへの型安全なアクセス
+  const typedIssue = issue as {
+    validation?:
+      | string
+      | { includes: string }
+      | { startsWith: string }
+      | { endsWith: string };
+  };
+
+  const validation = typedIssue.validation;
+
+  if (!validation) {
+    return `${field}の形式が正しくありません`;
+  }
 
   if (typeof validation === 'object' && 'includes' in validation) {
     return `${field}は "${validation.includes}" を含む必要があります`;
@@ -124,9 +145,14 @@ function createInvalidStringMessage(issue: ZodIssue, field: string): string {
  * カスタムメッセージが指定されている場合はそれを優先
  */
 function createTooSmallMessage(issue: ZodIssue, field: string): string {
-  const minimum = (issue as any).minimum;
-  const type = (issue as any).type;
-  const inclusive = (issue as any).inclusive;
+  // ZodIssueのtoo_small固有プロパティへの型安全なアクセス
+  const typedIssue = issue as {
+    minimum?: number;
+    type?: 'string' | 'number' | 'bigint' | 'array' | 'date';
+    inclusive?: boolean;
+  };
+
+  const { minimum, type, inclusive } = typedIssue;
 
   // Zodのデフォルト英語メッセージかどうかを判定
   const isDefaultMessage =
@@ -142,6 +168,10 @@ function createTooSmallMessage(issue: ZodIssue, field: string): string {
     return issue.message;
   }
 
+  if (minimum === undefined || type === undefined || inclusive === undefined) {
+    return `${field}は最小値を満たしていません`;
+  }
+
   const comparator = inclusive ? '以上' : 'より大きい値';
 
   switch (type) {
@@ -153,7 +183,7 @@ function createTooSmallMessage(issue: ZodIssue, field: string): string {
     case 'array':
       return `${field}は${minimum}個${comparator}の要素が必要です`;
     case 'date':
-      return `${field}は${new Date(minimum as number).toISOString()}${comparator}である必要があります`;
+      return `${field}は${new Date(minimum).toISOString()}${comparator}である必要があります`;
     default:
       return `${field}は最小値${minimum}${comparator}である必要があります`;
   }
@@ -165,9 +195,14 @@ function createTooSmallMessage(issue: ZodIssue, field: string): string {
  * カスタムメッセージが指定されている場合はそれを優先
  */
 function createTooBigMessage(issue: ZodIssue, field: string): string {
-  const maximum = (issue as any).maximum;
-  const type = (issue as any).type;
-  const inclusive = (issue as any).inclusive;
+  // ZodIssueのtoo_big固有プロパティへの型安全なアクセス
+  const typedIssue = issue as {
+    maximum?: number;
+    type?: 'string' | 'number' | 'bigint' | 'array' | 'date';
+    inclusive?: boolean;
+  };
+
+  const { maximum, type, inclusive } = typedIssue;
 
   // Zodのデフォルト英語メッセージかどうかを判定
   const isDefaultMessage =
@@ -184,6 +219,10 @@ function createTooBigMessage(issue: ZodIssue, field: string): string {
     return issue.message;
   }
 
+  if (maximum === undefined || type === undefined || inclusive === undefined) {
+    return `${field}は最大値を超えています`;
+  }
+
   const comparator = inclusive ? '以下' : '未満';
 
   switch (type) {
@@ -195,7 +234,7 @@ function createTooBigMessage(issue: ZodIssue, field: string): string {
     case 'array':
       return `${field}は${maximum}個${comparator}の要素である必要があります`;
     case 'date':
-      return `${field}は${new Date(maximum as number).toISOString()}${comparator}である必要があります`;
+      return `${field}は${new Date(maximum).toISOString()}${comparator}である必要があります`;
     default:
       return `${field}は最大値${maximum}${comparator}である必要があります`;
   }
@@ -205,10 +244,18 @@ function createTooBigMessage(issue: ZodIssue, field: string): string {
  * invalid_enum_value エラーのメッセージ生成
  */
 function createInvalidEnumMessage(issue: ZodIssue, field: string): string {
-  const options = (issue as any).options;
-  const optionsStr = Array.isArray(options)
-    ? options.map((opt: unknown) => `"${opt}"`).join(', ')
-    : '';
+  // ZodIssueのinvalid_enum_value固有プロパティへの型安全なアクセス
+  const typedIssue = issue as {
+    options?: unknown[];
+  };
+
+  if (!typedIssue.options || !Array.isArray(typedIssue.options)) {
+    return `${field}は指定された値のいずれかである必要があります`;
+  }
+
+  const optionsStr = typedIssue.options
+    .map((opt: unknown) => `"${opt}"`)
+    .join(', ');
   return `${field}は${optionsStr}のいずれかである必要があります`;
 }
 
@@ -216,10 +263,16 @@ function createInvalidEnumMessage(issue: ZodIssue, field: string): string {
  * unrecognized_keys エラーのメッセージ生成
  */
 function createUnrecognizedKeysMessage(issue: ZodIssue, field: string): string {
-  const keys = (issue as any).keys;
-  const keysStr = Array.isArray(keys)
-    ? keys.map((key: unknown) => `"${key}"`).join(', ')
-    : '';
+  // ZodIssueのunrecognized_keys固有プロパティへの型安全なアクセス
+  const typedIssue = issue as {
+    keys?: string[];
+  };
+
+  if (!typedIssue.keys || !Array.isArray(typedIssue.keys)) {
+    return `${field}に不明なキーが含まれています`;
+  }
+
+  const keysStr = typedIssue.keys.map((key) => `"${key}"`).join(', ');
   return `${field}に不明なキー ${keysStr} が含まれています`;
 }
 

@@ -398,7 +398,6 @@ describe('GET /api/user/profile 統合テスト', () => {
 
     test('複数フィールドのバリデーションエラーで各フィールドの日本語メッセージが返される', async () => {
       // Given: 複数の不正な値を含むPOSTリクエスト
-      const validJWT = 'valid-jwt-token';
       const request = new Request('http://localhost/api/auth/callback', {
         method: 'POST',
         headers: {

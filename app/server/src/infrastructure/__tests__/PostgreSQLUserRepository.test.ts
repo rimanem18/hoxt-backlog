@@ -330,11 +330,15 @@ async function cleanupTestData() {
   }
 
   try {
-    // test_で始まるexternal_idを持つレコードを削除
+    // トランザクションでデータ削除を保証
+    await client.query('BEGIN');
     await client.query(
       `DELETE FROM "${schema}".users WHERE external_id LIKE 'test_%' OR email LIKE '%@example.com'`,
     );
+    await client.query('COMMIT');
   } catch (error) {
+    // エラー時はロールバック
+    await client.query('ROLLBACK');
     // テーブルが存在しない場合は無視、その他のエラーはログ出力
     if (error instanceof Error && !error.message.includes('does not exist')) {
       console.warn('Cleanup warning:', error.message);

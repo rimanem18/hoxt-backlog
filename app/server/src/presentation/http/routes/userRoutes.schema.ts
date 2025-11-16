@@ -100,14 +100,14 @@ export const listUsersRoute = createRoute({
       limit: z.coerce
         .number()
         .int()
-        .min(1)
-        .max(100)
+        .min(1, 'limitは最小値1以上である必要があります')
+        .max(100, 'limitは最大値100以下である必要があります')
         .default(20)
         .openapi({ param: { name: 'limit', in: 'query' } }),
       offset: z.coerce
         .number()
         .int()
-        .min(0)
+        .min(0, 'offsetは最小値0以上である必要があります')
         .default(0)
         .openapi({ param: { name: 'offset', in: 'query' } }),
     }),

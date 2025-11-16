@@ -766,12 +766,6 @@ describe('responseValidationMiddleware', () => {
 
       // Then: 平均バリデーション時間が150ms以内
       expect(avgTime).toBeLessThan(150);
-
-      // パフォーマンス情報をログ出力（デバッグ用）
-      // biome-ignore lint/suspicious/noConsole: パフォーマンス測定結果の出力
-      console.log(
-        `Zod validation performance: ${avgTime.toFixed(4)}ms per iteration (${iterations} iterations, total: ${elapsed.toFixed(2)}ms)`,
-      );
     },
   );
 
@@ -863,12 +857,6 @@ describe('responseValidationMiddleware', () => {
       // Then: 本番環境のレスポンスタイムが開発環境と同等またはそれ以下
       // バリデーションオーバーヘッドがないため、本番環境の方が高速であるべき
       expect(prodAvgTime).toBeLessThanOrEqual(devAvgTime);
-
-      // パフォーマンス比較情報をログ出力（デバッグ用）
-      // biome-ignore lint/suspicious/noConsole: パフォーマンス測定結果の出力
-      console.log(
-        `Performance comparison: Dev=${devAvgTime.toFixed(4)}ms, Prod=${prodAvgTime.toFixed(4)}ms (overhead: ${(devAvgTime - prodAvgTime).toFixed(4)}ms)`,
-      );
 
       // Then: 本番環境ではバリデーションが実行されないことを確認
       // モックLoggerのerror/warnが呼ばれていないことで間接的に検証
