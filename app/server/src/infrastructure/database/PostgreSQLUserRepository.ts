@@ -54,6 +54,33 @@ export class PostgreSQLUserRepository implements IUserRepository {
       throw error;
     }
 
+    // Drizzleエラーの場合、causeプロパティに元のPostgresエラーが含まれる
+    if (error && typeof error === 'object' && 'cause' in error) {
+      const cause = (error as { cause: unknown }).cause;
+      if (this.isPgDatabaseError(cause)) {
+        if (cause.code === '23505') {
+          if (cause.constraint === 'unique_external_id_provider') {
+            throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+          }
+          if (cause.constraint?.includes('email')) {
+            throw new Error('メールアドレスが既に登録されています');
+          }
+          // 制約名が取得できない場合はメッセージで判定
+          if (cause.message.includes('unique_external_id_provider')) {
+            throw new Error('外部IDとプロバイダーの組み合わせが既に存在します');
+          }
+          // その他の一意制約違反
+          throw new Error('既に登録されているデータです');
+        }
+
+        if (cause.code === 'ECONNREFUSED') {
+          throw new Error('データベースへの接続に失敗しました');
+        }
+
+        throw new Error(`データベースエラー: ${cause.message}`);
+      }
+    }
+
     if (this.isPgDatabaseError(error)) {
       if (error.code === '23505') {
         if (error.constraint === 'unique_external_id_provider') {
@@ -101,32 +128,18 @@ export class PostgreSQLUserRepository implements IUserRepository {
           if (errorMessage.includes('email')) {
             throw new Error('メールアドレスが既に登録されています');
           }
-        }
-
-        // インサート文のパラメータを見て判断（Drizzleの詳細エラー用）
-        if (
-          errorMessage.includes('insert into') &&
-          errorMessage.includes('users')
-        ) {
-          // パラメータに同じexternal_idとproviderがある場合は重複エラーと判断
-          const paramsMatch = errorMessage.match(/params: ([^,]+),([^,]+)/);
-          if (paramsMatch) {
-            // 他のテストでの同一パラメータとの重複を避けるため、
-            // external_idが同じ形式(test_で始まる)で同じ内容の場合のみ重複と判断
-            const externalId = paramsMatch[1];
-            if (externalId?.startsWith('test_')) {
-              throw new Error(
-                '外部IDとプロバイダーの組み合わせが既に存在します',
-              );
-            }
-          }
+          // その他の一意制約違反
+          throw new Error('既に登録されているデータです');
         }
       }
     }
 
-    throw new Error(
-      `データベースエラー: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    // その他のエラーは元のエラーをそのまま再スロー
+    // これによりfindメソッドでの適切なエラーハンドリングが可能になる
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(String(error));
   }
 
   /**
