@@ -73,8 +73,8 @@ docker compose exec e2e npx playwright test
 - **推奨**: `const` の使用
 - **非推奨**: `let` の使用
   - ただし、再代入が明確に必要な場面（ループ変数や一時的な状態）の使用可
-- **禁止**: `z.string().uuid()`, `z.string().email()` メソッドの使用
-  - `z.uuid()`,`z.email()` で代用
+- **禁止**: `z.string().uuid()`, `z.string().email()`, `z.string().datetime()` メソッドの使用
+  - `z.uuid()`,`z.email()`, `z.iso.datetime()` で代用
 - **禁止**: `any` 型の使用
   - ただし、型が取得不能な外部ライブラリや JSON パースなどの場合に限り、理由コメントを添えて明示的に使用可
 - **禁止**: `var` の使用
@@ -116,8 +116,8 @@ docker compose exec server bun run dev
 - **推奨**: `const` の使用
 - **非推奨**: `let` の使用
   - ただし、再代入が明確に必要な場面（ループ変数や一時的な状態）の使用可
-- **禁止**: `z.string().uuid()`, `z.string().email()` メソッドの使用
-  - `z.uuid()`,`z.email()` で代用
+- **禁止**: `z.string().uuid()`, `z.string().email()`, `z.string().datetime()` メソッドの使用
+  - `z.uuid()`,`z.email()`, `z.iso.datetime()` で代用
 - **禁止**: `@ts-ignore` ディレクティブの使用
   - `@ts-expect-error` ディレクティブで代用
 - **禁止**: `any` 型の使用
