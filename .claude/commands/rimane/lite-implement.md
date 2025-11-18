@@ -8,7 +8,8 @@ description: Claude が実装し、Codex がレビューする形で協働で実
 - use serena MCP
 - use Codex MCP
 
-codex 利用時は、 prompt のみ送信してください。
+codex 利用時は、 prompt のみ送信してください。sessionid や model は指定しないでください。
+
 
 ## プランニングフェーズ
 
