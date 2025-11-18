@@ -1184,6 +1184,7 @@ paths:
                   maxLength: 100
                 description:
                   type: string
+                  nullable: true
                 priority:
                   type: string
                   enum:

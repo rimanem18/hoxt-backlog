@@ -861,7 +861,7 @@ export interface paths {
         content: {
           'application/json': {
             title: string;
-            description?: string;
+            description?: string | null;
             /**
              * @default medium
              * @enum {string}

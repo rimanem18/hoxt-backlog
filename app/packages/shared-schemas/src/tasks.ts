@@ -68,14 +68,23 @@ export const listTasksQuerySchema = z.object({
     },
     example: 'high',
   }),
-  status: z.string().optional().openapi({
-    param: {
-      name: 'status',
-      in: 'query',
-    },
-    description: 'ステータス（カンマ区切りで複数選択可能）',
-    example: 'in_progress,in_review',
-  }),
+  status: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val.split(',').every(s =>
+        taskStatusSchema.options.includes(s.trim() as typeof taskStatusSchema.options[number])
+      ),
+      'ステータスは有効な値のカンマ区切りである必要があります'
+    )
+    .openapi({
+      param: {
+        name: 'status',
+        in: 'query',
+      },
+      description: 'ステータス（カンマ区切りで複数選択可能）',
+      example: 'in_progress,in_review',
+    }),
   sort: taskSortSchema.default('created_at_desc').openapi({
     param: {
       name: 'sort',
@@ -91,7 +100,7 @@ export const createTaskBodySchema = z.object({
   title: z.string()
     .min(1, 'タイトルを入力してください')
     .max(100, 'タイトルは100文字以内で入力してください'),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   priority: taskPrioritySchema.default('medium'),
 }).openapi('CreateTaskBody');
 

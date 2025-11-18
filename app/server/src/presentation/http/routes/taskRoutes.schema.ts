@@ -15,6 +15,7 @@ import {
   createTaskResponseSchema,
   getTaskResponseSchema,
   listTasksResponseSchema,
+  taskStatusSchema,
   updateTaskBodySchema,
   updateTaskResponseSchema,
 } from '@/packages/shared-schemas/src/tasks';
@@ -42,6 +43,18 @@ export const listTasksRoute = createRoute({
       status: z
         .string()
         .optional()
+        .refine(
+          (val) =>
+            !val ||
+            val
+              .split(',')
+              .every((s) =>
+                taskStatusSchema.options.includes(
+                  s.trim() as (typeof taskStatusSchema.options)[number],
+                ),
+              ),
+          'ステータスは有効な値のカンマ区切りである必要があります',
+        )
         .openapi({
           param: { name: 'status', in: 'query' },
           description: 'ステータス（カンマ区切りで複数選択可能）',
