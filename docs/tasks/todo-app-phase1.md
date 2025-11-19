@@ -267,7 +267,7 @@ docker compose exec server bun run generate:schemas
 
 ### TASK-1303: OpenAPI仕様自動生成
 
-- [ ] **タスク完了**
+- [x] **タスク完了** ✅ 完了 (2025-11-17)
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1302
@@ -361,11 +361,11 @@ docker compose exec server bun run generate:openapi
 
 #### 完了条件
 
-- [ ] docs/api/openapi.yaml が生成される
-- [ ] 6つのエンドポイントがすべて定義される
-- [ ] Swagger UIでAPIドキュメントを確認できる
-- [ ] スキーマバリデーションが正しく定義される
-- [ ] ファイル冒頭に手動編集禁止の警告コメントがある
+- [x] docs/api/openapi.yaml が生成される
+- [x] 6つのエンドポイントがすべて定義される
+- [x] Swagger UIでAPIドキュメントを確認できる
+- [x] スキーマバリデーションが正しく定義される
+- [x] ファイル冒頭に手動編集禁止の警告コメントがある
 
 #### 参照
 

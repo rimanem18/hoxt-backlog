@@ -22,3 +22,6 @@ export * from './src/auth';
 
 // ユーザーAPI型定義
 export * from './src/users';
+
+// タスク管理API型定義
+export * from './src/tasks';

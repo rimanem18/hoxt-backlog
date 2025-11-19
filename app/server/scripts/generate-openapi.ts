@@ -31,6 +31,9 @@ import {
 	updateUserRoute,
 } from "../src/presentation/http/routes/userRoutes.schema";
 import { authCallbackRoute } from "../src/presentation/http/routes/authRoutes.schema";
+import {
+	taskRoutes,
+} from "../src/presentation/http/routes/taskRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -62,6 +65,9 @@ async function generateOpenAPISpec(): Promise<void> {
 	app.openapi(updateUserRoute, noopHandler as any);
 	app.openapi(getUserProfileRoute, noopHandler as any);
 
+	// タスク管理ルート
+	taskRoutes.forEach((route) => app.openapi(route, noopHandler as any));
+
 	// OpenAPI仕様を取得
 	const openAPISpec = app.getOpenAPIDocument({
 		openapi: "3.1.0",
@@ -80,8 +86,32 @@ async function generateOpenAPISpec(): Promise<void> {
 		],
 	});
 
+	// components.securitySchemesを手動で追加
+	// Why: @hono/zod-openapiのバージョンによっては、
+	// getOpenAPIDocument()のcomponentsパラメータが正しくマージされない可能性があるため
+	if (!openAPISpec.components) {
+		openAPISpec.components = {};
+	}
+	openAPISpec.components.securitySchemes = {
+		BearerAuth: {
+			type: "http",
+			scheme: "bearer",
+			bearerFormat: "JWT",
+			description: "JWT認証トークン",
+		},
+	};
+
 	// YAML形式で出力
-	const yamlContent = yaml.dump(openAPISpec, {
+	const warningComment =
+		"# ⚠️ 警告: このファイルは自動生成されています\n" +
+		"# このファイルを直接編集しないでください。\n" +
+		"# 変更が必要な場合は、以下のいずれかを更新してから再生成してください:\n" +
+		"#   - app/server/src/schemas/*.ts (DBスキーマ)\n" +
+		"#   - app/packages/shared-schemas/src/*.ts (API契約スキーマ)\n" +
+		"#   - app/server/src/presentation/http/routes/*.schema.ts (ルート定義)\n" +
+		"# 再生成コマンド: docker compose exec server bun run generate:openapi\n\n";
+
+	const yamlContent = warningComment + yaml.dump(openAPISpec, {
 		indent: 2,
 		lineWidth: 120,
 		noRefs: true,
