@@ -377,7 +377,7 @@ docker compose exec server bun run generate:openapi
 
 ### TASK-1304: フロントエンド型定義自動生成
 
-- [ ] **タスク完了**
+- [x] **タスク完了** ✅ 完了 (2025-11-19)
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1303
@@ -448,11 +448,11 @@ export const apiClient = createClient<paths>({
 
 #### 完了条件
 
-- [ ] types/api/generated.ts が生成される
-- [ ] TaskDTO型が含まれる
-- [ ] 6つのエンドポイントの型定義が含まれる
-- [ ] 型チェックが通る（`bun run typecheck`）
-- [ ] ファイル冒頭に手動編集禁止の警告コメントがある
+- [x] types/api/generated.ts が生成される
+- [x] TaskDTO型が含まれる
+- [x] 6つのエンドポイントの型定義が含まれる
+- [x] 型チェックが通る（`bun run typecheck`）
+- [x] ファイル冒頭に手動編集禁止の警告コメントがある
 
 #### 参照
 
