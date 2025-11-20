@@ -51,7 +51,7 @@ DDD（ドメイン駆動設計）の原則に従い、ビジネスロジック�
 
 ### TASK-1306: TaskPriority値オブジェクト
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1305
@@ -136,11 +136,11 @@ export class TaskPriority {
 
 #### 完了条件
 
-- [ ] TaskPriority値オブジェクトが実装される
-- [ ] すべてのテストケースが通る
-- [ ] テストカバレッジ100%
-- [ ] Biomeチェック合格（`bun run check`）
-- [ ] 型チェック合格（`bun run typecheck`）
+- [x] TaskPriority値オブジェクトが実装される
+- [x] すべてのテストケースが通る
+- [x] テストカバレッジ100%
+- [x] Biomeチェック合格（`bun run check`）
+- [x] 型チェック合格（`bun run typecheck`）
 
 #### 参照
 
