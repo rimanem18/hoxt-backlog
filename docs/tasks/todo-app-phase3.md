@@ -2,7 +2,7 @@
 
 ## 📄 フェーズ情報
 
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 3 / 8
 - **期間**: 6日間（48時間）
 - **担当**: バックエンド
@@ -49,7 +49,7 @@ Application層にユースケースを実装し、Domain層のエンティティ
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1310
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -94,7 +94,7 @@ export class CreateTaskUseCase {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1311
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -136,7 +136,7 @@ export class GetTasksUseCase {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1312
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -179,7 +179,7 @@ export class GetTaskByIdUseCase {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1313
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -226,7 +226,7 @@ export class UpdateTaskUseCase {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1314
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -274,7 +274,7 @@ export class ChangeTaskStatusUseCase {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1315
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 

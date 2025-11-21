@@ -2,7 +2,7 @@
 
 ## 📄 フェーズ情報
 
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 7 / 8
 - **期間**: 8日間（64時間）
 - **担当**: フロントエンド
@@ -54,7 +54,7 @@ Tailwind CSS 4を使用したレスポンシブデザイン、Markdown表示、�
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1330
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -158,7 +158,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1331
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -227,7 +227,7 @@ export const TaskList: React.FC = () => {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1332
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -315,7 +315,7 @@ export const TaskCreateForm: React.FC = () => {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1333
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -429,7 +429,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({ task, onClose }) =
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1334
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -505,7 +505,7 @@ export const TaskFilter: React.FC = () => {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1335
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -560,7 +560,7 @@ export const TaskSort: React.FC = () => {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1336
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -609,7 +609,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1337
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 

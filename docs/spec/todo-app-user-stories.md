@@ -3,7 +3,7 @@
 ## 📄 ドキュメント情報
 
 - **作成日**: 2025-11-06
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **バージョン**: 1.0.0
 - **関連文書**: [todo-app-requirements.md](todo-app-requirements.md)
 

@@ -2,7 +2,7 @@
 
 ## 📄 フェーズ情報
 
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 1 / 8
 - **期間**: 5日間（40時間）
 - **担当**: バックエンド
@@ -54,7 +54,7 @@ Drizzle ORM → Zod → OpenAPI → TypeScript型定義の自動生成パイプ�
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: なし
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -178,7 +178,7 @@ docker compose exec server bun run db:push
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1301
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -271,7 +271,7 @@ docker compose exec server bun run generate:schemas
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1302
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -381,7 +381,7 @@ docker compose exec server bun run generate:openapi
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1303
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -468,7 +468,7 @@ export const apiClient = createClient<paths>({
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1304
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 

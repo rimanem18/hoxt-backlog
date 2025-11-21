@@ -2,7 +2,7 @@
 
 ## 📄 フェーズ情報
 
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 6 / 8
 - **期間**: 4日間（32時間）
 - **担当**: フロントエンド
@@ -45,7 +45,7 @@ TanStack Queryでサーバー状態を管理するための設定を実装。
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1326
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -144,7 +144,7 @@ export type AppDispatch = typeof store.dispatch;
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1327
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -211,7 +211,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1328
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -260,7 +260,7 @@ export const setAuthToken = (token: string) => {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1329
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
