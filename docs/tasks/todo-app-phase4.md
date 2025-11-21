@@ -2,7 +2,7 @@
 
 ## 📄 フェーズ情報
 
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 4 / 8
 - **期間**: 5日間（40時間）
 - **担当**: バックエンド
@@ -46,7 +46,7 @@ JWT検証ミドルウェアとRLS設定を実装。
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1316
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -97,7 +97,7 @@ export class DatabaseConnection {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1317
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -187,7 +187,7 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1318
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -248,7 +248,7 @@ async findByUserId(userId: string, filters: TaskFilters, sort: TaskSortBy): Prom
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1319
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 
@@ -301,7 +301,7 @@ export class SupabaseJwtVerifier {
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1320
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 
 #### 実装詳細
 

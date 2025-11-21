@@ -4,7 +4,7 @@
 
 - **作成日**: 2025-11-20
 - **タスクID**: TASK-1306
-- **要件名**: TODO リストアプリ
+- **要件名**: todo-app
 - **フェーズ**: Phase 2 - バックエンドDomain層実装
 - **テスト対象**: TaskPriority 値オブジェクト
 - **テストファイル**: `app/server/src/domain/task/__tests__/TaskPriority.test.ts`
