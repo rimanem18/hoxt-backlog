@@ -352,7 +352,7 @@ export class TaskTitle {
 
 ### TASK-1309: TaskEntity実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1308
@@ -535,11 +535,11 @@ export class TaskEntity {
 
 #### 完了条件
 
-- [ ] TaskEntityが実装される
-- [ ] すべてのテストケースが通る
-- [ ] テストカバレッジ100%
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] TaskEntityが実装される
+- [x] すべてのテストケースが通る
+- [x] テストカバレッジ100%
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 #### 参照
 
@@ -677,10 +677,10 @@ export interface UpdateTaskInput {
 
 ### エンティティ
 
-- [ ] TaskEntityが実装される
-- [ ] ファクトリメソッド（create, reconstruct）が動作する
-- [ ] ビジネスロジックが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskEntityが実装される
+- [x] ファクトリメソッド（create, reconstruct）が動作する
+- [x] ビジネスロジックが実装される
+- [x] テストカバレッジ100%
 
 ### エラー・インターフェース
 
