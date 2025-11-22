@@ -238,6 +238,13 @@ mermaidフローチャートを記述する際の確認項目：
 
 - シーケンス図では参加者名（`participant`）やノート内のテキストに特殊文字があっても問題ない
 - ただし、一貫性のため可能な限りクォートを使用することを推奨
+- **参加者名にmermaidの予約語を使用しない**
+  - 予約語の例: `Title`, `title`, `Note`, `note`, `end`, `loop`, `alt`, `else`, `opt`, `par`, `rect`, `activate`, `deactivate`
+  - ❌ 悪い例: `participant Title as TaskTitle`
+  - ✅ 良い例: `participant TT as TaskTitle`
+- **参加者名は短縮形（2-3文字の略称）を推奨**
+  - ❌ 悪い例: `participant Entity as TaskEntity`
+  - ✅ 良い例: `participant TE as TaskEntity`
 
 ## パースエラーが発生した場合の対処法
 
