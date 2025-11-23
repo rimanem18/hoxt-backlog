@@ -1,5 +1,8 @@
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { AuthProvider, CreateUserInput } from '@/domain/user';
+import type {
+  AuthProvider,
+  CreateUserInput,
+  IUserRepository,
+} from '@/domain/user';
 import {
   InvalidProviderError,
   isValidAuthProvider,

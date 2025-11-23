@@ -1,8 +1,8 @@
 import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
 import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import { AuthenticationDomainService } from '@/domain/services/AuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type { IUserRepository } from '@/domain/user';
 import { SupabaseJwtVerifier } from '@/infrastructure/auth/SupabaseJwtVerifier';
 import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
 import type { Logger } from '@/shared/logging/Logger';

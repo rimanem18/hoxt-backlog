@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { User } from '@/domain/user';
+import type { IUserRepository, User } from '@/domain/user';
 import { InvalidProviderError } from '@/domain/user';
 import { AuthenticationDomainService } from '../AuthenticationDomainService';
 import type { ExternalUserInfo } from '../IAuthProvider';

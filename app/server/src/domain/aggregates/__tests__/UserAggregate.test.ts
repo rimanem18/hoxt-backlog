@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { CreateUserInput, UpdateUserInput, User } from '@/domain/user';
+import type {
+  CreateUserInput,
+  IUserRepository,
+  UpdateUserInput,
+  User,
+} from '@/domain/user';
 import { UserEntity, UserNotFoundError } from '@/domain/user';
 import { UserAggregate } from '../UserAggregate';
 

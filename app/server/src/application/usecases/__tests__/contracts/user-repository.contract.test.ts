@@ -6,9 +6,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
-import type { AuthProvider, CreateUserInput } from '@/domain/user';
-import type { User } from '@/domain/user/UserEntity';
+import type {
+  AuthProvider,
+  CreateUserInput,
+  IUserRepository,
+  User,
+} from '@/domain/user';
 import { UserFactory } from '../authenticate-user/helpers/userFactory';
 
 describe('UserRepository契約テスト', () => {

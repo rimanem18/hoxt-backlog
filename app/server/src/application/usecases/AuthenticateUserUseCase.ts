@@ -5,9 +5,9 @@
  * 一連のビジネスフローを管理するApplication層のUseCase実装。
  */
 
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import type { IUserRepository } from '@/domain/user';
 import { AuthenticationError } from '@/domain/user/errors/AuthenticationError';
 import { TokenExpiredError } from '@/domain/user/errors/TokenExpiredError';
 import { ExternalServiceError } from '@/shared/errors/ExternalServiceError';

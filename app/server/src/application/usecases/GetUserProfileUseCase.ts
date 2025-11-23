@@ -4,7 +4,7 @@
  * 指定されたユーザーIDに対応するユーザー情報を取得する
  */
 
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
+import type { IUserRepository } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
 import type { User } from '@/domain/user/UserEntity';
 import { InfrastructureError } from '@/shared/errors/InfrastructureError';

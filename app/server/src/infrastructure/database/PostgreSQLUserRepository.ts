@@ -1,8 +1,8 @@
 import { and, eq, type SQL, sql } from 'drizzle-orm';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type {
   AuthProvider,
   CreateUserInput,
+  IUserRepository,
   UpdateUserInput,
   User,
 } from '@/domain/user';

@@ -1,9 +1,7 @@
-import type {
-  AuthProvider,
-  CreateUserInput,
-  UpdateUserInput,
-  User,
-} from '@/domain/user';
+import type { AuthProvider } from './AuthProvider';
+import type { User } from './UserEntity';
+import type { CreateUserInput } from './valueobjects/CreateUserInput';
+import type { UpdateUserInput } from './valueobjects/UpdateUserInput';
 
 /**
  * ユーザーリポジトリインターフェース
