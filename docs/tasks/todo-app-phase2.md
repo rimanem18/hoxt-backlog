@@ -551,7 +551,7 @@ export class TaskEntity {
 
 ### TASK-1310: ドメインエラーとリポジトリインターフェース
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1309
@@ -652,11 +652,11 @@ export interface UpdateTaskInput {
 
 #### 完了条件
 
-- [ ] 3つのドメインエラーが実装される
-- [ ] ITaskRepositoryインターフェースが定義される
-- [ ] すべてのテストケースが通る
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] 3つのドメインエラーが実装される
+- [x] ITaskRepositoryインターフェースが定義される
+- [x] すべてのテストケースが通る
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 #### 参照
 
@@ -670,10 +670,10 @@ export interface UpdateTaskInput {
 
 ### 値オブジェクト
 
-- [ ] TaskPriority値オブジェクトが実装される
-- [ ] TaskStatus値オブジェクトが実装される
-- [ ] TaskTitle値オブジェクトが実装される
-- [ ] すべての値オブジェクトのテストカバレッジ100%
+- [x] TaskPriority値オブジェクトが実装される
+- [x] TaskStatus値オブジェクトが実装される
+- [x] TaskTitle値オブジェクトが実装される
+- [x] すべての値オブジェクトのテストカバレッジ100%
 
 ### エンティティ
 
@@ -684,17 +684,17 @@ export interface UpdateTaskInput {
 
 ### エラー・インターフェース
 
-- [ ] TaskNotFoundErrorが実装される
-- [ ] InvalidTaskDataErrorが実装される
-- [ ] TaskAccessDeniedErrorが実装される
-- [ ] ITaskRepositoryインターフェースが定義される
+- [x] TaskNotFoundErrorが実装される
+- [x] InvalidTaskDataErrorが実装される
+- [x] TaskAccessDeniedErrorが実装される
+- [x] ITaskRepositoryインターフェースが定義される
 
 ### 品質
 
-- [ ] すべてのユニットテストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] すべてのユニットテストが通る
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 
