@@ -7,7 +7,7 @@
 
 import { mock } from 'bun:test';
 import { GetUserProfileUseCase } from '@/application/usecases/GetUserProfileUseCase';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
+import type { IUserRepository } from '@/domain/user';
 import type { Logger } from '@/shared/logging/Logger';
 
 /**

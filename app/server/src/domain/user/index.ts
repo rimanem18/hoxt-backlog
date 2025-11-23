@@ -16,6 +16,8 @@ export { InvalidProviderError } from './errors/InvalidProviderError';
 // ドメインエラー
 export { UserDomainError } from './errors/UserDomainError';
 export { UserNotFoundError } from './errors/UserNotFoundError';
+// リポジトリインターフェース
+export type { IUserRepository } from './IUserRepository';
 export type { User } from './UserEntity';
 // エンティティ
 export { UserEntity } from './UserEntity';

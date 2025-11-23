@@ -7,16 +7,18 @@
 
 import { mock } from 'bun:test';
 import { AuthenticateUserUseCase } from '@/application/usecases/AuthenticateUserUseCase';
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type { IAuthenticationDomainService } from '@/domain/services/IAuthenticationDomainService';
 import type {
   ExternalUserInfo,
   IAuthProvider,
   JwtPayload,
 } from '@/domain/services/IAuthProvider';
-import type { User } from '@/domain/user/UserEntity';
-import type { CreateUserInput } from '@/domain/user/valueobjects/CreateUserInput';
-import type { UpdateUserInput } from '@/domain/user/valueobjects/UpdateUserInput';
+import type {
+  CreateUserInput,
+  IUserRepository,
+  UpdateUserInput,
+  User,
+} from '@/domain/user';
 import type { Logger } from '@/shared/logging/Logger';
 import type { IErrorClassificationService } from '@/shared/services/ErrorClassificationService';
 import type { IJwtValidationService } from '@/shared/services/JwtValidationService';

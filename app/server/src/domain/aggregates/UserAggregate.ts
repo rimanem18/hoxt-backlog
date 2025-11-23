@@ -1,7 +1,7 @@
-import type { IUserRepository } from '@/domain/repositories/IUserRepository';
 import type {
   AuthProvider,
   CreateUserInput,
+  IUserRepository,
   UpdateUserInput,
 } from '@/domain/user';
 import { UserEntity, UserNotFoundError } from '@/domain/user';
