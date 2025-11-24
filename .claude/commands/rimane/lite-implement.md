@@ -13,7 +13,7 @@ codex 利用時は、 prompt のみ送信してください。sessionid や mode
 
 ## プランニングフェーズ
 
-1. 次のセクションで示されている実装順序にのっとり、指示を遂行するためのプランを立てます。
+1. 次のセクションで示されている実装順序にのっとり、指示を遂行するための @plan でプランを立てます。
   - プラン内容には、TDD or DIRECT のどちらで実装するか必ず記載します。
   - ユーザから何かしらの推測や提案が示された場合は、それが妥当かどうか精査します。
 
@@ -50,7 +50,8 @@ codex 利用時は、 prompt のみ送信してください。sessionid や mode
 - **対応非推奨**: 実施時間に見合わない品質向上
 - **対応禁止**: ついでに機能を追加
 
-6. 改めて 、test と lint,semgrep を実施します。問題があれば修正します。
+6. 改めて、test と lint, 型チェック, semgrep を実施します。問題があれば修正します。
+  - `docker compose exec {コンテナサービス名} bunx tsc --noEmit`
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`

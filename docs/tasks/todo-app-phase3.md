@@ -175,7 +175,7 @@ export class GetTaskByIdUseCase {
 
 ### TASK-1314: UpdateTaskUseCase
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1313
@@ -211,8 +211,8 @@ export class UpdateTaskUseCase {
 
 #### 完了条件
 
-- [ ] UpdateTaskUseCaseが実装される
-- [ ] テストカバレッジ100%
+- [x] UpdateTaskUseCaseが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -316,7 +316,7 @@ export class DeleteTaskUseCase {
 - [x] CreateTaskUseCase実装完了
 - [x] GetTasksUseCase実装完了
 - [x] GetTaskByIdUseCase実装完了
-- [ ] UpdateTaskUseCase実装完了
+- [x] UpdateTaskUseCase実装完了
 - [ ] ChangeTaskStatusUseCase実装完了
 - [ ] DeleteTaskUseCase実装完了
 
