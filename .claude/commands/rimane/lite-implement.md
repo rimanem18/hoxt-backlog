@@ -56,4 +56,6 @@ codex 利用時は、 prompt のみ送信してください。sessionid や mode
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
 
+Codex MCP からの改善提案のうち、60% の原則に基づいて自己判断での実施を見送ったものがある場合、推奨アプローチをふくむ3つのオプションをユーザーに提示してください。
+
 #think
