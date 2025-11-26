@@ -270,7 +270,7 @@ export class ChangeTaskStatusUseCase {
 
 ### TASK-1316: DeleteTaskUseCase
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1315
@@ -300,8 +300,8 @@ export class DeleteTaskUseCase {
 
 #### 完了条件
 
-- [ ] DeleteTaskUseCaseが実装される
-- [ ] テストカバレッジ100%
+- [x] DeleteTaskUseCaseが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -318,14 +318,14 @@ export class DeleteTaskUseCase {
 - [x] GetTaskByIdUseCase実装完了
 - [x] UpdateTaskUseCase実装完了
 - [x] ChangeTaskStatusUseCase実装完了
-- [ ] DeleteTaskUseCase実装完了
+- [x] DeleteTaskUseCase実装完了
 
 ### テスト
 
-- [ ] すべてのユニットテストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] すべてのユニットテストが通る
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 
