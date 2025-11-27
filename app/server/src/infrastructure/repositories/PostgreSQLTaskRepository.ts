@@ -1,6 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type {
   ITaskRepository,
+  TaskFilters,
+  TaskSortBy,
   UpdateTaskInput,
 } from '@/domain/task/ITaskRepository';
 import { TaskEntity } from '@/domain/task/TaskEntity';
@@ -96,10 +98,47 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
     });
   }
 
-  // 以下、ITaskRepositoryインターフェースの他のメソッドは未実装
-  // TASK-1319で実装予定
-  async findByUserId(): Promise<TaskEntity[]> {
-    throw new Error('Not implemented yet');
+  async findByUserId(
+    userId: string,
+    filters: TaskFilters,
+    sort: TaskSortBy,
+  ): Promise<TaskEntity[]> {
+    const conditions = [eq(tasks.userId, userId)];
+
+    // 優先度フィルタ適用
+    if (filters.priority) {
+      conditions.push(eq(tasks.priority, filters.priority));
+    }
+
+    // ステータスフィルタ適用（複数選択、空配列の場合は無視）
+    if (filters.status && filters.status.length > 0) {
+      conditions.push(inArray(tasks.status, filters.status));
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle ORMのクエリビルダーの複雑な型を扱うため
+    let query: any = this.db
+      .select()
+      .from(tasks)
+      .where(and(...conditions));
+
+    // ソート適用
+    switch (sort) {
+      case 'created_at_desc':
+        query = query.orderBy(desc(tasks.createdAt));
+        break;
+      case 'created_at_asc':
+        query = query.orderBy(asc(tasks.createdAt));
+        break;
+      case 'priority_desc':
+        query = query.orderBy(
+          sql`CASE ${tasks.priority} WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END`,
+          desc(tasks.createdAt),
+        );
+        break;
+    }
+
+    const results = await query;
+    return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
   }
 
   async updateStatus(): Promise<TaskEntity | null> {
