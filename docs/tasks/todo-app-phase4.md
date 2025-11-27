@@ -84,7 +84,7 @@ JWT検証ミドルウェアとRLS設定を実装。
 
 ### TASK-1318: PostgreSQLTaskRepository実装（基本CRUD）
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1317
@@ -162,9 +162,9 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
 
 #### 完了条件
 
-- [ ] PostgreSQLTaskRepositoryが実装される（基本CRUD）
-- [ ] 統合テストが通る
-- [ ] テストカバレッジ80%以上
+- [x] PostgreSQLTaskRepositoryが実装される（基本CRUD）
+- [x] 統合テストが通る
+- [x] テストカバレッジ80%以上
 
 #### 参照
 
@@ -174,9 +174,9 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
 
 ### TASK-1319: PostgreSQLTaskRepository実装（フィルタ・ソート）
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
-- **推定工数**: 8時間
+- **推定工数**: 8時間（実績: 約4時間）
 - **依存タスク**: TASK-1318
 - **要件名**: todo-app
 
@@ -184,15 +184,22 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
 
 ```typescript
 async findByUserId(userId: string, filters: TaskFilters, sort: TaskSortBy): Promise<TaskEntity[]> {
-  let query = this.db.select().from(tasks).where(eq(tasks.userId, userId));
+  const conditions = [eq(tasks.userId, userId)];
 
-  // フィルタ適用
+  // 優先度フィルタ適用
   if (filters.priority) {
-    query = query.where(eq(tasks.priority, filters.priority));
+    conditions.push(eq(tasks.priority, filters.priority));
   }
+
+  // ステータスフィルタ適用（複数選択、空配列の場合は無視）
   if (filters.status && filters.status.length > 0) {
-    query = query.where(inArray(tasks.status, filters.status));
+    conditions.push(inArray(tasks.status, filters.status));
   }
+
+  let query: any = this.db
+    .select()
+    .from(tasks)
+    .where(and(...conditions));
 
   // ソート適用
   switch (sort) {
@@ -211,21 +218,30 @@ async findByUserId(userId: string, filters: TaskFilters, sort: TaskSortBy): Prom
   }
 
   const results = await query;
-  return results.map(row => this.toDomain(row));
+  return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
 }
 ```
 
+実装のポイント:
+- Drizzle ORMの `and()` を使用して複数の条件を組み合わせ
+- 優先度フィルタ: `filters.priority` が指定されている場合のみ適用
+- ステータスフィルタ: `filters.status` が配列で、かつ空でない場合のみ `inArray` で適用
+- ソート: `created_at_desc`, `created_at_asc`, `priority_desc` に対応
+
 テストケース:
-- 正常系: 優先度フィルタ
-- 正常系: ステータスフィルタ（複数）
-- 正常系: 作成日時ソート
-- 正常系: 優先度ソート
+- 正常系: 優先度フィルタ (high, medium)
+- 正常系: ステータスフィルタ（単一、複数、空配列）
+- 正常系: 複合フィルタ（優先度 + ステータス）
+- 正常系: 作成日時ソート (desc, asc)
+- 正常系: 優先度ソート (priority_desc)
+- 正常系: フィルタなし
+- 正常系: RLS検証（他ユーザーのタスクは返却されない）
 
 #### 完了条件
 
-- [ ] フィルタ・ソートが実装される
-- [ ] 統合テストが通る
-- [ ] テストカバレッジ80%以上
+- [x] フィルタ・ソートが実装される
+- [x] 統合テストが通る（20/20 pass）
+- [x] テストカバレッジ80%以上
 
 #### 参照
 
@@ -334,9 +350,9 @@ export class RlsHelper {
 
 ### リポジトリ実装
 
-- [ ] PostgreSQLTaskRepository実装完了
-- [ ] 基本CRUDが動作する
-- [ ] フィルタ・ソートが動作する
+- [x] PostgreSQLTaskRepository実装完了
+- [x] 基本CRUDが動作する（TASK-1318）
+- [x] フィルタ・ソートが動作する（TASK-1319）
 
 ### 認証・セキュリティ
 
@@ -347,10 +363,10 @@ export class RlsHelper {
 
 ### テスト
 
-- [ ] 統合テストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] 統合テストが通る（606 pass, 1 skip, 0 fail）
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 
