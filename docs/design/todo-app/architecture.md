@@ -205,7 +205,12 @@ graph TB
 **主要コンポーネント**:
 - `PostgreSQLTaskRepository`: Drizzle ORMを用いたタスクリポジトリ
 - `SupabaseJwtVerifier`: JWT検証(JWKS)
-- `DatabaseConnection`: DB接続管理
+- `DatabaseConnection`: DB接続管理（モジュールスコープ実装）
+  - `db`: Drizzle ORMシングルトンインスタンス
+  - `setCurrentUser()`: RLS設定ヘルパー（UUID検証付き）
+  - `clearCurrentUser()`: RLSクリアヘルパー
+  - `executeTransaction()`: トランザクションヘルパー
+  - `closeConnection()`: 接続終了ヘルパー
 
 **依存関係**: Domain層のインターフェースを実装
 

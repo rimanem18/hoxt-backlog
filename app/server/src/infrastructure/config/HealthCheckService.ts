@@ -1,5 +1,5 @@
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
-import { db } from '@/infrastructure/database/drizzle-client';
+import { db } from '@/infrastructure/database/DatabaseConnection';
 
 /**
  * システムヘルスチェックサービス実装

@@ -7,7 +7,7 @@ description: tumiki:tdd-requirements で生成された要件に従って TDD �
 
 1. まずは以下を把握してください。
 
-- `@docs/spec/{feature_name}-requirements.md`
+- `@docs/spec/{feature_name}-*.md`
 - `@docs/design/{feature_name}/*`
 - `@docs/implements/{feature_name}/{task_id}/*-requirements.md`
 

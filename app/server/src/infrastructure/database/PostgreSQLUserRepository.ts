@@ -7,7 +7,7 @@ import type {
   User,
 } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { db } from './drizzle-client';
+import { db } from './DatabaseConnection';
 import type { User as DrizzleUser } from './schema';
 import { users } from './schema';
 
