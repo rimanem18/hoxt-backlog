@@ -802,22 +802,9 @@ app/packages/shared-schemas/
 
 ## 環境別のマイグレーション戦略
 
-### ローカル/CI環境（app_test）
-- **運用方式**: drizzle-kit push（スキーマ同期）
-- **BASE_SCHEMA**: `app_test`
-- **特徴**:
-  - マイグレーションファイル生成不要
-  - スキーマ変更を即座にDBに反映
-  - マイグレーション履歴は Git 管理しない
-
-```bash
-# ローカル開発時のスキーマ同期
-docker compose exec server bun run db:push:test
-```
-
-### Preview/Production環境
 - **運用方式**: drizzle-kit generate → migrate（マイグレーション管理）
 - **BASE_SCHEMA**:
+  - Local: `app_test`
   - Preview: `app_${PROJECT_NAME}_preview`
   - Production: `app_${PROJECT_NAME}`
 - **特徴**:
