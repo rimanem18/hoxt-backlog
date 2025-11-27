@@ -9,8 +9,8 @@ import { TaskEntity } from '@/domain/task/TaskEntity';
 import { TaskPriority } from '@/domain/task/valueobjects/TaskPriority';
 import { TaskStatus } from '@/domain/task/valueobjects/TaskStatus';
 import { TaskTitle } from '@/domain/task/valueobjects/TaskTitle';
-import type { Database } from '../database/DatabaseConnection';
-import { tasks } from '../database/schema';
+import type { Database } from '../../database/DatabaseConnection';
+import { tasks } from '../../database/schema';
 
 /**
  * PostgreSQL実装のTaskRepository

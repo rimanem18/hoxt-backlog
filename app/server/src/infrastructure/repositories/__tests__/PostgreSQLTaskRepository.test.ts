@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { TaskEntity } from '@/domain/task/TaskEntity';
 import { db } from '@/infrastructure/database/DatabaseConnection';
 import { tasks, users } from '@/infrastructure/database/schema';
-import { PostgreSQLTaskRepository } from '../PostgreSQLTaskRepository';
+import { PostgreSQLTaskRepository } from '../task/PostgreSQLTaskRepository';
 
 describe('PostgreSQLTaskRepository', () => {
   let repository: PostgreSQLTaskRepository;
