@@ -7,9 +7,9 @@ import type {
   User,
 } from '@/domain/user';
 import { UserNotFoundError } from '@/domain/user/errors/UserNotFoundError';
-import { db } from './DatabaseConnection';
-import type { User as DrizzleUser } from './schema';
-import { users } from './schema';
+import { db } from '../../database/DatabaseConnection';
+import type { User as DrizzleUser } from '../../database/schema';
+import { users } from '../../database/schema';
 
 /**
  * ユーザー更新時のペイロード型

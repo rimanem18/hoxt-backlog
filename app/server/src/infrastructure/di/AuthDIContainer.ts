@@ -4,7 +4,7 @@ import { AuthenticationDomainService } from '@/domain/services/AuthenticationDom
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
 import type { IUserRepository } from '@/domain/user';
 import { SupabaseJwtVerifier } from '@/infrastructure/auth/SupabaseJwtVerifier';
-import { PostgreSQLUserRepository } from '@/infrastructure/database/PostgreSQLUserRepository';
+import { PostgreSQLUserRepository } from '@/infrastructure/repositories/user/PostgreSQLUserRepository';
 import type { Logger } from '@/shared/logging/Logger';
 
 /**

@@ -46,7 +46,7 @@ sequenceDiagram
 ## ファイルの役割と責任
 
 ### 今回解説するメインのファイル
-**app/server/src/infrastructure/database/PostgreSQLUserRepository.ts**：ユーザー情報のデータベース操作を担当する実装クラス
+**app/server/src/infrastructure/repositories/user/PostgreSQLUserRepository.ts**：ユーザー情報のデータベース操作を担当する実装クラス
 
 - IUserRepositoryインターフェースを実装して、具体的なPostgreSQLへのアクセスを行う
 - findByExternalId()、create()、update()、delete()などのCRUD操作を提供

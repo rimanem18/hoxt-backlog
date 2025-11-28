@@ -16,8 +16,8 @@ import {
   closePool,
   getConnection,
   resetPoolForTesting,
-} from '../database/connection';
-import { PostgreSQLUserRepository } from '../database/PostgreSQLUserRepository';
+} from '../../database/connection';
+import { PostgreSQLUserRepository } from '../user/PostgreSQLUserRepository';
 
 // テストデータ生成ヘルパー
 function createTestUserInput(): CreateUserInput {
