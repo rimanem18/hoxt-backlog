@@ -251,7 +251,7 @@ async findByUserId(userId: string, filters: TaskFilters, sort: TaskSortBy): Prom
 
 ### TASK-1320: SupabaseJwtVerifier実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1319
@@ -292,8 +292,8 @@ export class SupabaseJwtVerifier {
 
 #### 完了条件
 
-- [ ] SupabaseJwtVerifierが実装される
-- [ ] テストカバレッジ80%以上
+- [x] SupabaseJwtVerifierが実装される
+- [x] テストカバレッジ80%以上（20 pass, 1 skip, 0 fail）
 
 #### 参照
 
@@ -356,9 +356,9 @@ export class RlsHelper {
 
 ### 認証・セキュリティ
 
-- [ ] SupabaseJwtVerifier実装完了
+- [x] SupabaseJwtVerifier実装完了（TASK-1320）
 - [ ] RlsHelper実装完了
-- [ ] JWT検証が動作する
+- [x] JWT検証が動作する（20テストケース合格）
 - [ ] RLS設定が動作する
 
 ### テスト

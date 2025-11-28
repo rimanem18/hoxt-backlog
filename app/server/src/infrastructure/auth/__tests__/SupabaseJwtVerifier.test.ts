@@ -3,13 +3,19 @@
  * 作成日: 2025年09月23日
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type {
   ExternalUserInfo,
   JwtPayload,
   JwtVerificationResult,
 } from '@/domain/services/IAuthProvider';
 import { SupabaseJwtVerifier } from '../SupabaseJwtVerifier';
+import {
+  generateTestJwks,
+  mockJwksFetch,
+  mockJwksFetchFailure,
+  signTestToken,
+} from './helpers/jwks-test-helper';
 
 // CI環境またはテスト環境では外部JWKS依存のテストをスキップ
 // ネットワーク依存のテストは統合テストで実施
@@ -247,6 +253,256 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       await expect(
         jwtVerifier.getExternalUserInfo(payloadMissingProvider as JwtPayload),
       ).rejects.toThrow('Missing required field: app_metadata.provider');
+    });
+  });
+});
+
+describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
+  let jwtVerifier: SupabaseJwtVerifier;
+  let unmockFetch: (() => void) | null = null;
+
+  beforeEach(() => {
+    process.env.SUPABASE_URL = 'https://test-project.supabase.co';
+  });
+
+  afterEach(() => {
+    if (unmockFetch) {
+      unmockFetch();
+      unmockFetch = null;
+    }
+  });
+
+  describe('JWKS署名検証（正常系）', () => {
+    test('有効な署名を持つトークンが正しく検証される', async () => {
+      // Given: テスト用JWKS環境をセットアップ
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const testPayload = {
+        sub: 'test-user-123',
+        email: 'test@example.com',
+        user_metadata: {
+          name: 'Test User',
+          avatar_url: 'https://example.com/avatar.jpg',
+        },
+        app_metadata: {
+          provider: 'google',
+        },
+      };
+
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: 検証が成功し、正しいペイロードが返される
+      expect(result.valid).toBe(true);
+      expect(result.payload).toBeDefined();
+      expect(result.payload?.sub).toBe('test-user-123');
+      expect(result.payload?.email).toBe('test@example.com');
+      expect(result.error).toBeUndefined();
+    });
+
+    test('audience が配列の場合でも正しく処理される', async () => {
+      // Given: audience配列を持つトークン
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const testPayload = {
+        sub: 'test-user-456',
+        email: 'array-aud@example.com',
+        user_metadata: { name: 'Array Aud User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const tokenWithArrayAud = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '1h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(tokenWithArrayAud);
+
+      // Then: audience が文字列として正規化される
+      expect(result.valid).toBe(true);
+      expect(result.payload?.aud).toBe('authenticated');
+    });
+  });
+
+  describe('JWKS署名検証（異常系）', () => {
+    test('署名が改ざんされたトークンで検証が失敗する', async () => {
+      // Given: 異なる鍵で署名されたトークン
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const anotherKeyPair = await generateTestJwks();
+
+      const tamperedToken = await signTestToken(
+        anotherKeyPair.privateKey,
+        {
+          sub: 'attacker',
+          email: 'attacker@example.com',
+          user_metadata: { name: 'Attacker' },
+          app_metadata: { provider: 'google' },
+        },
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '1h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: 改ざんされたトークンを検証
+      const result = await jwtVerifier.verifyToken(tamperedToken);
+
+      // Then: 署名検証エラーが返される
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid signature');
+      expect(result.payload).toBeUndefined();
+    });
+
+    test('期限切れのトークンで検証が失敗する', async () => {
+      // Given: 期限切れのトークン
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const expiredToken = await signTestToken(
+        jwksContext.privateKey,
+        {
+          sub: 'expired-user',
+          email: 'expired@example.com',
+          user_metadata: { name: 'Expired User' },
+          app_metadata: { provider: 'google' },
+        },
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '-1h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: 期限切れトークンを検証
+      const result = await jwtVerifier.verifyToken(expiredToken);
+
+      // Then: 期限切れエラーが返される
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Token expired');
+      expect(result.payload).toBeUndefined();
+    });
+
+    test('issuer が一致しないトークンで検証が失敗する', async () => {
+      // Given: 不正なissuerを持つトークン
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const invalidIssuerToken = await signTestToken(
+        jwksContext.privateKey,
+        {
+          sub: 'wrong-issuer-user',
+          email: 'wrong@example.com',
+          user_metadata: { name: 'Wrong Issuer' },
+          app_metadata: { provider: 'google' },
+        },
+        {
+          issuer: 'https://attacker.com/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '1h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: 不正なissuerのトークンを検証
+      const result = await jwtVerifier.verifyToken(invalidIssuerToken);
+
+      // Then: issuer不一致エラーが返される
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Token expired');
+      expect(result.payload).toBeUndefined();
+    });
+
+    test('audience が一致しないトークンで検証が失敗する', async () => {
+      // Given: 不正なaudienceを持つトークン
+      const jwksContext = await generateTestJwks();
+      unmockFetch = mockJwksFetch(jwksContext.jwksJson);
+
+      const invalidAudienceToken = await signTestToken(
+        jwksContext.privateKey,
+        {
+          sub: 'wrong-aud-user',
+          email: 'wrong-aud@example.com',
+          user_metadata: { name: 'Wrong Audience' },
+          app_metadata: { provider: 'google' },
+        },
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'unauthenticated',
+          expirationTime: '1h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: 不正なaudienceのトークンを検証
+      const result = await jwtVerifier.verifyToken(invalidAudienceToken);
+
+      // Then: audience不一致エラーが返される
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Token expired');
+      expect(result.payload).toBeUndefined();
+    });
+  });
+
+  describe('JWKS取得エラー', () => {
+    test('JWKS取得に失敗した場合に適切なエラーが返される', async () => {
+      // Given: JWKS取得が失敗する環境
+      unmockFetch = mockJwksFetchFailure('Network error');
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      const jwksContext = await generateTestJwks();
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        {
+          sub: 'network-error-user',
+          email: 'network@example.com',
+          user_metadata: { name: 'Network Error' },
+          app_metadata: { provider: 'google' },
+        },
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '1h',
+        },
+      );
+
+      // When: JWKS取得失敗環境でトークンを検証
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: JWKS取得失敗エラーが返される
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Network error');
+      expect(result.payload).toBeUndefined();
     });
   });
 });
