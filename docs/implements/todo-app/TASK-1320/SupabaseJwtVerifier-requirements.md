@@ -229,7 +229,7 @@ expect(result.error).toBe("Token expired");
 
 ```typescript
 // Given: 署名が改ざんされたトークン
-const tamperedToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.invalid_signature";
+const tamperedToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...";
 
 // When: JWT検証を実行
 const result = await verifier.verifyToken(tamperedToken);
