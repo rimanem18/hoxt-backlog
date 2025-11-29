@@ -1,12 +1,11 @@
 /**
  * データベース接続管理
  *
- * Drizzle ORMのシングルトンインスタンスとRLS設定ヘルパーを提供。
+ * Drizzle ORMのシングルトンインスタンスを提供。
  * モジュールスコープでの実装により、Node.jsモジュールキャッシュで
  * シングルトンパターンを実現。
  */
 
-import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { getDatabaseConfig } from '@/infrastructure/config/env';
@@ -38,41 +37,10 @@ const queryClient = postgres(dbConfig.url, {
 export const db = drizzle(queryClient, { schema });
 
 /**
- * RLS用の現在のユーザーIDを設定
- *
- * トランザクション内でのみ呼び出すこと。
- * SET LOCALはトランザクションスコープ内でのみ有効。
- *
- * @param userId - 設定するユーザーID（UUID v4）
- * @throws UUID形式が不正な場合
- */
-export async function setCurrentUser(userId: string): Promise<void> {
-  // UUID v4 形式の検証（SQLインジェクション対策）
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(userId)) {
-    throw new Error('Invalid UUID format for user ID');
-  }
-
-  // SET LOCALはパラメータ化できないため、UUID検証後にsql.rawを使用
-  await db.execute(sql.raw(`SET LOCAL app.current_user_id = '${userId}'`));
-}
-
-/**
- * RLS用の現在のユーザーIDをクリア
- *
- * トランザクション内でのみ呼び出すこと。
- * 通常はfinallyブロックで呼び出してセッションをクリーンアップ。
- */
-export async function clearCurrentUser(): Promise<void> {
-  await db.execute(sql`SET LOCAL app.current_user_id = ''`);
-}
-
-/**
  * トランザクション内で処理を実行
  *
- * RLS設定が必要な場合は、このヘルパー内でsetCurrentUserを呼び出す。
- * エラー時は自動的にロールバック、finallyでRLSをクリア。
+ * RLS設定が必要な場合は、RlsHelperを使用してトランザクション内で設定する。
+ * エラー時は自動的にロールバック。
  *
  * @param fn - トランザクション内で実行する処理
  * @returns コールバック関数の実行結果
