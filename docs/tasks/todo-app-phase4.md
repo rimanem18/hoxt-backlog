@@ -304,7 +304,7 @@ export class SupabaseJwtVerifier {
 
 ### TASK-1321: RLS設定ヘルパー実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1320
@@ -336,9 +336,9 @@ export class RlsHelper {
 
 #### 完了条件
 
-- [ ] RlsHelperが実装される
-- [ ] 統合テストが通る
-- [ ] テストカバレッジ80%以上
+- [x] RlsHelperが実装される
+- [x] 統合テストが通る
+- [x] テストカバレッジ80%以上
 
 #### 参照
 
@@ -357,9 +357,9 @@ export class RlsHelper {
 ### 認証・セキュリティ
 
 - [x] SupabaseJwtVerifier実装完了（TASK-1320）
-- [ ] RlsHelper実装完了
+- [x] RlsHelper実装完了
 - [x] JWT検証が動作する（20テストケース合格）
-- [ ] RLS設定が動作する
+- [x] RLS設定が動作する
 
 ### テスト
 
