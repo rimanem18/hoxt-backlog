@@ -63,28 +63,6 @@ export function createAuthMiddleware(
 }
 
 /**
- * JWT認証ミドルウェア（レガシー互換）
- *
- * HTTPリクエストのJWTトークンを検証し、認証されたユーザーのリクエストのみを通過させる。
- * JWT検証成功後、Row-Level Security（RLS）設定を行い、コンテキストにuserIdを設定する。
- *
- * @deprecated テスト用途以外では createAuthMiddleware() を使用してください
- * @param c - Honoコンテキスト
- * @param next - 次のミドルウェア・ハンドラーを呼び出す関数
- * @param verifyFn - JWT検証関数（テスト時にモック注入可能）
- * @param setCurrentUserFn - RLS設定関数（テスト時にモック注入可能）
- * @returns 認証失敗時はJSONレスポンス、成功時はnext()呼び出し結果
- */
-export const authMiddleware = async (
-  c: Context,
-  next: Next,
-  verifyFn?: VerifyFunction,
-  setCurrentUserFn?: SetCurrentUserFunction,
-) => {
-  return authMiddlewareImpl(c, next, verifyFn, setCurrentUserFn);
-};
-
-/**
  * 認証ミドルウェアの内部実装
  */
 async function authMiddlewareImpl(
