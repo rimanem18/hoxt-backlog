@@ -42,7 +42,7 @@ JWT認証ミドルウェアとエラーハンドリングを実装。
 
 ### TASK-1322: authMiddleware実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1321
@@ -91,8 +91,8 @@ export const authMiddleware = async (c: Context, next: Next) => {
 
 #### 完了条件
 
-- [ ] authMiddlewareが実装される
-- [ ] テストカバレッジ100%
+- [x] authMiddlewareが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
