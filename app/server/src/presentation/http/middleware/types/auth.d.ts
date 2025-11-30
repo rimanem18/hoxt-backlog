@@ -2,7 +2,7 @@
  * 【型定義】: AuthMiddleware用のHono Context拡張型定義
  * 【実装方針】: Global Declaration Mergingによる型安全なContext拡張
  * 【テスト対応】: TypeScriptの型チェックでuserIdアクセスエラーを防ぐ
- * 🟢 信頼性レベル: Honoの公式パターンに基づく確実な実装
+ * 🔵 信頼性レベル: Honoの公式パターンに基づく確実な実装
  */
 
 import type { JWTPayload } from 'jose';

@@ -60,7 +60,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
 ```
 
 #### 修正理由
-🟢 **設計仕様準拠**: architecture.md 46行目「JWT検証（Supabase JWT Secret）」仕様に従い、複雑なJWKS方式から、よりシンプルで確実な環境変数Secret方式に変更。
+🔵 **設計仕様準拠**: architecture.md 46行目「JWT検証（Supabase JWT Secret）」仕様に従い、複雑なJWKS方式から、よりシンプルで確実な環境変数Secret方式に変更。
 
 ---
 
@@ -93,7 +93,7 @@ throw new AuthError('AUTHENTICATION_REQUIRED');
 ```
 
 #### 修正理由
-🟢 **設計仕様準拠**: api-endpoints.md 68行目の統一エラーコード仕様に従い、複数の認証エラーコード（TOKEN_MISSING/INVALID/EXPIRED/USER_BANNED）を単一のAUTHENTICATION_REQUIREDに統一。
+🔵 **設計仕様準拠**: api-endpoints.md 68行目の統一エラーコード仕様に従い、複数の認証エラーコード（TOKEN_MISSING/INVALID/EXPIRED/USER_BANNED）を単一のAUTHENTICATION_REQUIREDに統一。
 
 ---
 
@@ -127,7 +127,7 @@ const responseData: GetUserProfileResponse = {
 ```
 
 #### 修正理由
-🟢 **設計仕様準拠**: api-endpoints.md GET /api/user/profile レスポンス形式でupdatedAtフィールドが必須として定義されているため、削除されていたフィールドを復活。
+🔵 **設計仕様準拠**: api-endpoints.md GET /api/user/profile レスポンス形式でupdatedAtフィールドが必須として定義されているため、削除されていたフィールドを復活。
 
 ---
 
@@ -254,7 +254,7 @@ export async function generateTestJWT(payload: { userId: string; email?: string 
 - **テスト可能性**: 専用JWT生成機能による統合テスト実行環境整備
 - **保守性**: 統一エラーハンドリングによる一貫したAPI応答
 
-### 🟢 信頼性レベル
+### 🔵 信頼性レベル
 - **青信号**: 100% - 全修正項目が設計文書に基づく確実な仕様準拠
 
 ---

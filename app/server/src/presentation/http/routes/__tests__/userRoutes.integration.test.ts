@@ -152,7 +152,7 @@ describe('GET /api/user/profile 統合テスト', () => {
       const response = await app.request(request);
 
       // Then: 認証エラーで401が返される
-      // 🟢 信頼性レベル: createErrorHandlerがAuthErrorを正しく401レスポンスに変換
+      // 🔵 信頼性レベル: createErrorHandlerがAuthErrorを正しく401レスポンスに変換
       expect(response.status).toBe(401);
 
       const responseJson = await response.json();

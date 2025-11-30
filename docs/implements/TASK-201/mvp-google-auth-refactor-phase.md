@@ -48,10 +48,10 @@ export class AuthDIContainer {
 ```
 
 **設計判断**:
-- **🟢 シングルトンパターン**: インスタンス再利用による効率化
-- **🟢 実装済みクラス活用**: PostgreSQL・Supabase・AuthDomain・Logger統合
+- **🔵 シングルトンパターン**: インスタンス再利用による効率化
+- **🔵 実装済みクラス活用**: PostgreSQL・Supabase・AuthDomain・Logger統合
 - **🟡 フォールバックLogger**: ConsoleLogger不在時の簡易Logger実装
-- **🟢 テスト支援**: resetInstances()メソッドによるテスタビリティ確保
+- **🔵 テスト支援**: resetInstances()メソッドによるテスタビリティ確保
 
 #### 2. **authRoutes.ts**（リファクタ改善）
 **パス**: `app/server/src/presentation/http/routes/authRoutes.ts`
@@ -70,7 +70,7 @@ const authenticateUserUseCase = new AuthenticateUserUseCase(
 
 // After: Refactor Phase実装  
 const authenticateUserUseCase = AuthDIContainer.getAuthenticateUserUseCase();
-// 🟢 実際の依存関係による確実な認証処理
+// 🔵 実際の依存関係による確実な認証処理
 ```
 
 **セキュリティ強化**:
@@ -155,7 +155,7 @@ return c.json({
 
 #### **信頼性レベル表示の徹底**
 ```typescript
-// 🟢 青信号: 既存実装の活用・確実な動作保証
+// 🔵 青信号: 既存実装の活用・確実な動作保証
 const userRepository = new PostgreSQLUserRepository();
 
 // 🟡 黄信号: 一般的なベストプラクティスの適用
@@ -185,10 +185,10 @@ this.loggerInstance = {
 | **ドキュメント品質** | 基本レベル | 企業レベル | 大幅向上 |
 
 #### **技術的負債解消**
-- **🔴 → 🟢 依存性注入**: null依存関係の完全解消
-- **🔴 → 🟢 セキュリティ**: 脆弱性の完全解決
-- **🔴 → 🟢 型安全性**: any型の適切な型への置換
-- **🔴 → 🟢 エラー処理**: 内部情報漏洩の完全防止
+- **🔴 → 🔵 依存性注入**: null依存関係の完全解消
+- **🔴 → 🔵 セキュリティ**: 脆弱性の完全解決
+- **🔴 → 🔵 型安全性**: any型の適切な型への置換
+- **🔴 → 🔵 エラー処理**: 内部情報漏洩の完全防止
 
 ### 🏆 **Refactor Phase 総合評価**
 

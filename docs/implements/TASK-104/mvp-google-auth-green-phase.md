@@ -38,7 +38,7 @@ export class SupabaseAuthProvider implements IAuthProvider {
 - **機能概要**: 各メソッドの役割を明確に記述
 - **実装方針**: TDD Greenフェーズの目的を明記
 - **テスト対応**: 対応するテストケースを明示
-- **信頼性レベル**: 🟢🟡🔴による情報源の透明性確保
+- **信頼性レベル**: 🔵🟡🔴による情報源の透明性確保
 
 #### 最小限実装アプローチ
 ```typescript
@@ -46,7 +46,7 @@ export class SupabaseAuthProvider implements IAuthProvider {
  * 【機能概要】: JWTトークンの検証を行う
  * 【実装方針】: テストケースを通すための最小限のJWT検証ロジック
  * 【テスト対応】: 全5つのverifyTokenテストケースを通すための実装
- * 🟢 信頼性レベル: JWT仕様・テストケース定義から明確に定義済み
+ * 🔵 信頼性レベル: JWT仕様・テストケース定義から明確に定義済み
  */
 async verifyToken(token: string): Promise<JwtVerificationResult> {
   // 最小限の実装でテストを通す
@@ -103,7 +103,7 @@ bunx tsc --noEmit
 ### 6. 信頼性レベル評価
 
 #### 実装全体の信頼性
-- 🟢 **85%**: IAuthProviderインターフェース・要件定義・テストケースから明確に定義
+- 🔵 **85%**: IAuthProviderインターフェース・要件定義・テストケースから明確に定義
 - 🟡 **13%**: JWT仕様・TypeScript型システムから妥当な推測
 - 🔴 **2%**: テスト通過のための簡易的な署名検証実装
 

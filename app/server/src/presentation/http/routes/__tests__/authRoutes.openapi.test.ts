@@ -20,7 +20,7 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
     // 【テスト目的】: createRouteで定義したOpenAPIルートがHonoアプリに正常に登録されることを確認
     // 【テスト内容】: OpenAPIHonoインスタンスに対してcreateRouteの結果を登録し、エラーが発生しないことを検証
     // 【期待される動作】: ルート定義が成功し、OpenAPI仕様に含まれる
-    // 🟢 信頼性レベル: 青信号（@hono/zod-openapiの公式ドキュメントと要件定義書に基づく）
+    // 🔵 信頼性レベル: 青信号（@hono/zod-openapiの公式ドキュメントと要件定義書に基づく）
 
     // 【テストデータ準備】: OpenAPIルート定義オブジェクトを作成
     // 【初期条件設定】: Zodスキーマを使用してリクエスト・レスポンスを定義
@@ -76,7 +76,7 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
     expect(() => {
       app.openapi(route, async (c) => {
         // 【検証項目】: ハンドラ関数がダミーレスポンスを返せることを確認（実装はGreenフェーズで行う）
-        // 🟢 この実装パターンは@hono/zod-openapiの公式サンプルに基づく
+        // 🔵 この実装パターンは@hono/zod-openapiの公式サンプルに基づく
         return c.json(
           {
             success: true,
@@ -102,7 +102,7 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
     // 【テスト目的】: Zodスキーマ（authCallbackRequestSchema等）がOpenAPI仕様のJSONスキーマとして正しく変換されることを確認
     // 【テスト内容】: createRouteで定義されたスキーマが、OpenAPIドキュメント生成時に参照可能であることを検証
     // 【期待される動作】: ZodスキーマがOpenAPI 3.1のJSONスキーマ形式に変換され、仕様書に含まれる
-    // 🟢 信頼性レベル: 青信号（REQ-004「ZodスキーマからOpenAPI 3.1仕様を生成」に基づく）
+    // 🔵 信頼性レベル: 青信号（REQ-004「ZodスキーマからOpenAPI 3.1仕様を生成」に基づく）
 
     // 【テストデータ準備】: OpenAPIルート定義を作成し、Zodスキーマを含める
     // 【初期条件設定】: authCallbackRequestSchemaとauthCallbackResponseSchemaがインポート済み
@@ -144,7 +144,7 @@ describe('POST /auth/callback - OpenAPIルート定義', () => {
     expect(responseSchema).toBeDefined(); // 【確認内容】: レスポンススキーマが定義されており、API契約が明示される
 
     // 【検証項目】: Zodスキーマオブジェクトがそのまま保持されていることを確認（OpenAPI変換前の状態）
-    // 🟢 @hono/zod-openapiはZodスキーマを内部でOpenAPIスキーマに変換する
+    // 🔵 @hono/zod-openapiはZodスキーマを内部でOpenAPIスキーマに変換する
     expect(requestSchema).toBe(authCallbackRequestSchema); // 【確認内容】: リクエストスキーマが元のZodスキーマと一致し、変換処理が正常
     expect(responseSchema).toBe(authCallbackResponseSchema); // 【確認内容】: レスポンススキーマが元のZodスキーマと一致し、API契約が保証される
   });

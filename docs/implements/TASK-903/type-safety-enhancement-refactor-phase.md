@@ -47,7 +47,7 @@ message: '一時的にサービスが利用できません',
 /**
  * 【定数定義】: エラーコードとメッセージの一元管理
  * 【設計方針】: ハードコーディングを避け、保守性を向上
- * 🟢 信頼性レベル: REQ-104とNFR-303に基づく
+ * 🔵 信頼性レベル: REQ-104とNFR-303に基づく
  */
 const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
@@ -134,7 +134,7 @@ catch (error) {
  * 【エラーレスポンス生成関数】: 500エラーの共通処理
  * 【セキュリティ】: 内部実装詳細を隠蔽し、ユーザーフレンドリーなメッセージを返却（NFR-303）
  * 【ログ記録】: セキュリティイベントとしてエラー詳細を記録
- * 🟢 信頼性レベル: NFR-303（内部エラー詳細の隠蔽）に基づく実装
+ * 🔵 信頼性レベル: NFR-303（内部エラー詳細の隠蔽）に基づく実装
  *
  * @param error - キャッチされたエラーオブジェクト
  * @param endpoint - エラーが発生したエンドポイントパス
@@ -264,28 +264,28 @@ import type { Context } from 'hono';
 | 認証ミドルウェアの欠如 | 9.1 | 未認証アクセス可能 | 次フェーズで実装 |
 | 認可チェックの不在 | 8.1 | 他ユーザーデータアクセス可能 | 次フェーズで実装 |
 
-### 🟢 Good（適切に実装済み）
+### 🔵 Good（適切に実装済み）
 
 | 項目 | 評価 | 詳細 |
 |-----|------|------|
-| XSS対策 | 🟢 Good | JSONレスポンスのみ、HTMLなし |
-| CSRF対策 | 🟢 Good | JWT Bearer認証でリスク低減 |
-| 入力検証 | 🟢 Good | Zodスキーマで厳密に検証 |
-| エラーメッセージ | 🟢 Good | 内部情報隠蔽（NFR-303準拠） |
-| SQLインジェクション | 🟢 Good | Drizzle ORMで対策済み |
+| XSS対策 | 🔵 Good | JSONレスポンスのみ、HTMLなし |
+| CSRF対策 | 🔵 Good | JWT Bearer認証でリスク低減 |
+| 入力検証 | 🔵 Good | Zodスキーマで厳密に検証 |
+| エラーメッセージ | 🔵 Good | 内部情報隠蔽（NFR-303準拠） |
+| SQLインジェクション | 🔵 Good | Drizzle ORMで対策済み |
 
 ---
 
 ## 5. パフォーマンスレビュー
 
-### 🟢 良好な項目
+### 🔵 良好な項目
 
 | 項目 | 測定値 | 目標値 | 評価 |
 |-----|--------|--------|------|
-| Zodバリデーション | 9ms/req | 50ms以内 | 🟢 目標の18%（大幅クリア） |
-| メモリ使用量 | 最小限 | - | 🟢 効率的 |
-| 計算量 | O(1) | - | 🟢 最適 |
-| テスト実行時間 | 237ms | - | 🟢 高速 |
+| Zodバリデーション | 9ms/req | 50ms以内 | 🔵 目標の18%（大幅クリア） |
+| メモリ使用量 | 最小限 | - | 🔵 効率的 |
+| 計算量 | O(1) | - | 🔵 最適 |
+| テスト実行時間 | 237ms | - | 🔵 高速 |
 
 ### 🟡 改善検討項目（次フェーズ）
 
@@ -313,10 +313,10 @@ import type { Context } from 'hono';
 
 | 原則 | 評価 | 詳細 |
 |-----|------|------|
-| Single Responsibility | 🟢 Good | 各関数が単一の責任を持つ |
-| Open/Closed | 🟢 Good | Zodスキーマで拡張に開放 |
-| Liskov Substitution | 🟢 Good | 型定義が適切 |
-| Interface Segregation | 🟢 Good | 必要な定義のみ |
+| Single Responsibility | 🔵 Good | 各関数が単一の責任を持つ |
+| Open/Closed | 🔵 Good | Zodスキーマで拡張に開放 |
+| Liskov Substitution | 🔵 Good | 型定義が適切 |
+| Interface Segregation | 🔵 Good | 必要な定義のみ |
 | Dependency Inversion | 🟡 Medium | UseCase統合で改善予定 |
 
 ---

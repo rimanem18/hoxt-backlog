@@ -7,7 +7,7 @@
 
 ### 1.1 概要
 
-🟢 **青信号**: EARS要件定義書・設計文書を参考にしてほぼ推測していない場合
+🔵 **青信号**: EARS要件定義書・設計文書を参考にしてほぼ推測していない場合
 
 - **何をする機能か**: JWT検証からユーザー認証・JITプロビジョニングまでの一連のビジネスフローを管理するApplication層のUseCase実装
 - **どのような問題を解決するか**: フロントエンドから送信されたJWTトークンを安全に検証し、既存ユーザーの認証または新規ユーザーのJIT作成を実行
@@ -20,7 +20,7 @@
 
 ### 1.2 主要責務
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **JWT検証の調整**: SupabaseAuthProviderを使用したトークン検証処理の実行
 - **ユーザー認証**: 既存ユーザーの特定と認証状態の確立
@@ -32,7 +32,7 @@
 
 ### 2.1 execute メソッド
 
-🟢 **青信号**: IAuthenticateUserUseCaseインターフェースで完全定義済み
+🔵 **青信号**: IAuthenticateUserUseCaseインターフェースで完全定義済み
 
 #### 入力パラメータ
 ```typescript
@@ -76,7 +76,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 
 ### 3.1 パフォーマンス要件
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **認証処理時間**: 1秒以内（JWT検証 + DB処理含む）（NFR-002）
 - **JITプロビジョニング時間**: 2秒以内（NFR-003）
@@ -87,7 +87,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 
 ### 3.2 セキュリティ要件
 
-🟢 **青信号**: EARS要件定義書・設計文書から明確に定義済み
+🔵 **青信号**: EARS要件定義書・設計文書から明確に定義済み
 
 - **JWT検証**: SupabaseAuthProviderによる厳密な署名・有効期限検証
 - **認証失敗時**: 詳細なエラー情報の秘匿（攻撃者への情報漏洩防止）
@@ -98,7 +98,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 
 ### 3.3 アーキテクチャ制約
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **依存性方向**: Application → Domain ← Infrastructure（依存性逆転の原則）
 - **層配置**: application/usecases/AuthenticateUserUseCase.ts
@@ -111,7 +111,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 
 ### 3.4 可用性・エラーハンドリング制約
 
-🟢 **青信号**: データフロー図・エラーハンドリング仕様から明確に定義済み
+🔵 **青信号**: データフロー図・エラーハンドリング仕様から明確に定義済み
 
 - **部分障害への対応**: 外部サービス障害時の適切なエラーメッセージ
 - **リトライ機構**: データベース一時的障害に対する適切な再試行
@@ -124,7 +124,7 @@ Promise<AuthenticateUserUseCaseOutput> {
 
 ### 4.1 基本的な使用パターン
 
-🟢 **青信号**: データフロー図から明確に定義済み
+🔵 **青信号**: データフロー図から明確に定義済み
 
 #### 既存ユーザーの認証フロー
 ```typescript
@@ -170,7 +170,7 @@ const result = await authenticateUserUseCase.execute(input);
 
 ### 4.2 エッジケース・エラーハンドリング
 
-🟢 **青信号**: EARS要件定義書Edgeケースセクションから明確に定義済み
+🔵 **青信号**: EARS要件定義書Edgeケースセクションから明確に定義済み
 
 #### 無効なJWTトークン
 ```typescript
@@ -209,7 +209,7 @@ try {
 
 ### 4.3 境界値・特殊状況
 
-🟢 **青信号**: EARS要件定義書・データフロー仕様から明確に定義済み
+🔵 **青信号**: EARS要件定義書・データフロー仕様から明確に定義済み
 
 #### 長いユーザー名の処理
 ```typescript
@@ -264,7 +264,7 @@ const userWithoutAvatar = {
 
 ### 6.1 ファイル構成
 
-🟢 **青信号**: アーキテクチャ設計から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計から明確に定義済み
 
 ```
 app/server/src/application/
@@ -276,7 +276,7 @@ app/server/src/application/
 
 ### 6.2 依存関係
 
-🟢 **青信号**: DDD設計原則から明確に定義済み
+🔵 **青信号**: DDD設計原則から明確に定義済み
 
 ```typescript
 import { IAuthenticateUserUseCase, AuthenticateUserUseCaseInput, AuthenticateUserUseCaseOutput } from '@/domain/usecases/IAuthenticateUserUseCase';
@@ -289,7 +289,7 @@ import { Logger } from '@/shared/logging/Logger';
 
 ### 6.3 DI（依存性注入）要件
 
-🟢 **青信号**: クリーンアーキテクチャ設計原則から明確に定義済み
+🔵 **青信号**: クリーンアーキテクチャ設計原則から明確に定義済み
 
 ```typescript
 export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
@@ -304,7 +304,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 6.4 トランザクション管理方針
 
-🟢 **青信号**: セキュリティ・データ整合性要件から明確に定義済み
+🔵 **青信号**: セキュリティ・データ整合性要件から明確に定義済み
 
 - **JIT作成時**: ユーザー作成のトランザクション境界設定
 - **更新処理**: lastLoginAt更新のアトミック性保証  
@@ -322,7 +322,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 - **実装可能性**: 確実（TASK-103・TASK-104の完成により依存関係解決済み）
 
 ### 7.2 信頼性レベルサマリー
-- 🟢 **要件・仕様**: 95%が青信号（EARS要件定義書・設計文書ベース）
+- 🔵 **要件・仕様**: 95%が青信号（EARS要件定義書・設計文書ベース）
 - 🟡 **実装詳細**: 5%が黄信号（トランザクション管理・エラーハンドリングの具体的実装方式は妥当な推測）
 - 🔴 **推測部分**: 0%（設計文書にない新規推測は含まれていない）
 
@@ -330,7 +330,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 8.1 機能受け入れ基準
 
-🟢 **青信号**: EARS受け入れ基準から明確に定義済み
+🔵 **青信号**: EARS受け入れ基準から明確に定義済み
 
 - [ ] 有効なJWTで既存ユーザーの認証が成功する
 - [ ] 有効なJWTで新規ユーザーのJIT作成が成功する  
@@ -343,7 +343,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 8.2 セキュリティ受け入れ基準
 
-🟢 **青信号**: EARS非機能要件から明確に定義済み
+🔵 **青信号**: EARS非機能要件から明確に定義済み
 
 - [ ] JWT署名検証失敗時に認証が拒否される
 - [ ] JWT有効期限切れ時に認証が拒否される
@@ -353,7 +353,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 8.3 アーキテクチャ受け入れ基準
 
-🟢 **青信号**: アーキテクチャ設計から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計から明確に定義済み
 
 - [ ] Domain層・Infrastructure層への適切な依存方向（依存性逆転準拠）
 - [ ] Application層の適切な配置・責務分離
@@ -363,7 +363,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 8.4 エラーハンドリング受け入れ基準
 
-🟢 **青信号**: Edgeケース仕様から明確に定義済み
+🔵 **青信号**: Edgeケース仕様から明確に定義済み
 
 - [ ] AuthenticationError の適切なthrow・catch
 - [ ] データベースエラーの適切な変換・処理
@@ -377,7 +377,7 @@ export class AuthenticateUserUseCase implements IAuthenticateUserUseCase {
 
 ### 9.1 完了必須タスク
 
-🟢 **青信号**: タスク管理文書から明確に定義済み
+🔵 **青信号**: タスク管理文書から明確に定義済み
 
 - **TASK-103**: PostgreSQLUserRepository実装（ユーザーデータ永続化）
 - **TASK-104**: SupabaseAuthProvider実装（JWT検証・ユーザー情報抽出）

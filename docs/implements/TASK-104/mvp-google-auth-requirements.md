@@ -7,7 +7,7 @@
 
 ### 1.1 概要
 
-🟢 **青信号**: EARS要件定義書・設計文書を参考にしてほぼ推測していない場合
+🔵 **青信号**: EARS要件定義書・設計文書を参考にしてほぼ推測していない場合
 
 - **何をする機能か**: Supabase AuthのJWT検証・ユーザー情報抽出を行う認証プロバイダー実装
 - **どのような問題を解決するか**: 外部認証サービスとの統一的な連携インターフェースを提供し、プロバイダー固有の実装詳細をDomain層から隠蔽
@@ -20,7 +20,7 @@
 
 ### 1.2 主要責務
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **JWT署名検証**: Supabase JWT Secretを使用したトークン検証
 - **ユーザー情報抽出**: JWTペイロードから正規化されたユーザー情報の生成
@@ -31,7 +31,7 @@
 
 ### 2.1 verifyToken メソッド
 
-🟢 **青信号**: IAuthProviderインターフェースで完全定義済み
+🔵 **青信号**: IAuthProviderインターフェースで完全定義済み
 
 #### 入力パラメータ
 ```typescript
@@ -78,7 +78,7 @@ Promise<JwtVerificationResult> {
 
 ### 2.2 getExternalUserInfo メソッド
 
-🟢 **青信号**: IAuthProviderインターフェースで完全定義済み
+🔵 **青信号**: IAuthProviderインターフェースで完全定義済み
 
 #### 入力パラメータ
 ```typescript
@@ -103,7 +103,7 @@ Promise<ExternalUserInfo> {
 
 ### 3.1 パフォーマンス要件
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **JWT検証時間**: 1秒以内（NFR-002）
 - **メモリ内署名検証**: メモリ効率を重視した実装
@@ -113,7 +113,7 @@ Promise<ExternalUserInfo> {
 
 ### 3.2 セキュリティ要件
 
-🟢 **青信号**: EARS要件定義書・設計文書から明確に定義済み
+🔵 **青信号**: EARS要件定義書・設計文書から明確に定義済み
 
 - **署名検証**: Supabase JWT Secretによる厳密な署名検証
 - **有効期限チェック**: exp claimによる期限切れトークン拒否
@@ -124,7 +124,7 @@ Promise<ExternalUserInfo> {
 
 ### 3.3 アーキテクチャ制約
 
-🟢 **青信号**: アーキテクチャ設計文書から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計文書から明確に定義済み
 
 - **依存性逆転**: IAuthProviderインターフェースの実装
 - **Infrastructure層配置**: infrastructure/auth/SupabaseAuthProvider.ts
@@ -136,7 +136,7 @@ Promise<ExternalUserInfo> {
 
 ### 3.4 環境設定制約
 
-🟢 **青信号**: 技術実装要件から明確に定義済み
+🔵 **青信号**: 技術実装要件から明確に定義済み
 
 - **必須環境変数**: SUPABASE_JWT_SECRET
 - **設定検証**: 起動時の環境変数存在確認
@@ -148,7 +148,7 @@ Promise<ExternalUserInfo> {
 
 ### 4.1 基本的な使用パターン
 
-🟢 **青信号**: データフロー図から明確に定義済み
+🔵 **青信号**: データフロー図から明確に定義済み
 
 #### 正常な認証フロー
 ```typescript
@@ -169,7 +169,7 @@ if (result.valid && result.payload) {
 
 ### 4.2 エッジケース
 
-🟢 **青信号**: EARS要件定義書Edgeケースセクションから明確に定義済み
+🔵 **青信号**: EARS要件定義書Edgeケースセクションから明確に定義済み
 
 #### 無効なJWTトークン
 ```typescript
@@ -229,7 +229,7 @@ const userInfoResult = await authProvider.getExternalUserInfo(incompletePayload)
 
 ### 6.1 ファイル構成
 
-🟢 **青信号**: アーキテクチャ設計から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計から明確に定義済み
 
 ```
 app/server/src/infrastructure/
@@ -239,7 +239,7 @@ app/server/src/infrastructure/
 
 ### 6.2 依存関係
 
-🟢 **青信号**: 技術実装要件から明確に定義済み
+🔵 **青信号**: 技術実装要件から明確に定義済み
 
 ```typescript
 import { IAuthProvider, JwtVerificationResult, JwtPayload, ExternalUserInfo } from '@/domain/services/IAuthProvider';
@@ -251,7 +251,7 @@ import jwt from 'jsonwebtoken';
 
 ### 6.3 環境変数要件
 
-🟢 **青信号**: 技術実装要件から明確に定義済み
+🔵 **青信号**: 技術実装要件から明確に定義済み
 
 ```env
 SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
@@ -259,7 +259,7 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 
 ### 6.4 実装方針
 
-🟢 **青信号**: セキュリティ・アーキテクチャ要件から明確に定義済み
+🔵 **青信号**: セキュリティ・アーキテクチャ要件から明確に定義済み
 
 - **JWT検証**: jsonwebtoken ライブラリによるHS256署名検証
 - **エラーハンドリング**: 詳細なエラー情報を含むJwtVerificationResult返却
@@ -277,7 +277,7 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 - **実装可能性**: 確実（既存のSupabase・JWT技術スタックで実現可能）
 
 ### 7.2 信頼性レベルサマリー
-- 🟢 **要件・仕様**: 95%が青信号（EARS要件定義書・設計文書ベース）
+- 🔵 **要件・仕様**: 95%が青信号（EARS要件定義書・設計文書ベース）
 - 🟡 **技術詳細**: 5%が黄信号（JWT検証の具体的実装方式は妥当な推測）
 - 🔴 **推測部分**: 0%（設計文書にない新規推測は含まれていない）
 
@@ -285,7 +285,7 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 
 ### 8.1 機能受け入れ基準
 
-🟢 **青信号**: EARS受け入れ基準から明確に定義済み
+🔵 **青信号**: EARS受け入れ基準から明確に定義済み
 
 - [ ] 有効なGoogle OAuth JWTを正しく検証できる
 - [ ] 無効なJWTを確実に拒否できる
@@ -296,7 +296,7 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 
 ### 8.2 セキュリティ受け入れ基準
 
-🟢 **青信号**: EARS非機能要件から明確に定義済み
+🔵 **青信号**: EARS非機能要件から明確に定義済み
 
 - [ ] 不正な署名のJWTを確実に拒否する
 - [ ] 期限切れのJWTを確実に拒否する
@@ -305,7 +305,7 @@ SUPABASE_JWT_SECRET=your-supabase-jwt-secret-here
 
 ### 8.3 アーキテクチャ受け入れ基準
 
-🟢 **青信号**: アーキテクチャ設計から明確に定義済み
+🔵 **青信号**: アーキテクチャ設計から明確に定義済み
 
 - [ ] Domain層への依存関係が存在しない（依存性逆転準拠）
 - [ ] Infrastructure層の適切な配置

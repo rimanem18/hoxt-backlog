@@ -265,7 +265,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【テスト目的】: 新規ユーザー作成の正常フローを確認
     // 【テスト内容】: 有効なリクエストボディで新規ユーザーが作成され、200レスポンスが返る
     // 【期待される動作】: AuthenticateUserUseCaseが呼ばれ、新規ユーザー情報がレスポンスされる
-    // 🟢 信頼性レベル: 青信号（要件定義書のシナリオ1に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のシナリオ1に基づく）
 
     // 【テストデータ準備】: Google認証後の典型的なユーザー情報を用意
     // 【初期条件設定】: avatarUrlはGoogle提供のURLを含む新規ユーザーリクエスト
@@ -288,28 +288,28 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 200 OKレスポンスが返り、レスポンスボディがauthCallbackResponseSchemaに一致することを確認
     // 【期待値確認】: 新規ユーザーの場合、createdAt・updatedAt・lastLoginAtがすべて同じ時刻になる理由は、作成直後のユーザーであるため
     // 【品質保証】: 新規ユーザー作成フローが正常に動作し、Zodバリデーションがレスポンスを保証
-    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 要件定義書のシナリオ1に基づく
+    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 要件定義書のシナリオ1に基づく
 
     const responseBody = await response.json();
-    expect(responseBody.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認 🟢 apiResponseSchemaの定義に基づく
-    expect(responseBody.data).toBeDefined(); // 【確認内容】: レスポンスデータが存在することを確認 🟢 authCallbackResponseSchemaに基づく
-    expect(responseBody.data.externalId).toBe('google-1234567890'); // 【確認内容】: externalIdが正しく保存されることを確認 🟢 リクエストデータと一致
-    expect(responseBody.data.provider).toBe('google'); // 【確認内容】: プロバイダーが正しく保存されることを確認 🟢 authProviderSchemaに基づく
-    expect(responseBody.data.email).toBe('newuser@example.com'); // 【確認内容】: メールアドレスが正しく保存されることを確認 🟢 emailSchemaに基づく
-    expect(responseBody.data.name).toBe('New User'); // 【確認内容】: ユーザー名が正しく保存されることを確認 🟢 リクエストデータと一致
+    expect(responseBody.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認 🔵 apiResponseSchemaの定義に基づく
+    expect(responseBody.data).toBeDefined(); // 【確認内容】: レスポンスデータが存在することを確認 🔵 authCallbackResponseSchemaに基づく
+    expect(responseBody.data.externalId).toBe('google-1234567890'); // 【確認内容】: externalIdが正しく保存されることを確認 🔵 リクエストデータと一致
+    expect(responseBody.data.provider).toBe('google'); // 【確認内容】: プロバイダーが正しく保存されることを確認 🔵 authProviderSchemaに基づく
+    expect(responseBody.data.email).toBe('newuser@example.com'); // 【確認内容】: メールアドレスが正しく保存されることを確認 🔵 emailSchemaに基づく
+    expect(responseBody.data.name).toBe('New User'); // 【確認内容】: ユーザー名が正しく保存されることを確認 🔵 リクエストデータと一致
     expect(responseBody.data.avatarUrl).toBe(
       'https://lh3.googleusercontent.com/a/default-user',
-    ); // 【確認内容】: avatarUrlが正しく保存されることを確認 🟢 urlSchemaに基づく
+    ); // 【確認内容】: avatarUrlが正しく保存されることを確認 🔵 urlSchemaに基づく
     expect(responseBody.data.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    ); // 【確認内容】: UUIDv4形式のIDが生成されることを確認 🟢 uuidSchemaに基づく
+    ); // 【確認内容】: UUIDv4形式のIDが生成されることを確認 🔵 uuidSchemaに基づく
   });
 
   test('既存ユーザーのGitHub認証が成功し、lastLoginAtが更新される', async () => {
     // 【テスト目的】: 既存ユーザーのログインフローを確認
     // 【テスト内容】: 既存ユーザーのログイン時にlastLoginAtのみが更新されること
     // 【期待される動作】: AuthenticateUserUseCaseが既存ユーザーを検出し、lastLoginAtを更新
-    // 🟢 信頼性レベル: 青信号（要件定義書のシナリオ2に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のシナリオ2に基づく）
 
     // 【テストデータ準備】: GitHubアカウントの認証情報（avatarUrlは省略）
     // 【初期条件設定】: 以前登録したユーザーが再度ログインした場合を想定
@@ -330,20 +330,20 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 200 OKレスポンスが返り、lastLoginAtが更新されることを確認
     // 【期待値確認】: createdAtは変更されず、lastLoginAtが最新の時刻に更新される理由は、既存ユーザーの再ログインであるため
     // 【品質保証】: avatarUrlがnullでもバリデーションエラーにならないことを保証
-    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 要件定義書のシナリオ2に基づく
+    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 要件定義書のシナリオ2に基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認
-    expect(responseBody.data.externalId).toBe('github-existing-user'); // 【確認内容】: externalIdが一致することを確認 🟢 既存ユーザーの識別
+    expect(responseBody.data.externalId).toBe('github-existing-user'); // 【確認内容】: externalIdが一致することを確認 🔵 既存ユーザーの識別
     expect(responseBody.data.provider).toBe('github'); // 【確認内容】: プロバイダーがgithubであることを確認
-    expect(responseBody.data.avatarUrl).toBeNull(); // 【確認内容】: avatarUrlがnullであることを確認（オプションフィールド） 🟢 urlSchema.optional()に基づく
+    expect(responseBody.data.avatarUrl).toBeNull(); // 【確認内容】: avatarUrlがnullであることを確認（オプションフィールド） 🔵 urlSchema.optional()に基づく
   });
 
   test('6種類の全プロバイダーで認証が成功する', async () => {
     // 【テスト目的】: プロバイダー列挙型の網羅的な検証
     // 【テスト内容】: google、apple、microsoft、github、facebook、lineの全プロバイダーで認証が成功すること
     // 【期待される動作】: 各プロバイダーに対して200レスポンスが返される
-    // 🟢 信頼性レベル: 青信号（authProviderSchemaの定義に基づく）
+    // 🔵 信頼性レベル: 青信号（authProviderSchemaの定義に基づく）
 
     // 【テストデータ準備】: 各プロバイダーの典型的な認証情報を用意
     // 【初期条件設定】: authProviderSchemaで定義された6つの値すべてをテスト
@@ -373,7 +373,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
       // 【結果検証】: すべてのプロバイダーで200 OKレスポンスが返ることを確認
       // 【期待値確認】: authProviderSchemaで定義された6つの値すべてが有効であるため、バリデーションを通過する
       // 【品質保証】: すべてのプロバイダーがZodバリデーションを通過することを保証
-      expect(response.status).toBe(200); // 【確認内容】: プロバイダー「${provider}」で200 OKが返ることを確認 🟢 authProviderSchemaに基づく
+      expect(response.status).toBe(200); // 【確認内容】: プロバイダー「${provider}」で200 OKが返ることを確認 🔵 authProviderSchemaに基づく
 
       const responseBody = await response.json();
       expect(responseBody.success).toBe(true); // 【確認内容】: プロバイダー「${provider}」でsuccessがtrueであることを確認
@@ -387,7 +387,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【テスト目的】: Zodバリデーションのメールアドレスチェック確認
     // 【テスト内容】: RFC 5321に準拠しないメールアドレスが送信された場合、400エラーが返る
     // 【期待される動作】: 不正なメールアドレスでユーザーが登録されるのを防ぐ
-    // 🟢 信頼性レベル: 青信号（要件定義書のEDGE-001に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のEDGE-001に基づく）
 
     // 【テストデータ準備】: `@`記号がないメールアドレスを用意
     // 【初期条件設定】: クライアント側のバリデーションをバイパスした不正リクエストを想定
@@ -408,22 +408,22 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 400 Bad Requestレスポンスが返り、詳細エラーメッセージが含まれることを確認
     // 【期待値確認】: フィールド名とエラー理由が明確であるため、クライアント側で適切にエラーハンドリングできる
     // 【品質保証】: データ整合性の維持、セキュリティ向上を保証（REQ-104に基づく）
-    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🟢 EDGE-001に基づく
+    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🔵 EDGE-001に基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
-    expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認 🟢 apiErrorResponseSchemaに基づく
+    expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認 🔵 apiErrorResponseSchemaに基づく
     expect(responseBody.error.message).toBe('バリデーションエラー'); // 【確認内容】: ユーザー向けエラーメッセージが含まれることを確認
     expect(responseBody.error.details.email).toBe(
       '有効なメールアドレス形式である必要があります',
-    ); // 【確認内容】: フィールド単位のエラー詳細が含まれることを確認 🟢 REQ-104（詳細エラーメッセージ返却）に基づく
+    ); // 【確認内容】: フィールド単位のエラー詳細が含まれることを確認 🔵 REQ-104（詳細エラーメッセージ返却）に基づく
   });
 
   test('externalIdが空文字列の場合、400エラーが返る', async () => {
     // 【テスト目的】: 文字列長制約のバリデーション確認
     // 【テスト内容】: externalIdが空の場合、400エラーが返る
     // 【期待される動作】: ユーザーを一意に識別できなくなる重大な問題を防ぐ
-    // 🟢 信頼性レベル: 青信号（要件定義書のEDGE-002に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のEDGE-002に基づく）
 
     // 【テストデータ準備】: externalIdが空文字列のリクエストを用意
     // 【初期条件設定】: クライアント側のJavaScriptエラーで空文字列が送信された場合を想定
@@ -444,21 +444,21 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 400 Bad Requestレスポンスが返り、最小文字数制約違反を明示
     // 【期待値確認】: ユーザーの一意性が保たれる理由は、externalIdが1文字以上であることが保証されるため
     // 【品質保証】: データ整合性、ビジネスロジックの保護を保証
-    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🟢 EDGE-002に基づく
+    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🔵 EDGE-002に基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
     expect(responseBody.error.details.externalId).toBe(
       'externalIdは1文字以上である必要があります',
-    ); // 【確認内容】: 最小文字数制約違反を明示するエラーメッセージが含まれることを確認 🟢 authCallbackRequestSchemaのメッセージに基づく
+    ); // 【確認内容】: 最小文字数制約違反を明示するエラーメッセージが含まれることを確認 🔵 authCallbackRequestSchemaのメッセージに基づく
   });
 
   test('providerが列挙型に存在しない値の場合、400エラーが返る', async () => {
     // 【テスト目的】: 列挙型バリデーションの確認
     // 【テスト内容】: サポートされていないプロバイダー名が送信された場合、400エラーが返る
     // 【期待される動作】: 未サポートのプロバイダーによる認証を防ぐ
-    // 🟢 信頼性レベル: 青信号（要件定義書のEDGE-003に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のEDGE-003に基づく）
 
     // 【テストデータ準備】: authProviderSchemaで定義されていない"twitter"を用意
     // 【初期条件設定】: 古いクライアントから廃止されたプロバイダー名が送信された場合を想定
@@ -479,19 +479,19 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 400 Bad Requestレスポンスが返り、無効なプロバイダーであることを明示
     // 【期待値確認】: 未定義のプロバイダーによる不正アクセスを防ぐ理由は、型安全性の維持とAPI契約の厳格な遵守のため
     // 【品質保証】: 型安全性の維持、API契約の厳格な遵守を保証
-    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🟢 EDGE-003に基づく
+    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🔵 EDGE-003に基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
-    expect(responseBody.error.details.provider).toBeDefined(); // 【確認内容】: providerフィールドに対するエラーメッセージが存在することを確認 🟢 authProviderSchemaのバリデーションエラー
+    expect(responseBody.error.details.provider).toBeDefined(); // 【確認内容】: providerフィールドに対するエラーメッセージが存在することを確認 🔵 authProviderSchemaのバリデーションエラー
   });
 
   test('avatarUrlがURL形式でない場合、400エラーが返る', async () => {
     // 【テスト目的】: オプションフィールドのURL形式バリデーション確認
     // 【テスト内容】: avatarUrlが不正な形式の場合、400エラーが返る
     // 【期待される動作】: 画像表示エラーの原因となる不正URLの保存を防ぐ
-    // 🟢 信頼性レベル: 青信号（要件定義書のEDGE-004に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のEDGE-004に基づく）
 
     // 【テストデータ準備】: URLスキーム（http://、https://）がない不正なURLを用意
     // 【初期条件設定】: クライアント側で画像パスを相対パスで誤って送信した場合を想定
@@ -513,21 +513,21 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 400 Bad Requestレスポンスが返り、URL形式制約違反を明示
     // 【期待値確認】: 不正なURLによる画像表示エラーを防ぐ理由は、データ品質の維持とフロントエンドエラーの防止のため
     // 【品質保証】: データ品質の維持、フロントエンドエラーの防止を保証
-    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🟢 EDGE-004に基づく
+    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🔵 EDGE-004に基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
     expect(responseBody.error.details.avatarUrl).toBe(
       '有効なURL形式である必要があります',
-    ); // 【確認内容】: URL形式制約違反を明示するエラーメッセージが含まれることを確認 🟢 urlSchemaのメッセージに基づく
+    ); // 【確認内容】: URL形式制約違反を明示するエラーメッセージが含まれることを確認 🔵 urlSchemaのメッセージに基づく
   });
 
   test('必須フィールドnameが欠落している場合、400エラーが返る', async () => {
     // 【テスト目的】: 必須フィールドのバリデーション確認
     // 【テスト内容】: リクエストボディに必須フィールドが含まれていない場合、400エラーが返る
     // 【期待される動作】: データ不足によるシステムエラーを防ぐ
-    // 🟢 信頼性レベル: 青信号（Zodスキーマの必須フィールド定義に基づく）
+    // 🔵 信頼性レベル: 青信号（Zodスキーマの必須フィールド定義に基づく）
 
     // 【テストデータ準備】: nameフィールドを含まないリクエストを用意
     // 【初期条件設定】: クライアント側のバグでフィールドが送信されなかった場合を想定
@@ -548,19 +548,19 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 400 Bad Requestレスポンスが返り、必須フィールドであることを明示
     // 【期待値確認】: 不完全なデータがデータベースに保存されない理由は、データ整合性の強制とAPIスキーマの遵守のため
     // 【品質保証】: データ整合性の強制、APIスキーマの遵守を保証
-    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🟢 Zodの必須フィールドチェックに基づく
+    expect(response.status).toBe(400); // 【確認内容】: HTTPステータスコードが400 Bad Requestであることを確認 🔵 Zodの必須フィールドチェックに基づく
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(false); // 【確認内容】: レスポンスのsuccessフィールドがfalseであることを確認
     expect(responseBody.error.code).toBe('VALIDATION_ERROR'); // 【確認内容】: エラーコードがVALIDATION_ERRORであることを確認
-    expect(responseBody.error.details.name).toBeDefined(); // 【確認内容】: nameフィールドに対するエラーメッセージが存在することを確認 🟢 Zodの必須フィールドバリデーション
+    expect(responseBody.error.details.name).toBeDefined(); // 【確認内容】: nameフィールドに対するエラーメッセージが存在することを確認 🔵 Zodの必須フィールドバリデーション
   });
 
   test('データベース接続エラー時に500エラーが返る', async () => {
     // 【テスト目的】: Infrastructure層エラーのハンドリング確認
     // 【テスト内容】: DBエラーが発生した場合、500エラーが返る
     // 【期待される動作】: 内部エラー詳細を隠蔽し、セキュリティを維持する
-    // 🟢 信頼性レベル: 青信号（要件定義書のEDGE-005とNFR-303に基づく）
+    // 🔵 信頼性レベル: 青信号（要件定義書のEDGE-005とNFR-303に基づく）
 
     // 【テストデータ準備】: 有効なリクエストボディ（バリデーションは成功）
     // 【初期条件設定】: リクエスト自体は正常だが、DB接続エラーが発生する状況を想定
@@ -633,7 +633,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【テスト目的】: 最小長制約の境界値確認
     // 【テスト内容】: externalIdが1文字の場合、バリデーションが成功する
     // 【期待される動作】: 1文字でも有効なexternalIdとして扱われること
-    // 🟢 信頼性レベル: 青信号（Zodスキーマのmin(1)制約に基づく）
+    // 🔵 信頼性レベル: 青信号（Zodスキーマのmin(1)制約に基づく）
 
     // 【テストデータ準備】: externalIdが1文字ちょうどのリクエストを用意
     // 【初期条件設定】: 短いIDを使用するプロバイダーが存在する可能性を考慮
@@ -654,7 +654,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 200 OKレスポンスが返り、1文字のexternalIdが正常に保存されることを確認
     // 【期待値確認】: 境界値でもシステムが正常動作する理由は、1文字が最小許容値として定義されているため
     // 【品質保証】: 境界値でもシステムが正常動作することを保証
-    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 z.string().min(1)の境界値テスト
+    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 z.string().min(1)の境界値テスト
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認
@@ -665,7 +665,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【テスト目的】: 最小長制約の境界値確認
     // 【テスト内容】: nameが1文字の場合、バリデーションが成功する
     // 【期待される動作】: 1文字の名前でも有効なユーザーとして扱われること
-    // 🟢 信頼性レベル: 青信号（Zodスキーマのmin(1)制約に基づく）
+    // 🔵 信頼性レベル: 青信号（Zodスキーマのmin(1)制約に基づく）
 
     // 【テストデータ準備】: nameが1文字ちょうどのリクエストを用意
     // 【初期条件設定】: イニシャルのみで登録するユーザーを想定
@@ -686,7 +686,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 200 OKレスポンスが返り、1文字の名前が正常に保存されることを確認
     // 【期待値確認】: 境界値でもシステムが正常動作する理由は、1文字が最小許容値として定義されているため
     // 【品質保証】: 境界値でもシステムが正常動作することを保証
-    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 z.string().min(1)の境界値テスト
+    expect(response.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 z.string().min(1)の境界値テスト
 
     const responseBody = await response.json();
     expect(responseBody.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認
@@ -697,7 +697,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【テスト目的】: オプションフィールドのnull/undefinedハンドリング確認
     // 【テスト内容】: avatarUrlが省略された場合、バリデーションが成功する
     // 【期待される動作】: オプションフィールドが省略可能であること
-    // 🟢 信頼性レベル: 青信号（Zodスキーマのoptional()定義に基づく）
+    // 🔵 信頼性レベル: 青信号（Zodスキーマのoptional()定義に基づく）
 
     // 【テストデータ準備】: avatarUrlを含まないリクエストを用意（省略パターン）
     // 【初期条件設定】: プロバイダーがアバター画像を提供しない場合を想定
@@ -719,7 +719,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     // 【結果検証】: 200 OKレスポンスが返り、avatarUrlがnullで保存されることを確認
     // 【期待値確認】: null/undefinedが正しくハンドリングされる理由は、TypeScriptのoptional型（`string | null | undefined`）に準拠しているため
     // 【品質保証】: オプションフィールドの全パターンで正常動作することを保証
-    expect(responseWithoutAvatar.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 urlSchema.optional()に基づく
+    expect(responseWithoutAvatar.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 urlSchema.optional()に基づく
 
     const responseBodyWithoutAvatar = await responseWithoutAvatar.json();
     expect(responseBodyWithoutAvatar.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認
@@ -739,7 +739,7 @@ describe('POST /auth/callback - OpenAPI認証コールバック統合テスト',
     });
 
     // 【結果検証】: 明示的にnullを送信した場合も200 OKレスポンスが返ることを確認
-    expect(responseWithNullAvatar.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🟢 nullも許容される
+    expect(responseWithNullAvatar.status).toBe(200); // 【確認内容】: HTTPステータスコードが200 OKであることを確認 🔵 nullも許容される
 
     const responseBodyWithNullAvatar = await responseWithNullAvatar.json();
     expect(responseBodyWithNullAvatar.success).toBe(true); // 【確認内容】: レスポンスのsuccessフィールドがtrueであることを確認

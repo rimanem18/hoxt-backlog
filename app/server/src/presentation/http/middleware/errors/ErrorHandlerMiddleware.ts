@@ -2,7 +2,7 @@
  * 【機能概要】: 統一エラーハンドリング（設計仕様準拠）
  * 【実装方針】: AuthErrorを適切なHTTPレスポンスに変換
  * 【テスト対応】: エラーレスポンス形式の統合テスト可能
- * 🟢 信頼性レベル: api-endpoints.md統一レスポンス仕様準拠
+ * 🔵 信頼性レベル: api-endpoints.md統一レスポンス仕様準拠
  *
  * Why: DDD/Clean Architecture原則に従い、MonitoringServiceインターフェースに依存。
  * 例外発生時にモニタリング基盤（CloudWatch等）へ記録する。

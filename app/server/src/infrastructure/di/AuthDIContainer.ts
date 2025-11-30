@@ -13,7 +13,7 @@ import type { Logger } from '@/shared/logging/Logger';
  * 【設計方針】: パフォーマンス最適化とテスタビリティを両立した設計
  * 【パフォーマンス】: リクエストごとのインスタンス生成を回避し、メモリ使用量を削減
  * 【保守性】: 依存関係の一元管理により、変更影響を最小化
- * 🟢 信頼性レベル: 既存のAuthDIContainerパターンに基づく拡張実装
+ * 🔵 信頼性レベル: 既存のAuthDIContainerパターンに基づく拡張実装
  */
 export class AuthDIContainer {
   private static authenticateUserUseCaseInstance: AuthenticateUserUseCase | null =
@@ -31,7 +31,7 @@ export class AuthDIContainer {
    * 【パフォーマンス】: 必要時のみインスタンス生成（遅延初期化）
    * 【保守性】: 依存関係の注入を一箇所に集約
    * 【注意】: テスト環境では使用不可（getAuthProvider()がエラーを投げる）
-   * 🟢 信頼性レベル: 既存実装を踏襲した安定性重視の実装
+   * 🔵 信頼性レベル: 既存実装を踏襲した安定性重視の実装
    */
   static getAuthenticateUserUseCase(): AuthenticateUserUseCase {
     if (!AuthDIContainer.authenticateUserUseCaseInstance) {
@@ -66,7 +66,7 @@ export class AuthDIContainer {
    * 【設計方針】: 認証済みユーザーのプロフィール取得処理を効率化
    * 【パフォーマンス】: シングルトン管理によりメモリリークを防止
    * 【保守性】: 依存関係をDIコンテナで一元管理
-   * 🟢 信頼性レベル: テスト済みの依存関係パターンを利用した安全な実装
+   * 🔵 信頼性レベル: テスト済みの依存関係パターンを利用した安全な実装
    */
   static getUserProfileUseCase(): GetUserProfileUseCase {
     if (!AuthDIContainer.getUserProfileUseCaseInstance) {
@@ -92,7 +92,7 @@ export class AuthDIContainer {
    * 【設計方針】: データベース接続プールを効率的に活用
    * 【パフォーマンス】: 接続リソースの最適化とメモリ使用量削減
    * 【保守性】: Repository設定を一箇所で管理
-   * 🟢 信頼性レベル: 既存のPostgreSQLUserRepository実装をそのまま活用
+   * 🔵 信頼性レベル: 既存のPostgreSQLUserRepository実装をそのまま活用
    */
   private static getUserRepository(): PostgreSQLUserRepository {
     if (!AuthDIContainer.userRepositoryInstance) {
@@ -109,7 +109,7 @@ export class AuthDIContainer {
    * 【設計方針】: 本番・開発環境ではJWKS検証を使用。テスト環境では明示的注入が必要
    * 【パフォーマンス】: 重複インスタンス生成を防止
    * 【保守性】: 認証関連設定を一箇所で管理
-   * 🟢 信頼性レベル: JWKS (JSON Web Key Set) 検証による高セキュリティ実装
+   * 🔵 信頼性レベル: JWKS (JSON Web Key Set) 検証による高セキュリティ実装
    */
   public static getAuthProvider(): IAuthProvider {
     // テスト環境で明示的に設定されたプロバイダーがあればそれを返す
@@ -254,7 +254,7 @@ export class AuthDIContainer {
    * 【設計方針】: 単体テストでの依存関係モック化を完全支援
    * 【テスト効率】: テスト間のインスタンス汚染を防ぎ、テスト独立性を確保
    * 【保守性】: 新しく追加された依存関係も漏れなくリセット
-   * 🟢 信頼性レベル: 既存のテストリセット機能を拡張した確実な実装
+   * 🔵 信頼性レベル: 既存のテストリセット機能を拡張した確実な実装
    */
   static resetInstances(): void {
     // 【認証関連インスタンスのリセット】: テスト時の独立性確保

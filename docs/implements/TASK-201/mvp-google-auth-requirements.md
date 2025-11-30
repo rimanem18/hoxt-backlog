@@ -11,10 +11,10 @@
 **従来の課題**: AuthControllerクラスとテストは実装済みだが、**HTTPエンドポイントとして実際に利用できない状態**
 
 **実装されているもの**:
-- 🟢 AuthController.ts（102行、完全実装）
-- 🟢 AuthController.test.ts（14テスト、全てpass）  
-- 🟢 バリデーター系クラス（HttpRequestValidator, JwtTokenValidator等）
-- 🟢 ResponseService（レスポンス統一処理）
+- 🔵 AuthController.ts（102行、完全実装）
+- 🔵 AuthController.test.ts（14テスト、全てpass）  
+- 🔵 バリデーター系クラス（HttpRequestValidator, JwtTokenValidator等）
+- 🔵 ResponseService（レスポンス統一処理）
 
 **不足しているもの**:
 - 🔴 authRoutes.ts（HTTPルート定義）
@@ -23,34 +23,34 @@
 
 ## 1. 機能の概要（改訂版）
 
-- 🟢 **AuthControllerクラス**: ✅ 実装済み - JWT検証・ユーザー認証処理
+- 🔵 **AuthControllerクラス**: ✅ 実装済み - JWT検証・ユーザー認証処理
 - 🔴 **POST /api/auth/verify エンドポイント**: ❌ 未統合 - HTTPルートとして利用不可
-- 🟢 **AuthenticateUserUseCaseとの連携**: ✅ 実装済み - Application層との適切な連携  
-- 🟢 **HTTPエラーハンドリング**: ✅ 実装済み - 401/400/500エラーの適切な変換
+- 🔵 **AuthenticateUserUseCaseとの連携**: ✅ 実装済み - Application層との適切な連携  
+- 🔵 **HTTPエラーハンドリング**: ✅ 実装済み - 401/400/500エラーの適切な変換
 - 🔴 **サーバー統合**: ❌ 未実装 - Honoサーバーにルートが登録されていない
-- 🟢 **想定されるユーザー**: フロントエンド（Next.js）からのJWT検証リクエスト処理
+- 🔵 **想定されるユーザー**: フロントエンド（Next.js）からのJWT検証リクエスト処理
 
-- 🟢 **参照したEARS要件**: REQ-002（JWT検証要件）、REQ-407（Presentation層実装）
-- 🟢 **参照した設計文書**: architecture.md Presentation層、api-endpoints.md
+- 🔵 **参照したEARS要件**: REQ-002（JWT検証要件）、REQ-407（Presentation層実装）
+- 🔵 **参照した設計文書**: architecture.md Presentation層、api-endpoints.md
 
 ## 2. 入力・出力の仕様（変更なし）
 
 ### HTTP エンドポイント
 - 🔴 **HTTPエンドポイント**: `POST /api/auth/verify` ❌ 未統合
-- 🟢 **Content-Type**: `application/json` ✅ バリデーター実装済み
-- 🟢 **リクエストボディ**: 
+- 🔵 **Content-Type**: `application/json` ✅ バリデーター実装済み
+- 🔵 **リクエストボディ**: 
   ```typescript
   {
     token: string; // Supabase Auth発行のJWT（必須、非空文字列）
   }
   ```
-- 🟢 **バリデーション制約**: 
+- 🔵 **バリデーション制約**: 
   - `token`フィールドの存在確認
   - `token`が空文字列でないこと
   - JSONパース可能であること
 
 ### レスポンス形式  
-- 🟢 **成功レスポンス（200 OK）**: ✅ ResponseService実装済み
+- 🔵 **成功レスポンス（200 OK）**: ✅ ResponseService実装済み
   ```typescript
   {
     success: true,
@@ -60,7 +60,7 @@
     }
   }
   ```
-- 🟢 **エラーレスポンス形式**: ✅ ResponseService実装済み
+- 🔵 **エラーレスポンス形式**: ✅ ResponseService実装済み
   ```typescript
   {
     success: false,
@@ -71,11 +71,11 @@
     }
   }
   ```
-- 🟢 **HTTPステータスコード**: 200（成功）、400（不正リクエスト）、401（認証エラー）、500（サーバーエラー）
+- 🔵 **HTTPステータスコード**: 200（成功）、400（不正リクエスト）、401（認証エラー）、500（サーバーエラー）
 
 ### 入出力の関係性
-- 🟢 **JWTトークン → AuthenticateUserUseCase → ユーザー情報**: 有効なJWTから認証済みユーザー情報を取得・作成
-- 🟢 **ドメインエラー → HTTPエラー**: `AuthenticationError`→401、`ValidationError`→400、その他→500
+- 🔵 **JWTトークン → AuthenticateUserUseCase → ユーザー情報**: 有効なJWTから認証済みユーザー情報を取得・作成
+- 🔵 **ドメインエラー → HTTPエラー**: `AuthenticationError`→401、`ValidationError`→400、その他→500
 
 ### データフロー  
 - **参照したEARS要件**: REQ-002、REQ-004（JITプロビジョニング）
@@ -84,23 +84,23 @@
 ## 3. 制約条件（変更なし）
 
 ### パフォーマンス要件
-- 🟢 **レスポンス時間**: 1000ms以内（JITプロビジョニング処理含む）- NFR-002, api-endpoints.md
-- 🟢 **同時リクエスト処理**: 100リクエスト/分まで対応可能（將来のレート制限準備）
+- 🔵 **レスポンス時間**: 1000ms以内（JITプロビジョニング処理含む）- NFR-002, api-endpoints.md
+- 🔵 **同時リクエスト処理**: 100リクエスト/分まで対応可能（將来のレート制限準備）
 
 ### セキュリティ要件  
-- 🟢 **HTTPS通信必須**: 本番環境でのHTTPS通信のみ許可 - NFR-101
-- 🟢 **入力検証**: Zodスキーマによる厳格なリクエストデータ検証
-- 🟢 **エラー情報秘匿**: セキュリティ上重要な詳細情報は開発環境でのみ露出
+- 🔵 **HTTPS通信必須**: 本番環境でのHTTPS通信のみ許可 - NFR-101
+- 🔵 **入力検証**: Zodスキーマによる厳格なリクエストデータ検証
+- 🔵 **エラー情報秘匿**: セキュリティ上重要な詳細情報は開発環境でのみ露出
 
 ### アーキテクチャ制約
-- 🟢 **Honoフレームワーク**: AuthController は Hono Context 対応実装済み - REQ-402
+- 🔵 **Honoフレームワーク**: AuthController は Hono Context 対応実装済み - REQ-402
 - 🔴 **RESTful API**: ルート定義が存在せず、RESTfulエンドポイントとして利用不可
-- 🟢 **依存性逆転原則**: ✅ 実装済み - Application層（UseCase）にのみ依存、Infrastructure層に直接依存禁止
-- 🟢 **JSON形式レスポンス**: api-endpoints.md統一レスポンス形式準拠
+- 🔵 **依存性逆転原則**: ✅ 実装済み - Application層（UseCase）にのみ依存、Infrastructure層に直接依存禁止
+- 🔵 **JSON形式レスポンス**: api-endpoints.md統一レスポンス形式準拠
 
 ### API制約
 - 🔴 **RESTful設計**: POST /api/auth/verify の単一責任（JWT検証・認証のみ）- ルートが未定義
-- 🟢 **Content-Type制約**: application/json以外は400エラー ✅ バリデーター実装済み
+- 🔵 **Content-Type制約**: application/json以外は400エラー ✅ バリデーター実装済み
 - 🔴 **CORS対応**: フロントエンド（localhost:3000、本番ドメイン）からのアクセス許可 - 未統合
 
 - **参照したEARS要件**: NFR-001, NFR-002, REQ-402, REQ-407
@@ -137,23 +137,23 @@
 ## 5. 想定される使用例（変更なし）
 
 ### 基本的な使用パターン
-- 🟢 **既存ユーザーの認証**: フロントエンドからの有効JWT送信→既存ユーザー情報返却
-- 🟢 **新規ユーザーのJIT作成**: 初回ログインでのJWT送信→ユーザー作成→新規ユーザー情報返却  
-- 🟢 **認証状態の確認**: ページリロード時のJWT再検証→認証状態復元
+- 🔵 **既存ユーザーの認証**: フロントエンドからの有効JWT送信→既存ユーザー情報返却
+- 🔵 **新規ユーザーのJIT作成**: 初回ログインでのJWT送信→ユーザー作成→新規ユーザー情報返却  
+- 🔵 **認証状態の確認**: ページリロード時のJWT再検証→認証状態復元
 
 ### データフロー
-- 🟢 **正常フロー**: HTTPリクエスト受信→入力検証→UseCase呼び出し→結果変換→JSONレスポンス
-- 🟢 **JITプロビジョニングフロー**: JWT検証成功→ユーザー不存在→新規作成→`isNewUser: true`返却
+- 🔵 **正常フロー**: HTTPリクエスト受信→入力検証→UseCase呼び出し→結果変換→JSONレスポンス
+- 🔵 **JITプロビジョニングフロー**: JWT検証成功→ユーザー不存在→新規作成→`isNewUser: true`返却
 
 ### エッジケース
-- 🟢 **無効JWT**: EDGE-002対応 - JWT検証失敗時の401エラー・「認証トークンが無効です」メッセージ
-- 🟢 **JSON不正**: リクエストボディJSONパースエラー時の400エラー・「リクエスト形式が不正です」メッセージ  
-- 🟢 **必須フィールド不存在**: tokenフィールド不存在時の400エラー・「トークンが必要です」メッセージ
+- 🔵 **無効JWT**: EDGE-002対応 - JWT検証失敗時の401エラー・「認証トークンが無効です」メッセージ
+- 🔵 **JSON不正**: リクエストボディJSONパースエラー時の400エラー・「リクエスト形式が不正です」メッセージ  
+- 🔵 **必須フィールド不存在**: tokenフィールド不存在時の400エラー・「トークンが必要です」メッセージ
 - 🟡 **サーバー内部エラー**: DB接続エラー等の未処理例外時の500エラー・「一時的にサービスが利用できません」メッセージ
 
 ### エラーケース
-- 🟢 **EDGE-002適用**: JWT検証失敗→401 Unauthorized→フロントエンドでログイン画面表示
-- 🟢 **EDGE-003適用**: バックエンド内部エラー→500 Internal Server Error→「APIサーバーとの通信に失敗しました」
+- 🔵 **EDGE-002適用**: JWT検証失敗→401 Unauthorized→フロントエンドでログイン画面表示
+- 🔵 **EDGE-003適用**: バックエンド内部エラー→500 Internal Server Error→「APIサーバーとの通信に失敗しました」
 - 🟡 **ネットワークタイムアウト**: 1000ms超過時のリクエスト打ち切り・適切なエラーハンドリング
 
 - **参照したEARS要件**: EDGE-002, EDGE-003
