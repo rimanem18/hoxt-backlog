@@ -159,7 +159,7 @@ export const errorMiddleware = async (c: Context, next: Next) => {
 
 ### TASK-1324: TaskController実装（作成・一覧・詳細）
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1323
@@ -228,8 +228,8 @@ export class TaskController {
 
 #### 完了条件
 
-- [ ] TaskController（作成・一覧・詳細）が実装される
-- [ ] テストカバレッジ100%
+- [x] TaskController（作成・一覧・詳細）が実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -239,7 +239,7 @@ export class TaskController {
 
 ### TASK-1325: TaskController実装（更新・削除・ステータス変更）
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1324
@@ -289,8 +289,8 @@ async changeStatus(c: Context) {
 
 #### 完了条件
 
-- [ ] TaskController（更新・削除・ステータス変更）が実装される
-- [ ] テストカバレッジ100%
+- [x] TaskController（更新・削除・ステータス変更）が実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
