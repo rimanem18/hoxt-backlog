@@ -1,7 +1,10 @@
 import type { Context } from 'hono';
+import type { ChangeTaskStatusUseCase } from '@/application/usecases/ChangeTaskStatusUseCase';
 import type { CreateTaskUseCase } from '@/application/usecases/CreateTaskUseCase';
+import type { DeleteTaskUseCase } from '@/application/usecases/DeleteTaskUseCase';
 import type { GetTaskByIdUseCase } from '@/application/usecases/GetTaskByIdUseCase';
 import type { GetTasksUseCase } from '@/application/usecases/GetTasksUseCase';
+import type { UpdateTaskUseCase } from '@/application/usecases/UpdateTaskUseCase';
 import type { TaskEntity } from '@/domain/task/TaskEntity';
 
 /**
@@ -56,6 +59,9 @@ export class TaskController {
     private readonly createTaskUseCase: CreateTaskUseCase,
     private readonly getTasksUseCase: GetTasksUseCase,
     private readonly getTaskByIdUseCase: GetTaskByIdUseCase,
+    private readonly updateTaskUseCase: UpdateTaskUseCase,
+    private readonly deleteTaskUseCase: DeleteTaskUseCase,
+    private readonly changeTaskStatusUseCase: ChangeTaskStatusUseCase,
   ) {}
 
   /**
@@ -139,6 +145,87 @@ export class TaskController {
     const taskId = c.req.param('id');
 
     const task = await this.getTaskByIdUseCase.execute({ userId, taskId });
+
+    return c.json<SuccessResponseSingle>(
+      {
+        success: true,
+        data: this.toDTO(task),
+      },
+      200,
+    );
+  }
+
+  /**
+   * タスク更新エンドポイント
+   *
+   * PUT /api/tasks/:id
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（更新されたタスク）
+   */
+  async update(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const taskId = c.req.param('id');
+    const input = await c.req.json();
+
+    const data = {
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
+      ...(input.priority !== undefined && { priority: input.priority }),
+    };
+
+    const task = await this.updateTaskUseCase.execute({
+      userId,
+      taskId,
+      data,
+    });
+
+    return c.json<SuccessResponseSingle>(
+      {
+        success: true,
+        data: this.toDTO(task),
+      },
+      200,
+    );
+  }
+
+  /**
+   * タスク削除エンドポイント
+   *
+   * DELETE /api/tasks/:id
+   *
+   * @param c - Honoコンテキスト
+   * @returns 204レスポンス（No Content）
+   */
+  async delete(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const taskId = c.req.param('id');
+
+    await this.deleteTaskUseCase.execute({ userId, taskId });
+
+    return c.body(null, 204);
+  }
+
+  /**
+   * タスクステータス変更エンドポイント
+   *
+   * PATCH /api/tasks/:id/status
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（更新されたタスク）
+   */
+  async changeStatus(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const taskId = c.req.param('id');
+    const input = await c.req.json();
+
+    const task = await this.changeTaskStatusUseCase.execute({
+      userId,
+      taskId,
+      status: input.status,
+    });
 
     return c.json<SuccessResponseSingle>(
       {
