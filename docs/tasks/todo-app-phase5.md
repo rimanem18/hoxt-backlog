@@ -102,7 +102,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
 
 ### TASK-1323: errorMiddleware実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1322
@@ -152,8 +152,8 @@ export const errorMiddleware = async (c: Context, next: Next) => {
 
 #### 完了条件
 
-- [ ] errorMiddlewareが実装される
-- [ ] テストカバレッジ100%
+- [x] errorMiddlewareが実装される
+- [x] テストカバレッジ100%
 
 ---
 
