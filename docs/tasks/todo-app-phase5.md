@@ -300,7 +300,7 @@ async changeStatus(c: Context) {
 
 ### TASK-1326: taskRoutes統合・テスト
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1325
@@ -349,10 +349,10 @@ taskRoutes.patch('/tasks/:id/status', (c) => controller.changeStatus(c));
 
 #### 完了条件
 
-- [ ] taskRoutesが実装される
-- [ ] 統合テストが通る
-- [ ] Swagger UIでAPIドキュメント確認
-- [ ] すべてのエンドポイントが動作する
+- [x] taskRoutesが実装される
+- [x] 統合テストが通る
+- [x] Swagger UIでAPIドキュメント確認
+- [x] すべてのエンドポイントが動作する
 
 #### 参照
 
