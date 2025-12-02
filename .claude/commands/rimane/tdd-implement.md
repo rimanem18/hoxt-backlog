@@ -27,7 +27,4 @@ description: tumiki:tdd-requirements で生成された要件に従って TDD �
 
 上記は `/rimane:lite-implement` を実施することで実装してください。
 
-## 実行後
-
-1. すべての実装が完了したら、 `@docs/tasks/{feature_name}-phase*.md` を探します。
-2. 上記ファイル内の適切なフェーズの、完了した範囲のチェックボックスを埋めて完了範囲を追跡可能にしてください。
+4. すべての実装が完了したら、 `@docs/tasks/{feature_name}-phase*.md` を探します。ファイル内の適切なフェーズの、完了した範囲のチェックボックスを埋めて完了範囲を追跡可能にしてください。（`TodoWrite` にふくめて忘れないようにしてください）
