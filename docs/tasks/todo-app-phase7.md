@@ -437,13 +437,12 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({ task, onClose }) =
 
 ```typescript
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setPriorityFilter, setStatusFilter } from '../store/taskSlice';
-import type { RootState } from '@/store';
 
 export const TaskFilter: React.FC = () => {
-  const dispatch = useDispatch();
-  const filters = useSelector((state: RootState) => state.task.filters);
+  const dispatch = useAppDispatch();
+  const filters = useAppSelector((state) => state.task.filters);
 
   return (
     <div className="flex gap-4 mb-4">
@@ -513,13 +512,12 @@ export const TaskFilter: React.FC = () => {
 
 ```typescript
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setSortBy } from '../store/taskSlice';
-import type { RootState } from '@/store';
 
 export const TaskSort: React.FC = () => {
-  const dispatch = useDispatch();
-  const sort = useSelector((state: RootState) => state.task.sort);
+  const dispatch = useAppDispatch();
+  const sort = useAppSelector((state) => state.task.sort);
 
   return (
     <div>

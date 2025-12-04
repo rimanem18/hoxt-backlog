@@ -268,13 +268,12 @@ export const setAuthToken = (token: string) => {
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/store/hooks';
 import { apiClient } from '@/lib/api';
-import type { RootState } from '@/store';
 
 export const useTasks = () => {
-  const filters = useSelector((state: RootState) => state.task.filters);
-  const sort = useSelector((state: RootState) => state.task.sort);
+  const filters = useAppSelector((state) => state.task.filters);
+  const sort = useAppSelector((state) => state.task.sort);
 
   return useQuery({
     queryKey: ['tasks', filters, sort],
