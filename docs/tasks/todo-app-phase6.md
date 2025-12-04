@@ -41,7 +41,7 @@ TanStack Queryでサーバー状態を管理するための設定を実装。
 
 ### TASK-1327: Redux Store設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1326
@@ -127,9 +127,9 @@ export type AppDispatch = typeof store.dispatch;
 
 #### 完了条件
 
-- [ ] Redux Storeが設定される
-- [ ] taskSliceが実装される
-- [ ] テストカバレッジ100%
+- [x] Redux Storeが設定される
+- [x] taskSliceが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -268,13 +268,12 @@ export const setAuthToken = (token: string) => {
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/store/hooks';
 import { apiClient } from '@/lib/api';
-import type { RootState } from '@/store';
 
 export const useTasks = () => {
-  const filters = useSelector((state: RootState) => state.task.filters);
-  const sort = useSelector((state: RootState) => state.task.sort);
+  const filters = useAppSelector((state) => state.task.filters);
+  const sort = useAppSelector((state) => state.task.sort);
 
   return useQuery({
     queryKey: ['tasks', filters, sort],
@@ -384,9 +383,9 @@ export const useTaskMutations = () => {
 
 ### Redux
 
-- [ ] Redux Storeが設定される
-- [ ] taskSliceが実装される
-- [ ] フィルタ・ソート状態管理が動作する
+- [x] Redux Storeが設定される
+- [x] taskSliceが実装される
+- [x] フィルタ・ソート状態管理が動作する
 
 ### TanStack Query
 

@@ -365,30 +365,30 @@ taskRoutes.patch('/tasks/:id/status', (c) => controller.changeStatus(c));
 
 ### ミドルウェア
 
-- [ ] authMiddleware実装完了
-- [ ] errorMiddleware実装完了
-- [ ] JWT認証が動作する
-- [ ] エラーハンドリングが動作する
+- [x] authMiddleware実装完了
+- [x] errorMiddleware実装完了
+- [x] JWT認証が動作する
+- [x] エラーハンドリングが動作する
 
 ### コントローラ
 
-- [ ] TaskController実装完了
-- [ ] 6つのエンドポイントが実装される
-- [ ] すべてのエンドポイントが動作する
+- [x] TaskController実装完了
+- [x] 6つのエンドポイントが実装される
+- [x] すべてのエンドポイントが動作する
 
 ### ルーティング
 
-- [ ] taskRoutes統合完了
-- [ ] Swagger UIでドキュメント確認
-- [ ] 統合テストが通る
+- [x] taskRoutes統合完了
+- [x] Swagger UIでドキュメント確認
+- [x] 統合テストが通る
 
 ### テスト
 
-- [ ] すべてのユニットテストが通る
-- [ ] すべての統合テストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] すべてのユニットテストが通る
+- [x] すべての統合テストが通る
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 

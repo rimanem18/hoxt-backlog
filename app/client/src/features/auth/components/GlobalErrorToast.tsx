@@ -6,16 +6,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { clearError } from '@/features/auth/store/errorSlice';
-import type { RootState } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
  * グローバルエラー表示コンポーネント
  * エラーメッセージの視覚的表示とインタラクションを提供
  */
 export function GlobalErrorToast() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   // 再試行ボタンのローディング状態管理
   const [isRetrying, setIsRetrying] = useState(false);
   // ブラウザAPIによるネットワーク状態監視
@@ -26,9 +25,7 @@ export function GlobalErrorToast() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Redux storeからエラー状態を取得
-  const { isVisible, message, type } = useSelector(
-    (state: RootState) => state.error,
-  );
+  const { isVisible, message, type } = useAppSelector((state) => state.error);
 
   // ブラウザAPIを活用したネットワーク状態監視
   useEffect(() => {

@@ -12,10 +12,10 @@
 import Image from 'next/image';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
 import { logout } from '@/features/auth/store/authSlice';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/packages/shared-schemas/src/auth';
+import { useAppDispatch } from '@/store/hooks';
 
 /**
  * UserProfileコンポーネントのProps型定義
@@ -32,7 +32,7 @@ interface UserProfileProps {
  * @returns {React.ReactNode} ユーザープロフィール表示要素
  */
 export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   /**
    * 【パフォーマンス最適化】: ログアウト処理のメモ化
