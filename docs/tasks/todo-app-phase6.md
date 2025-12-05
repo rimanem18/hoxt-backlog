@@ -140,7 +140,7 @@ export type AppDispatch = typeof store.dispatch;
 
 ### TASK-1328: TanStack Query設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1327
@@ -195,9 +195,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 #### 完了条件
 
-- [ ] TanStack Queryが設定される
-- [ ] Providersコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TanStack Queryが設定される
+- [x] Providersコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -389,8 +389,8 @@ export const useTaskMutations = () => {
 
 ### TanStack Query
 
-- [ ] QueryClientが設定される
-- [ ] Providersコンポーネントが実装される
+- [x] QueryClientが設定される
+- [x] Providersコンポーネントが実装される
 
 ### API Client
 
