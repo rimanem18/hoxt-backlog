@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, expect, type Mock, mock, test } from 'bun:test';
-import { apiClient, createApiClient } from '../api';
+import {
+  apiClient,
+  clearAuthToken,
+  createApiClient,
+  setAuthToken,
+} from '../api';
 import { getApiBaseUrl } from '../env';
 
 // テスト用のベースURL（環境変数から取得、/apiサフィックス付き）
@@ -527,4 +532,44 @@ test('UUID形式の境界値が正しく処理される', async () => {
   // 最大UUIDがリクエストURLに正しく含まれることを検証
   const maxRequest = mockFetch.mock.calls[1][0];
   expect(maxRequest.url).toContain(maxUUID);
+});
+
+test('setAuthToken関数で認証トークンを動的に設定できる', async () => {
+  // Given: 認証トークンを準備
+  const authToken = 'dynamic-auth-token-xyz';
+
+  // When: setAuthTokenを呼び出してトークンを設定
+  const result = setAuthToken(authToken);
+
+  // Then: エラーなく設定が完了する
+  expect(result).toBeUndefined();
+});
+
+test('setAuthTokenに空文字列を渡すとエラーが発生する', () => {
+  // Given: 空文字列のトークン
+  const emptyToken = '';
+
+  // When & Then: setAuthTokenを呼び出すとエラーが発生する
+  expect(() => setAuthToken(emptyToken)).toThrow('Token must not be empty');
+});
+
+test('setAuthTokenに空白文字のみのトークンを渡すとエラーが発生する', () => {
+  // Given: 空白文字のみのトークン
+  const whitespaceToken = '   ';
+
+  // When & Then: setAuthTokenを呼び出すとエラーが発生する
+  expect(() => setAuthToken(whitespaceToken)).toThrow(
+    'Token must not be empty',
+  );
+});
+
+test('clearAuthToken後は認証トークンがクリアされる', () => {
+  // Given: 事前に認証トークンを設定
+  setAuthToken('initial-token-123');
+
+  // When: clearAuthTokenを呼び出す
+  const result = clearAuthToken();
+
+  // Then: エラーなくクリアが完了する
+  expect(result).toBeUndefined();
 });
