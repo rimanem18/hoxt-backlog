@@ -14,9 +14,6 @@ import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { validateClientEnv } from '@/shared/utils/validateClientEnv';
 import { store } from '@/store';
 
-// Provider初期化時に環境変数を検証
-validateClientEnv();
-
 type ProviderProps = {
   children: React.ReactNode;
 };
@@ -27,9 +24,13 @@ type ProviderProps = {
  * 起動時に認証状態を検証し、ストアと同期する
  */
 export default function Provider({ children }: ProviderProps) {
-  // コンポーネントのライフサイクル内でQueryClientを1回だけ生成
+  // コンポーネントのライフサイクル内で QueryClient を1回だけ生成
   // useStateの初期化関数を使用して再レンダリング時もインスタンスを保持
-  const [queryClient] = useState(() => createQueryClient());
+  const [queryClient] = useState(() => {
+    // Provider初期化時に環境変数を検証（デフォルト値使用）
+    validateClientEnv({});
+    return createQueryClient();
+  });
 
   // アプリケーション初回読み込み時に認証状態を検証・復元
   useEffect(() => {

@@ -22,10 +22,6 @@ mock.module('@/shared/utils/authValidation', () => ({
   validateStoredAuth: mock(() => ({ isValid: false, reason: 'missing' })),
 }));
 
-mock.module('@/shared/utils/validateClientEnv', () => ({
-  validateClientEnv: mock(() => {}),
-}));
-
 mock.module('@/features/auth/components/GlobalErrorToast', () => ({
   default: function GlobalErrorToast() {
     return <div data-testid="global-error-toast" />;
