@@ -8,12 +8,21 @@
 ## 技術スタック
 
 ### フロントエンド (client)
-- **フレームワーク**: Next.js 15.4.6 + React 19.1.0
-- **言語**: TypeScript 5
+- **フレームワーク**: Next.js 16.0.7 + React 19.2.1
+- **言語**: TypeScript 5.9.3
 - **ランタイム**: Bun 1.2
-- **スタイリング**: Tailwind CSS v4
-- **状態管理**: @tanstack/react-query 5.84.2
-- **リンター/フォーマッター**: Biome 2.1.4
+- **スタイリング**: Tailwind CSS v4.1.17
+- **状態管理**: 
+  - Redux (@reduxjs/toolkit 2.11.0)
+  - TanStack Query (@tanstack/react-query 5.90.12)
+- **認証**: @supabase/supabase-js 2.86.2
+- **API通信**: openapi-fetch 0.15.0
+- **テスト**: 
+  - Bun標準テスト
+  - @testing-library/react 16.3.0
+  - Playwright 1.57.0
+  - jsdom 27.2.0
+- **リンター/フォーマッター**: Biome 2.3.8
 
 ### バックエンド (server)
 - **フレームワーク**: Hono 4.9.0
