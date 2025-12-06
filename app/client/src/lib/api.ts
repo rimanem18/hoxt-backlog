@@ -38,3 +38,68 @@ export function createApiClient(
  * 認証トークンは後で動的に設定する想定
  */
 export const apiClient = createApiClient(getApiBaseUrl());
+
+/**
+ * 現在の認証トークン（モジュールスコープで保持）
+ */
+let currentAuthToken: string | null = null;
+
+/**
+ * ミドルウェアが登録済みかを示すフラグ
+ */
+let isMiddlewareRegistered = false;
+
+/**
+ * JWT認証トークンを設定
+ *
+ * すべてのリクエストにAuthorizationヘッダーを追加する
+ * ミドルウェアは初回のみ登録され、トークンはモジュールスコープで管理される
+ *
+ * @param token - JWT認証トークン（空文字列不可）
+ * @throws {Error} トークンが空文字列の場合
+ *
+ * @example
+ * ```typescript
+ * setAuthToken('eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...');
+ * // 以降のすべてのリクエストに Authorization: Bearer {token} が付与される
+ *
+ * // トークン更新時も同じ関数を使用
+ * setAuthToken('new-token-xyz');
+ * ```
+ */
+export function setAuthToken(token: string): void {
+  if (token.trim() === '') {
+    throw new Error('Token must not be empty');
+  }
+
+  currentAuthToken = token;
+
+  if (!isMiddlewareRegistered) {
+    apiClient.use({
+      onRequest: async ({ request }) => {
+        if (currentAuthToken) {
+          request.headers.set('Authorization', `Bearer ${currentAuthToken}`);
+        }
+        return request;
+      },
+    });
+    isMiddlewareRegistered = true;
+  }
+}
+
+/**
+ * 認証トークンをクリア
+ *
+ * 保持している認証トークンを削除する
+ * ミドルウェアは登録されたまま残るが、トークンがnullのため
+ * Authorizationヘッダーは追加されなくなる
+ *
+ * @example
+ * ```typescript
+ * clearAuthToken();
+ * // 以降のリクエストにはAuthorizationヘッダーが付与されなくなる
+ * ```
+ */
+export function clearAuthToken(): void {
+  currentAuthToken = null;
+}

@@ -207,7 +207,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ### TASK-1329: API Client設定
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1328
@@ -244,9 +244,9 @@ export const setAuthToken = (token: string) => {
 
 #### 完了条件
 
-- [ ] API Clientが設定される
-- [ ] 認証ヘッダー設定が実装される
-- [ ] テストカバレッジ100%
+- [x] API Clientが設定される
+- [x] 認証ヘッダー設定が実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -394,8 +394,8 @@ export const useTaskMutations = () => {
 
 ### API Client
 
-- [ ] apiClientが設定される
-- [ ] 認証ヘッダー設定が実装される
+- [x] apiClientが設定される
+- [x] 認証ヘッダー設定が実装される
 
 ### カスタムフック
 
