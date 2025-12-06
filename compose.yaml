@@ -67,7 +67,7 @@ services:
     restart: unless-stopped
 
   e2e:
-    image: mcr.microsoft.com/playwright:v1.55.0-jammy
+    image: mcr.microsoft.com/playwright:v1.57.0-jammy
     volumes:
       - ./app/client:/workspace
     working_dir: /workspace
