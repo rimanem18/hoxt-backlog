@@ -44,6 +44,8 @@ docker compose exec e2e npx playwright test
 - **禁止**: `var` の使用
 - **禁止**: `JSX.Element` 型の返却
   - `React.ReactNode` 型で代用
+- **禁止**: `forEach` での副作用関数（戻り値のある関数）の使用
+  - `clearTimeout`, `clearInterval` などは `for-of` ループで代用
 
 # テストガイドライン
 

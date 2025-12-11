@@ -27,6 +27,10 @@
       "recommended": true,
       "a11y": {
         "useSemanticElements": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "useIterableCallbackReturn": "error"
       }
     }
   },

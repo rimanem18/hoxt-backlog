@@ -238,9 +238,9 @@ export class APIFallbackHandler {
     }
 
     // 保留中のリトライタイマーを全て停止
-    this.retryTimers.forEach((timerId) => {
+    for (const timerId of this.retryTimers) {
       clearTimeout(timerId);
-    });
+    }
     this.retryTimers.clear();
 
     console.log('オンラインモードに復帰しました');
