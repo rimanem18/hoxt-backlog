@@ -139,7 +139,9 @@ export class NetworkErrorHandler {
     this.currentRetryCount = 0;
 
     // スケジュール済みリトライを全てキャンセル
-    this.retryTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    for (const timeoutId of this.retryTimeouts) {
+      clearTimeout(timeoutId);
+    }
     this.retryTimeouts.clear();
   }
 

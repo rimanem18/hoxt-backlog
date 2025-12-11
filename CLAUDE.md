@@ -77,9 +77,13 @@ docker compose exec e2e npx playwright test
   - `z.uuid()`,`z.email()`, `z.iso.datetime()` で代用
 - **禁止**: `any` 型の使用
   - ただし、型が取得不能な外部ライブラリや JSON パースなどの場合に限り、理由コメントを添えて明示的に使用可
+  - テストコードで意図的に不正な値を渡す場合は `as unknown as TargetType` を使用（`as any` は禁止）
 - **禁止**: `var` の使用
 - **禁止**: `JSX.Element` 型の返却
   - `React.ReactNode` 型で代用
+- **禁止**: `forEach` での副作用関数（戻り値のある関数）の使用
+  - `clearTimeout`, `clearInterval` などは `for-of` ループで代用
+  - 理由: Biomeの `useIterableCallbackReturn` ルールに違反し、意図しない戻り値が発生する可能性がある
 
 # バックエンド開発ガイドライン
 
@@ -122,8 +126,12 @@ docker compose exec server bun run dev
   - `@ts-expect-error` ディレクティブで代用
 - **禁止**: `any` 型の使用
   - ただし、型が取得不能な外部ライブラリや JSON パースなどの場合に限り、理由コメントを添えて明示的に使用可
+  - テストコードで意図的に不正な値を渡す場合は `as unknown as TargetType` を使用（`as any` は禁止）
 - **禁止**: `var` の使用
 - **禁止**: Supabase JWT Secret 認証の使用（現在非推奨、 JWKS 認証で代用）
+- **禁止**: `forEach` での副作用関数（戻り値のある関数）の使用
+  - `clearTimeout`, `clearInterval` などは `for-of` ループで代用
+  - 理由: Biomeの `useIterableCallbackReturn` ルールに違反し、意図しない戻り値が発生する可能性がある
 
 # スキーマ駆動開発ガイドライン
 
