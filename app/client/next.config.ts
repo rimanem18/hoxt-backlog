@@ -55,15 +55,10 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7日間キャッシュ（プロフィール画像は変更頻度が低い）
   },
 
-  // 開発環境設定: TypeScriptとReactの厳格モード
+  // 開発環境設定: TypeScriptの厳格モード
   typescript: {
     // 本番ビルド時に型エラーでビルド中断（品質保証）
     ignoreBuildErrors: false,
-  },
-  
-  eslint: {
-    // 本番ビルド時にESLintエラーでビルド中断（品質保証）
-    ignoreDuringBuilds: false,
   },
 
   // 実験的機能: Next.js 15の新機能を有効化
