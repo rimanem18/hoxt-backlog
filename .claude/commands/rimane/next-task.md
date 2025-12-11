@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git switch:*), Bash(git pull:*), Bash(git fetch:*),
+allowed-tools: Bash(git switch:*), Bash(git pull:*), Bash(git fetch:*)
 description: 次のタスクに切り替えるための準備をします。
 ---
 
