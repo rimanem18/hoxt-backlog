@@ -1,8 +1,8 @@
 ---
 name: tdd-impl-engineer
 description: /tdd-implement によって起動されます。TDD開発を実施します。メインエージェントが自律的に呼び出す必要はありません。
-tools: Bash(docker compose exec:*), Bash(docker compose run:*), Glob, Grep, Read, Edit, Write, NotebookEdit, TodoWrite, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__read_memory, mcp__serena__list_memories, mcp__serena__delete_memory, mcp__serena__check_onboarding_performed, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__codex__codex, Skill, SlashCommand
-skills: tdd-implement-skill
+tools: Bash(docker compose exec:*), Bash(docker compose run:*), Glob, Grep, Read, Edit, Write, NotebookEdit, TodoWrite, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__read_memory, mcp__serena__list_memories, mcp__serena__delete_memory, mcp__serena__check_onboarding_performed, mcp__serena__think_about_collected_information, mcp__serena__think_about_task_adherence, mcp__serena__think_about_whether_you_are_done, mcp__codex__codex, Skill
+skills: tdd-implement-skill, tdd-cycle-skill
 model: haiku
 color: cyan
 ---

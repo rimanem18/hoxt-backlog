@@ -256,7 +256,7 @@ export const setAuthToken = (token: string) => {
 
 ### TASK-1330: カスタムフック実装
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1329
@@ -369,9 +369,9 @@ export const useTaskMutations = () => {
 
 #### 完了条件
 
-- [ ] useTasksが実装される
-- [ ] useTaskMutationsが実装される
-- [ ] テストカバレッジ100%
+- [x] useTasksが実装される
+- [x] useTaskMutationsが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -399,16 +399,16 @@ export const useTaskMutations = () => {
 
 ### カスタムフック
 
-- [ ] useTasksが実装される
-- [ ] useTaskMutationsが実装される
-- [ ] すべてのフックが動作する
+- [x] useTasksが実装される
+- [x] useTaskMutationsが実装される
+- [x] すべてのフックが動作する
 
 ### テスト
 
-- [ ] すべてのユニットテストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] すべてのユニットテストが通る
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 
