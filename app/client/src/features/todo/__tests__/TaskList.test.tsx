@@ -72,7 +72,7 @@ describe('TaskList', () => {
     };
   });
 
-  // describeブロック内でmock.moduleを実行
+  // describe単位でmock.moduleを固定（新ガイドライン準拠）
   mock.module('@/features/todo/hooks/useTasks', () => ({
     useTasks: mockUseTasks,
   }));
@@ -106,7 +106,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 各タスクのタイトルが表示される
@@ -128,7 +128,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: ローディングテキストが表示される
@@ -150,7 +150,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: エラーテキストが表示される
@@ -171,7 +171,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 空状態テキストが表示される
@@ -192,7 +192,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 空状態テキストが表示される
@@ -218,7 +218,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: テキストコンテナに適切なクラスが設定される
@@ -243,7 +243,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: エラーコンテナに適切なクラスが設定される
@@ -266,7 +266,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: 空状態コンテナに適切なクラスが設定される
@@ -289,7 +289,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: タスク一覧コンテナにspace-y-0クラスが設定される
@@ -311,7 +311,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: aria-live="polite"が設定される
@@ -336,7 +336,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 削除ボタンが表示される
@@ -358,7 +358,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: ステータス変更セレクトが表示される
@@ -380,7 +380,7 @@ describe('TaskList', () => {
       }));
 
       // When: TaskListをインポートしてレンダリング
-      const { TaskList } = await import('../components/TaskList');
+      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 編集ボタンが表示される

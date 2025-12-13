@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import type { TaskStatus } from '@/packages/shared-schemas/src/tasks';
 import { useTaskMutations } from '../hooks/useTaskMutations';
 import { useTasks } from '../hooks/useTasks';
-import { TaskItem } from './TaskItem';
+import TaskItem from './TaskItem';
 
 /**
  * TaskListコンポーネント
@@ -12,7 +12,7 @@ import { TaskItem } from './TaskItem';
  * useTasks()でタスク一覧を取得し、useTaskMutations()でタスク操作を実行する。
  * ローディング、エラー、空状態の処理を行い、各タスクをTaskItemとして表示する。
  */
-export const TaskList: React.FC = () => {
+function TaskList(): React.ReactNode {
   const { data: tasks, isLoading, error } = useTasks();
   const { deleteTask, changeStatus } = useTaskMutations();
 
@@ -77,6 +77,6 @@ export const TaskList: React.FC = () => {
       ))}
     </div>
   );
-};
+}
 
-TaskList.displayName = 'TaskList';
+export default TaskList;
