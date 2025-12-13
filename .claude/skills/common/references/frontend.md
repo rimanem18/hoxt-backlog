@@ -33,6 +33,7 @@ docker compose exec e2e npx playwright test
 
 - **必須**: 実装前に `libs`, `utils`, `shared`, `helper` などのディレクトリが存在しないか確認し、車輪の再発明を防ぐ
 - **必須**: ファイルの末尾には改行を入れて空行を作る
+- **必須**: 親コンポーネントから受け取った pros を使用する際は、`props.hoge`, `props.fuga` のように、 props であることが明示的になるように使用
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
 - **非推奨**: `let` の使用
@@ -46,6 +47,23 @@ docker compose exec e2e npx playwright test
   - `React.ReactNode` 型で代用
 - **禁止**: `forEach` での副作用関数（戻り値のある関数）の使用
   - `clearTimeout`, `clearInterval` などは `for-of` ループで代用
+- **禁止**: Func.displayName の使用
+  - そもそも無名関数コンポーネントにしない。
+
+### コンポーネント定義例:
+```tsx
+interface TaskItemProps {
+  ...
+}
+
+function TaskItem = (props: TaskItemProps) => {
+  return (
+    ...
+  )
+}
+
+export React.memo(TaskItem)
+```
 
 # テストガイドライン
 
@@ -72,6 +90,7 @@ docker compose exec client bun test
 - **推奨**: 依存注入を優先（DI可能な設計、差し替えは`mock()` / `spyOn()`）
 - **推奨**: カスタムマッチャー活用（共通マッチャーは`__tests__/helpers`に配置）
 - **推奨**: DIパターンでのモック生成（テストごとに新しいモックを生成）
+- **非推奨**: 非同期 import（原則、トップレベルの同期 import）
 - **非推奨**: モックの乱用（実装との乖離を生む過度なスタブは避け、E2E/統合テストとのバランスを考慮）
 - **非推奨**: `mock.module()`の使用（DI不可能な外部依存のみに限定）
 - **非推奨**: `data-testid`の使用（ユーザー中心のクエリを優先）
