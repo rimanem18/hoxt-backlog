@@ -1,5 +1,5 @@
 ---
-description: Claude が実装し、Codex がレビューする形で協働で実装します。
+description: TDD か DIRECT かどちらかで実装します
 skills: tdd-cycle-skill
 ---
 
