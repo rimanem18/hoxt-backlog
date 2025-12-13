@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Task } from '@/packages/shared-schemas/src/tasks';
-import { TaskItem } from '../components/TaskItem';
+import TaskItem from '../components/TaskItem';
 
 // テスト用のモックタスクデータ
 const createMockTask = (overrides?: Partial<Task>): Task => ({

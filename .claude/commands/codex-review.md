@@ -7,10 +7,11 @@ description: 要件定義や技術設計をもとにしたコードレビュー
 - レビューしてもらうべきファイルを確認します。明確でない場合は、ユーザに確認してください。
 - 必要なガイドラインがなにか検討します。 Read ツールで読み込む必要はありません。ファイルパスを渡してください。
 
-- [バックエンド開発ガイドライン](../common/references/backend.md)
-- [フロントエンド開発ガイドライン](../common/references/frontend.md)
-- [スキーマ駆動開発ガイドライン](../common/references/schema-db.md)
-- [E2Eテストガイドライン](../common/references/e2e.md)
+- **必須**: `CLAUDE.md`
+- [バックエンド開発ガイドライン](../skills/common/references/backend.md)
+- [フロントエンド開発ガイドライン](../skills/common/references/frontend.md)
+- [スキーマ駆動開発ガイドライン](../skills/common/references/schema-db.md)
+- [E2Eテストガイドライン](../skills/common/references/e2e.md)
 
 ## 実行内容
 
