@@ -135,7 +135,7 @@ beforeAll(() => {
 - **必須**: テスト用依存注入はContext APIを使用（`mock.module()`は原則禁止）
   - Custom Hooksの注入は`XxxServicesProvider`パターンで実装
   - 既存の`ApiClientProvider`パターンとの一貫性を保つ
-  - Context経由で取得した変数名は`use`で始めること（例: `useTasksHook`）
+  - Context経由で取得した変数名は`use`で始めること
 - **推奨**: テスト終了時のクリーンアップ（`mock.restore()`と`mock.clearAllMocks()`）
 - **推奨**: 依存注入を優先（DI可能な設計、差し替えは`mock()` / `spyOn()`）
 - **推奨**: カスタムマッチャー活用（共通マッチャーは`__tests__/helpers`に配置）
@@ -465,12 +465,12 @@ import { useTaskServices } from '../lib/TaskServicesContext';
 function TaskList() {
   // 重要: 変数名を`use`で始めることでESLintの静的解析を維持
   const {
-    useTasks: useTasksHook,
-    useTaskMutations: useTaskMutationsHook
+    useTasks,
+    useTaskMutations
   } = useTaskServices();
 
-  const { data, isLoading, error } = useTasksHook();
-  const { deleteTask, changeStatus } = useTaskMutationsHook();
+  const { data, isLoading, error } = useTasks();
+  const { deleteTask, changeStatus } = useTaskMutations();
 
   // ...
 }
@@ -568,8 +568,8 @@ describe('TaskList', () => {
 1. **変数名を`use`で始める**
    ```typescript
    // ✅ 正しい
-   const { useTasks: useTasksHook } = useTaskServices();
-   const data = useTasksHook();
+   const { useTasks } = useTaskServices();
+   const data = useTasks();
    ```
 
 2. **デフォルト値を提供する**
