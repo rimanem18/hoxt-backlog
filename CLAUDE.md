@@ -325,9 +325,9 @@ app/client/src/
 
 ### ルール詳細
 
-- **必須**: 各feature配下に`__tests__`ディレクトリを作成
+- **必須**: 各 feature 直下に`__tests__`ディレクトリを作成
 - **UI/UX別テスト**: UIに特化したテストは`__tests__/ui-ux/`にサブディレクトリ化
-- **hooks/utils**: feature内の`__tests__`に集約(ファイル隣接ではなく)
+- **hooks/utils**: feature 直下の`__tests__`に集約(ファイル隣接ではなく)
 - **lib/shared**: 同様に`__tests__`ディレクトリに集約
 
 ## shared-schemas

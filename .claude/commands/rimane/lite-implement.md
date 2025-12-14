@@ -1,5 +1,6 @@
 ---
-description: Claude が実装し、Codex がレビューする形で協働で実装します。
+description: TDD か DIRECT かどちらかで実装します
+skills: tdd-cycle-skill
 ---
 
 与えられた指示を完了してください。
@@ -17,6 +18,8 @@ description: Claude が実装し、Codex がレビューする形で協働で実
 
 ## 実装フェーズ
 
-tdd-cycle-skill に従って実装します。
+tdd-cycle-skill を Skill ツールで読み込んで、このスキルに従って実装します。
+
+`/codex-review` を実施します。
 
 #think

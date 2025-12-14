@@ -154,7 +154,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
 ### TASK-1332: TaskListコンポーネント
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1331
@@ -212,8 +212,8 @@ export const TaskList: React.FC = () => {
 
 #### 完了条件
 
-- [ ] TaskListコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskListコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
