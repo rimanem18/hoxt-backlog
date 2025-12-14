@@ -1,10 +1,11 @@
+'use client';
+
 /**
  * Taskサービスの依存注入用Context
  *
  * テスト時にCustom Hooksをモック化するため、Context APIを使用してDIを実現。
  * 既存のApiClientProviderパターンと統一した設計。
  */
-'use client';
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { useTaskMutations } from '../hooks/useTaskMutations';
@@ -83,9 +84,9 @@ export function TaskServicesProvider({
  * @example
  * ```tsx
  * function TaskList() {
- *   const { useTasks: useTasksHook, useTaskMutations: useTaskMutationsHook } = useTaskServices();
- *   const { data } = useTasksHook();
- *   const { deleteTask } = useTaskMutationsHook();
+ *   const { useTasks, useTaskMutations } = useTaskServices();
+ *   const { data } = useTasks();
+ *   const { deleteTask } = useTaskMutations();
  * }
  * ```
  */
