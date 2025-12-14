@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { Provider } from 'react-redux';
 import taskReducer from '@/features/todo/store/taskSlice';
 import type { Task } from '@/packages/shared-schemas/src/tasks';
+import TaskList from '../components/TaskList';
+import { TaskServicesProvider } from '../lib/TaskServicesContext';
 
 // テスト用のモックタスク
 const mockTasks: Task[] = [
@@ -31,55 +33,49 @@ const mockTasks: Task[] = [
   },
 ];
 
-// テスト用のコンポーネントラッパー
-function renderWithProviders(component: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  const store = configureStore({
-    reducer: {
-      task: taskReducer,
-    },
-  });
-
-  return render(
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        {component}
-      </QueryClientProvider>
-    </Provider>,
-  );
-}
-
 describe('TaskList', () => {
-  // モックフック
-  const mockUseTasks = mock(function useTasks() {
-    return {
-      data: [],
-      isLoading: false,
-      error: null,
-    };
-  });
-
-  const mockUseTaskMutations = mock(function useTaskMutations() {
-    return {
-      deleteTask: { mutate: mock(() => {}) },
-      changeStatus: { mutate: mock(() => {}) },
-    };
-  });
-
-  // describe単位でmock.moduleを固定（新ガイドライン準拠）
-  mock.module('@/features/todo/hooks/useTasks', () => ({
-    useTasks: mockUseTasks,
+  // モックサービスを定義
+  const mockUseTasks = mock(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
   }));
 
-  mock.module('@/features/todo/hooks/useTaskMutations', () => ({
-    useTaskMutations: mockUseTaskMutations,
+  const mockUseTaskMutations = mock(() => ({
+    deleteTask: { mutate: mock(() => {}) },
+    changeStatus: { mutate: mock(() => {}) },
   }));
+
+  // テスト用のコンポーネントラッパー
+  function renderWithProviders(component: React.ReactElement) {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const store = configureStore({
+      reducer: {
+        task: taskReducer,
+      },
+    });
+
+    return render(
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <TaskServicesProvider
+            services={{
+              useTasks: mockUseTasks,
+              useTaskMutations: mockUseTaskMutations,
+            }}
+          >
+            {component}
+          </TaskServicesProvider>
+        </QueryClientProvider>
+      </Provider>,
+    );
+  }
 
   beforeEach(() => {
     // モックをリセット
@@ -87,9 +83,16 @@ describe('TaskList', () => {
     mockUseTaskMutations.mockClear?.();
   });
 
+  afterEach(() => {
+    // DOMとモックのクリーンアップ
+    cleanup();
+    mock.restore();
+    mock.clearAllMocks();
+  });
+
   // 正常系テスト
   describe('正常系', () => {
-    test('タスク一覧が表示される', async () => {
+    test('タスク一覧が表示される', () => {
       // Given: タスク一覧を返すモック
       const mockDeleteMutate = mock(() => {});
       const mockChangeStatusMutate = mock(() => {});
@@ -105,8 +108,7 @@ describe('TaskList', () => {
         changeStatus: { mutate: mockChangeStatusMutate },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
+      // When: TaskListをレンダリング
       renderWithProviders(<TaskList />);
 
       // Then: 各タスクのタイトルが表示される
@@ -114,7 +116,7 @@ describe('TaskList', () => {
       expect(screen.getByText('テスト2')).toBeTruthy();
     });
 
-    test('ローディング表示が正しく表示される', async () => {
+    test('ローディング表示が正しく表示される', () => {
       // Given: ローディング状態を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: undefined,
@@ -127,15 +129,13 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: ローディングテキストが表示される
       expect(screen.getByText('読み込み中...')).toBeTruthy();
     });
 
-    test('エラー表示が正しく表示される', async () => {
+    test('エラー表示が正しく表示される', () => {
       // Given: エラー状態を返すモック
       const mockError = new Error('API error');
       mockUseTasks.mockImplementation(() => ({
@@ -149,15 +149,13 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: エラーテキストが表示される
       expect(screen.getByText('エラーが発生しました')).toBeTruthy();
     });
 
-    test('空状態表示が正しく表示される', async () => {
+    test('空状態表示が正しく表示される', () => {
       // Given: 空配列を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: [],
@@ -170,15 +168,13 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 空状態テキストが表示される
       expect(screen.getByText('タスクがありません')).toBeTruthy();
     });
 
-    test('dataがundefinedの場合は空状態表示される', async () => {
+    test('dataがundefinedの場合は空状態表示される', () => {
       // Given: undefinedを返すモック
       mockUseTasks.mockImplementation(() => ({
         data: undefined,
@@ -191,8 +187,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 空状態テキストが表示される
@@ -204,7 +198,7 @@ describe('TaskList', () => {
 
   // UIスタイルテスト
   describe('UIスタイル', () => {
-    test('ローディング表示は中央配置される', async () => {
+    test('ローディング表示は中央配置される', () => {
       // Given: ローディング状態を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: undefined,
@@ -217,8 +211,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: テキストコンテナに適切なクラスが設定される
@@ -228,7 +220,7 @@ describe('TaskList', () => {
       expect(loadingDiv?.className).toMatch(/py-8/);
     });
 
-    test('エラー表示は中央配置・赤文字である', async () => {
+    test('エラー表示は中央配置・赤文字である', () => {
       // Given: エラー状態を返すモック
       const mockError = new Error('API error');
       mockUseTasks.mockImplementation(() => ({
@@ -242,8 +234,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: エラーコンテナに適切なクラスが設定される
@@ -252,7 +242,7 @@ describe('TaskList', () => {
       expect(errorDiv?.className).toMatch(/text-red-600/);
     });
 
-    test('空状態表示は中央配置・グレー文字である', async () => {
+    test('空状態表示は中央配置・グレー文字である', () => {
       // Given: 空配列を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: [],
@@ -265,8 +255,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: 空状態コンテナに適切なクラスが設定される
@@ -275,7 +263,7 @@ describe('TaskList', () => {
       expect(emptyDiv?.className).toMatch(/text-gray-500/);
     });
 
-    test('タスク一覧はspace-y-0で余白なし', async () => {
+    test('タスク一覧はspace-y-0で余白なし', () => {
       // Given: タスク一覧を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: mockTasks,
@@ -288,8 +276,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: タスク一覧コンテナにspace-y-0クラスが設定される
@@ -297,7 +283,7 @@ describe('TaskList', () => {
       expect(taskListDiv).toBeTruthy();
     });
 
-    test('aria-live属性がローディング状態に設定される', async () => {
+    test('aria-live属性がローディング状態に設定される', () => {
       // Given: ローディング状態を返すモック
       mockUseTasks.mockImplementation(() => ({
         data: undefined,
@@ -310,8 +296,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       const { container } = renderWithProviders(<TaskList />);
 
       // Then: aria-live="polite"が設定される
@@ -322,7 +306,7 @@ describe('TaskList', () => {
 
   // イベント系テスト
   describe('イベント処理', () => {
-    test('タスク削除ボタンが表示される', async () => {
+    test('タスク削除ボタンが表示される', () => {
       // Given: タスク一覧
       mockUseTasks.mockImplementation(() => ({
         data: mockTasks,
@@ -335,8 +319,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 削除ボタンが表示される
@@ -344,7 +326,7 @@ describe('TaskList', () => {
       expect(deleteButtons.length).toBeGreaterThanOrEqual(2);
     });
 
-    test('ステータス変更セレクトボックスが表示される', async () => {
+    test('ステータス変更セレクトボックスが表示される', () => {
       // Given: タスク一覧
       mockUseTasks.mockImplementation(() => ({
         data: mockTasks,
@@ -357,8 +339,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: ステータス変更セレクトが表示される
@@ -366,7 +346,7 @@ describe('TaskList', () => {
       expect(statusSelects.length).toBeGreaterThanOrEqual(2);
     });
 
-    test('編集ボタンが表示される', async () => {
+    test('編集ボタンが表示される', () => {
       // Given: タスク一覧
       mockUseTasks.mockImplementation(() => ({
         data: mockTasks,
@@ -379,8 +359,6 @@ describe('TaskList', () => {
         changeStatus: { mutate: mock(() => {}) },
       }));
 
-      // When: TaskListをインポートしてレンダリング
-      const TaskList = (await import('../components/TaskList')).default;
       renderWithProviders(<TaskList />);
 
       // Then: 編集ボタンが表示される

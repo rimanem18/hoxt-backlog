@@ -1,20 +1,24 @@
 import type React from 'react';
 import { useCallback } from 'react';
 import type { TaskStatus } from '@/packages/shared-schemas/src/tasks';
-import { useTaskMutations } from '../hooks/useTaskMutations';
-import { useTasks } from '../hooks/useTasks';
+import { useTaskServices } from '../lib/TaskServicesContext';
 import TaskItem from './TaskItem';
 
 /**
  * TaskListコンポーネント
  *
  * タスク一覧を表示するコンテナコンポーネント。
- * useTasks()でタスク一覧を取得し、useTaskMutations()でタスク操作を実行する。
+ * TaskServicesContext経由でhooksを取得し、タスク一覧の取得と操作を実行する。
  * ローディング、エラー、空状態の処理を行い、各タスクをTaskItemとして表示する。
  */
 function TaskList(): React.ReactNode {
-  const { data: tasks, isLoading, error } = useTasks();
-  const { deleteTask, changeStatus } = useTaskMutations();
+  // Context経由でhooksを取得（テスト時にモック注入可能）
+  // 注意: 変数名を`use`で始めることでESLintの静的解析を維持
+  const { useTasks: useTasksHook, useTaskMutations: useTaskMutationsHook } =
+    useTaskServices();
+
+  const { data: tasks, isLoading, error } = useTasksHook();
+  const { deleteTask, changeStatus } = useTaskMutationsHook();
 
   // タスク削除ハンドラをメモ化（TaskItemの再レンダリング回避）
   const handleDeleteTask = useCallback(
