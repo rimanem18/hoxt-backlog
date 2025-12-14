@@ -20,4 +20,6 @@ skills: tdd-cycle-skill
 
 tdd-cycle-skill を Skill ツールで読み込んで、このスキルに従って実装します。
 
+`/codex-review` を実施します。
+
 #think
