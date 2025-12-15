@@ -52,30 +52,8 @@ Playwrightを使用したE2Eテストを実装し、ユーザーシナリオ全�
 
 ファイル: `app/client/playwright.config.ts`
 
-```typescript
-import { defineConfig } from '@playwright/test';
 
-export default defineConfig({
-  testDir: './src/features/todo/__tests__/e2e',
-  timeout: 30000,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  use: {
-    baseURL: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
-});
-```
-
-ファイル: `app/client/src/features/todo/__tests__/e2e/helpers/auth.ts`
+ファイル: `app/client/e2e/todo/helpers/auth.ts`
 
 ```typescript
 import type { Page } from '@playwright/test';
@@ -115,7 +93,7 @@ export async function login(page: Page) {
 
 #### 実装詳細
 
-ファイル: `app/client/src/features/todo/__tests__/e2e/task-create-list.spec.ts`
+ファイル: `app/client/e2e/todo/task-create-list.spec.ts`
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -192,7 +170,7 @@ test.describe('タスク作成・一覧', () => {
 
 #### 実装詳細
 
-ファイル: `app/client/src/features/todo/__tests__/e2e/task-update-delete.spec.ts`
+ファイル: `app/client/e2e/todo/task-update-delete.spec.ts`
 
 ```typescript
 import { test, expect } from '@playwright/test';
