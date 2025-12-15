@@ -43,7 +43,6 @@ TDD 要件定義書を作成しました。ユーザーに確認を促してく�
 - `docs/implements/{要件名}/{task_id}/{feature_name}-requirements.md`
 ```
 
-
 # 留意事項
 
 **必須**: メインエージェントとは極めて最小限のレスポンスをする

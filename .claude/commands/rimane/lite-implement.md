@@ -23,3 +23,12 @@ tdd-cycle-skill を Skill ツールで読み込んで、このスキルに従っ
 `/codex-review` を実施します。
 
 #think
+
+## 参照情報
+必要に応じて参照してください。
+
+- [フロントエンド開発ガイドライン](../../skills/common/references/frontend.md)
+- [バックエンド開発ガイドライン](../../skills/common/references/backend.md)
+- [ドキュメント作成ガイドライン](../../skills/common/references/documents.md)
+- [E2Eテストガイドライン](../../skills/common/references/e2e.md)
+- [スキーマ駆動開発ガイドライン](../../skills/common/references/schema-db.md)

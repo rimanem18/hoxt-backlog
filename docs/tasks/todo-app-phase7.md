@@ -223,7 +223,7 @@ export const TaskList: React.FC = () => {
 
 ### TASK-1333: TaskCreateFormコンポーネント
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1332
@@ -233,75 +233,24 @@ export const TaskList: React.FC = () => {
 
 ファイル: `app/client/src/features/todo/components/TaskCreateForm.tsx`
 
-```typescript
-import React, { useState } from 'react';
-import { useTaskMutations } from '../hooks/useTaskMutations';
-
-export const TaskCreateForm: React.FC = () => {
-  const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
-  const { createTask } = useTaskMutations();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    createTask.mutate(
-      { title, priority },
-      {
-        onSuccess: () => {
-          setTitle('');
-          setPriority('medium');
-        },
-      }
-    );
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="mb-6">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="タスクを入力..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#710000]"
-          maxLength={100}
-        />
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as any)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#710000]"
-        >
-          <option value="high">高</option>
-          <option value="medium">中</option>
-          <option value="low">低</option>
-        </select>
-        <button
-          type="submit"
-          className="px-6 py-2 bg-[#710000] text-white rounded-lg hover:bg-[#5a0000] disabled:opacity-50"
-          disabled={!title.trim() || createTask.isPending}
-        >
-          追加
-        </button>
-      </div>
-    </form>
-  );
-};
-```
-
-テストケース:
-- 正常系: タスクが作成される
-- 正常系: フォームがリセットされる
-- 異常系: 空文字列で送信不可
-- イベント: タイトル入力
-- イベント: 優先度選択
-- イベント: フォーム送信
+テストケース（全12件、100%カバレッジ）:
+- TC-001: タスクが作成される
+- TC-002: フォームがリセットされる
+- TC-003: タイトル100文字が正常に送信される
+- TC-004: 空文字列または空白のみでボタンが無効化される
+- TC-005: 101文字入力が制限され、100文字で送信される
+- TC-006: タイトル入力ができる
+- TC-007: 優先度選択ができる
+- TC-008: Enterキーでフォーム送信できる
+- TC-009: 送信中はボタンが無効化される
+- TC-010: APIエラー時にエラーメッセージが表示される
+- TC-011: ネットワークエラー時にリトライボタンが表示される
+- TC-012: 再試行時は最新の入力値で送信される
 
 #### 完了条件
 
-- [ ] TaskCreateFormコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskCreateFormコンポーネントが実装される
+- [x] テストカバレッジ100%（12件すべてのテストが合格）
 
 #### 参照
 

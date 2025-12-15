@@ -13,12 +13,10 @@ import TaskItem from './TaskItem';
  */
 function TaskList(): React.ReactNode {
   // Context経由でhooksを取得（テスト時にモック注入可能）
-  // 注意: 変数名を`use`で始めることでESLintの静的解析を維持
-  const { useTasks: useTasksHook, useTaskMutations: useTaskMutationsHook } =
-    useTaskServices();
+  const { useTasks, useTaskMutations } = useTaskServices();
 
-  const { data: tasks, isLoading, error } = useTasksHook();
-  const { deleteTask, changeStatus } = useTaskMutationsHook();
+  const { data: tasks, isLoading, error } = useTasks();
+  const { deleteTask, changeStatus } = useTaskMutations();
 
   // タスク削除ハンドラをメモ化（TaskItemの再レンダリング回避）
   const handleDeleteTask = useCallback(
