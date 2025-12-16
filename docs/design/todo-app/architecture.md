@@ -414,6 +414,11 @@ flowchart LR
 - Trace Viewerによるデバッグ
 - 実行: `docker compose exec e2e npx playwright test`
 
+**ディレクトリ構造**: `app/client/e2e/{feature}/`
+- 例: `app/client/e2e/todo/*.spec.ts`
+- feature単位でディレクトリを分離
+- helpersやfixturesもfeature配下に配置
+
 **主要シナリオ**:
 1. ログイン → タスク追加 → 編集 → ステータス変更 → 削除
 2. フィルタ・ソート機能の動作確認

@@ -5,6 +5,21 @@
 docker compose exec e2e npx playwright test
 ```
 
+## ディレクトリ構造
+
+E2Eテストは `app/client/e2e/{feature}/` 配下に配置します。
+
+**例**:
+- `app/client/e2e/todo/*.spec.ts` - todoアプリのE2Eテスト
+- `app/client/e2e/auth/*.spec.ts` - 認証関連のE2Eテスト
+- `app/client/e2e/{feature}/helpers/` - feature固有のヘルパー
+- `app/client/e2e/{feature}/fixtures/` - feature固有のフィクスチャ
+
+**方針**:
+- feature単位でディレクトリを分離
+- helpersやfixturesもfeature配下に配置
+- テストファイル間の依存を最小化
+
 ## 運用指針詳細
 
 - **必須**: `storageState` APIの使用（ハイドレーション前に確実に設定、レース条件回避）

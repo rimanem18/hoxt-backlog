@@ -260,7 +260,7 @@ export const TaskList: React.FC = () => {
 
 ### TASK-1334: TaskEditModalコンポーネント
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1333
@@ -270,101 +270,12 @@ export const TaskList: React.FC = () => {
 
 ファイル: `app/client/src/features/todo/components/TaskEditModal.tsx`
 
-```typescript
-import React, { useState } from 'react';
-import type { TaskDTO } from '@/types/api/generated';
-import { useTaskMutations } from '../hooks/useTaskMutations';
-
-interface TaskEditModalProps {
-  task: TaskDTO | null;
-  onClose: () => void;
-}
-
-export const TaskEditModal: React.FC<TaskEditModalProps> = ({ task, onClose }) => {
-  const [title, setTitle] = useState(task?.title || '');
-  const [description, setDescription] = useState(task?.description || '');
-  const [priority, setPriority] = useState(task?.priority || 'medium');
-  const { updateTask } = useTaskMutations();
-
-  if (!task) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateTask.mutate(
-      { id: task.id, input: { title, description, priority } },
-      { onSuccess: onClose }
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-        <h2 className="text-2xl font-bold mb-4">タスクを編集</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">タイトル</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg"
-                maxLength={100}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">説明（Markdown）</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg h-32"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">優先度</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="high">高</option>
-                <option value="medium">中</option>
-                <option value="low">低</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-6">
-            <button
-              type="submit"
-              className="flex-1 px-6 py-2 bg-[#710000] text-white rounded-lg hover:bg-[#5a0000]"
-            >
-              保存
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              キャンセル
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-```
-
-テストケース:
-- 正常系: モーダルが表示される
-- 正常系: タスクが更新される
-- イベント: 保存ボタンクリック
-- イベント: キャンセルボタンクリック
+実装済み。TDD (Red-Green-Refactor) で完全に実装されました。
 
 #### 完了条件
 
-- [ ] TaskEditModalコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskEditModalコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
