@@ -120,6 +120,7 @@ beforeAll(() => {
 - **必須**: テスト駆動開発
   - 実装を更新したらテストコードも更新
   - テストコードに記載するテストケース名は日本語で記載
+  - Refactor フェーズでは、「以前書いたテスト」と重複したことをテストしないように、テストケースの整理も検討
 - **必須**: Bun標準テストを使用
 - **必須**: `docker compose exec client bunx tsc --noEmit`による型チェック
 - **必須**: `docker compose exec client bun test`による自動テスト実行

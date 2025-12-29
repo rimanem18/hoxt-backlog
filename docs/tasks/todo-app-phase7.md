@@ -414,7 +414,7 @@ export const TaskSort: React.FC = () => {
 
 ### TASK-1337: Markdownレンダリング
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1336
@@ -424,36 +424,12 @@ export const TaskSort: React.FC = () => {
 
 ファイル: `app/client/src/features/todo/components/MarkdownRenderer.tsx`
 
-```typescript
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-
-interface MarkdownRendererProps {
-  content: string;
-}
-
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      className="prose prose-sm max-w-none"
-    >
-      {content}
-    </ReactMarkdown>
-  );
-};
-```
-
-テストケース:
-- 正常系: Markdownが表示される
-- 正常系: チェックリストが表示される
-- 正常系: リンクが表示される
+TDD（Red-Green-Refactor）で完全に実装されました。
 
 #### 完了条件
 
-- [ ] MarkdownRendererコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] MarkdownRendererコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -518,7 +494,7 @@ export default {
 - [x] TaskEditModal実装完了
 - [x] TaskFilter実装完了
 - [x] TaskSort実装完了
-- [ ] MarkdownRenderer実装完了
+- [x] MarkdownRenderer実装完了
 
 ### デザイン
 
@@ -528,10 +504,10 @@ export default {
 
 ### テスト
 
-- [ ] すべてのユニットテストが通る
-- [ ] テストカバレッジ80%以上
-- [ ] Biomeチェック合格
-- [ ] 型チェック合格
+- [x] すべてのユニットテストが通る
+- [x] テストカバレッジ80%以上
+- [x] Biomeチェック合格
+- [x] 型チェック合格
 
 ---
 
