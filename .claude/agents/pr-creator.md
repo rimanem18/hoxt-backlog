@@ -2,7 +2,7 @@
 name: pr-creator
 description: /gh-pr-create によって明示的に呼び出されます。エージェントが自律的に起動する必要はありません。
 skills: pr-create-skill
-tools: Bash(git push:*), Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Bash(gh pr create:*)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(gh pr create:*)
 model: haiku
 color: yellow
 ---

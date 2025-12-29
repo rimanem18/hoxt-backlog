@@ -285,7 +285,7 @@ export const TaskList: React.FC = () => {
 
 ### TASK-1335: TaskFilterコンポーネント
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1334
@@ -349,8 +349,8 @@ export const TaskFilter: React.FC = () => {
 
 #### 完了条件
 
-- [ ] TaskFilterコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskFilterコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
