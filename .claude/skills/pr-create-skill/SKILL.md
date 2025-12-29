@@ -1,5 +1,5 @@
 ---
-name: pr-create-skill-skill
+name: pr-create-skill
 description: 明示的に呼び出されたときにのみ読み込みます。エージェントが自律的に呼び出す必要はありません。
 ---
 
