@@ -360,7 +360,7 @@ export const TaskFilter: React.FC = () => {
 
 ### TASK-1336: TaskSortコンポーネント
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: TDD
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1335
@@ -403,8 +403,8 @@ export const TaskSort: React.FC = () => {
 
 #### 完了条件
 
-- [ ] TaskSortコンポーネントが実装される
-- [ ] テストカバレッジ100%
+- [x] TaskSortコンポーネントが実装される
+- [x] テストカバレッジ100%
 
 #### 参照
 
@@ -512,12 +512,12 @@ export default {
 
 ### UI コンポーネント
 
-- [ ] TaskItem実装完了
-- [ ] TaskList実装完了
-- [ ] TaskCreateForm実装完了
-- [ ] TaskEditModal実装完了
-- [ ] TaskFilter実装完了
-- [ ] TaskSort実装完了
+- [x] TaskItem実装完了
+- [x] TaskList実装完了
+- [x] TaskCreateForm実装完了
+- [x] TaskEditModal実装完了
+- [x] TaskFilter実装完了
+- [x] TaskSort実装完了
 - [ ] MarkdownRenderer実装完了
 
 ### デザイン
