@@ -42,7 +42,7 @@ describe('TaskFilter', () => {
 
     // Then: 優先度セレクトボックスが表示される
     const prioritySelect = screen.getByLabelText('優先度フィルタ');
-    expect(prioritySelect).toBeDefined();
+    expect(prioritySelect).toBeInTheDocument();
     expect(prioritySelect.tagName).toBe('SELECT');
   });
 
@@ -59,7 +59,7 @@ describe('TaskFilter', () => {
     const statusSelect = screen
       .getAllByRole('listbox')
       .find((select) => (select as HTMLSelectElement).multiple);
-    expect(statusSelect).toBeDefined();
+    expect(statusSelect).toBeInTheDocument();
     expect((statusSelect as HTMLSelectElement).multiple).toBe(true);
   });
 
@@ -73,9 +73,9 @@ describe('TaskFilter', () => {
     );
 
     // Then: 優先度ラベルが表示される
-    expect(screen.getByText('優先度')).toBeDefined();
+    expect(screen.getByText('優先度')).toBeInTheDocument();
     // Then: ステータスラベルが表示される
-    expect(screen.getByText('ステータス')).toBeDefined();
+    expect(screen.getByText('ステータス')).toBeInTheDocument();
   });
 
   // イベント: 優先度選択
