@@ -46,6 +46,30 @@ function TaskEditModal(props: {
     }
   }, [props.task]);
 
+  // Escapeキーでモーダルを閉じる
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        props.onClose();
+      }
+    };
+
+    if (props.task) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [props.task, props.onClose]);
+
+  // モーダル表示時に最初の入力フィールドにフォーカス
+  useEffect(() => {
+    if (props.task) {
+      const titleInput = document.getElementById('edit-title');
+      if (titleInput) {
+        titleInput.focus();
+      }
+    }
+  }, [props.task]);
+
   // タイトルのバリデーション結果を返すヘルパー関数
   const validateTitle = useCallback(
     (titleToValidate: string): string | null => {
@@ -105,24 +129,27 @@ function TaskEditModal(props: {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       role="presentation"
     >
       <div
-        className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4"
+        className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <h2 id="modal-title" className="text-2xl font-bold mb-4">
+        <h2
+          id="modal-title"
+          className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4"
+        >
           タスクを編集
         </h2>
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <label
                 htmlFor="edit-title"
-                className="block text-sm font-medium mb-1"
+                className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
               >
                 タイトル
               </label>
@@ -131,7 +158,7 @@ function TaskEditModal(props: {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 maxLength={100}
                 aria-label="タイトル"
               />
@@ -139,7 +166,7 @@ function TaskEditModal(props: {
             <div>
               <label
                 htmlFor="edit-description"
-                className="block text-sm font-medium mb-1"
+                className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
               >
                 説明（Markdown）
               </label>
@@ -147,14 +174,14 @@ function TaskEditModal(props: {
                 id="edit-description"
                 value={description ?? ''}
                 onChange={(e) => setDescription(e.target.value || null)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00] h-32"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent h-24 sm:h-32"
                 aria-label="説明（Markdown）"
               />
             </div>
             <div>
               <label
                 htmlFor="edit-priority"
-                className="block text-sm font-medium mb-1"
+                className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
               >
                 優先度
               </label>
@@ -167,7 +194,7 @@ function TaskEditModal(props: {
                     setPriority(val);
                   }
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 aria-label="優先度"
               >
                 <option value="high">高</option>
@@ -180,7 +207,7 @@ function TaskEditModal(props: {
           {/* エラーメッセージ表示 */}
           {error && (
             <div
-              className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg"
+              className="mt-3 sm:mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm"
               role="alert"
               aria-live="polite"
             >
@@ -188,10 +215,10 @@ function TaskEditModal(props: {
             </div>
           )}
 
-          <div className="flex gap-2 mt-6">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-6">
             <button
               type="submit"
-              className="flex-1 px-6 py-2 bg-[#710000] text-white rounded-lg hover:bg-[#5a0000] disabled:opacity-50"
+              className="flex-1 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary text-white rounded-lg hover:bg-opacity-80 disabled:opacity-50 transition-colors"
               disabled={updateTask.isPending}
               aria-label="保存"
             >
@@ -200,7 +227,7 @@ function TaskEditModal(props: {
             <button
               type="button"
               onClick={props.onClose}
-              className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex-1 px-4 sm:px-6 py-2 text-sm sm:text-base border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               aria-label="キャンセル"
             >
               キャンセル

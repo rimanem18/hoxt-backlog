@@ -42,7 +42,10 @@ function TaskList(): React.ReactNode {
   // ローディング状態
   if (isLoading) {
     return (
-      <div className="text-center py-8" aria-live="polite">
+      <div
+        className="text-center py-8 sm:py-12 text-sm sm:text-base"
+        aria-live="polite"
+      >
         読み込み中...
       </div>
     );
@@ -51,7 +54,10 @@ function TaskList(): React.ReactNode {
   // エラー状態
   if (error) {
     return (
-      <div className="text-center py-8 text-red-600" aria-live="assertive">
+      <div
+        className="text-center py-8 sm:py-12 text-red-600 text-sm sm:text-base"
+        aria-live="assertive"
+      >
         エラーが発生しました
       </div>
     );
@@ -60,14 +66,17 @@ function TaskList(): React.ReactNode {
   // 空状態
   if (!tasks || tasks.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500" aria-live="polite">
+      <div
+        className="text-center py-8 sm:py-12 text-gray-500 text-sm sm:text-base"
+        aria-live="polite"
+      >
         タスクがありません
       </div>
     );
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 divide-y divide-gray-200">
       {tasks.map((task) => (
         <TaskItem
           key={task.id}
