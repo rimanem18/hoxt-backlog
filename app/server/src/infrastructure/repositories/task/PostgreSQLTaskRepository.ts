@@ -141,7 +141,20 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
     return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
   }
 
-  async updateStatus(): Promise<TaskEntity | null> {
-    throw new Error('Not implemented yet');
+  async updateStatus(
+    userId: string,
+    taskId: string,
+    status: string,
+  ): Promise<TaskEntity | null> {
+    const result = await this.db
+      .update(tasks)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+      .returning();
+
+    return result[0] ? this.toDomain(result[0]) : null;
   }
 }
