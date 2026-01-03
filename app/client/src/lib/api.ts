@@ -50,6 +50,13 @@ let currentAuthToken: string | null = null;
 let isMiddlewareRegistered = false;
 
 /**
+ * 認証エラー時のコールバック関数
+ */
+let onAuthErrorCallback:
+  | ((error: { status: number; message?: string }) => void)
+  | null = null;
+
+/**
  * JWT認証トークンを設定
  *
  * すべてのリクエストにAuthorizationヘッダーを追加する
@@ -73,17 +80,46 @@ export function setAuthToken(token: string): void {
   }
 
   currentAuthToken = token;
+  console.log('[setAuthToken] Token set:', {
+    tokenLength: token.length,
+    isMiddlewareRegistered,
+  });
 
   if (!isMiddlewareRegistered) {
     apiClient.use({
       onRequest: async ({ request }) => {
+        console.log('[apiClient middleware] onRequest called:', {
+          hasToken: !!currentAuthToken,
+          url: request.url,
+        });
         if (currentAuthToken) {
           request.headers.set('Authorization', `Bearer ${currentAuthToken}`);
+          console.log('[apiClient middleware] Authorization header set');
         }
         return request;
       },
+      onResponse: async ({ response }) => {
+        // 401 Unauthorizedエラーの検出
+        if (response.status === 401) {
+          console.warn('[apiClient middleware] 401 Unauthorized detected:', {
+            url: response.url,
+            statusText: response.statusText,
+          });
+
+          // 認証エラーコールバックを呼び出し
+          if (onAuthErrorCallback) {
+            onAuthErrorCallback({
+              status: 401,
+              message: 'セッションの有効期限が切れました',
+            });
+          }
+        }
+
+        return response;
+      },
     });
     isMiddlewareRegistered = true;
+    console.log('[setAuthToken] Middleware registered');
   }
 }
 
@@ -102,4 +138,27 @@ export function setAuthToken(token: string): void {
  */
 export function clearAuthToken(): void {
   currentAuthToken = null;
+}
+
+/**
+ * 認証エラー時のコールバック関数を登録
+ *
+ * API呼び出しで401エラーが発生した際に呼び出されるコールバック関数を設定する
+ *
+ * @param callback - 認証エラー時に呼び出される関数
+ *
+ * @example
+ * ```typescript
+ * setAuthErrorCallback((error) => {
+ *   if (error.status === 401) {
+ *     store.dispatch(handleExpiredToken());
+ *   }
+ * });
+ * ```
+ */
+export function setAuthErrorCallback(
+  callback: (error: { status: number; message?: string }) => void,
+): void {
+  onAuthErrorCallback = callback;
+  console.log('[setAuthErrorCallback] Callback registered');
 }

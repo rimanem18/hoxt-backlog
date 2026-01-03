@@ -116,8 +116,10 @@ export function validateStoredAuth(): AuthValidationResult {
     // localStorage からの認証データ取得
     // データ不存在の場合は早期リターン
     const storageKey = getSupabaseStorageKey();
+    console.log('[validateStoredAuth] Storage key:', storageKey);
     const persistedState = localStorage.getItem(storageKey);
     if (!persistedState) {
+      console.log('[validateStoredAuth] No data found in localStorage');
       return {
         isValid: false,
         reason: 'missing',
@@ -129,7 +131,14 @@ export function validateStoredAuth(): AuthValidationResult {
     let authData: StoredAuthData;
     try {
       authData = JSON.parse(persistedState);
-    } catch {
+      console.log('[validateStoredAuth] Parsed data:', {
+        hasAccessToken: !!authData.access_token,
+        hasExpiresAt: !!authData.expires_at,
+        hasUser: !!authData.user,
+        expiresAtType: typeof authData.expires_at,
+      });
+    } catch (error) {
+      console.error('[validateStoredAuth] Parse error:', error);
       return {
         isValid: false,
         reason: 'parse_error',
@@ -140,6 +149,10 @@ export function validateStoredAuth(): AuthValidationResult {
     // 無効な型の expires_at を検出
     const isValidExpiresAt = typeof authData.expires_at === 'number';
     if (!isValidExpiresAt) {
+      console.log(
+        '[validateStoredAuth] Invalid expires_at type:',
+        typeof authData.expires_at,
+      );
       return {
         isValid: false,
         reason: 'invalid_expires_at',
@@ -152,7 +165,13 @@ export function validateStoredAuth(): AuthValidationResult {
     const currentTime = Date.now();
     // expires_atは秒単位なのでミリ秒に変換して比較
     const expiresAtMs = expiresAt * 1000;
+    console.log('[validateStoredAuth] Expiry check:', {
+      expiresAtMs,
+      currentTime,
+      isExpired: expiresAtMs <= currentTime,
+    });
     if (expiresAtMs <= currentTime) {
+      console.log('[validateStoredAuth] Token expired');
       return {
         isValid: false,
         reason: 'expired',
@@ -169,7 +188,15 @@ export function validateStoredAuth(): AuthValidationResult {
     const isValidAccessToken =
       tokenExists && tokenIsString && tokenHasThreeParts;
 
+    console.log('[validateStoredAuth] Token validation:', {
+      tokenExists,
+      tokenIsString,
+      tokenHasThreeParts,
+      isValidAccessToken,
+    });
+
     if (!isValidAccessToken) {
+      console.log('[validateStoredAuth] Invalid access token');
       return {
         isValid: false,
         reason: 'invalid_token',
@@ -179,7 +206,13 @@ export function validateStoredAuth(): AuthValidationResult {
     // ユーザー情報の完全性確認
     // 必須ユーザー情報の存在確認
     const isValidUser = authData.user && typeof authData.user.id === 'string';
+    console.log('[validateStoredAuth] User validation:', {
+      hasUser: !!authData.user,
+      userId: authData.user?.id,
+      isValidUser,
+    });
     if (!isValidUser) {
+      console.log('[validateStoredAuth] Invalid user');
       return {
         isValid: false,
         reason: 'invalid_user',
@@ -199,6 +232,7 @@ export function validateStoredAuth(): AuthValidationResult {
     };
 
     // すべての検証を通過した場合
+    console.log('[validateStoredAuth] Validation successful!');
     return {
       isValid: true,
       data: {
@@ -208,7 +242,7 @@ export function validateStoredAuth(): AuthValidationResult {
     };
   } catch (error) {
     // 予期しないエラー処理として localStorage アクセスエラー等
-    console.error('validateStoredAuth: Unexpected error occurred:', error);
+    console.error('[validateStoredAuth] Unexpected error occurred:', error);
     return {
       isValid: false,
       reason: 'parse_error',

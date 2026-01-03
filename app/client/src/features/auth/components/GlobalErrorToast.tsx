@@ -6,7 +6,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { clearError } from '@/features/auth/store/errorSlice';
+import { apiClient } from '@/lib/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
@@ -26,6 +28,9 @@ export function GlobalErrorToast() {
 
   // Redux storeからエラー状態を取得
   const { isVisible, message, type } = useAppSelector((state) => state.error);
+
+  // 認証エラー状態を取得
+  const authError = useAppSelector((state) => state.auth.authError);
 
   // ブラウザAPIを活用したネットワーク状態監視
   useEffect(() => {
@@ -115,64 +120,126 @@ export function GlobalErrorToast() {
     console.log('T007: Error toast closed by user');
   }, [dispatch]);
 
+  // 認証エラーの表示
+  const shouldShowAuthError = authError && authError.code === 'EXPIRED';
+
   // エラーが発生していない場合は何も表示しない
-  if (!isVisible || !message) {
+  if (!isVisible && !shouldShowAuthError) {
     return null;
   }
 
   return (
     <>
-      {/* ネットワーク接続エラーメッセージ表示 */}
-      <div
-        className="fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md"
-        role="alert"
-        aria-live="polite"
-      >
-        {/* Redux stateから取得したエラーメッセージを表示 */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            {/* エラーアイコン */}
-            <div className="flex items-center mb-2">
-              <div className="w-5 h-5 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-2">
-                <span className="text-sm font-bold">!</span>
+      {/* 認証エラーメッセージ表示（セッション期限切れ） */}
+      {shouldShowAuthError && (
+        <div
+          className="fixed top-4 right-4 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md"
+          role="alert"
+          aria-live="polite"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {/* 警告アイコン */}
+              <div className="flex items-center mb-2">
+                <div className="w-5 h-5 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-2">
+                  <span className="text-sm font-bold">⚠</span>
+                </div>
+                <span className="font-semibold">セッション期限切れ</span>
               </div>
-              <span className="font-semibold">
-                {type === 'network' ? 'ネットワークエラー' : 'エラー'}
-              </span>
+
+              {/* エラーメッセージ表示 */}
+              <p className="text-sm">
+                {authError.message || 'セッションの有効期限が切れました'}
+              </p>
+              <p className="text-xs mt-2 opacity-90">
+                再度ログインしてください
+              </p>
             </div>
 
-            {/* エラーメッセージ表示 */}
-            <p className="text-sm">{message}</p>
-          </div>
-
-          {/* 閉じるボタン */}
-          <button
-            type="button"
-            onClick={handleClose}
-            className="ml-4 text-white hover:text-gray-200 transition-colors"
-            aria-label="エラーメッセージを閉じる"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-label="閉じる"
+            {/* 閉じるボタン */}
+            <button
+              type="button"
+              onClick={() => {
+                // authErrorはauth.authSliceで管理されているので、
+                // ここではclearAuthStateではなくページリロードで対応
+                window.location.href = '/';
+              }}
+              className="ml-4 text-white hover:text-gray-200 transition-colors"
+              aria-label="ログイン画面へ"
             >
-              <title>閉じる</title>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="ログイン画面へ"
+              >
+                <title>ログイン画面へ</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ネットワーク接続エラーメッセージ表示 */}
+      {isVisible && message && (
+        <div
+          className="fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md"
+          role="alert"
+          aria-live="polite"
+        >
+          {/* Redux stateから取得したエラーメッセージを表示 */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {/* エラーアイコン */}
+              <div className="flex items-center mb-2">
+                <div className="w-5 h-5 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-2">
+                  <span className="text-sm font-bold">!</span>
+                </div>
+                <span className="font-semibold">
+                  {type === 'network' ? 'ネットワークエラー' : 'エラー'}
+                </span>
+              </div>
+
+              {/* エラーメッセージ表示 */}
+              <p className="text-sm">{message}</p>
+            </div>
+
+            {/* 閉じるボタン */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="ml-4 text-white hover:text-gray-200 transition-colors"
+              aria-label="エラーメッセージを閉じる"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="閉じる"
+              >
+                <title>閉じる</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 再試行ボタン */}
-      {type === 'network' && (
+      {isVisible && type === 'network' && (
         <div className="fixed top-20 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
           <button
             type="button"
@@ -197,20 +264,13 @@ export function GlobalErrorToast() {
 
               // ページリロードを廃止して局所的再試行でパフォーマンスとUXを向上
               try {
-                // 特定のAPIリクエストのみ再実行
-                const response = await fetch('/api/v1/users/me', {
-                  method: 'GET',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    // CSRF攻撃対策ヘッダーを追加
-                    'X-Requested-With': 'XMLHttpRequest',
-                  },
-                  credentials: 'same-origin',
+                // 認証付きAPIリクエストで接続状態を確認
+                const { error } = await apiClient.GET('/tasks', {
                   signal: abortControllerRef.current.signal,
                 });
 
                 // ネットワーク接続の復旧を確認
-                if (response.ok || response.status < 500) {
+                if (!error) {
                   // エラー状態をクリアして成功フィードバック
                   dispatch(clearError());
 
@@ -221,6 +281,14 @@ export function GlobalErrorToast() {
                   timeoutRef.current = setTimeout(() => {
                     setIsRetrying(false);
                   }, 2000);
+                } else if (
+                  error.error?.code === 'UNAUTHORIZED' ||
+                  error.error?.message?.includes('401')
+                ) {
+                  // 401エラーの場合はセッション失効として処理
+                  console.log('T007: Session expired detected during retry');
+                  dispatch(handleExpiredToken());
+                  setIsRetrying(false);
                 } else {
                   // エラーが継続していることを通知
                   console.log('T007: Retry failed, network issue persists');
@@ -299,7 +367,7 @@ export function GlobalErrorToast() {
       )}
 
       {/* オフライン状態インジケータ */}
-      {type === 'network' && (
+      {isVisible && type === 'network' && (
         <div
           className="fixed bottom-4 left-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50"
           data-testarea="network-status"

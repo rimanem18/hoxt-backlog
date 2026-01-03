@@ -9,6 +9,8 @@ import {
   logout,
   restoreAuthState,
 } from '@/features/auth/store/authSlice';
+import { setAuthErrorCallback, setAuthToken } from '@/lib/api';
+import { ApiClientProvider } from '@/lib/apiClientContext';
 import { createQueryClient } from '@/lib/queryClient';
 import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { validateClientEnv } from '@/shared/utils/validateClientEnv';
@@ -34,7 +36,18 @@ export default function Provider({ children }: ProviderProps) {
 
   // アプリケーション初回読み込み時に認証状態を検証・復元
   useEffect(() => {
+    // 401エラー時の自動ログアウト処理を設定
+    setAuthErrorCallback((error) => {
+      if (error.status === 401) {
+        console.warn('[Provider] 401 detected, dispatching handleExpiredToken');
+        store.dispatch(handleExpiredToken());
+      }
+    });
+
     const validationResult = validateStoredAuth();
+
+    // デバッグ: 検証結果をログ出力
+    console.log('[Provider] validateStoredAuth result:', validationResult);
 
     if (validationResult.isValid && validationResult.data) {
       // 検証成功：認証状態をReduxストアに復元
@@ -44,6 +57,14 @@ export default function Provider({ children }: ProviderProps) {
           isNewUser: validationResult.data.isNewUser ?? false,
         }),
       );
+
+      // APIクライアントにJWTトークンを直接設定（sessionListenerに依存しない）
+      if (validationResult.data.access_token) {
+        setAuthToken(validationResult.data.access_token);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Provider] API client token configured directly');
+        }
+      }
     } else if (validationResult.reason) {
       // 検証失敗：理由に応じて処理を分岐
       switch (validationResult.reason) {
@@ -69,9 +90,11 @@ export default function Provider({ children }: ProviderProps) {
   return (
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
-        {children}
-        {/* グローバルエラー表示コンポーネント */}
-        <GlobalErrorToast />
+        <ApiClientProvider>
+          {children}
+          {/* グローバルエラー表示コンポーネント */}
+          <GlobalErrorToast />
+        </ApiClientProvider>
       </QueryClientProvider>
     </ReduxProvider>
   );

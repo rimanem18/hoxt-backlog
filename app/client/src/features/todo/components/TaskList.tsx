@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useCallback } from 'react';
-import type { TaskStatus } from '@/packages/shared-schemas/src/tasks';
+import type { Task, TaskStatus } from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 import TaskItem from './TaskItem';
 
@@ -11,7 +11,12 @@ import TaskItem from './TaskItem';
  * TaskServicesContext経由でhooksを取得し、タスク一覧の取得と操作を実行する。
  * ローディング、エラー、空状態の処理を行い、各タスクをTaskItemとして表示する。
  */
-function TaskList(): React.ReactNode {
+interface TaskListProps {
+  /** タスク編集時のコールバック（オプション） */
+  onEdit?: (task: Task) => void;
+}
+
+function TaskList(props: TaskListProps = {}): React.ReactNode {
   // Context経由でhooksを取得（テスト時にモック注入可能）
   const { useTasks, useTaskMutations } = useTaskServices();
 
@@ -34,10 +39,15 @@ function TaskList(): React.ReactNode {
     [changeStatus.mutate],
   );
 
-  // タスク編集ハンドラをメモ化（TaskItemの再レンダリング回避、現在は空のコールバック）
-  const handleEditTask = useCallback(() => {
-    /* 将来TaskEditModalを表示 */
-  }, []);
+  // タスク編集ハンドラをメモ化（TaskItemの再レンダリング回避）
+  const handleEditTask = useCallback(
+    (task: Task) => {
+      if (props.onEdit) {
+        props.onEdit(task);
+      }
+    },
+    [props.onEdit],
+  );
 
   // ローディング状態
   if (isLoading) {
