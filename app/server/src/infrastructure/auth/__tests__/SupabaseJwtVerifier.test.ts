@@ -14,6 +14,8 @@ import {
   generateTestJwks,
   mockJwksFetch,
   mockJwksFetchFailure,
+  mockJwksFetchWithRetry,
+  mockJwksFetchWithTimeout,
   signTestToken,
 } from './helpers/jwks-test-helper';
 
@@ -503,6 +505,131 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
       expect(result.valid).toBe(false);
       expect(result.error).toBe('Network error');
       expect(result.payload).toBeUndefined();
+    });
+  });
+
+  describe('リトライ・タイムアウト機能', () => {
+    let unmockFetch: (() => void) | { unmock: () => void } | null = null;
+
+    afterEach(() => {
+      if (unmockFetch) {
+        if (typeof unmockFetch === 'function') {
+          unmockFetch();
+        } else {
+          unmockFetch.unmock();
+        }
+        unmockFetch = null;
+      }
+    });
+
+    test('ネットワークエラー時に最大3回リトライして成功する', async () => {
+      // Given: 2回失敗した後に成功するJWKSフェッチ
+      const jwksContext = await generateTestJwks();
+      const retryMock = mockJwksFetchWithRetry(2, jwksContext.jwksJson);
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-retry',
+        email: 'retry@example.com',
+        user_metadata: { name: 'Retry Test User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: リトライにより検証が成功する
+      expect(result.valid).toBe(true);
+      expect(result.payload?.sub).toBe('test-user-retry');
+
+      // リトライが3回実行されたことを確認（初回 + 2回リトライ）
+      expect(retryMock.getCallCount()).toBe(3);
+    });
+
+    test('リトライ可能なエラーで最大3回までリトライする', async () => {
+      // Given: 常に失敗するJWKSフェッチ
+      const jwksContext = await generateTestJwks();
+      const retryMock = mockJwksFetchWithRetry(10, jwksContext.jwksJson); // 10回失敗設定
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-max-retry',
+        email: 'maxretry@example.com',
+        user_metadata: { name: 'Max Retry Test User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: 最大リトライ回数後に失敗する
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Failed to fetch JWKS');
+
+      // 最大4回実行されたことを確認（初回 + 3回リトライ）
+      expect(retryMock.getCallCount()).toBe(4);
+    });
+
+    test('署名エラーなどリトライ不可能なエラーは即座に失敗する', async () => {
+      // Given: 正しいJWKSだが異なる鍵で署名されたトークン
+      const jwksContext = await generateTestJwks();
+      const anotherKeyPair = await generateTestJwks();
+
+      const retryMock = mockJwksFetchWithRetry(0, jwksContext.jwksJson);
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-invalid-sig',
+        email: 'invalidsig@example.com',
+        user_metadata: { name: 'Invalid Sig User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const invalidToken = await signTestToken(
+        anotherKeyPair.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(invalidToken);
+
+      // Then: リトライせず即座に失敗する
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid signature');
+
+      // 1回のみ実行されたことを確認（リトライなし）
+      expect(retryMock.getCallCount()).toBe(1);
     });
   });
 });
