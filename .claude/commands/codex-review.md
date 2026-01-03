@@ -8,10 +8,10 @@ description: 要件定義や技術設計をもとにしたコードレビュー
 - 必要なガイドラインがなにか検討します。 Read ツールで読み込む必要はありません。ファイルパスを渡してください。
 
 - **必須**: `CLAUDE.md`
-- [バックエンド開発ガイドライン](../skills/common/references/backend.md)
-- [フロントエンド開発ガイドライン](../skills/common/references/frontend.md)
-- [スキーマ駆動開発ガイドライン](../skills/common/references/schema-db.md)
-- [E2Eテストガイドライン](../skills/common/references/e2e.md)
+- バックエンド開発ガイドライン: `.claude/skills/common/references/backend.md`
+- フロントエンド開発ガイドライン `.claude/skills/common/references/frontend.md`
+- スキーマ駆動開発ガイドライン: `.cluade/skills/common/references/schema-db.md`
+- E2Eテストガイドライン `.claude/skills/common/references/e2e.md`
 
 ## 実行内容
 
