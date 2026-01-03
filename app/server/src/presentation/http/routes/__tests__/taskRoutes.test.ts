@@ -283,6 +283,31 @@ describe('taskRoutes統合テスト', () => {
       expect(data.success).toBe(false);
       expect(data.error.code).toBe('INTERNAL_ERROR');
     });
+
+    test('異常系: AuthError（JWT未提供）で401 Unauthorizedを返す', async () => {
+      // Given: authMiddlewareOptionsなし（JWTなし）でアプリを作成
+      const { createTaskRoutes } = await import('../taskRoutes');
+      const appWithoutAuth = createTaskRoutes({
+        createTaskUseCase: useCases.createTaskUseCase as any,
+        getTasksUseCase: useCases.getTasksUseCase as any,
+        getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
+        updateTaskUseCase: useCases.updateTaskUseCase as any,
+        deleteTaskUseCase: useCases.deleteTaskUseCase as any,
+        changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
+        // authMiddlewareOptions を渡さない（AuthError発生）
+      });
+
+      // When: Authorizationヘッダーなしでリクエスト
+      const res = await appWithoutAuth.request('/tasks', {
+        method: 'GET',
+      });
+
+      // Then: 401 Unauthorizedレスポンスを返す
+      expect(res.status).toBe(401);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('AUTHENTICATION_REQUIRED');
+    });
   });
 
   describe('RLS動作確認', () => {

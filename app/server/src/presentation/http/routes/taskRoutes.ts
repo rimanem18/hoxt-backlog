@@ -6,10 +6,12 @@ import type { GetTaskByIdUseCase } from '@/application/usecases/GetTaskByIdUseCa
 import type { GetTasksUseCase } from '@/application/usecases/GetTasksUseCase';
 import type { UpdateTaskUseCase } from '@/application/usecases/UpdateTaskUseCase';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/domain/task/errors';
+import { TaskDIContainer } from '@/infrastructure/di/TaskDIContainer';
 import {
   type AuthMiddlewareOptions,
   authMiddleware,
 } from '@/presentation/http/middleware/auth/AuthMiddleware';
+import { AuthError } from '@/presentation/http/middleware/errors/AuthError';
 import { TaskController } from '../controllers/TaskController';
 import {
   changeTaskStatusRoute,
@@ -21,7 +23,108 @@ import {
 } from './taskRoutes.schema';
 
 /**
- * taskRoutes依存性定義
+ * タスク管理APIのOpenAPIルート定義
+ *
+ * @hono/zod-openapiを使用したOpenAPI 3.1準拠の実装
+ * TaskDIContainerから依存性を注入し、6つのタスク管理エンドポイントを提供
+ *
+ * @example
+ * ```typescript
+ * import task from './taskRoutes';
+ * app.route('/api', task);
+ * ```
+ */
+const tasks = new OpenAPIHono();
+
+/**
+ * TaskControllerのインスタンス化
+ *
+ * TaskDIContainerから依存性を注入してTaskControllerを生成。
+ * モジュールスコープで1回だけインスタンス化（リクエストごとではない）。
+ */
+const taskController = new TaskController(
+  TaskDIContainer.getCreateTaskUseCase(),
+  TaskDIContainer.getGetTasksUseCase(),
+  TaskDIContainer.getGetTaskByIdUseCase(),
+  TaskDIContainer.getUpdateTaskUseCase(),
+  TaskDIContainer.getDeleteTaskUseCase(),
+  TaskDIContainer.getChangeTaskStatusUseCase(),
+);
+
+// authMiddlewareでJWT認証を実施
+tasks.use('*', authMiddleware());
+
+// 6つのエンドポイントを登録
+// Note: `as any`はOpenAPIHonoの型推論の制限により必要
+tasks.openapi(createTaskRoute, (c) => taskController.create(c) as any);
+tasks.openapi(listTasksRoute, (c) => taskController.getAll(c) as any);
+tasks.openapi(getTaskRoute, (c) => taskController.getById(c) as any);
+tasks.openapi(updateTaskRoute, (c) => taskController.update(c) as any);
+tasks.openapi(deleteTaskRoute, (c) => taskController.delete(c) as any);
+tasks.openapi(
+  changeTaskStatusRoute,
+  (c) => taskController.changeStatus(c) as any,
+);
+
+// グローバルエラーハンドラー
+tasks.onError((err, c) => {
+  console.error('Global error handler:', err);
+
+  // 認証エラー → 401
+  if (err instanceof AuthError) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: err.code,
+          message: err.message,
+        },
+      },
+      401,
+    );
+  }
+
+  if (err instanceof TaskNotFoundError) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: err.message,
+        },
+      },
+      404,
+    );
+  }
+
+  if (err instanceof InvalidTaskDataError) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: err.message,
+        },
+      },
+      400,
+    );
+  }
+
+  // その他のエラー → 500
+  return c.json(
+    {
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'サーバーエラーが発生しました',
+      },
+    },
+    500,
+  );
+});
+
+/**
+ * taskRoutes依存性定義（テスト用）
  *
  * 6つのタスク管理UseCaseと認証ミドルウェアオプションを注入する。
  * 依存性注入により、テスト時にモックを差し替え可能。
@@ -44,14 +147,10 @@ export interface TaskRoutesDependencies {
 }
 
 /**
- * taskRoutesファクトリー関数
+ * taskRoutesファクトリー関数（テスト用）
  *
- * 6つのタスク管理エンドポイントを統合し、JWT認証とエラーハンドリングを適用した
- * OpenAPIHonoアプリケーションを返す。
- *
- * ミドルウェア構成:
- * - authMiddleware: JWT認証とRLS設定（全エンドポイント必須）
- * - app.onError(): グローバルエラーハンドラー（ドメインエラーをHTTPステータスに変換）
+ * テスト時にモックUseCaseを注入するためのヘルパー関数。
+ * 本番コードでは直接tasksインスタンスを使用する。
  *
  * @param dependencies - UseCaseとミドルウェアオプション
  * @returns 統合されたOpenAPIHonoアプリケーション
@@ -70,10 +169,11 @@ export function createTaskRoutes(
 
   const app = new OpenAPIHono();
 
-  // authMiddlewareで認証とRLS設定を実施
+  // authMiddlewareでJWT認証を実施
   app.use('*', authMiddleware(dependencies.authMiddlewareOptions));
 
   // 6つのエンドポイントを登録
+  // Note: `as any`はOpenAPIHonoの型推論の制限により必要
   app.openapi(createTaskRoute, (c) => controller.create(c) as any);
   app.openapi(listTasksRoute, (c) => controller.getAll(c) as any);
   app.openapi(getTaskRoute, (c) => controller.getById(c) as any);
@@ -84,6 +184,20 @@ export function createTaskRoutes(
   // グローバルエラーハンドラー
   app.onError((err, c) => {
     console.error('Global error handler:', err);
+
+    // 認証エラー → 401
+    if (err instanceof AuthError) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: err.code,
+            message: err.message,
+          },
+        },
+        401,
+      );
+    }
 
     if (err instanceof TaskNotFoundError) {
       return c.json(
@@ -126,3 +240,5 @@ export function createTaskRoutes(
 
   return app;
 }
+
+export default tasks;
