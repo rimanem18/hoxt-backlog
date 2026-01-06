@@ -6,12 +6,12 @@
 export class AuthError extends Error {
   /*
    * 認証エラーのコンストラクタ
-   * @param code エラーコード（AUTHENTICATION_REQUIRED）
+   * @param code エラーコード（AUTHENTICATION_REQUIRED | USER_NOT_FOUND）
    * @param status HTTPステータスコード（デフォルト: 401）
    * @param message カスタムエラーメッセージ（オプション）
    */
   constructor(
-    public readonly code: 'AUTHENTICATION_REQUIRED',
+    public readonly code: 'AUTHENTICATION_REQUIRED' | 'USER_NOT_FOUND',
     public readonly status: number = 401,
     message?: string,
   ) {

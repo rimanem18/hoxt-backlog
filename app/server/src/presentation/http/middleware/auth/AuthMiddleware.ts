@@ -6,6 +6,9 @@
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import type { IAuthProvider } from '@/domain/services/IAuthProvider';
+import { isValidAuthProvider } from '@/domain/user/AuthProvider';
+import type { IUserRepository } from '@/domain/user/IUserRepository';
+import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 import { AuthError } from '../errors/AuthError';
 import { verifyJWT } from './jwks';
 
@@ -21,6 +24,9 @@ export interface AuthMiddlewareOptions {
 
   // カスタムAuthProvider（テスト時のモック注入で使用）
   authProvider?: IAuthProvider;
+
+  // カスタムUserRepository（テスト時のモック注入で使用）
+  userRepository?: IUserRepository;
 
   // テスト用モックペイロード（JWT検証をバイパス）
   mockPayload?: {
@@ -72,9 +78,29 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       const payload =
         options.mockPayload || (await verifyJWT(token, options.authProvider));
 
-      // ユーザーID抽出
-      const userId = payload.sub;
-      if (!userId) {
+      // 外部IDとプロバイダーを取得
+      const externalId = payload.sub;
+      const providerStr =
+        (payload.app_metadata as { provider?: string })?.provider || 'google';
+
+      // プロバイダーの実行時バリデーション
+      if (!isValidAuthProvider(providerStr)) {
+        throw new AuthError(
+          'AUTHENTICATION_REQUIRED',
+          401,
+          `サポートされていないプロバイダー: ${providerStr}`,
+        );
+      }
+
+      const provider = providerStr as
+        | 'google'
+        | 'github'
+        | 'facebook'
+        | 'microsoft'
+        | 'apple'
+        | 'line';
+
+      if (!externalId) {
         throw new AuthError(
           'AUTHENTICATION_REQUIRED',
           401,
@@ -82,13 +108,28 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
         );
       }
 
-      // 認証情報をContextに設定
-      c.set('userId', userId);
+      // DBから実際のusers.idを検索
+      // テスト環境ではモックが注入される前提、本番環境ではDIContainerから取得
+      const userRepository =
+        options.userRepository || AuthDIContainer.getUserRepository();
+
+      const user = await userRepository.findByExternalId(externalId, provider);
+
+      if (!user) {
+        throw new AuthError(
+          'USER_NOT_FOUND',
+          401,
+          'ユーザーが見つかりません。先に /auth/verify を呼び出してください',
+        );
+      }
+
+      // DBのusers.idをcontextにセット
+      c.set('userId', user.id);
       c.set('claims', payload);
 
       // 認証成功ログ（本番環境）
       if (process.env.NODE_ENV === 'production') {
-        console.log(`[AUTH] User authenticated: ${userId}`);
+        console.log(`[AUTH] User authenticated: ${user.id}`);
       }
 
       await next();
