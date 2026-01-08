@@ -253,6 +253,21 @@ export class SupabaseJwtVerifier implements IAuthProvider {
   }
 
   /**
+   * user_metadataからアバターURLを解決する
+   *
+   * OAuth プロバイダーによって使用するフィールド名が異なるため、
+   * avatar_url → picture の優先順位でフォールバックする
+   *
+   * @param metadata - JWTのuser_metadata
+   * @returns アバターURL（存在しない場合はnull）
+   */
+  private resolveAvatarUrl(
+    metadata: JwtPayload['user_metadata'],
+  ): string | null {
+    return metadata?.avatar_url ?? metadata?.picture ?? null;
+  }
+
+  /**
    * JWTペイロードから外部ユーザー情報を抽出する
    *
    * @param payload - 検証済みJWTペイロード
@@ -285,6 +300,9 @@ export class SupabaseJwtVerifier implements IAuthProvider {
       );
     }
 
+    // アバターURLを解決
+    const avatarUrl = this.resolveAvatarUrl(payload.user_metadata);
+
     // JWTペイロードからExternalUserInfoへのマッピング
     const userInfo: ExternalUserInfo = {
       id: payload.sub,
@@ -292,9 +310,7 @@ export class SupabaseJwtVerifier implements IAuthProvider {
       email: payload.email,
       name: displayName,
       // アバターURLはオプションフィールド
-      ...(payload.user_metadata.avatar_url && {
-        avatarUrl: payload.user_metadata.avatar_url,
-      }),
+      ...(avatarUrl && { avatarUrl }),
     };
 
     return userInfo;
@@ -316,6 +332,7 @@ export class SupabaseJwtVerifier implements IAuthProvider {
       user_metadata: josePayload.user_metadata as {
         name: string;
         avatar_url?: string;
+        picture?: string;
         email?: string;
         full_name?: string;
       },
