@@ -19,13 +19,6 @@ import {
   signTestToken,
 } from './helpers/jwks-test-helper';
 
-// CI環境またはテスト環境では外部JWKS依存のテストをスキップ
-// ネットワーク依存のテストは統合テストで実施
-const skipInCI =
-  process.env.CI === 'true' || process.env.NODE_ENV === 'test'
-    ? describe.skip
-    : describe;
-
 describe('SupabaseJwtVerifier（JWKS検証器）', () => {
   let jwtVerifier: SupabaseJwtVerifier;
 
@@ -181,6 +174,65 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       expect(userInfo.name).toBe('No Avatar User');
       expect(userInfo.provider).toBe('google');
       expect(userInfo.avatarUrl).toBeUndefined();
+    });
+
+    test('pictureフィールドのみ提供される場合にavatarUrlが正しく設定される', async () => {
+      // Given: avatar_urlなし、pictureフィールドあり
+      const payloadWithPictureOnly: JwtPayload = {
+        sub: 'google_picture_user',
+        email: 'picture@example.com',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+        iss: 'https://test-project.supabase.co/auth/v1',
+        user_metadata: {
+          name: 'Picture User',
+          picture: 'https://example.com/picture.jpg',
+        },
+        app_metadata: {
+          provider: 'google',
+        },
+      };
+
+      // When: ユーザー情報抽出を実行
+      const userInfo: ExternalUserInfo = await jwtVerifier.getExternalUserInfo(
+        payloadWithPictureOnly,
+      );
+
+      // Then: pictureフィールドからavatarUrlが設定される
+      expect(userInfo.id).toBe('google_picture_user');
+      expect(userInfo.email).toBe('picture@example.com');
+      expect(userInfo.name).toBe('Picture User');
+      expect(userInfo.provider).toBe('google');
+      expect(userInfo.avatarUrl).toBe('https://example.com/picture.jpg');
+    });
+
+    test('avatar_urlとpictureの両方がある場合にavatar_urlが優先される', async () => {
+      // Given: avatar_urlとpictureの両方あり
+      const payloadWithBoth: JwtPayload = {
+        sub: 'google_both_fields',
+        email: 'both@example.com',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+        iss: 'https://test-project.supabase.co/auth/v1',
+        user_metadata: {
+          name: 'Both Fields User',
+          avatar_url: 'https://example.com/avatar.jpg',
+          picture: 'https://example.com/picture.jpg',
+        },
+        app_metadata: {
+          provider: 'google',
+        },
+      };
+
+      // When: ユーザー情報抽出を実行
+      const userInfo: ExternalUserInfo =
+        await jwtVerifier.getExternalUserInfo(payloadWithBoth);
+
+      // Then: avatar_urlが優先される
+      expect(userInfo.id).toBe('google_both_fields');
+      expect(userInfo.avatarUrl).toBe('https://example.com/avatar.jpg');
     });
 
     test('必須フィールド不足で適切な例外が発生する', async () => {
@@ -631,48 +683,5 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
       // 1回のみ実行されたことを確認（リトライなし）
       expect(retryMock.getCallCount()).toBe(1);
     });
-  });
-});
-
-skipInCI('SupabaseJwtVerifier（JWKS統合テスト）', () => {
-  let jwtVerifier: SupabaseJwtVerifier;
-
-  beforeEach(() => {
-    // 実際のSupabase環境変数が必要
-    process.env.SUPABASE_URL =
-      process.env.SUPABASE_URL || 'https://test-project.supabase.co';
-    jwtVerifier = new SupabaseJwtVerifier();
-  });
-
-  test('実際のJWKSエンドポイントからの公開鍵取得テスト', async () => {
-    // Note: このテストは実際のSupabaseプロジェクトが必要
-    // CI環境では自動スキップされる
-
-    // Given: 実際のSupabase JWTトークン（テスト用）
-    // 注意: 実際のテストでは、テスト用の有効なトークンが必要
-    const realJwtToken = 'your-real-test-jwt-token-here';
-
-    // このテストは手動実行時のみ有効
-    if (realJwtToken === 'your-real-test-jwt-token-here') {
-      console.log('⚠️ 実際のJWKS統合テストには有効なJWTトークンが必要です');
-      return;
-    }
-
-    // When: 実際のJWKS検証を実行
-    const result: JwtVerificationResult =
-      await jwtVerifier.verifyToken(realJwtToken);
-
-    // Then: 検証結果を確認（成功または適切なエラー）
-    expect(result).toBeDefined();
-    expect(typeof result.valid).toBe('boolean');
-
-    if (result.valid) {
-      expect(result.payload).toBeDefined();
-      if (result.payload) {
-        expect(typeof result.payload.sub).toBe('string');
-      }
-    } else {
-      expect(typeof result.error).toBe('string');
-    }
   });
 });
