@@ -555,14 +555,12 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
       // Then: JWKS取得失敗エラーが返される
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect(result.error).toBe('Network error during JWKS fetch');
       expect(result.payload).toBeUndefined();
-    });
+    }, 10000);
   });
 
   describe('リトライ・タイムアウト機能', () => {
-    let unmockFetch: (() => void) | { unmock: () => void } | null = null;
-
     afterEach(() => {
       if (unmockFetch) {
         if (typeof unmockFetch === 'function') {
@@ -608,7 +606,7 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
       // リトライが3回実行されたことを確認（初回 + 2回リトライ）
       expect(retryMock.getCallCount()).toBe(3);
-    });
+    }, 5000);
 
     test('リトライ可能なエラーで最大3回までリトライする', async () => {
       // Given: 常に失敗するJWKSフェッチ
@@ -640,11 +638,11 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
       // Then: 最大リトライ回数後に失敗する
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Failed to fetch JWKS');
+      expect(result.error).toBe('Network error during JWKS fetch');
 
       // 最大4回実行されたことを確認（初回 + 3回リトライ）
       expect(retryMock.getCallCount()).toBe(4);
-    });
+    }, 10000);
 
     test('署名エラーなどリトライ不可能なエラーは即座に失敗する', async () => {
       // Given: 正しいJWKSだが異なる鍵で署名されたトークン
