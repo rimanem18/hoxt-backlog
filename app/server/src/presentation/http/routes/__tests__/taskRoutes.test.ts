@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/domain/task/errors';
+import type { IUserRepository } from '@/domain/user/IUserRepository';
+import type { User } from '@/domain/user/UserEntity';
 import type { MockUseCases } from './helpers';
 import { createMockTaskEntity, mockUseCases } from './helpers';
 
@@ -12,6 +14,29 @@ describe('taskRoutes統合テスト', () => {
   beforeEach(async () => {
     useCases = mockUseCases();
 
+    // モックユーザーエンティティ（各テストで新規生成）
+    const mockUser: User = {
+      id: mockUserId,
+      externalId: 'google-oauth2|123456789',
+      provider: 'google',
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastLoginAt: null,
+    };
+
+    // モックユーザーリポジトリ（各テストで新規生成）
+    const mockUserRepository: IUserRepository = {
+      findByExternalId: mock(() => Promise.resolve(mockUser)),
+      findById: mock(() => Promise.resolve(mockUser)),
+      findByEmail: mock(() => Promise.resolve(null)),
+      create: mock(() => Promise.resolve(mockUser)),
+      update: mock(() => Promise.resolve(mockUser)),
+      delete: mock(() => Promise.resolve()),
+    };
+
     const { createTaskRoutes } = await import('../taskRoutes');
 
     app = createTaskRoutes({
@@ -22,6 +47,7 @@ describe('taskRoutes統合テスト', () => {
       deleteTaskUseCase: useCases.deleteTaskUseCase as any,
       changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
       authMiddlewareOptions: {
+        userRepository: mockUserRepository,
         mockPayload: {
           sub: mockUserId,
           email: 'test@example.com',
