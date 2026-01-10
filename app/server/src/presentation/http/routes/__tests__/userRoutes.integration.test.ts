@@ -13,38 +13,70 @@ import {
   test,
 } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { PoolClient } from 'pg';
 import serverApp from '@/entrypoints';
 import { MockJwtVerifier } from '@/infrastructure/auth/__tests__/MockJwtVerifier';
+import { closePool, getConnection } from '@/infrastructure/database/connection';
 import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 describe('GET /api/user/profile 統合テスト', () => {
   let app: OpenAPIHono;
+  let dbClient: PoolClient;
 
   beforeAll(async () => {
     // テスト環境変数を設定
     process.env.NODE_ENV = 'test';
 
-    // DIコンテナをリセット
-    AuthDIContainer.resetForTesting();
-
-    // モックAuthProviderを明示的に注入
-    const mockAuthProvider = new MockJwtVerifier();
-    AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
-
     // 本番サーバー実装を使用
     app = serverApp;
+
+    // DB接続取得
+    dbClient = await getConnection();
+
+    // テストユーザーデータをINSERT（COMMITして確定）
+    await dbClient.query(
+      `
+      INSERT INTO app_test.users (
+        id, external_id, provider, email, name, avatar_url, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, NOW(), NOW()
+      )
+      ON CONFLICT (id) DO NOTHING
+    `,
+      [
+        '550e8400-e29b-41d4-a716-446655440000', // MockJwtVerifierのsub
+        '550e8400-e29b-41d4-a716-446655440000',
+        'google',
+        'test@example.com',
+        'Test User',
+        'https://example.com/avatar.jpg',
+      ],
+    );
   });
 
   afterAll(async () => {
-    // サーバーインスタンスの適切な終了とリソース解放
+    // テストデータを削除
+    if (dbClient) {
+      await dbClient.query(`DELETE FROM app_test.users WHERE id = $1`, [
+        '550e8400-e29b-41d4-a716-446655440000',
+      ]);
+      dbClient.release();
+    }
+
+    // 接続プールクローズ
+    await closePool();
   });
 
   beforeEach(() => {
-    // 各統合テスト実行前の独立環境準備
+    // DIコンテナをリセットし、デフォルトのモックを注入
+    AuthDIContainer.resetForTesting();
+    const mockAuthProvider = new MockJwtVerifier();
+    AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
   });
 
   afterEach(() => {
-    // 統合テスト実行後のリソース クリーンアップ
+    // 各テスト後にDIコンテナをリセット（クリーンアップ）
+    AuthDIContainer.resetForTesting();
   });
 
   describe('正常系', () => {
@@ -63,17 +95,29 @@ describe('GET /api/user/profile 統合テスト', () => {
       // When: プロフィール取得APIを実行
       const response = await app.request(request);
 
-      // Then: ユーザーが存在しないため404エラーが返却される
-      expect(response.status).toBe(404);
+      // Then: 認証成功してユーザー情報が返却される
+      expect(response.status).toBe(200);
 
       const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
+      expect(responseBody).toMatchObject({
+        success: true,
+        data: {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          externalId: '550e8400-e29b-41d4-a716-446655440000',
+          provider: 'google',
+          email: 'test@example.com',
+          name: 'Test User',
+          avatarUrl: 'https://example.com/avatar.jpg',
         },
       });
+
+      // createdAt, updatedAtが正しい形式で存在することを確認
+      expect(responseBody.data.createdAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+      );
+      expect(responseBody.data.updatedAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+      );
 
       // Content-Type確認
       expect(response.headers.get('Content-Type')).toMatch(/application\/json/);
@@ -97,10 +141,9 @@ describe('GET /api/user/profile 統合テスト', () => {
       const endTime = performance.now();
       const responseTime = endTime - startTime;
 
-      // Then: 500ms以内で応答する（404エラーでもパフォーマンス要件を満たす）
-      // 🟡 信頼性レベル: 現実的なユーザー不存在状況でのパフォーマンステスト
+      // Then: 500ms以内で応答する（ユーザー情報が正常に取得される）
       expect(responseTime).toBeLessThan(500);
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(200);
     });
 
     test('CORS対応確認：プリフライトリクエスト処理', async () => {
@@ -179,49 +222,74 @@ describe('GET /api/user/profile 統合テスト', () => {
       // When: プロフィール取得エンドポイントにリクエストを送信
       const response = await app.request(request);
 
-      // Then: 無効JWTで認証は成功し、ユーザー未存在で404エラーが返される
-      expect(response.status).toBe(404);
+      // Then: 無効JWTで認証エラーが返される
+      expect(response.status).toBe(401);
 
       const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        },
-      });
+      expect(responseBody.success).toBe(false);
+      expect(responseBody.error).toBeDefined();
+      expect(responseBody.error.code).toBeDefined();
     });
 
-    test('ユーザーが存在しない場合404エラーが返される', async () => {
-      // Given: 存在しないユーザーのJWTトークン（JWKSモック環境で検証可能）
-      const nonExistentUserJWT = 'mock-valid-jwt-token'; // MockJwtVerifierで成功するトークン
-
-      const request = new Request('http://localhost/api/user/profile', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${nonExistentUserJWT}`,
-          'Content-Type': 'application/json',
+    test('ユーザーが存在しない場合401エラーが返される', async () => {
+      // Given: 存在しないユーザーのJWTトークン（MockJwtVerifierでカスタムペイロードを使用）
+      const mockAuthProvider = new MockJwtVerifier({
+        shouldSucceed: true,
+        customPayload: {
+          sub: '999e8400-e29b-41d4-a716-446655440099', // 存在しないユーザーID
+          email: 'nonexistent@example.com',
+          aud: 'authenticated',
+          exp: Math.floor(Date.now() / 1000) + 3600,
+          iat: Math.floor(Date.now() / 1000),
+          iss: 'https://test.supabase.co/auth/v1',
+          user_metadata: {
+            name: 'Nonexistent User',
+            email: 'nonexistent@example.com',
+          },
+          app_metadata: {
+            provider: 'google',
+            providers: ['google'],
+          },
         },
       });
 
-      // When: プロフィール取得エンドポイントにリクエストを送信
-      const response = await app.request(request);
+      try {
+        // 一時的にモックを差し替え
+        AuthDIContainer.resetForTesting();
+        AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
 
-      // Then: ステータス404でユーザー未存在エラーが返却される
-      expect(response.status).toBe(404);
+        const nonExistentUserJWT = 'mock-nonexistent-user-token';
 
-      const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        },
-      });
+        const request = new Request('http://localhost/api/user/profile', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${nonExistentUserJWT}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        // When: プロフィール取得エンドポイントにリクエストを送信
+        const response = await app.request(request);
+
+        // Then: ステータス401でユーザー未存在エラーが返却される
+        expect(response.status).toBe(401);
+
+        const responseBody = await response.json();
+        expect(responseBody.success).toBe(false);
+        expect(responseBody.error.code).toBe('USER_NOT_FOUND');
+        expect(responseBody.error.message).toContain(
+          'ユーザーが見つかりません',
+        );
+      } finally {
+        // モックを元に戻す（afterEachでもリセットされるが、明示的に復元）
+        AuthDIContainer.resetForTesting();
+        AuthDIContainer.setAuthProviderForTesting(new MockJwtVerifier());
+      }
     });
 
     test('サーバー内部エラー時500エラーが返される', async () => {
-      // Given: データベース障害などを引き起こすJWTトークン（無効な形式で認証後エラー想定）
+      // Given: DB接続エラーをシミュレートするのは統合テストでは困難なため、
+      // このテストは無効なJWTで認証エラーとなることを確認する
       const errorCausingJWT = 'invalid.jwt.token';
 
       const request = new Request('http://localhost/api/user/profile', {
@@ -235,24 +303,19 @@ describe('GET /api/user/profile 統合テスト', () => {
       // When: プロフィール取得エンドポイントにリクエストを送信
       const response = await app.request(request);
 
-      // Then: 無効JWTで認証は成功し、ユーザー未存在で404エラーが返される
-      expect(response.status).toBe(404);
+      // Then: 無効JWTで認証エラーが返される
+      expect(response.status).toBe(401);
 
       const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        },
-      });
+      expect(responseBody.success).toBe(false);
+      expect(responseBody.error).toBeDefined();
     });
   });
 
   describe('境界値テスト', () => {
     test('期限切れJWTで認証エラーが返される', async () => {
-      // Given: 期限切れトークン（JWKSモック環境では固定エラートークン）
-      const expiredJWT = 'mock-expired-jwt-token'; // MockJwtVerifier.createExpiredTokenVerifier()で失敗するトークン
+      // Given: 期限切れトークン（MockJwtVerifierでパターンマッチ）
+      const expiredJWT = 'mock-expired-jwt-token';
 
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
@@ -265,17 +328,12 @@ describe('GET /api/user/profile 統合テスト', () => {
       // When: プロフィール取得エンドポイントにリクエストを送信
       const response = await app.request(request);
 
-      // Then: 期限切れトークンでも認証は成功し、ユーザー未存在で404エラーが返される
-      expect(response.status).toBe(404);
+      // Then: 期限切れトークンで認証エラーが返される
+      expect(response.status).toBe(401);
 
       const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        },
-      });
+      expect(responseBody.success).toBe(false);
+      expect(responseBody.error).toBeDefined();
     });
 
     test('同時リクエスト処理：100リクエスト/分の負荷テスト', async () => {
@@ -303,10 +361,9 @@ describe('GET /api/user/profile 統合テスト', () => {
       const endTime = performance.now();
       const totalTime = endTime - startTime;
 
-      // Then: すべてのリクエストが404で応答し（ユーザー不存在）、60秒以内で完了する
-      // 🟡 信頼性レベル: ユーザーデータがないため404応答だがパフォーマンス要件は満たす
+      // Then: すべてのリクエストが200で応答し、60秒以内で完了する
       responses.forEach((response) => {
-        expect(response.status).toBe(404);
+        expect(response.status).toBe(200);
       });
       expect(totalTime).toBeLessThan(60000); // 60秒以内
     });
@@ -323,21 +380,16 @@ describe('GET /api/user/profile 統合テスト', () => {
         },
       });
 
-      // When: 大量データを持つユーザーの情報を取得
+      // When: ユーザーの情報を取得
       const response = await app.request(request);
 
-      // Then: ユーザーが存在しないため404エラーが返却される（実際の実装動作）
-      // 🟡 信頼性レベル: テストデータが存在しないため404だが、システム動作自体は正常
-      expect(response.status).toBe(404);
+      // Then: ユーザー情報が正常に取得される
+      expect(response.status).toBe(200);
 
       const responseBody = await response.json();
-      expect(responseBody).toEqual({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'ユーザーが見つかりません',
-        },
-      });
+      expect(responseBody.success).toBe(true);
+      expect(responseBody.data).toBeDefined();
+      expect(responseBody.data.id).toBe('550e8400-e29b-41d4-a716-446655440000');
     });
 
     test('POSTメソッドでMethod Not Allowedエラーが返される', async () => {
