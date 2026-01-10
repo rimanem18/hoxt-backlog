@@ -438,4 +438,160 @@ describe('PostgreSQLTaskRepository', () => {
       });
     });
   });
+
+  describe('updateStatus', () => {
+    test('タスクのステータスを更新できる', async () => {
+      // Given: 保存済みのタスク（ステータス: not_started）
+      const taskEntity = TaskEntity.create({
+        userId: testUserId1,
+        title: 'ステータス更新テスト',
+        description: 'テスト説明',
+        priority: 'medium',
+      });
+      await repository.save(taskEntity);
+
+      // When: ステータスをin_progressに更新
+      const updatedTask = await repository.updateStatus(
+        testUserId1,
+        taskEntity.getId(),
+        'in_progress',
+      );
+
+      // Then: 更新されたタスクが返される
+      expect(updatedTask).not.toBeNull();
+      expect(updatedTask?.getId()).toBe(taskEntity.getId());
+      expect(updatedTask?.getStatus()).toBe('in_progress');
+      // タイトルや説明は変更されない
+      expect(updatedTask?.getTitle()).toBe('ステータス更新テスト');
+      expect(updatedTask?.getDescription()).toBe('テスト説明');
+      expect(updatedTask?.getPriority()).toBe('medium');
+    });
+
+    test('updatedAtが更新される', async () => {
+      // Given: 保存済みのタスク
+      const taskEntity = TaskEntity.create({
+        userId: testUserId1,
+        title: 'updatedAtテスト',
+        priority: 'low',
+      });
+      await repository.save(taskEntity);
+      const originalUpdatedAt = taskEntity.getUpdatedAt();
+
+      // 時間差を確実にするため少し待機
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When: ステータスを更新
+      const updatedTask = await repository.updateStatus(
+        testUserId1,
+        taskEntity.getId(),
+        'completed',
+      );
+
+      // Then: updatedAtが更新される
+      expect(updatedTask).not.toBeNull();
+      expect(updatedTask?.getUpdatedAt().getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+    });
+
+    test.each(['not_started', 'in_progress', 'in_review', 'completed'])(
+      'ステータス "%s" に変更できる',
+      async (status: string) => {
+        // Given: 保存済みのタスク
+        const taskEntity = TaskEntity.create({
+          userId: testUserId1,
+          title: `ステータス${status}テスト`,
+          priority: 'high',
+        });
+        await repository.save(taskEntity);
+
+        // When: 指定されたステータスに変更
+        const updatedTask = await repository.updateStatus(
+          testUserId1,
+          taskEntity.getId(),
+          status,
+        );
+
+        // Then: ステータスが正しく変更される
+        expect(updatedTask).not.toBeNull();
+        expect(updatedTask?.getStatus()).toBe(status);
+      },
+    );
+
+    test('存在しないタスクIDの場合nullを返す', async () => {
+      // Given: 存在しないタスクID
+      const nonExistentTaskId = '666e4567-e89b-12d3-a456-426614174666';
+
+      // When: 存在しないタスクのステータスを更新
+      const updatedTask = await repository.updateStatus(
+        testUserId1,
+        nonExistentTaskId,
+        'completed',
+      );
+
+      // Then: nullが返される
+      expect(updatedTask).toBeNull();
+    });
+
+    test('他のユーザーのタスクは更新できない（RLS検証）', async () => {
+      // Given: ユーザー1のタスク
+      const taskEntity = TaskEntity.create({
+        userId: testUserId1,
+        title: 'ユーザー1のタスク',
+        priority: 'high',
+      });
+      await repository.save(taskEntity);
+
+      // When: ユーザー2として同じタスクIDのステータスを更新しようとする
+      const updatedTask = await repository.updateStatus(
+        testUserId2,
+        taskEntity.getId(),
+        'completed',
+      );
+
+      // Then: nullが返される（更新できない）
+      expect(updatedTask).toBeNull();
+
+      // 元のタスクのステータスは変更されていない
+      const originalTask = await repository.findById(
+        testUserId1,
+        taskEntity.getId(),
+      );
+      expect(originalTask?.getStatus()).toBe('not_started');
+    });
+
+    test('連続してステータスを変更できる', async () => {
+      // Given: 保存済みのタスク
+      const taskEntity = TaskEntity.create({
+        userId: testUserId1,
+        title: '連続ステータス変更テスト',
+        priority: 'medium',
+      });
+      await repository.save(taskEntity);
+
+      // When: ステータスを段階的に変更
+      const step1 = await repository.updateStatus(
+        testUserId1,
+        taskEntity.getId(),
+        'in_progress',
+      );
+      expect(step1?.getStatus()).toBe('in_progress');
+
+      const step2 = await repository.updateStatus(
+        testUserId1,
+        taskEntity.getId(),
+        'in_review',
+      );
+      expect(step2?.getStatus()).toBe('in_review');
+
+      const step3 = await repository.updateStatus(
+        testUserId1,
+        taskEntity.getId(),
+        'completed',
+      );
+
+      // Then: 最終的にcompletedになる
+      expect(step3?.getStatus()).toBe('completed');
+    });
+  });
 });

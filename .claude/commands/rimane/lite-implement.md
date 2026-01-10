@@ -9,6 +9,18 @@ skills: tdd-cycle-skill
 - use serena MCP
 - use Codex MCP
 
+## 事前確認
+
+## 参照情報
+
+指示内容または分析対象に基づいて、必要に応じて取捨選択して参照してください。
+
+- [フロントエンド開発ガイドライン](../../skills/common/references/frontend.md)
+- [バックエンド開発ガイドライン](../../skills/common/references/backend.md)
+- [ドキュメント作成ガイドライン](../../skills/common/references/documents.md)
+- [E2Eテストガイドライン](../../skills/common/references/e2e.md)
+- [スキーマ駆動開発ガイドライン](../../skills/common/references/schema-db.md)
+
 ## プランニングフェーズ
 
 1. 次のスキルで示されている実装順序にのっとった指示を遂行するためにプランを立てます。
@@ -24,11 +36,3 @@ tdd-cycle-skill を Skill ツールで読み込んで、このスキルに従っ
 
 #think
 
-## 参照情報
-必要に応じて参照してください。
-
-- [フロントエンド開発ガイドライン](../../skills/common/references/frontend.md)
-- [バックエンド開発ガイドライン](../../skills/common/references/backend.md)
-- [ドキュメント作成ガイドライン](../../skills/common/references/documents.md)
-- [E2Eテストガイドライン](../../skills/common/references/e2e.md)
-- [スキーマ駆動開発ガイドライン](../../skills/common/references/schema-db.md)

@@ -25,7 +25,7 @@ export type ValidationOptions = {
  * クライアント側の必須環境変数を検証する
  *
  * Provider初期化時に呼び出され、必要な環境変数がすべて設定されているかを確認する。
- * テスト環境では検証をスキップする。
+ * テスト環境・開発環境では検証をスキップする。
  *
  * @param options - 検証オプション（デフォルトでprocess.envを使用）
  *
@@ -40,8 +40,8 @@ export function validateClientEnv(options: ValidationOptions = {}): void {
     logger = console.error,
   } = options;
 
-  // テスト環境では検証をスキップ
-  if (nodeEnv === 'test') {
+  // テスト環境・開発環境では検証をスキップ
+  if (nodeEnv === 'test' || nodeEnv === 'development') {
     return;
   }
 

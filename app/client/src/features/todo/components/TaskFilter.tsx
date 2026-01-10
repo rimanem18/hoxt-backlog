@@ -51,11 +51,11 @@ function TaskFilter(): React.ReactNode {
   };
 
   return (
-    <div className="flex gap-4 mb-4">
-      <div>
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="flex-1">
         <label
           htmlFor="priority-filter"
-          className="block text-sm font-medium mb-1"
+          className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
         >
           優先度
         </label>
@@ -63,7 +63,7 @@ function TaskFilter(): React.ReactNode {
           id="priority-filter"
           value={priority}
           onChange={handlePriorityChange}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+          className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label="優先度フィルタ"
         >
           {priorityOptions.map((option) => (
@@ -74,10 +74,10 @@ function TaskFilter(): React.ReactNode {
         </select>
       </div>
 
-      <div>
+      <div className="flex-1">
         <label
           htmlFor="status-filter"
-          className="block text-sm font-medium mb-1"
+          className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
         >
           ステータス
         </label>
@@ -86,7 +86,7 @@ function TaskFilter(): React.ReactNode {
           multiple
           value={status}
           onChange={handleStatusChange}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+          className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label="ステータスフィルタ"
         >
           {statusOptions.map((option) => (

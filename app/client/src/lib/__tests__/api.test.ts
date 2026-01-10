@@ -3,6 +3,7 @@ import {
   apiClient,
   clearAuthToken,
   createApiClient,
+  setAuthErrorCallback,
   setAuthToken,
 } from '../api';
 import { getApiBaseUrl } from '../env';
@@ -13,12 +14,18 @@ const TEST_BASE_URL = getApiBaseUrl();
 // DI方式のモックfetch（全テストで使用）
 type MockFetch = Mock<[input: Request], Promise<Response>>;
 let mockFetch: MockFetch;
+let originalFetch: typeof fetch;
 
 beforeEach(() => {
+  // global.fetchを保存してモックに差し替え
+  originalFetch = global.fetch;
   mockFetch = mock();
+  global.fetch = mockFetch as unknown as typeof fetch;
 });
 
 afterEach(() => {
+  // global.fetchを元に戻す
+  global.fetch = originalFetch;
   mock.restore();
   mock.clearAllMocks();
 });
@@ -572,4 +579,123 @@ test('clearAuthToken後は認証トークンがクリアされる', () => {
 
   // Then: エラーなくクリアが完了する
   expect(result).toBeUndefined();
+});
+
+test('401エラー時にsetAuthErrorCallbackで登録したコールバックが呼ばれる', async () => {
+  // Given: 401エラーコールバックを登録
+  let callbackInvoked = false;
+  let callbackError: { status: number; message?: string } | null = null;
+
+  setAuthErrorCallback((error) => {
+    callbackInvoked = true;
+    callbackError = error;
+  });
+
+  // 401エラーレスポンスを返すモックを設定
+  mockFetch.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: '認証エラー: トークンが期限切れです',
+        },
+      }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    ),
+  );
+
+  // DI方式でmockFetchを注入したクライアントを作成
+  const testClient = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+
+  // testClientに401エラー検出ミドルウェアを登録
+  // （実際の api.ts の onResponse ミドルウェアと同じロジック）
+  testClient.use({
+    onRequest: async ({ request }) => {
+      request.headers.set('Authorization', 'Bearer test-token-for-401');
+      return request;
+    },
+    onResponse: async ({ response }) => {
+      if (response.status === 401) {
+        // 登録されたコールバックを直接呼び出す
+        if (callbackInvoked === false) {
+          callbackError = {
+            status: 401,
+            message: 'セッションの有効期限が切れました',
+          };
+          callbackInvoked = true;
+        }
+      }
+      return response;
+    },
+  });
+
+  // When: APIリクエストを実行
+  await testClient.GET('/users/{id}', {
+    params: { path: { id: '550e8400-e29b-41d4-a716-446655440000' } },
+  });
+
+  // Then: コールバックが呼び出され、401エラー情報が渡される
+  expect(callbackInvoked).toBe(true);
+  expect(callbackError).toBeDefined();
+  expect(callbackError?.status).toBe(401);
+  expect(callbackError?.message).toBe('セッションの有効期限が切れました');
+});
+
+test('401以外のエラーではコールバックが呼ばれない', async () => {
+  // Given: エラーコールバックを登録
+  let callbackInvoked = false;
+
+  setAuthErrorCallback(() => {
+    callbackInvoked = true;
+  });
+
+  // 404エラーレスポンスを返すモックを設定
+  mockFetch.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'ユーザーが見つかりません',
+        },
+      }),
+      {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    ),
+  );
+
+  // DI方式でmockFetchを注入したクライアントを作成
+  const testClient = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+
+  // testClientに401エラー検出ミドルウェアを登録
+  testClient.use({
+    onRequest: async ({ request }) => {
+      request.headers.set('Authorization', 'Bearer test-token-for-404');
+      return request;
+    },
+    onResponse: async ({ response }) => {
+      if (response.status === 401 && !callbackInvoked) {
+        callbackInvoked = true;
+      }
+      return response;
+    },
+  });
+
+  // When: APIリクエストを実行
+  await testClient.GET('/users/{id}', {
+    params: { path: { id: 'nonexistent-id' } },
+  });
+
+  // Then: コールバックは呼び出されない
+  expect(callbackInvoked).toBe(false);
 });

@@ -439,7 +439,7 @@ TDD（Red-Green-Refactor）で完全に実装されました。
 
 ### TASK-1338: レスポンシブデザイン・テーマカラー適用
 
-- [ ] **タスク完了**
+- [x] **タスク完了**
 - **タスクタイプ**: DIRECT
 - **推定工数**: 8時間
 - **依存タスク**: TASK-1337
@@ -447,40 +447,44 @@ TDD（Red-Green-Refactor）で完全に実装されました。
 
 #### 実装詳細
 
-Tailwind CSS設定:
+globals.css にテーマカラーを定義:
 
-```typescript
-// tailwind.config.ts
-export default {
-  theme: {
-    extend: {
-      colors: {
-        primary: '#710000',
-        accent: '#ff6a00',
-      },
-    },
-  },
-};
+```css
+:root {
+  --color-primary: #710000;
+  --color-accent: #ff6a00;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+}
 ```
 
-レスポンシブデザイン:
-- モバイル: 1カラム
-- タブレット: 1カラム
-- デスクトップ: 最適化
+レスポンシブデザイン適用:
+- TaskItem: `flex flex-col sm:flex-row` で画面幅に応じてレイアウト変更
+- TaskCreateForm: `flex flex-col sm:flex-row` でモバイルではフル幅、デスクトップでは横並び
+- TaskFilter: `flex flex-col sm:flex-row` で画面幅に応じて柔軟に対応
+- TaskSort: モバイルでフル幅、デスクトップで自動幅
+- TaskEditModal: `p-4 sm:p-6` で画面に応じたパディング、`max-w-2xl` でデスクトップ最適化
+- TaskList: `divide-y divide-gray-200` で視覚的な区切り線
 
 テーマカラー適用:
-- ベースカラー: `#710000`
-- アクセントカラー: `#ff6a00`
+- ベースカラー(`#710000`): 削除ボタン、フォーカスリング背景
+- アクセントカラー(`#ff6a00`): ホバー状態、優先度「高」の表示、フォーカスリング
 
 #### 完了条件
 
-- [ ] レスポンシブデザインが適用される
-- [ ] テーマカラーが適用される
-- [ ] デスクトップ最適化が完了する
+- [x] レスポンシブデザインが適用される
+- [x] テーマカラーが適用される
+- [x] デスクトップ最適化が完了する
+- [x] 既存テスト230件が合格
+- [x] 型チェック合格
+- [x] Biome チェック合格
 
 #### 参照
 
-- 要件: NFR-201
+- 要件: NFR-201, NFR-205
 
 ---
 
@@ -498,13 +502,13 @@ export default {
 
 ### デザイン
 
-- [ ] レスポンシブデザイン適用
-- [ ] テーマカラー適用
-- [ ] デスクトップ最適化完了
+- [x] レスポンシブデザイン適用
+- [x] テーマカラー適用
+- [x] デスクトップ最適化完了
 
 ### テスト
 
-- [x] すべてのユニットテストが通る
+- [x] すべてのユニットテストが通る（230件合格）
 - [x] テストカバレッジ80%以上
 - [x] Biomeチェック合格
 - [x] 型チェック合格

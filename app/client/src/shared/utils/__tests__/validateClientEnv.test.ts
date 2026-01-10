@@ -113,6 +113,27 @@ describe('validateClientEnv', () => {
     expect(errorCalled).toBe(false);
   });
 
+  test('開発環境ではconsole.errorが呼ばれない', () => {
+    // Given: 開発環境かつ環境変数が未設定
+    const testEnv = {};
+
+    // モックを設定
+    let errorCalled = false;
+    const mockLogger = () => {
+      errorCalled = true;
+    };
+
+    // When: 検証を実行
+    validateClientEnv({
+      env: testEnv,
+      nodeEnv: 'development',
+      logger: mockLogger,
+    });
+
+    // Then: console.errorが呼ばれない
+    expect(errorCalled).toBe(false);
+  });
+
   test('引数なし呼び出しでデフォルト動作が保証される（回帰テスト）', () => {
     // Given: 引数なしで呼び出し
     // When & Then: エラーが発生しない（デフォルトでテスト環境をスキップ）

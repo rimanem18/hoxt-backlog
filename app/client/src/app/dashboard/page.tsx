@@ -1,9 +1,16 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { UserProfile } from '@/features/auth/components/UserProfile';
 import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
+import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
+import TaskEditModal from '@/features/todo/components/TaskEditModal';
+import TaskFilter from '@/features/todo/components/TaskFilter';
+import TaskList from '@/features/todo/components/TaskList';
+import TaskSort from '@/features/todo/components/TaskSort';
+import { TaskServicesProvider } from '@/features/todo/lib/TaskServicesContext';
+import type { Task } from '@/packages/shared-schemas/src/tasks';
 import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -17,6 +24,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 export default function DashboardPage(): React.ReactNode {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // JWT期限切れ時の処理をメモ化して複数回実行を防止
   const handleTokenExpiration = useCallback(() => {
@@ -92,20 +100,61 @@ export default function DashboardPage(): React.ReactNode {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ダッシュボードタイトル */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="mt-2 text-gray-600">
             {user?.lastLoginAt
-              ? 'おかえりなさい！あなたのアカウント情報です。'
-              : 'ようこそ！あなたのアカウント情報です。'}
+              ? 'おかえりなさい！あなたのタスクを管理しましょう。'
+              : 'ようこそ！タスク管理を始めましょう。'}
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-6">
-          <div className="w-full max-w-md">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* ユーザープロフィール（左サイドバー） */}
+          <div className="lg:col-span-1">
             {user && <UserProfile user={user} />}
+          </div>
+
+          {/* タスク管理セクション（メインエリア） */}
+          <div className="lg:col-span-2">
+            <TaskServicesProvider>
+              <div className="space-y-6">
+                {/* タスク作成フォーム */}
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h2 className="text-xl font-semibold mb-4">新しいタスク</h2>
+                  <TaskCreateForm />
+                </div>
+
+                {/* フィルタとソート */}
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h2 className="text-xl font-semibold mb-4">
+                    絞り込み・並び替え
+                  </h2>
+                  <div className="space-y-4">
+                    <TaskFilter />
+                    <TaskSort />
+                  </div>
+                </div>
+
+                {/* タスク一覧 */}
+                <div className="bg-white rounded-lg shadow">
+                  <div className="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 className="text-xl font-semibold">タスク一覧</h2>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    <TaskList onEdit={setEditingTask} />
+                  </div>
+                </div>
+              </div>
+
+              {/* タスク編集モーダル */}
+              <TaskEditModal
+                task={editingTask}
+                onClose={() => setEditingTask(null)}
+              />
+            </TaskServicesProvider>
           </div>
         </div>
 

@@ -92,9 +92,10 @@ export class AuthDIContainer {
    * 【設計方針】: データベース接続プールを効率的に活用
    * 【パフォーマンス】: 接続リソースの最適化とメモリ使用量削減
    * 【保守性】: Repository設定を一箇所で管理
+   * 【公開理由】: authMiddlewareでのDB検索に使用
    * 🔵 信頼性レベル: 既存のPostgreSQLUserRepository実装をそのまま活用
    */
-  private static getUserRepository(): PostgreSQLUserRepository {
+  public static getUserRepository(): PostgreSQLUserRepository {
     if (!AuthDIContainer.userRepositoryInstance) {
       // 【データベース永続化層】: PostgreSQL接続プールを利用した効率的なアクセス
       AuthDIContainer.userRepositoryInstance = new PostgreSQLUserRepository();

@@ -73,14 +73,17 @@ function TaskCreateForm(): React.ReactNode {
   }, [title, priority, createTask.isPending, mutateTask]);
 
   return (
-    <div className="mb-6">
-      <form onSubmit={handleSubmit} className="flex gap-2">
+    <div className="mb-4 sm:mb-6">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-2 sm:gap-2 sm:flex-row"
+      >
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="タスクを入力..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+          className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
           maxLength={100}
           aria-label="タスクのタイトル"
         />
@@ -92,7 +95,7 @@ function TaskCreateForm(): React.ReactNode {
               setPriority(val);
             }
           }}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+          className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label="優先度"
         >
           <option value="high">高</option>
@@ -101,7 +104,7 @@ function TaskCreateForm(): React.ReactNode {
         </select>
         <button
           type="submit"
-          className="px-6 py-2 bg-[#710000] text-white rounded-lg hover:bg-[#5a0000] disabled:opacity-50"
+          className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary text-white rounded-lg hover:bg-opacity-80 disabled:opacity-50 transition-colors whitespace-nowrap"
           disabled={!title.trim() || createTask.isPending}
           aria-label="追加"
         >
@@ -112,17 +115,17 @@ function TaskCreateForm(): React.ReactNode {
       {/* エラーメッセージ表示 */}
       {error && (
         <div
-          className="mt-2 p-3 bg-red-100 text-red-700 rounded-lg flex items-center justify-between"
+          className="mt-2 sm:mt-3 p-3 bg-red-100 text-red-700 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
           role="alert"
           aria-live="polite"
         >
-          <span>{error}</span>
+          <span className="text-sm">{error}</span>
           {hasRetry && (
             <button
               type="button"
               onClick={handleRetry}
               disabled={createTask.isPending}
-              className="ml-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm disabled:opacity-50"
+              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs sm:text-sm disabled:opacity-50 transition-colors whitespace-nowrap"
               aria-label="再試行"
               aria-disabled={createTask.isPending}
             >

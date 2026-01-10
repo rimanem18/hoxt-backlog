@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/domain/task/errors';
+import type { IUserRepository } from '@/domain/user/IUserRepository';
+import type { User } from '@/domain/user/UserEntity';
 import type { MockUseCases } from './helpers';
 import { createMockTaskEntity, mockUseCases } from './helpers';
 
@@ -12,6 +14,29 @@ describe('taskRoutes統合テスト', () => {
   beforeEach(async () => {
     useCases = mockUseCases();
 
+    // モックユーザーエンティティ（各テストで新規生成）
+    const mockUser: User = {
+      id: mockUserId,
+      externalId: 'google-oauth2|123456789',
+      provider: 'google',
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastLoginAt: null,
+    };
+
+    // モックユーザーリポジトリ（各テストで新規生成）
+    const mockUserRepository: IUserRepository = {
+      findByExternalId: mock(() => Promise.resolve(mockUser)),
+      findById: mock(() => Promise.resolve(mockUser)),
+      findByEmail: mock(() => Promise.resolve(null)),
+      create: mock(() => Promise.resolve(mockUser)),
+      update: mock(() => Promise.resolve(mockUser)),
+      delete: mock(() => Promise.resolve()),
+    };
+
     const { createTaskRoutes } = await import('../taskRoutes');
 
     app = createTaskRoutes({
@@ -22,6 +47,7 @@ describe('taskRoutes統合テスト', () => {
       deleteTaskUseCase: useCases.deleteTaskUseCase as any,
       changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
       authMiddlewareOptions: {
+        userRepository: mockUserRepository,
         mockPayload: {
           sub: mockUserId,
           email: 'test@example.com',
@@ -282,6 +308,31 @@ describe('taskRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.success).toBe(false);
       expect(data.error.code).toBe('INTERNAL_ERROR');
+    });
+
+    test('異常系: AuthError（JWT未提供）で401 Unauthorizedを返す', async () => {
+      // Given: authMiddlewareOptionsなし（JWTなし）でアプリを作成
+      const { createTaskRoutes } = await import('../taskRoutes');
+      const appWithoutAuth = createTaskRoutes({
+        createTaskUseCase: useCases.createTaskUseCase as any,
+        getTasksUseCase: useCases.getTasksUseCase as any,
+        getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
+        updateTaskUseCase: useCases.updateTaskUseCase as any,
+        deleteTaskUseCase: useCases.deleteTaskUseCase as any,
+        changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
+        // authMiddlewareOptions を渡さない（AuthError発生）
+      });
+
+      // When: Authorizationヘッダーなしでリクエスト
+      const res = await appWithoutAuth.request('/tasks', {
+        method: 'GET',
+      });
+
+      // Then: 401 Unauthorizedレスポンスを返す
+      expect(res.status).toBe(401);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('AUTHENTICATION_REQUIRED');
     });
   });
 

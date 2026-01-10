@@ -103,7 +103,23 @@ describe('AuthController', () => {
       jwt: validJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: true, user: expectedUser, isNewUser: false },
+      {
+        success: true,
+        data: {
+          user: {
+            id: expectedUser.id,
+            externalId: expectedUser.externalId,
+            provider: expectedUser.provider,
+            email: expectedUser.email,
+            name: expectedUser.name,
+            avatarUrl: expectedUser.avatarUrl,
+            createdAt: expectedUser.createdAt.toISOString(),
+            updatedAt: expectedUser.updatedAt.toISOString(),
+            lastLoginAt: expectedUser.lastLoginAt?.toISOString() ?? null,
+          },
+          isNewUser: false,
+        },
+      },
       200,
     );
   });
@@ -136,7 +152,23 @@ describe('AuthController', () => {
       jwt: newUserJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: true, user: newUser, isNewUser: true },
+      {
+        success: true,
+        data: {
+          user: {
+            id: newUser.id,
+            externalId: newUser.externalId,
+            provider: newUser.provider,
+            email: newUser.email,
+            name: newUser.name,
+            avatarUrl: newUser.avatarUrl,
+            createdAt: newUser.createdAt.toISOString(),
+            updatedAt: newUser.updatedAt.toISOString(),
+            lastLoginAt: newUser.lastLoginAt?.toISOString() ?? null,
+          },
+          isNewUser: true,
+        },
+      },
       200,
     );
   });
@@ -169,7 +201,23 @@ describe('AuthController', () => {
       jwt: existingUserJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: true, user: existingUser, isNewUser: false },
+      {
+        success: true,
+        data: {
+          user: {
+            id: existingUser.id,
+            externalId: existingUser.externalId,
+            provider: existingUser.provider,
+            email: existingUser.email,
+            name: existingUser.name,
+            avatarUrl: existingUser.avatarUrl,
+            createdAt: existingUser.createdAt.toISOString(),
+            updatedAt: existingUser.updatedAt.toISOString(),
+            lastLoginAt: existingUser.lastLoginAt?.toISOString() ?? null,
+          },
+          isNewUser: false,
+        },
+      },
       200,
     );
   });
@@ -197,7 +245,13 @@ describe('AuthController', () => {
       jwt: invalidJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Invalid JWT token' },
+      {
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: 'Invalid JWT token',
+        },
+      },
       401,
     );
   });
@@ -224,7 +278,13 @@ describe('AuthController', () => {
       jwt: expiredJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'JWT token has expired' },
+      {
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: 'JWT token has expired',
+        },
+      },
       401,
     );
   });
@@ -243,7 +303,13 @@ describe('AuthController', () => {
     // Then: 400バリデーションエラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Token is required' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Token is required',
+        },
+      },
       400,
     );
   });
@@ -264,7 +330,13 @@ describe('AuthController', () => {
     // Then: 400バリデーションエラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Token cannot be empty' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Token cannot be empty',
+        },
+      },
       400,
     );
   });
@@ -283,7 +355,13 @@ describe('AuthController', () => {
     // Then: 400JSONパースエラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Invalid JSON format' },
+      {
+        success: false,
+        error: {
+          code: 'JSON_PARSE_ERROR',
+          message: 'Invalid JSON format',
+        },
+      },
       400,
     );
   });
@@ -308,7 +386,13 @@ describe('AuthController', () => {
       jwt: validJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Internal server error',
+        },
+      },
       500,
     );
   });
@@ -333,7 +417,13 @@ describe('AuthController', () => {
       jwt: validJwtToken,
     });
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Internal server error',
+        },
+      },
       500,
     );
   });
@@ -356,7 +446,13 @@ describe('AuthController', () => {
     // Then: 405ステータスでメソッド不許可エラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Method not allowed' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Method not allowed',
+        },
+      },
       405,
     );
   });
@@ -383,7 +479,13 @@ describe('AuthController', () => {
     // Then: 415Content-Type不正エラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Content-Type must be application/json' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Content-Type must be application/json',
+        },
+      },
       415,
     );
   });
@@ -406,7 +508,13 @@ describe('AuthController', () => {
     // Then: 404ステータスでエンドポイント不存在エラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Endpoint not found' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Endpoint not found',
+        },
+      },
       404,
     );
   });
@@ -426,7 +534,13 @@ describe('AuthController', () => {
     // Then: 400ステータスでトークン長制限エラーが返される
     expect(mockAuthenticateUserUseCase.execute).not.toHaveBeenCalled();
     expect(mockContext.json).toHaveBeenCalledWith(
-      { success: false, error: 'Token is too long' },
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Token is too long',
+        },
+      },
       400,
     );
   });

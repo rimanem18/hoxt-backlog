@@ -336,7 +336,8 @@ export class GoogleAuthProvider extends BaseAuthProvider {
 
   /**
    * Google OAuth コールバック処理
-   * Supabase セッション確立とユーザー情報取得を実施
+   * Supabase セッション確立とユーザー情報取得を実施し、
+   * バックエンドの /auth/verify を呼び出してDB の User レコードを作成する
    */
   async handleCallback(
     hashParams: URLSearchParams,
@@ -379,23 +380,45 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       );
     }
 
-    // User オブジェクト構築
+    // バックエンドで User レコード作成（JIT Provisioning）
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!apiBaseUrl) {
+      throw new Error('API Base URLが設定されていません');
+    }
+
+    const verifyResponse = await fetch(`${apiBaseUrl}/api/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: accessToken }),
+    });
+
+    if (!verifyResponse.ok) {
+      const errorData = await verifyResponse.json();
+      throw new Error(
+        `バックエンド認証エラー: ${errorData.error?.message || 'Unknown error'}`,
+      );
+    }
+
+    const verifyData = await verifyResponse.json();
+
+    // DB の user.id を使用（Supabase の外部IDではない）
     const user: import('@/packages/shared-schemas/src/auth').User = {
-      id: userData.user.id,
-      externalId: userData.user.id,
-      provider: 'google',
-      email: userData.user.email || '',
-      name: userData.user.user_metadata.full_name || userData.user.email || '',
-      avatarUrl:
-        userData.user.user_metadata?.avatar_url ||
-        userData.user.user_metadata?.picture ||
-        null,
-      createdAt: userData.user.created_at || new Date().toISOString(),
-      updatedAt: userData.user.updated_at || new Date().toISOString(),
-      lastLoginAt: new Date().toISOString(),
+      id: verifyData.data.user.id, // DB の UUID
+      externalId: verifyData.data.user.externalId,
+      provider: verifyData.data.user.provider,
+      email: verifyData.data.user.email,
+      name: verifyData.data.user.name,
+      avatarUrl: verifyData.data.user.avatarUrl || null,
+      createdAt: verifyData.data.user.createdAt,
+      updatedAt: verifyData.data.user.updatedAt,
+      lastLoginAt: verifyData.data.user.lastLoginAt || null,
     };
 
-    return { success: true, user, isNewUser: false };
+    return {
+      success: true,
+      user,
+      isNewUser: verifyData.data.isNewUser,
+    };
   }
 
   // resetPasswordメソッドは削除済み

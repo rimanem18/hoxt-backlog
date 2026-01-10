@@ -31,6 +31,7 @@ export interface JwtPayload {
   user_metadata: {
     name: string;
     avatar_url?: string;
+    picture?: string;
     email?: string;
     full_name?: string;
   };

@@ -32,15 +32,18 @@ function TaskSort(): React.ReactNode {
   };
 
   return (
-    <div className="mb-4">
-      <label htmlFor="sort-select" className="block text-sm font-medium mb-1">
+    <div className="mb-4 sm:mb-6">
+      <label
+        htmlFor="sort-select"
+        className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
+      >
         並び替え
       </label>
       <select
         id="sort-select"
         value={sortBy}
         onChange={handleSortChange}
-        className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+        className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
         aria-label="並び替えオプション"
       >
         {sortOptions.map((option) => (

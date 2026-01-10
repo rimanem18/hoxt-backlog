@@ -49,7 +49,7 @@ export class AuthController {
       // HTTPリクエストの基本バリデーション実行
       const httpValidationResult = this.validatorService.validateHttpRequest(c);
       if (!httpValidationResult.isValid) {
-        return AuthResponseHelper.legacyError(
+        return AuthResponseHelper.validationFailed(
           c,
           httpValidationResult.error ?? 'HTTP validation failed',
           httpValidationResult.statusCode ?? 400,
@@ -62,7 +62,7 @@ export class AuthController {
         requestBody = await c.req.json();
       } catch {
         // JSONパース失敗時は400エラーを返却
-        return AuthResponseHelper.legacyError(c, 'Invalid JSON format', 400);
+        return AuthResponseHelper.jsonParseError(c);
       }
 
       // JWTトークンの構造バリデーション
@@ -70,7 +70,7 @@ export class AuthController {
         requestBody as { token?: string },
       );
       if (!tokenValidationResult.isValid) {
-        return AuthResponseHelper.legacyError(
+        return AuthResponseHelper.validationFailed(
           c,
           tokenValidationResult.error ?? 'Token validation failed',
           tokenValidationResult.statusCode ?? 400,
@@ -83,7 +83,7 @@ export class AuthController {
       });
 
       // 認証成功時のレスポンス生成
-      return AuthResponseHelper.legacySuccess(
+      return AuthResponseHelper.success(
         c,
         authResult.user,
         authResult.isNewUser,
@@ -93,17 +93,17 @@ export class AuthController {
 
       if (error instanceof AuthenticationError) {
         // 認証エラーは401ステータスで返却
-        return AuthResponseHelper.legacyError(c, error.message, 401);
+        return AuthResponseHelper.authenticationError(c, error);
       }
 
       if (error instanceof ValidationError) {
         // バリデーションエラーは400ステータスで返却
-        return AuthResponseHelper.legacyError(c, error.message, 400);
+        return AuthResponseHelper.validationError(c, error);
       }
 
       // 予期しないエラーは500ステータスで返却
       console.error('Unexpected error in AuthController:', error);
-      return AuthResponseHelper.legacyError(c, 'Internal server error', 500);
+      return AuthResponseHelper.genericError(c, error);
     }
   }
 }

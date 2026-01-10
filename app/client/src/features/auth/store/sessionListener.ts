@@ -1,7 +1,19 @@
 import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import { authSlice } from '@/features/auth/store/authSlice';
+import { clearAuthToken, setAuthToken } from '@/lib/api';
+import {
+  clearStoredAuth,
+  validateStoredAuth,
+} from '@/shared/utils/authValidation';
 
-const { authSuccess, logout, handleExpiredToken } = authSlice.actions;
+const {
+  authSuccess,
+  authFailure,
+  restoreAuthState,
+  logout,
+  handleExpiredToken,
+  clearAuthState,
+} = authSlice.actions;
 
 /**
  * セッション監視用Listener Middleware
@@ -12,43 +24,66 @@ const { authSuccess, logout, handleExpiredToken } = authSlice.actions;
 export const authListenerMiddleware = createListenerMiddleware();
 
 /**
- * 認証成功時のログ出力
+ * 認証成功・認証状態復元時にAPIクライアントにトークンを設定
  *
- * authSuccessアクションをリッスンし、開発環境でログを出力する。
+ * authSuccess・restoreAuthStateアクションをリッスンし、
+ * LocalStorageからaccess_tokenを取得してAPIクライアントに設定する。
  */
 authListenerMiddleware.startListening({
-  matcher: isAnyOf(authSuccess),
+  matcher: isAnyOf(authSuccess, restoreAuthState),
   effect: (action) => {
-    // 開発環境でのみListenerレベルのログを出力
-    if (process.env.NODE_ENV === 'development') {
-      // PayloadActionの型ガード
-      if (
-        'payload' in action &&
-        action.payload &&
-        typeof action.payload === 'object' &&
-        'user' in action.payload &&
-        action.payload.user !== null &&
-        typeof action.payload.user === 'object' &&
-        'id' in action.payload.user
-      ) {
-        console.log('Auth session established:', action.payload.user.id);
+    // LocalStorageから認証データを取得
+    const validationResult = validateStoredAuth();
+
+    if (validationResult.isValid && validationResult.data?.access_token) {
+      // APIクライアントにJWTトークンを設定
+      setAuthToken(validationResult.data.access_token);
+
+      // 開発環境でのログ出力
+      if (process.env.NODE_ENV === 'development') {
+        // PayloadActionの型ガード
+        if (
+          'payload' in action &&
+          action.payload &&
+          typeof action.payload === 'object' &&
+          'user' in action.payload &&
+          action.payload.user !== null &&
+          typeof action.payload.user === 'object' &&
+          'id' in action.payload.user
+        ) {
+          console.log('Auth session established:', action.payload.user.id);
+          console.log('API client token configured');
+        }
       }
+    } else {
+      // トークンが取得できない場合は警告ログ
+      console.warn(
+        'Auth token not found in localStorage after successful auth',
+      );
     }
   },
 });
 
 /**
- * ログアウト・トークン期限切れ時のログ出力
+ * 認証解除時の後始末処理
  *
- * logout・handleExpiredTokenアクションをリッスンし、
- * 開発環境でログを出力する。
+ * authFailure・logout・handleExpiredToken・clearAuthStateアクションをリッスンし、
+ * APIクライアントからトークンを削除し、LocalStorageもクリアする。
  */
 authListenerMiddleware.startListening({
-  matcher: isAnyOf(logout, handleExpiredToken),
+  matcher: isAnyOf(authFailure, logout, handleExpiredToken, clearAuthState),
   effect: () => {
-    // 開発環境でのみListenerレベルのログを出力
+    // APIクライアントからJWTトークンを削除
+    clearAuthToken();
+
+    // LocalStorageから認証データを削除
+    clearStoredAuth();
+
+    // 開発環境でのログ出力
     if (process.env.NODE_ENV === 'development') {
       console.log('Auth session cleared');
+      console.log('API client token removed');
+      console.log('LocalStorage auth data cleared');
     }
   },
 });

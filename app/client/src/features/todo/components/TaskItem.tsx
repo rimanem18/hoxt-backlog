@@ -26,7 +26,7 @@ interface TaskItemProps {
 
 /** 優先度に応じたテキストカラーとスタイルのマップ */
 const priorityColorMap = {
-  high: 'text-[#ff6a00] font-bold',
+  high: 'text-accent font-bold',
   medium: 'text-gray-700',
   low: 'text-gray-400',
 } as const;
@@ -72,16 +72,18 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
   };
 
   return (
-    <div className="border-l-4 border-[#710000] bg-white p-4 hover:bg-gray-50 transition-colors">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
+    <div className="border-l-4 border-primary bg-white p-4 sm:p-5 md:p-6 hover:bg-gray-50 transition-colors">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0 w-full">
           {/* タスクタイトル。長い場合は省略記号で表示 */}
-          <h3 className="text-lg font-semibold truncate">{props.task.title}</h3>
+          <h3 className="text-base sm:text-lg font-semibold truncate">
+            {props.task.title}
+          </h3>
 
           {/* Markdown形式の説明。null/空文字列時は非表示、2行制限で表示 */}
           {props.task.description && props.task.description.trim() !== '' && (
             <div
-              className="text-gray-600 text-sm mt-1"
+              className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2"
               style={{
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -99,8 +101,8 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
           )}
 
           {/* 優先度バッジとステータスバッジ */}
-          <div className="flex items-center gap-2 mt-3">
-            <span className={`text-sm ${priorityColor}`}>
+          <div className="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
+            <span className={`text-xs sm:text-sm ${priorityColor}`}>
               {props.task.priority === 'high'
                 ? '高'
                 : props.task.priority === 'medium'
@@ -117,13 +119,13 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
         </div>
 
         {/* ステータス変更、編集、削除の操作ボタン */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto">
           {/* ステータス選択ドロップダウン */}
           <select
             value={props.task.status}
             onChange={handleStatusChange}
             aria-label="ステータスを変更"
-            className="px-3 py-1 text-sm border border-gray-300 rounded hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ff6a00]"
+            className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="not_started">未着手</option>
             <option value="in_progress">進行中</option>
@@ -136,7 +138,7 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
             type="button"
             onClick={() => props.onEdit(props.task)}
             aria-label="タスクを編集"
-            className="px-3 py-1 text-sm text-gray-700 hover:text-[#ff6a00] transition-colors"
+            className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-gray-700 hover:text-accent transition-colors whitespace-nowrap"
           >
             編集
           </button>
@@ -146,7 +148,7 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
             type="button"
             onClick={() => props.onDelete(props.task.id)}
             aria-label="タスクを削除"
-            className="px-3 py-1 text-sm text-white bg-[#710000] hover:bg-opacity-80 rounded transition-colors"
+            className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-white bg-primary hover:bg-opacity-80 rounded transition-colors whitespace-nowrap"
           >
             削除
           </button>
