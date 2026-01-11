@@ -10,7 +10,7 @@ description: 要件定義や技術設計をもとにしたコードレビュー
 - **必須**: `CLAUDE.md`
 - バックエンド開発ガイドライン: `.claude/skills/common/references/backend.md`
 - フロントエンド開発ガイドライン `.claude/skills/common/references/frontend.md`
-- スキーマ駆動開発ガイドライン: `.cluade/skills/common/references/schema-db.md`
+- スキーマ駆動開発ガイドライン: `.claude/skills/common/references/schema-db.md`
 - E2Eテストガイドライン `.claude/skills/common/references/e2e.md`
 
 ## 実行内容
