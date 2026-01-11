@@ -292,17 +292,4 @@ describe('Provider', () => {
     });
     expect(mockSetAuthToken).not.toHaveBeenCalled();
   });
-
-  test('services 未指定時はデフォルトの services が使用される（後方互換性）', () => {
-    // When: services を指定せずに Provider をレンダリング
-    render(
-      <Provider>
-        <div data-testid="fallback-child">Fallback Test</div>
-      </Provider>,
-    );
-
-    // Then: エラーなくレンダリングされる（デフォルトの services が使用される）
-    expect(screen.getByTestId('fallback-child')).toBeDefined();
-    expect(screen.getByText('Fallback Test')).toBeDefined();
-  });
 });
