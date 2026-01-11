@@ -215,11 +215,11 @@ describe('Provider', () => {
     });
   });
 
-  test('認証情報が invalid（その他のエラー）の場合、logout が dispatch される', () => {
-    // Given: 認証情報が invalid を返すモック
+  test('認証情報が invalid_token（その他のエラー）の場合、logout が dispatch される', () => {
+    // Given: 認証情報が invalid_token を返すモック
     mockValidateStoredAuth.mockImplementation(() => ({
       isValid: false,
-      reason: 'invalid',
+      reason: 'invalid_token',
     }));
 
     // When: Provider をレンダリング
