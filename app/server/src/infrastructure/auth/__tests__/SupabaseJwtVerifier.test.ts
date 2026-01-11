@@ -311,9 +311,12 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
   });
 });
 
-describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
+describe('SupabaseJwtVerifier(JWKS検証テスト)', () => {
   let jwtVerifier: SupabaseJwtVerifier;
-  let unmockFetch: (() => void) | null = null;
+  let unmockFetch:
+    | (() => void)
+    | { unmock: () => void; getCallCount: () => number }
+    | null = null;
 
   beforeEach(() => {
     process.env.SUPABASE_URL = 'https://test-project.supabase.co';
@@ -321,7 +324,11 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
   afterEach(() => {
     if (unmockFetch) {
-      unmockFetch();
+      if (typeof unmockFetch === 'function') {
+        unmockFetch();
+      } else {
+        unmockFetch.unmock();
+      }
       unmockFetch = null;
     }
   });
