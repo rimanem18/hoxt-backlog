@@ -54,6 +54,15 @@ aws コマンドも iac コンテナの中で利用できます。
 docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
 ```
 
+# 実装基本ガイドライン
+
+コードを変更したら、以下のコマンドを実行します。コンテナ名は必要に応じて取捨選択します。:
+
+  - `docker compose exec {コンテナサービス名} bunx tsc --noEmit`
+  - `docker compose exec {コンテナサービス名} bun run fix`
+  - `docker compose exec {コンテナサービス名} test`
+  - `docker compose run --rm semgrep semgrep <args...>`
+
 # テストガイドライン
 
 ## テスト哲学（共通）
