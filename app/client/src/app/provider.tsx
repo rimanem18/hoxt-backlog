@@ -13,6 +13,7 @@ import {
 import { setAuthErrorCallback, setAuthToken } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
 import { createQueryClient } from '@/lib/queryClient';
+import { debugLog } from '@/lib/utils/logger';
 import type { AuthValidationResult } from '@/shared/utils/authValidation';
 import { validateStoredAuth } from '@/shared/utils/authValidation';
 import { validateClientEnv } from '@/shared/utils/validateClientEnv';
@@ -87,15 +88,14 @@ export default function Provider({ children, services }: ProviderProps) {
     // 401エラー時の自動ログアウト処理を設定
     authServices.setAuthErrorCallback((error) => {
       if (error.status === 401) {
-        console.warn('[Provider] 401 detected, dispatching handleExpiredToken');
+        debugLog.warn('401 detected, dispatching handleExpiredToken');
         authServices.store.dispatch(authServices.handleExpiredToken());
       }
     });
 
     const validationResult = authServices.validateStoredAuth();
 
-    // デバッグ: 検証結果をログ出力
-    console.log('[Provider] validateStoredAuth result:', validationResult);
+    debugLog.redactedAuth('validateStoredAuth result', validationResult);
 
     if (validationResult.isValid && validationResult.data) {
       // 検証成功：認証状態をReduxストアに復元
@@ -109,9 +109,7 @@ export default function Provider({ children, services }: ProviderProps) {
       // APIクライアントにJWTトークンを直接設定（sessionListenerに依存しない）
       if (validationResult.data.access_token) {
         authServices.setAuthToken(validationResult.data.access_token);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Provider] API client token configured directly');
-        }
+        debugLog.auth('API client token configured directly');
       }
     } else if (validationResult.reason) {
       // 検証失敗：理由に応じて処理を分岐

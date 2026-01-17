@@ -49,6 +49,8 @@ docker compose exec e2e npx playwright test
   - `clearTimeout`, `clearInterval` などは `for-of` ループで代用
 - **禁止**: Func.displayName の使用
   - そもそも無名関数コンポーネントにしない。
+- **禁止**: console.log の使用
+  - 自前の logger `debugLog` を使用
 
 ### コンポーネント定義例:
 ```tsx

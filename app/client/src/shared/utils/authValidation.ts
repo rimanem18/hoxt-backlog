@@ -4,6 +4,7 @@
  * DRY原則に基づく重複コード除去とメンテナンス性向上
  */
 
+import { debugLog } from '@/lib/utils/logger';
 import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
@@ -14,10 +15,7 @@ import type { User } from '@/packages/shared-schemas/src/auth';
 export function getSupabaseStorageKey(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  // デバッグログ（開発環境のみ）
-  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-    console.log('[getSupabaseStorageKey] NEXT_PUBLIC_SUPABASE_URL:', url);
-  }
+  debugLog.storageKey('NEXT_PUBLIC_SUPABASE_URL', url);
 
   if (!url) return 'sb-localhost-auth-token';
 
@@ -30,10 +28,7 @@ export function getSupabaseStorageKey(): string {
     ? `sb-${projectRef}-auth-token`
     : 'sb-localhost-auth-token';
 
-  // デバッグログ（開発環境のみ）
-  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-    console.log('[getSupabaseStorageKey] Generated key:', key);
-  }
+  debugLog.auth('Generated key', { keySet: !!key });
 
   return key;
 }
@@ -116,10 +111,10 @@ export function validateStoredAuth(): AuthValidationResult {
     // localStorage からの認証データ取得
     // データ不存在の場合は早期リターン
     const storageKey = getSupabaseStorageKey();
-    console.log('[validateStoredAuth] Storage key:', storageKey);
+    debugLog.auth('Storage key set', { keySet: !!storageKey });
     const persistedState = localStorage.getItem(storageKey);
     if (!persistedState) {
-      console.log('[validateStoredAuth] No data found in localStorage');
+      debugLog.auth('No data found in localStorage');
       return {
         isValid: false,
         reason: 'missing',
@@ -131,14 +126,14 @@ export function validateStoredAuth(): AuthValidationResult {
     let authData: StoredAuthData;
     try {
       authData = JSON.parse(persistedState);
-      console.log('[validateStoredAuth] Parsed data:', {
+      debugLog.parsedData('Parsed data', {
         hasAccessToken: !!authData.access_token,
         hasExpiresAt: !!authData.expires_at,
         hasUser: !!authData.user,
         expiresAtType: typeof authData.expires_at,
       });
     } catch (error) {
-      console.error('[validateStoredAuth] Parse error:', error);
+      debugLog.error('Parse error', error);
       return {
         isValid: false,
         reason: 'parse_error',
@@ -149,10 +144,9 @@ export function validateStoredAuth(): AuthValidationResult {
     // 無効な型の expires_at を検出
     const isValidExpiresAt = typeof authData.expires_at === 'number';
     if (!isValidExpiresAt) {
-      console.log(
-        '[validateStoredAuth] Invalid expires_at type:',
-        typeof authData.expires_at,
-      );
+      debugLog.auth('Invalid expires_at type', {
+        expiresAtType: typeof authData.expires_at,
+      });
       return {
         isValid: false,
         reason: 'invalid_expires_at',
@@ -165,13 +159,13 @@ export function validateStoredAuth(): AuthValidationResult {
     const currentTime = Date.now();
     // expires_atは秒単位なのでミリ秒に変換して比較
     const expiresAtMs = expiresAt * 1000;
-    console.log('[validateStoredAuth] Expiry check:', {
+    debugLog.expiryCheck('Expiry check', {
       expiresAtMs,
       currentTime,
       isExpired: expiresAtMs <= currentTime,
     });
     if (expiresAtMs <= currentTime) {
-      console.log('[validateStoredAuth] Token expired');
+      debugLog.auth('Token expired');
       return {
         isValid: false,
         reason: 'expired',
@@ -182,13 +176,14 @@ export function validateStoredAuth(): AuthValidationResult {
     // 基本的なJWT形式（3つのパート）の確認
     const tokenExists = !!authData.access_token;
     const tokenIsString = typeof authData.access_token === 'string';
-    const tokenHasThreeParts =
-      authData.access_token && authData.access_token.split('.').length === 3;
+    const tokenHasThreeParts = !!(
+      authData.access_token && authData.access_token.split('.').length === 3
+    );
 
     const isValidAccessToken =
       tokenExists && tokenIsString && tokenHasThreeParts;
 
-    console.log('[validateStoredAuth] Token validation:', {
+    debugLog.tokenValidation('Token validation', {
       tokenExists,
       tokenIsString,
       tokenHasThreeParts,
@@ -196,7 +191,7 @@ export function validateStoredAuth(): AuthValidationResult {
     });
 
     if (!isValidAccessToken) {
-      console.log('[validateStoredAuth] Invalid access token');
+      debugLog.auth('Invalid access token');
       return {
         isValid: false,
         reason: 'invalid_token',
@@ -206,13 +201,13 @@ export function validateStoredAuth(): AuthValidationResult {
     // ユーザー情報の完全性確認
     // 必須ユーザー情報の存在確認
     const isValidUser = authData.user && typeof authData.user.id === 'string';
-    console.log('[validateStoredAuth] User validation:', {
+    debugLog.userValidation('User validation', {
       hasUser: !!authData.user,
-      userId: authData.user?.id,
+      hasUserId: !!authData.user?.id,
       isValidUser,
     });
     if (!isValidUser) {
-      console.log('[validateStoredAuth] Invalid user');
+      debugLog.auth('Invalid user');
       return {
         isValid: false,
         reason: 'invalid_user',
@@ -232,7 +227,7 @@ export function validateStoredAuth(): AuthValidationResult {
     };
 
     // すべての検証を通過した場合
-    console.log('[validateStoredAuth] Validation successful!');
+    debugLog.auth('Validation successful!');
     return {
       isValid: true,
       data: {
@@ -242,7 +237,7 @@ export function validateStoredAuth(): AuthValidationResult {
     };
   } catch (error) {
     // 予期しないエラー処理として localStorage アクセスエラー等
-    console.error('[validateStoredAuth] Unexpected error occurred:', error);
+    debugLog.error('Unexpected error occurred', error);
     return {
       isValid: false,
       reason: 'parse_error',
