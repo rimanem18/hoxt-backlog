@@ -372,10 +372,18 @@ describe('GoogleAuthProvider - callback処理', () => {
         }),
       ) as typeof global.fetch;
 
-      // When & Then: エラーが発生
-      await expect(googleProvider.handleCallback(hashParams)).rejects.toThrow(
-        'バックエンド認証エラー',
-      );
+      // When: コールバック処理を実行してエラーをキャッチ
+      let thrownError: Error | undefined;
+      try {
+        await googleProvider.handleCallback(hashParams);
+      } catch (error) {
+        thrownError = error as Error;
+      }
+
+      // Then: エラーが発生し、バックエンドのエラー詳細を含む
+      expect(thrownError).toBeDefined();
+      expect(thrownError?.message).toContain('バックエンド認証エラー');
+      expect(thrownError?.message).toContain('Backend Server Error');
     });
   });
 });
