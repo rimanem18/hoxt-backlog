@@ -16,6 +16,27 @@ function isDevelopment(): boolean {
 }
 
 /**
+ * URLからクエリパラメータとハッシュを除去し、安全なパス情報のみを抽出
+ *
+ * @param url - サニタイズ対象のURL文字列
+ * @returns クエリパラメータとハッシュを除去したパスとホスト情報
+ *
+ * @example
+ * ```typescript
+ * sanitizeUrl('https://api.example.com/users/123?token=secret#fragment')
+ * // => 'https://api.example.com/users/123'
+ * ```
+ */
+export function sanitizeUrl(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+    return `${parsedUrl.origin}${parsedUrl.pathname}`;
+  } catch {
+    return '[Invalid URL]';
+  }
+}
+
+/**
  * 認証関連のデバッグログユーティリティ
  *
  * 本番環境では何も出力せず、開発環境のみでPIIを含まない
@@ -163,6 +184,39 @@ export const debugLog = {
   warn: (message: string): void => {
     if (isDevelopment()) {
       console.warn(`[Auth Debug] ${message}`);
+    }
+  },
+
+  /**
+   * APIクライアントのリクエストログ（URL安全化済み）
+   *
+   * @param message - ログメッセージ
+   * @param data - ログデータ（URLは自動的にサニタイズされる）
+   */
+  apiRequest: (message: string, data: { url: string }): void => {
+    if (isDevelopment()) {
+      console.log(`[API Client] ${message}`, {
+        safeUrl: sanitizeUrl(data.url),
+      });
+    }
+  },
+
+  /**
+   * APIクライアントのレスポンスログ（URL安全化済み）
+   *
+   * @param message - ログメッセージ
+   * @param data - ログデータ（URLは自動的にサニタイズされる）
+   */
+  apiResponse: (
+    message: string,
+    data: { url: string; status: number; statusText: string },
+  ): void => {
+    if (isDevelopment()) {
+      console.log(`[API Client] ${message}`, {
+        safeUrl: sanitizeUrl(data.url),
+        status: data.status,
+        statusText: data.statusText,
+      });
     }
   },
 };

@@ -14,6 +14,7 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@/types/api/generated';
 import { getApiBaseUrl } from './env';
+import { debugLog } from './utils/logger';
 
 /**
  * APIクライアントインスタンスを作成
@@ -57,6 +58,11 @@ let onAuthErrorCallback:
   | null = null;
 
 /**
+ * 401エラーコールバック実行中フラグ（並列リクエスト時の重複防止）
+ */
+let isHandling401 = false;
+
+/**
  * JWT認証トークンを設定
  *
  * すべてのリクエストにAuthorizationヘッダーを追加する
@@ -80,7 +86,7 @@ export function setAuthToken(token: string): void {
   }
 
   currentAuthToken = token;
-  console.log('[setAuthToken] Token set:', {
+  debugLog.auth('Token set', {
     tokenLength: token.length,
     isMiddlewareRegistered,
   });
@@ -88,21 +94,22 @@ export function setAuthToken(token: string): void {
   if (!isMiddlewareRegistered) {
     apiClient.use({
       onRequest: async ({ request }) => {
-        console.log('[apiClient middleware] onRequest called:', {
-          hasToken: !!currentAuthToken,
+        debugLog.apiRequest('Request initiated', {
           url: request.url,
         });
         if (currentAuthToken) {
           request.headers.set('Authorization', `Bearer ${currentAuthToken}`);
-          console.log('[apiClient middleware] Authorization header set');
+          debugLog.auth('Authorization header set');
         }
         return request;
       },
       onResponse: async ({ response }) => {
-        // 401 Unauthorizedエラーの検出
-        if (response.status === 401) {
-          console.warn('[apiClient middleware] 401 Unauthorized detected:', {
+        // 401 Unauthorizedエラーの検出（並列リクエスト時の重複防止ガード）
+        if (response.status === 401 && !isHandling401) {
+          isHandling401 = true;
+          debugLog.apiResponse('401 Unauthorized detected', {
             url: response.url,
+            status: response.status,
             statusText: response.statusText,
           });
 
@@ -113,13 +120,18 @@ export function setAuthToken(token: string): void {
               message: 'セッションの有効期限が切れました',
             });
           }
+
+          // 短時間後にフラグをリセット（100ms後）
+          setTimeout(() => {
+            isHandling401 = false;
+          }, 100);
         }
 
         return response;
       },
     });
     isMiddlewareRegistered = true;
-    console.log('[setAuthToken] Middleware registered');
+    debugLog.auth('Middleware registered');
   }
 }
 
@@ -160,5 +172,5 @@ export function setAuthErrorCallback(
   callback: (error: { status: number; message?: string }) => void,
 ): void {
   onAuthErrorCallback = callback;
-  console.log('[setAuthErrorCallback] Callback registered');
+  debugLog.auth('Auth error callback registered');
 }

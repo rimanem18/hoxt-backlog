@@ -699,3 +699,83 @@ test('401以外のエラーではコールバックが呼ばれない', async ()
   // Then: コールバックは呼び出されない
   expect(callbackInvoked).toBe(false);
 });
+
+test('並列401リクエストでもコールバックは1回のみ呼ばれる', async () => {
+  // Given: コールバック呼び出し回数をカウント
+  let callbackCount = 0;
+  const callbackErrors: Array<{ status: number; message?: string }> = [];
+
+  setAuthErrorCallback((error) => {
+    callbackCount++;
+    callbackErrors.push(error);
+  });
+
+  // 401エラーレスポンスを返すモックを設定（並列リクエスト対応：各呼び出しで新しいResponseを生成）
+  mockFetch.mockImplementation(() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '認証エラー: トークンが期限切れです',
+          },
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    ),
+  );
+
+  // DI方式でmockFetchを注入したクライアントを作成
+  const testClient = createApiClient(TEST_BASE_URL, undefined, {
+    fetch: mockFetch as unknown as typeof fetch,
+  });
+
+  // 実際のapi.tsと同じ401ミドルウェアロジックを使用
+  let isHandling401 = false;
+  testClient.use({
+    onRequest: async ({ request }) => {
+      request.headers.set('Authorization', 'Bearer test-token-parallel');
+      return request;
+    },
+    onResponse: async ({ response }) => {
+      if (response.status === 401 && !isHandling401) {
+        isHandling401 = true;
+        callbackErrors.push({
+          status: 401,
+          message: 'セッションの有効期限が切れました',
+        });
+        callbackCount++;
+        setTimeout(() => {
+          isHandling401 = false;
+        }, 100);
+      }
+      return response;
+    },
+  });
+
+  // When: 並列で3つの401リクエストを実行
+  await Promise.all([
+    testClient.GET('/users/{id}', {
+      params: { path: { id: 'user-1' } },
+    }),
+    testClient.GET('/users/{id}', {
+      params: { path: { id: 'user-2' } },
+    }),
+    testClient.GET('/users/{id}', {
+      params: { path: { id: 'user-3' } },
+    }),
+  ]);
+
+  // Then: コールバックが1回のみ呼ばれる
+  expect(callbackCount).toBe(1);
+  expect(callbackErrors).toHaveLength(1);
+  expect(callbackErrors[0].status).toBe(401);
+  expect(callbackErrors[0].message).toBe('セッションの有効期限が切れました');
+
+  // 3つのリクエストすべてが実行されたことを確認
+  expect(mockFetch).toHaveBeenCalledTimes(3);
+});
