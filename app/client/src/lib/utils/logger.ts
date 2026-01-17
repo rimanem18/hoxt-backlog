@@ -219,4 +219,28 @@ export const debugLog = {
       });
     }
   },
+
+  /**
+   * ネットワーク状態のデバッグログ
+   *
+   * @param message - ログメッセージ
+   * @param data - 追加データ（オプショナル）
+   */
+  network: (message: string, data?: Record<string, unknown>): void => {
+    if (isDevelopment()) {
+      console.log(`[Network] ${message}`, data || '');
+    }
+  },
+
+  /**
+   * UI操作のデバッグログ
+   *
+   * @param message - ログメッセージ
+   * @param data - 追加データ（オプショナル）
+   */
+  ui: (message: string, data?: Record<string, unknown>): void => {
+    if (isDevelopment()) {
+      console.log(`[UI] ${message}`, data || '');
+    }
+  },
 };

@@ -10,6 +10,7 @@ import {
   setOAuthError,
 } from '@/features/auth/store/oauthErrorSlice';
 import { HelloWorld } from '@/features/hello-world';
+import { debugLog } from '@/lib/utils/logger';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
@@ -29,7 +30,7 @@ export default function Home(): React.ReactNode {
   // 認証状態復元完了後のみリダイレクト実行（AuthGuardとの競合回避）
   useEffect(() => {
     if (!isAuthRestoring && isAuthenticated && user) {
-      console.log('Home: Redirecting authenticated user to dashboard');
+      debugLog.auth('Home: Redirecting authenticated user to dashboard');
       router.replace('/dashboard'); // 履歴を残さずリダイレクト
     }
   }, [isAuthRestoring, isAuthenticated, user, router]);
@@ -99,12 +100,12 @@ export default function Home(): React.ReactNode {
               onAuthStart={() => {
                 // Redux経由でエラー状態をクリア
                 dispatch(clearOAuthError());
-                console.log('認証を開始しました');
+                debugLog.auth('認証を開始しました');
               }}
-              onAuthSuccess={(data) => {
+              onAuthSuccess={() => {
                 // Redux経由でエラー状態をクリア
                 dispatch(clearOAuthError());
-                console.log('認証に成功しました', data);
+                debugLog.auth('認証に成功しました');
               }}
               onAuthError={(error) => {
                 console.error('認証エラー:', error);
@@ -126,7 +127,7 @@ export default function Home(): React.ReactNode {
               className="mt-4"
               onRetry={() => {
                 // ログインボタンの再クリックをシミュレート
-                console.log('OAuth認証を再試行中...');
+                debugLog.auth('OAuth認証を再試行中');
                 // 実際の再試行処理は LoginButton 内部で処理される
               }}
             />

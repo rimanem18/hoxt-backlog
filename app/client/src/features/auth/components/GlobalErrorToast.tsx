@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { clearError } from '@/features/auth/store/errorSlice';
 import { apiClient } from '@/lib/api';
+import { debugLog } from '@/lib/utils/logger';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 /**
@@ -80,12 +81,12 @@ export function GlobalErrorToast() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log('Network: Online status detected');
+      debugLog.network('Online status detected');
     };
 
     const handleOffline = () => {
       setIsOnline(false);
-      console.log('Network: Offline status detected');
+      debugLog.network('Offline status detected');
     };
 
     // ネットワーク状態変化の監視開始
@@ -117,7 +118,7 @@ export function GlobalErrorToast() {
   const handleClose = useCallback(() => {
     // エラー状態をクリア
     dispatch(clearError());
-    console.log('T007: Error toast closed by user');
+    debugLog.ui('Error toast closed by user');
   }, [dispatch]);
 
   // 認証エラーの表示
@@ -246,15 +247,15 @@ export function GlobalErrorToast() {
             onClick={async () => {
               // ブラウザAPIで接続状態を確認してから再試行
               if (!isOnline) {
-                console.log(
-                  'T007: Retry skipped - browser reports offline status',
+                debugLog.network(
+                  'Retry skipped - browser reports offline status',
                 );
                 return;
               }
 
               // ローディング状態管理付きの再試行機能
               setIsRetrying(true);
-              console.log('T007: Network retry initiated with loading state');
+              debugLog.network('Retry initiated with loading state');
 
               // 既存のリクエストをキャンセルして重複を防止
               if (abortControllerRef.current) {
@@ -274,8 +275,7 @@ export function GlobalErrorToast() {
                   // エラー状態をクリアして成功フィードバック
                   dispatch(clearError());
 
-                  // 成功メッセージの一時表示
-                  console.log('T007: Network recovery successful');
+                  debugLog.network('Recovery successful');
 
                   // 2秒間成功メッセージを表示
                   timeoutRef.current = setTimeout(() => {
@@ -286,12 +286,12 @@ export function GlobalErrorToast() {
                   error.error?.message?.includes('401')
                 ) {
                   // 401エラーの場合はセッション失効として処理
-                  console.log('T007: Session expired detected during retry');
+                  debugLog.auth('Session expired detected during retry');
                   dispatch(handleExpiredToken());
                   setIsRetrying(false);
                 } else {
                   // エラーが継続していることを通知
-                  console.log('T007: Retry failed, network issue persists');
+                  debugLog.network('Retry failed, network issue persists');
                   timeoutRef.current = setTimeout(
                     () => setIsRetrying(false),
                     1000,
@@ -300,9 +300,9 @@ export function GlobalErrorToast() {
               } catch (error) {
                 // 再試行失敗時のユーザーフィードバック
                 if ((error as Error).name === 'AbortError') {
-                  console.log('T007: Retry cancelled');
+                  debugLog.network('Retry cancelled');
                 } else {
-                  console.log('T007: Retry failed:', error);
+                  debugLog.error('Retry failed', error);
                 }
                 timeoutRef.current = setTimeout(
                   () => setIsRetrying(false),
