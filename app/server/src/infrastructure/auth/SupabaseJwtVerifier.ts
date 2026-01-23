@@ -224,15 +224,15 @@ export class SupabaseJwtVerifier implements IAuthProvider {
         lastError = error instanceof Error ? error : new Error(String(error));
         const message = lastError.message.toLowerCase();
 
-        // リトライ可能なエラー（ネットワーク/JWKS取得エラー）のみリトライ（許可リスト方式）
+        // リトライ可能なエラー（ネットワーク系）のみリトライ（許可リスト方式）
+        // 'jwks'は含めない: JWKSNoMatchingKey等のリトライ不可エラーがマッチするため
         const isRetryableError =
           message.includes('network') ||
           message.includes('timeout') ||
           message.includes('econnrefused') ||
           message.includes('econnreset') ||
           message.includes('enotfound') ||
-          message.includes('fetch') ||
-          message.includes('jwks');
+          message.includes('fetch');
 
         if (!isRetryableError) {
           throw lastError;
