@@ -224,20 +224,21 @@ export class SupabaseJwtVerifier implements IAuthProvider {
         lastError = error instanceof Error ? error : new Error(String(error));
         const message = lastError.message.toLowerCase();
 
-        // リトライ不可能なエラーは即座に失敗
-        if (
-          message.includes('signature') ||
-          message.includes('expired') ||
-          message.includes('exp') ||
-          message.includes('issuer') ||
-          message.includes('audience') ||
-          message.includes('format') ||
-          message.includes('parse')
-        ) {
+        // リトライ可能なエラー（ネットワーク/JWKS取得エラー）のみリトライ（許可リスト方式）
+        const isRetryableError =
+          message.includes('network') ||
+          message.includes('timeout') ||
+          message.includes('econnrefused') ||
+          message.includes('econnreset') ||
+          message.includes('enotfound') ||
+          message.includes('fetch') ||
+          message.includes('jwks');
+
+        if (!isRetryableError) {
           throw lastError;
         }
 
-        // ネットワークエラーやJWKSフェッチエラーのみリトライ
+        // リトライ可能なエラーの場合のみ継続
         if (attempt < JWKS_CONFIG.MAX_RETRIES) {
           const delay = JWKS_CONFIG.RETRY_DELAY * 2 ** attempt;
           console.warn(

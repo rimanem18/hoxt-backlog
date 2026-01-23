@@ -63,6 +63,15 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
 
+## コード品質
+
+- **必須**: リトライ対象は allowlist で明示する（「未知エラー＝リトライ」の否定）
+- **必須**: 認証・検証系は fail-fast / fail-closed（遅延より即時失敗を優先）
+- **推奨**: リトライは「回復可能（トランジェント）」に限定（例: JWKS fetch の timeout / DNS / 接続エラー / 5xx）
+- **推奨**: `kid not found` は「最大1回の再フェッチ＋再検証」など限定的に扱う（無制限リトライはしない）
+- **非推奨**: blocklist（除外リスト）でのリトライ判定（想定外エラーがリトライ対象に混入しやすい）
+- **禁止**: 最大 ~7 秒など長いリトライをリクエストパス上で無条件に実行する（遅延・負荷増幅・DoS 耐性低下の温床）
+
 # テストガイドライン
 
 ## テスト哲学（共通）
