@@ -255,38 +255,30 @@ describe('GET /api/user/profile 統合テスト', () => {
         },
       });
 
-      try {
-        // 一時的にモックを差し替え
-        AuthDIContainer.resetForTesting();
-        AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
+      // モックを差し替え（afterEachでリセットされる）
+      AuthDIContainer.resetForTesting();
+      AuthDIContainer.setAuthProviderForTesting(mockAuthProvider);
 
-        const nonExistentUserJWT = 'mock-nonexistent-user-token';
+      const nonExistentUserJWT = 'mock-nonexistent-user-token';
 
-        const request = new Request('http://localhost/api/user/profile', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${nonExistentUserJWT}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const request = new Request('http://localhost/api/user/profile', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${nonExistentUserJWT}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        // When: プロフィール取得エンドポイントにリクエストを送信
-        const response = await app.request(request);
+      // When: プロフィール取得エンドポイントにリクエストを送信
+      const response = await app.request(request);
 
-        // Then: ステータス401でユーザー未存在エラーが返却される
-        expect(response.status).toBe(401);
+      // Then: ステータス401でユーザー未存在エラーが返却される
+      expect(response.status).toBe(401);
 
-        const responseBody = await response.json();
-        expect(responseBody.success).toBe(false);
-        expect(responseBody.error.code).toBe('USER_NOT_FOUND');
-        expect(responseBody.error.message).toContain(
-          'ユーザーが見つかりません',
-        );
-      } finally {
-        // モックを元に戻す（afterEachでもリセットされるが、明示的に復元）
-        AuthDIContainer.resetForTesting();
-        AuthDIContainer.setAuthProviderForTesting(new MockJwtVerifier());
-      }
+      const responseBody = await response.json();
+      expect(responseBody.success).toBe(false);
+      expect(responseBody.error.code).toBe('USER_NOT_FOUND');
+      expect(responseBody.error.message).toContain('ユーザーが見つかりません');
     });
   });
 
