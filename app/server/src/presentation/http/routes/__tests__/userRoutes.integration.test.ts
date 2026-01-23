@@ -13,7 +13,6 @@ import {
   test,
 } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import type { PoolClient } from 'pg';
 import serverApp from '@/entrypoints';
 import { MockJwtVerifier } from '@/infrastructure/auth/__tests__/MockJwtVerifier';
 import { closePool, getConnection } from '@/infrastructure/database/connection';
@@ -21,7 +20,6 @@ import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 describe('GET /api/user/profile 統合テスト', () => {
   let app: OpenAPIHono;
-  let dbClient: PoolClient;
 
   beforeAll(async () => {
     // テスト環境変数を設定
@@ -30,37 +28,41 @@ describe('GET /api/user/profile 統合テスト', () => {
     // 本番サーバー実装を使用
     app = serverApp;
 
-    // DB接続取得
-    dbClient = await getConnection();
-
-    // テストユーザーデータをINSERT（COMMITして確定）
-    await dbClient.query(
-      `
-      INSERT INTO app_test.users (
-        id, external_id, provider, email, name, avatar_url, created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, NOW(), NOW()
-      )
-      ON CONFLICT (id) DO NOTHING
-    `,
-      [
-        '550e8400-e29b-41d4-a716-446655440000', // MockJwtVerifierのsub
-        '550e8400-e29b-41d4-a716-446655440000',
-        'google',
-        'test@example.com',
-        'Test User',
-        'https://example.com/avatar.jpg',
-      ],
-    );
+    // テストユーザーデータをINSERT（接続取得→クエリ実行→即release）
+    const client = await getConnection();
+    try {
+      await client.query(
+        `
+        INSERT INTO app_test.users (
+          id, external_id, provider, email, name, avatar_url, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, NOW(), NOW()
+        )
+        ON CONFLICT (id) DO NOTHING
+        `,
+        [
+          '550e8400-e29b-41d4-a716-446655440000', // MockJwtVerifierのsub
+          '550e8400-e29b-41d4-a716-446655440000',
+          'google',
+          'test@example.com',
+          'Test User',
+          'https://example.com/avatar.jpg',
+        ],
+      );
+    } finally {
+      client.release();
+    }
   });
 
   afterAll(async () => {
-    // テストデータを削除
-    if (dbClient) {
-      await dbClient.query(`DELETE FROM app_test.users WHERE id = $1`, [
+    // テストデータを削除（新規接続を取得して即release）
+    const client = await getConnection();
+    try {
+      await client.query(`DELETE FROM app_test.users WHERE id = $1`, [
         '550e8400-e29b-41d4-a716-446655440000',
       ]);
-      dbClient.release();
+    } finally {
+      client.release();
     }
 
     // 接続プールクローズ
