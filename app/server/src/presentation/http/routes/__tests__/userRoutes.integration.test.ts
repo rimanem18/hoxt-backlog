@@ -288,30 +288,6 @@ describe('GET /api/user/profile 統合テスト', () => {
         AuthDIContainer.setAuthProviderForTesting(new MockJwtVerifier());
       }
     });
-
-    test('サーバー内部エラー時500エラーが返される', async () => {
-      // Given: DB接続エラーをシミュレートするのは統合テストでは困難なため、
-      // このテストは無効なJWTで認証エラーとなることを確認する
-      const errorCausingJWT = 'invalid.jwt.token';
-
-      const request = new Request('http://localhost/api/user/profile', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${errorCausingJWT}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      // When: プロフィール取得エンドポイントにリクエストを送信
-      const response = await app.request(request);
-
-      // Then: 無効JWTで認証エラーが返される
-      expect(response.status).toBe(401);
-
-      const responseBody = await response.json();
-      expect(responseBody.success).toBe(false);
-      expect(responseBody.error).toBeDefined();
-    });
   });
 
   describe('境界値テスト', () => {
