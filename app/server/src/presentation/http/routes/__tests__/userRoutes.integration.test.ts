@@ -370,14 +370,14 @@ describe('GET /api/user/profile 統合テスト', () => {
       expect(totalTime).toBeLessThan(60000); // 60秒以内
     });
 
-    test('大量データレスポンス処理テスト', async () => {
-      // Given: 大きなプロフィールデータを持つユーザーのJWTトークン（JWKSモック環境）
-      const largeDataUserJWT = 'mock-valid-jwt-token'; // MockJwtVerifierで成功するトークン
+    test('標準ユーザープロフィール取得テスト', async () => {
+      // Given: テストユーザーのJWTトークン（JWKSモック環境）
+      const validJWT = 'mock-valid-jwt-token';
 
       const request = new Request('http://localhost/api/user/profile', {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${largeDataUserJWT}`,
+          Authorization: `Bearer ${validJWT}`,
           'Content-Type': 'application/json',
         },
       });

@@ -27,10 +27,10 @@ export function getPool(): Pool {
     const config = getDatabaseConfig();
     pool = new Pool({
       connectionString: config.url,
-      max: 2, // サーバーレス環境に最適化（リクエスト毎に1インスタンス=1-2接続で十分）
-      idleTimeoutMillis: 5000, // アイドルタイムアウトを短く（サーバーレスの短時間実行に合わせる）
-      connectionTimeoutMillis: 2000, // 接続タイムアウト
-      allowExitOnIdle: true, // Lambda等でアイドル接続が原因でプロセスが終了しないのを防ぐ
+      max: config.maxConnections,
+      idleTimeoutMillis: config.idleTimeoutSeconds * 1000,
+      connectionTimeoutMillis: config.connectTimeoutSeconds * 1000,
+      allowExitOnIdle: true,
     });
 
     // エラーハンドリング
