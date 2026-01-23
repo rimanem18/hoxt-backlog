@@ -271,23 +271,27 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       ).rejects.toThrow('Missing required field: email');
     });
 
-    test('user_metadata.name不足で適切な例外が発生する', async () => {
-      // Given: user_metadata.nameが不足したペイロード
-      const payloadMissingName: Partial<JwtPayload> = {
+    test('user_metadata.nameが空の場合、full_nameにフォールバックする', async () => {
+      // Given: user_metadata.nameが空でfull_nameが存在するペイロード
+      const payloadWithEmptyName: Partial<JwtPayload> = {
         sub: 'google_1234567890',
         email: 'test@example.com',
         user_metadata: {
           name: '',
           email: 'test@example.com',
           full_name: 'Test User',
-        }, // nameが不足
+        },
         app_metadata: { provider: 'google' },
       };
 
-      // When & Then: 適切な例外が発生することを確認
-      await expect(
-        jwtVerifier.getExternalUserInfo(payloadMissingName as JwtPayload),
-      ).rejects.toThrow('Missing required field: user_metadata.name');
+      // When: ユーザー情報を抽出
+      const result = await jwtVerifier.getExternalUserInfo(
+        payloadWithEmptyName as JwtPayload,
+      );
+
+      // Then: full_nameにフォールバックしてユーザー情報が取得される
+      expect(result.name).toBe('Test User');
+      expect(result.email).toBe('test@example.com');
     });
 
     test('app_metadata.provider不足で適切な例外が発生する', async () => {

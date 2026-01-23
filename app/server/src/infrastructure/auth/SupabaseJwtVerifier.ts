@@ -290,16 +290,12 @@ export class SupabaseJwtVerifier implements IAuthProvider {
 
     // 氏名のフォールバック処理（Supabaseの標準ペイロードに対応）
     // name → full_name → email の優先順位で取得
+    // || を使用し、空文字列もフォールバック対象とする
+    // email は上記で検証済みのため、displayName は必ず有効な文字列となる
     const displayName =
-      payload.user_metadata?.name ??
-      payload.user_metadata?.full_name ??
+      payload.user_metadata?.name ||
+      payload.user_metadata?.full_name ||
       payload.email;
-
-    if (!displayName) {
-      throw new Error(
-        ERROR_MESSAGES.MISSING_FIELD('user_metadata.name or full_name'),
-      );
-    }
 
     // アバターURLを解決
     const avatarUrl = this.resolveAvatarUrl(payload.user_metadata);
