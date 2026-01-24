@@ -36,8 +36,8 @@ describe('PostgreSQLUserRepository統合テスト', () => {
   let repository: PostgreSQLUserRepository;
 
   beforeAll(async () => {
-    // テスト用環境変数を設定
-    process.env.BASE_SCHEMA = process.env.BASE_SCHEMA || 'app_test';
+    // テスト用環境変数を設定（CI/ローカル環境で統一）
+    process.env.BASE_SCHEMA = process.env.BASE_SCHEMA || 'test_schema';
     process.env.DATABASE_URL =
       process.env.DATABASE_URL ||
       'postgresql://postgres:test_password@db:5432/postgres';

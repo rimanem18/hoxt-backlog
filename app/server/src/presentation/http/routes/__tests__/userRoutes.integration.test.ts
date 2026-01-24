@@ -20,6 +20,8 @@ import { AuthDIContainer } from '@/infrastructure/di/AuthDIContainer';
 
 describe('GET /api/user/profile 統合テスト', () => {
   let app: OpenAPIHono;
+  // 環境変数からスキーマ名を取得（CI/ローカル環境で統一）
+  const schema = process.env.BASE_SCHEMA ?? 'test_schema';
 
   beforeAll(async () => {
     // テスト環境変数を設定
@@ -33,7 +35,7 @@ describe('GET /api/user/profile 統合テスト', () => {
     try {
       await client.query(
         `
-        INSERT INTO app_test.users (
+        INSERT INTO "${schema}".users (
           id, external_id, provider, email, name, avatar_url, created_at, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, NOW(), NOW()
@@ -58,7 +60,7 @@ describe('GET /api/user/profile 統合テスト', () => {
     // テストデータを削除（新規接続を取得して即release）
     const client = await getConnection();
     try {
-      await client.query(`DELETE FROM app_test.users WHERE id = $1`, [
+      await client.query(`DELETE FROM "${schema}".users WHERE id = $1`, [
         '550e8400-e29b-41d4-a716-446655440000',
       ]);
     } finally {
