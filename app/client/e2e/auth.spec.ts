@@ -31,7 +31,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
     await expect(dashboardTitle).toBeVisible({ timeout: 10000 });
 
-    const welcomeMessage = page.getByText('おかえりなさい！あなたのアカウント情報です。');
+    const welcomeMessage = page.getByText('おかえりなさい！あなたのタスクを管理しましょう。');
     await expect(welcomeMessage).toBeVisible();
 
     const userNameHeading = page.locator('h2').filter({ hasText: DEFAULT_TEST_USER.name });
