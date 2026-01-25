@@ -186,8 +186,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // テスト用に明示的なキーを使用（環境差異を排除）
-    const storageKey = 'sb-localhost-auth-token';
+    const storageKey = getSupabaseStorageKey();
 
     // Node.js側で期限切れの時刻を計算
     const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
