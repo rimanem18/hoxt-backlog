@@ -386,7 +386,9 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       throw new Error('API Base URLが設定されていません');
     }
 
-    const verifyResponse = await fetch(`${apiBaseUrl}/api/auth/verify`, {
+    // 末尾スラッシュを除去して二重スラッシュを防止
+    const normalizedBaseUrl = apiBaseUrl.replace(/\/+$/, '');
+    const verifyResponse = await fetch(`${normalizedBaseUrl}/api/auth/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: accessToken }),
