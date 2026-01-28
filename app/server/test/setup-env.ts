@@ -21,3 +21,13 @@ process.env.NODE_ENV ??= 'test';
 // ローカルDocker環境を想定
 process.env.DATABASE_URL ??=
   'postgresql://postgres:test_password@db:5432/postgres';
+
+// CORS関連環境変数のデフォルト値設定
+process.env.ACCESS_ALLOW_ORIGIN ??= 'http://localhost:3000';
+process.env.ACCESS_ALLOW_METHODS ??= 'GET,POST,PUT,DELETE,OPTIONS';
+process.env.ACCESS_ALLOW_HEADERS ??= 'Authorization,Content-Type';
+
+// Supabase関連環境変数のデフォルト値設定
+process.env.SUPABASE_URL ??= 'http://localhost:54321';
+process.env.SUPABASE_ANON_KEY ??= 'test_anon_key';
+process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test_service_key';

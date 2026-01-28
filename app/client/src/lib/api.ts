@@ -14,6 +14,7 @@
 import createClient from 'openapi-fetch';
 import type { paths } from '@/types/api/generated';
 import { getApiBaseUrl } from './env';
+import { debugLog } from './utils/logger';
 
 /**
  * APIクライアントインスタンスを作成
@@ -50,6 +51,18 @@ let currentAuthToken: string | null = null;
 let isMiddlewareRegistered = false;
 
 /**
+ * 認証エラー時のコールバック関数
+ */
+let onAuthErrorCallback:
+  | ((error: { status: number; message?: string }) => void)
+  | null = null;
+
+/**
+ * 401エラーコールバック実行中フラグ（並列リクエスト時の重複防止）
+ */
+let isHandling401 = false;
+
+/**
  * JWT認証トークンを設定
  *
  * すべてのリクエストにAuthorizationヘッダーを追加する
@@ -73,17 +86,52 @@ export function setAuthToken(token: string): void {
   }
 
   currentAuthToken = token;
+  debugLog.auth('Token set', {
+    tokenLength: token.length,
+    isMiddlewareRegistered,
+  });
 
   if (!isMiddlewareRegistered) {
     apiClient.use({
       onRequest: async ({ request }) => {
+        debugLog.apiRequest('Request initiated', {
+          url: request.url,
+        });
         if (currentAuthToken) {
           request.headers.set('Authorization', `Bearer ${currentAuthToken}`);
+          debugLog.auth('Authorization header set');
         }
         return request;
       },
+      onResponse: async ({ response }) => {
+        // 401 Unauthorizedエラーの検出（並列リクエスト時の重複防止ガード）
+        if (response.status === 401 && !isHandling401) {
+          isHandling401 = true;
+          debugLog.apiResponse('401 Unauthorized detected', {
+            url: response.url,
+            status: response.status,
+            statusText: response.statusText,
+          });
+
+          // 認証エラーコールバックを呼び出し
+          if (onAuthErrorCallback) {
+            onAuthErrorCallback({
+              status: 401,
+              message: 'セッションの有効期限が切れました',
+            });
+          }
+
+          // 短時間後にフラグをリセット（100ms後）
+          setTimeout(() => {
+            isHandling401 = false;
+          }, 100);
+        }
+
+        return response;
+      },
     });
     isMiddlewareRegistered = true;
+    debugLog.auth('Middleware registered');
   }
 }
 
@@ -102,4 +150,27 @@ export function setAuthToken(token: string): void {
  */
 export function clearAuthToken(): void {
   currentAuthToken = null;
+}
+
+/**
+ * 認証エラー時のコールバック関数を登録
+ *
+ * API呼び出しで401エラーが発生した際に呼び出されるコールバック関数を設定する
+ *
+ * @param callback - 認証エラー時に呼び出される関数
+ *
+ * @example
+ * ```typescript
+ * setAuthErrorCallback((error) => {
+ *   if (error.status === 401) {
+ *     store.dispatch(handleExpiredToken());
+ *   }
+ * });
+ * ```
+ */
+export function setAuthErrorCallback(
+  callback: (error: { status: number; message?: string }) => void,
+): void {
+  onAuthErrorCallback = callback;
+  debugLog.auth('Auth error callback registered');
 }

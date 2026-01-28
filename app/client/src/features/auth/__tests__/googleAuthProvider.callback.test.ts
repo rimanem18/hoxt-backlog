@@ -94,6 +94,31 @@ describe('GoogleAuthProvider - callback処理', () => {
         error: null,
       });
 
+      // Given: /auth/verify API がDBのUUIDを返す
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: {
+                user: {
+                  id: 'test-user-id',
+                  externalId: 'test-user-id',
+                  provider: 'google',
+                  email: 'test@example.com',
+                  name: 'Test User',
+                  avatarUrl: 'https://example.com/avatar.jpg',
+                  createdAt: '2025-01-01T00:00:00Z',
+                  updatedAt: '2025-01-27T00:00:00Z',
+                  lastLoginAt: '2025-01-27T10:00:00Z',
+                },
+                isNewUser: false,
+              },
+            }),
+        }),
+      ) as typeof global.fetch;
+
       // When: コールバック処理を実行
       const result = await googleProvider.handleCallback(hashParams);
 
@@ -196,6 +221,31 @@ describe('GoogleAuthProvider - callback処理', () => {
         error: null,
       });
 
+      // Given: /auth/verify API がDBのUUIDを返す
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: {
+                user: {
+                  id: 'test-user-id',
+                  externalId: 'test-user-id',
+                  provider: 'google',
+                  email: 'test@example.com',
+                  name: 'Test User',
+                  avatarUrl: null,
+                  createdAt: '2025-01-01T00:00:00Z',
+                  updatedAt: '2025-01-27T00:00:00Z',
+                  lastLoginAt: null,
+                },
+                isNewUser: false,
+              },
+            }),
+        }),
+      ) as typeof global.fetch;
+
       // When: コールバック処理を実行
       const result = await googleProvider.handleCallback(hashParams);
 
@@ -207,6 +257,133 @@ describe('GoogleAuthProvider - callback処理', () => {
         access_token: 'valid_token',
         refresh_token: '',
       });
+    });
+  });
+
+  describe('handleCallback with /auth/verify API call', () => {
+    it('/auth/verify を呼び出し、DB の user.id を取得する', async () => {
+      // Given: 正常なアクセストークン
+      const hashParams = new URLSearchParams('access_token=valid_jwt_token');
+
+      // Given: Supabase がセッション確立に成功
+      (
+        mockSupabase.auth.setSession as ReturnType<typeof mock>
+      ).mockResolvedValue({ error: null });
+
+      // Given: Supabase ユーザー情報取得に成功
+      (mockSupabase.auth.getUser as ReturnType<typeof mock>).mockResolvedValue({
+        data: {
+          user: {
+            id: 'supabase-external-id',
+            email: 'backend-test@example.com',
+            user_metadata: {
+              full_name: 'Backend Test User',
+            },
+            created_at: '2025-01-01T00:00:00Z',
+            updated_at: '2025-01-27T00:00:00Z',
+          },
+        },
+        error: null,
+      });
+
+      // Given: /auth/verify API がDBのUUIDを返す
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              success: true,
+              data: {
+                user: {
+                  id: 'db-uuid-from-backend-12345',
+                  externalId: 'supabase-external-id',
+                  provider: 'google',
+                  email: 'backend-test@example.com',
+                  name: 'Backend Test User',
+                  avatarUrl: null,
+                  createdAt: '2024-01-01T00:00:00Z',
+                  updatedAt: '2024-01-01T00:00:00Z',
+                  lastLoginAt: '2024-01-27T10:00:00Z',
+                },
+                isNewUser: false,
+              },
+            }),
+        }),
+      ) as typeof global.fetch;
+
+      // When: コールバック処理を実行
+      const result = await googleProvider.handleCallback(hashParams);
+
+      // Then: 成功結果が返される
+      expect(result.success).toBe(true);
+      expect(result.user).toBeDefined();
+
+      // Then: DB の UUID が user.id として返される（Supabase の外部ID ではない）
+      expect(result.user?.id).toBe('db-uuid-from-backend-12345');
+      expect(result.user?.externalId).toBe('supabase-external-id');
+      expect(result.user?.provider).toBe('google');
+
+      // Then: /auth/verify API が呼ばれた
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/auth/verify'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+          body: expect.stringContaining('valid_jwt_token'),
+        }),
+      );
+    });
+
+    it('/auth/verify でエラー時、適切な例外をスロー', async () => {
+      // Given: 正常なアクセストークン
+      const hashParams = new URLSearchParams('access_token=valid_jwt_token');
+
+      // Given: Supabase がセッション確立に成功
+      (
+        mockSupabase.auth.setSession as ReturnType<typeof mock>
+      ).mockResolvedValue({ error: null });
+
+      // Given: Supabase ユーザー情報取得に成功
+      (mockSupabase.auth.getUser as ReturnType<typeof mock>).mockResolvedValue({
+        data: {
+          user: {
+            id: 'supabase-external-id',
+            email: 'error-test@example.com',
+            user_metadata: { full_name: 'Error Test User' },
+            created_at: '2025-01-01T00:00:00Z',
+            updated_at: '2025-01-27T00:00:00Z',
+          },
+        },
+        error: null,
+      });
+
+      // Given: /auth/verify API がエラーを返す
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () =>
+            Promise.resolve({
+              success: false,
+              error: { message: 'Backend Server Error' },
+            }),
+        }),
+      ) as typeof global.fetch;
+
+      // When: コールバック処理を実行してエラーをキャッチ
+      let thrownError: Error | undefined;
+      try {
+        await googleProvider.handleCallback(hashParams);
+      } catch (error) {
+        thrownError = error as Error;
+      }
+
+      // Then: エラーが発生し、バックエンドのエラー詳細を含む
+      expect(thrownError).toBeDefined();
+      expect(thrownError?.message).toContain('バックエンド認証エラー');
+      expect(thrownError?.message).toContain('Backend Server Error');
     });
   });
 });

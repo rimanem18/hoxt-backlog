@@ -21,6 +21,9 @@ services:
       - ENVIRONMENT=preview
       - BASE_SCHEMA=app_test
       - DATABASE_URL=postgresql://postgres:test_password@db:5432/postgres
+      - DB_CONNECT_TIMEOUT_SECONDS=${DB_CONNECT_TIMEOUT_SECONDS}
+      - DB_IDLE_TIMEOUT_SECONDS=${DB_IDLE_TIMEOUT_SECONDS}
+      - DB_MAX_CONNECTIONS=100
     depends_on:
       db:
         condition: service_healthy

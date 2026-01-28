@@ -12,7 +12,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await cleanupTestState(page);
   });
 
-  test('T001: 認証済みユーザーのダッシュボード表示テスト', async ({ page }) => {
+  test('認証済みユーザーのダッシュボード表示テスト', async ({ page }) => {
     // Given: 認証済みユーザーのRedux状態を設定
     await page.addInitScript((userData) => {
       window.__TEST_REDUX_AUTH_STATE__ = {
@@ -31,7 +31,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
     await expect(dashboardTitle).toBeVisible({ timeout: 10000 });
 
-    const welcomeMessage = page.getByText('おかえりなさい！あなたのアカウント情報です。');
+    const welcomeMessage = page.getByText('おかえりなさい！あなたのタスクを管理しましょう。');
     await expect(welcomeMessage).toBeVisible();
 
     const userNameHeading = page.locator('h2').filter({ hasText: DEFAULT_TEST_USER.name });
@@ -47,7 +47,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(avatarImage).toBeVisible();
   });
 
-  test('T002: 既存ユーザーの再ログインフローテスト', async ({ page }) => {
+  test('既存ユーザーの再ログインフローテスト', async ({ page }) => {
     // 既存ユーザーのログイン後の表示確認テスト
     // 1. 既存ユーザー情報の正常表示
     // 2. lastLoginAt を持つユーザーのダッシュボード表示
@@ -78,9 +78,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     // When: ダッシュボードページにアクセス
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
-    const reduxState = await page.evaluate(() => {
-      return window.__TEST_REDUX_AUTH_STATE__;
-    });
 
     // Then: ダッシュボードと既存ユーザー情報が表示される
     const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
@@ -100,7 +97,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(existingUserMessage).toBeVisible();
   });
 
-  test('T004: ページリロード時の認証状態復元テスト', async ({ page }) => {
+  test('ページリロード時の認証状態復元テスト', async ({ page }) => {
     // Given: 認証済みユーザーのセッション情報を設定
     const authenticatedUser = {
       id: 'auth-user-789',
@@ -175,7 +172,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(continuedSessionMessage).toBeVisible();
   });
 
-  test('T006: JWT期限切れ時のエラーハンドリングテスト', async ({ browser }) => {
+  test('JWT期限切れ時のエラーハンドリングテスト', async ({ browser }) => {
     // Given: 期限切れトークンでユーザー認証状態を設定
     const expiredUser = {
       id: 'expired-user-999',
@@ -189,8 +186,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    // テスト用に明示的なキーを使用（環境差異を排除）
-    const storageKey = 'sb-localhost-auth-token';
+    const storageKey = getSupabaseStorageKey();
 
     // Node.js側で期限切れの時刻を計算
     const expiredTimestamp = Math.floor(Date.now() / 1000) - 1; // 1秒前（期限切れ）
@@ -249,7 +245,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     }
   });
 
-  test('T003: 未認証ユーザーのリダイレクト確認', async ({ page }) => {
+  test('未認証ユーザーのリダイレクト確認', async ({ page }) => {
     // Given: 未認証状態のAPIモック設定
     await setupUnauthenticatedApiMocks(page);
 
@@ -261,7 +257,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await expect(loginButton).toBeVisible();
   });
 
-  test('T007: ネットワークエラー時のフォールバック処理テスト', async ({ page }) => {
+  test('ネットワークエラー時のフォールバック処理テスト', async ({ page }) => {
     const networkUser = {
       id: 'network-test-555',
       name: 'Network Test User',
@@ -313,36 +309,11 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
 
-    const debugInfo = await page.evaluate(({ key }) => {
-      const authData = localStorage.getItem(key);
-      const testState = window.__TEST_REDUX_AUTH_STATE__;
-      return {
-        authDataExists: !!authData,
-        testStateExists: !!testState,
-        currentURL: window.location.href,
-      };
-    }, { key: storageKey });
-
-    const networkErrorMessage = page.getByText('ネットワーク接続を確認してください', { exact: false });
-
+    // 再試行ボタンが表示されていればクリック
     const retryButton = page.getByRole('button', { name: /再試行|retry|もう一度/i });
-
-    const offlineIndicator = page.locator('[data-testarea="network-status"]');
-
     if (await retryButton.isVisible()) {
       await retryButton.click();
-
-      const loadingIndicator = page.locator('[data-testarea="retry-loading"]');
     }
-
-    const appStability = await page.evaluate(() => {
-      return {
-        pageExists: !!document.body,
-        hasError: document.querySelector('[data-testarea="error-boundary"]') !== null,
-        scriptErrors: window.onerror ? 'error-handler-present' : 'no-error-handler',
-      };
-    });
-
 
     await page.unroute('**/api/**');
 
@@ -359,24 +330,17 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
 
     // ネットワーク回復後のページリロード処理
     await page.reload({ waitUntil: 'domcontentloaded' });
-    
-    // ネットワークエラー後にアプリケーションが回復してUI表示が正常であることを確認
-    const recoveryDashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
-    
-    try {
-      // 理想的なケース：ダッシュボードが正常表示
-      await expect(recoveryDashboardTitle).toBeVisible({ timeout: 10000 });
-    } catch (error) {
-      // ダッシュボードが表示されない場合は、少なくともページが機能していることを確認
-      const anyPageTitle = page.locator('h1, h2, h3').first();
-      await expect(anyPageTitle).toBeVisible({ timeout: 10000 });
-      
-      // アプリケーションが正常に動作していることの最低限の確認
-      expect(await page.locator('html').isVisible()).toBeTruthy();
-    }
+
+    // ネットワーク回復後は以下のいずれかが表示される：
+    // - ダッシュボード（認証維持）
+    // - ログインページ（セッション切れ）
+    const dashboardTitle = page.getByRole('heading', { name: 'ダッシュボード' });
+    const loginButton = page.getByRole('button', { name: /ログイン|login/i });
+
+    await expect(dashboardTitle.or(loginButton)).toBeVisible({ timeout: 10000 });
   });
 
-  test('T005: 無効JWT認証エラーハンドリングテスト', async ({ page }) => {
+  test('無効JWT認証エラーハンドリングテスト', async ({ page }) => {
     const invalidUser = {
       id: 'invalid-user-111',
       name: 'Invalid User',
@@ -421,27 +385,6 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
 
-    const debugInfo = await page.evaluate(({ key }) => {
-      const authData = localStorage.getItem(key);
-      const testState = window.__TEST_REDUX_AUTH_STATE__;
-      const parsedAuthData = authData ? JSON.parse(authData) : null;
-      const now = Math.floor(Date.now() / 1000);
-
-      return {
-        authDataExists: !!authData,
-        hasAccessToken: !!parsedAuthData?.access_token,
-        isExpired: parsedAuthData?.expires_at ? parsedAuthData.expires_at < now : false,
-        expiresAt: parsedAuthData?.expires_at,
-        currentTime: now,
-        testStateExists: !!testState,
-        reduxAuthenticated: testState?.isAuthenticated,
-        currentURL: window.location.href,
-      };
-    }, { key: storageKey });
-    
-    console.log('Debug Info:', JSON.stringify(debugInfo, null, 2));
-
-
     // 無効JWT処理を待機してからエラーメッセージ確認
     const invalidTokenMessage = page.getByText('認証に問題があります', { exact: false });
     const reloginPrompt = page.getByText('もう一度ログインしてください', { exact: false });
@@ -455,14 +398,7 @@ test.describe('Google OAuth認証フロー E2Eテスト', () => {
       ]);
     } catch (error) {
       // タイムアウトしてもテスト続行（ログインページへのリダイレクト処理中の可能性）
-      console.log('認証エラー処理中...');
     }
-
-    // 認証状態クリア確認
-    const clearedAuthState = await page.evaluate(({ key }) => {
-      const authData = localStorage.getItem(key);
-      return authData ? JSON.parse(authData) : null;
-    }, { key: storageKey });
 
     // CI環境での遅延を考慮してログインボタンを待機
     const loginButton = page.getByRole('button', { name: /ログイン|login/i });

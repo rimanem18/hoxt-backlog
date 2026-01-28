@@ -25,6 +25,8 @@ const JWKS_CONFIG = {
   TIMEOUT: 5000,
   /** リトライ回数 */
   MAX_RETRIES: 3,
+  /** リトライ間隔（ミリ秒、指数バックオフの基準値） */
+  RETRY_DELAY: 1000,
 } as const;
 
 // エラーメッセージ定数
@@ -35,6 +37,8 @@ const ERROR_MESSAGES = {
   TOKEN_EXPIRED: 'Token expired',
   INVALID_SIGNATURE: 'Invalid signature',
   JWKS_FETCH_FAILED: 'Failed to fetch JWKS',
+  JWKS_TIMEOUT: 'JWKS fetch timeout',
+  NETWORK_ERROR: 'Network error during JWKS fetch',
   UNKNOWN_ERROR: 'Unknown error occurred',
   MISSING_FIELD: (field: string) => `Missing required field: ${field}`,
 } as const;
@@ -50,6 +54,11 @@ const ERROR_MESSAGES = {
  * - JWKSエンドポイントからの動的公開鍵取得
  * - 発行者・対象者検証によるトークン適用範囲制限
  * - キャッシュ機能による性能最適化
+ *
+ * 信頼性機能：
+ * - タイムアウト付きJWKSフェッチ（デフォルト5秒）
+ * - 指数バックオフ付きリトライ（最大3回）
+ * - 詳細なエラー分類とログ出力
  *
  * @example
  * ```typescript
@@ -81,6 +90,7 @@ export class SupabaseJwtVerifier implements IAuthProvider {
     this.jwks = createRemoteJWKSet(jwksUrl, {
       cooldownDuration: JWKS_CONFIG.CACHE_TTL,
       cacheMaxAge: JWKS_CONFIG.CACHE_TTL,
+      timeoutDuration: JWKS_CONFIG.TIMEOUT,
     });
 
     // JWT検証オプションの設定
@@ -142,12 +152,8 @@ export class SupabaseJwtVerifier implements IAuthProvider {
         };
       }
 
-      // JWKS + 非対称鍵による署名検証
-      const { payload: verifiedPayload } = await jwtVerify(
-        token,
-        this.jwks,
-        this.verifyOptions,
-      );
+      // JWKS + 非対称鍵による署名検証（リトライ付き）
+      const verifiedPayload = await this.verifyTokenWithRetry(token);
 
       // ペイロードの型変換（jose → ドメイン型）
       const domainPayload = this.convertToJwtPayload(verifiedPayload);
@@ -167,8 +173,12 @@ export class SupabaseJwtVerifier implements IAuthProvider {
           errorMessage = ERROR_MESSAGES.INVALID_SIGNATURE;
         } else if (message.includes('expired') || message.includes('exp')) {
           errorMessage = ERROR_MESSAGES.TOKEN_EXPIRED;
+        } else if (message.includes('timeout')) {
+          errorMessage = ERROR_MESSAGES.JWKS_TIMEOUT;
         } else if (message.includes('jwks') || message.includes('fetch')) {
           errorMessage = ERROR_MESSAGES.JWKS_FETCH_FAILED;
+        } else if (message.includes('network')) {
+          errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
         } else if (message.includes('format') || message.includes('parse')) {
           errorMessage = ERROR_MESSAGES.INVALID_TOKEN_FORMAT;
         } else {
@@ -194,6 +204,71 @@ export class SupabaseJwtVerifier implements IAuthProvider {
   }
 
   /**
+   * リトライロジック付きJWT検証
+   *
+   * @param token - 検証対象のJWTトークン
+   * @returns 検証済みJWTペイロード
+   */
+  private async verifyTokenWithRetry(token: string): Promise<JWTPayload> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= JWKS_CONFIG.MAX_RETRIES; attempt++) {
+      try {
+        const { payload } = await jwtVerify(
+          token,
+          this.jwks,
+          this.verifyOptions,
+        );
+        return payload;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const message = lastError.message.toLowerCase();
+
+        // リトライ可能なエラー（ネットワーク系）のみリトライ（許可リスト方式）
+        // 'jwks'は含めない: JWKSNoMatchingKey等のリトライ不可エラーがマッチするため
+        const isRetryableError =
+          message.includes('network') ||
+          message.includes('timeout') ||
+          message.includes('econnrefused') ||
+          message.includes('econnreset') ||
+          message.includes('enotfound') ||
+          message.includes('fetch');
+
+        if (!isRetryableError) {
+          throw lastError;
+        }
+
+        // リトライ可能なエラーの場合のみ継続
+        if (attempt < JWKS_CONFIG.MAX_RETRIES) {
+          const delay = JWKS_CONFIG.RETRY_DELAY * 2 ** attempt;
+          console.warn(
+            `[JWKS] JWT検証失敗 (試行 ${attempt + 1}/${JWKS_CONFIG.MAX_RETRIES + 1}): ${lastError.message}. ${delay}ms後にリトライ...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // 全リトライ失敗
+    throw lastError || new Error(ERROR_MESSAGES.UNKNOWN_ERROR);
+  }
+
+  /**
+   * user_metadataからアバターURLを解決する
+   *
+   * OAuth プロバイダーによって使用するフィールド名が異なるため、
+   * avatar_url → picture の優先順位でフォールバックする
+   *
+   * @param metadata - JWTのuser_metadata
+   * @returns アバターURL（存在しない場合はnull）
+   */
+  private resolveAvatarUrl(
+    metadata: JwtPayload['user_metadata'],
+  ): string | null {
+    return metadata?.avatar_url ?? metadata?.picture ?? null;
+  }
+
+  /**
    * JWTペイロードから外部ユーザー情報を抽出する
    *
    * @param payload - 検証済みJWTペイロード
@@ -209,24 +284,30 @@ export class SupabaseJwtVerifier implements IAuthProvider {
       throw new Error(ERROR_MESSAGES.MISSING_FIELD('email'));
     }
 
-    if (!payload.user_metadata?.name) {
-      throw new Error(ERROR_MESSAGES.MISSING_FIELD('user_metadata.name'));
-    }
-
     if (!payload.app_metadata?.provider) {
       throw new Error(ERROR_MESSAGES.MISSING_FIELD('app_metadata.provider'));
     }
+
+    // 氏名のフォールバック処理（Supabaseの標準ペイロードに対応）
+    // name → full_name → email の優先順位で取得
+    // || を使用し、空文字列もフォールバック対象とする
+    // email は上記で検証済みのため、displayName は必ず有効な文字列となる
+    const displayName =
+      payload.user_metadata?.name ||
+      payload.user_metadata?.full_name ||
+      payload.email;
+
+    // アバターURLを解決
+    const avatarUrl = this.resolveAvatarUrl(payload.user_metadata);
 
     // JWTペイロードからExternalUserInfoへのマッピング
     const userInfo: ExternalUserInfo = {
       id: payload.sub,
       provider: payload.app_metadata.provider,
       email: payload.email,
-      name: payload.user_metadata.name,
+      name: displayName,
       // アバターURLはオプションフィールド
-      ...(payload.user_metadata.avatar_url && {
-        avatarUrl: payload.user_metadata.avatar_url,
-      }),
+      ...(avatarUrl && { avatarUrl }),
     };
 
     return userInfo;
@@ -248,6 +329,7 @@ export class SupabaseJwtVerifier implements IAuthProvider {
       user_metadata: josePayload.user_metadata as {
         name: string;
         avatar_url?: string;
+        picture?: string;
         email?: string;
         full_name?: string;
       },
@@ -282,6 +364,8 @@ export class SupabaseJwtVerifier implements IAuthProvider {
     if (message.includes('signature')) return 'INVALID_SIGNATURE';
     if (message.includes('expired') || message.includes('exp'))
       return 'TOKEN_EXPIRED';
+    if (message.includes('timeout')) return 'JWKS_TIMEOUT';
+    if (message.includes('network')) return 'NETWORK_ERROR';
     if (message.includes('jwks') || message.includes('fetch'))
       return 'JWKS_FETCH_FAILED';
     if (message.includes('format') || message.includes('parse'))

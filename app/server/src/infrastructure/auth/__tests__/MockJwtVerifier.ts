@@ -55,13 +55,19 @@ export class MockJwtVerifier implements IAuthProvider {
       );
     }
 
-    this.shouldSucceed = options.shouldSucceed ?? true;
+    this.shouldSucceed = options.shouldSucceed ?? false;
     this.customError = options.customError || undefined;
     this.customPayload = options.customPayload || undefined;
   }
 
   /**
    * モックJWTトークンの検証を行う
+   *
+   * トークン文字列に基づいて決定論的な結果を返す。
+   * - 'mock-valid-jwt-token': 成功
+   * - 'invalid.jwt.token': 失敗（署名エラー）
+   * - 'mock-expired-jwt-token': 失敗（期限切れ）
+   * - その他: shouldSucceedフラグに基づく
    *
    * @param token - 検証対象のJWTトークン
    * @returns 設定された検証結果
@@ -75,8 +81,23 @@ export class MockJwtVerifier implements IAuthProvider {
       };
     }
 
-    // 成功パターン
-    if (this.shouldSucceed) {
+    // トークンパターンによる分岐
+    if (token === 'invalid.jwt.token') {
+      return {
+        valid: false,
+        error: 'Invalid token signature',
+      };
+    }
+
+    if (token === 'mock-expired-jwt-token') {
+      return {
+        valid: false,
+        error: 'Token has expired',
+      };
+    }
+
+    // 成功パターン（明示的なトークン文字列のみ）
+    if (token === 'mock-valid-jwt-token') {
       const payload: JwtPayload = this.customPayload || {
         sub: '550e8400-e29b-41d4-a716-446655440000', // UUID形式のユーザーID
         email: 'test@example.com',
@@ -102,7 +123,34 @@ export class MockJwtVerifier implements IAuthProvider {
       };
     }
 
-    // 失敗パターン
+    // shouldSucceedフラグによるフォールバック（明示的に指定された場合のみ）
+    if (this.shouldSucceed) {
+      const payload: JwtPayload = this.customPayload || {
+        sub: '550e8400-e29b-41d4-a716-446655440000',
+        email: 'test@example.com',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+        iss: 'https://test.supabase.co/auth/v1',
+        user_metadata: {
+          name: 'Test User',
+          avatar_url: 'https://example.com/avatar.jpg',
+          email: 'test@example.com',
+          full_name: 'Test User',
+        },
+        app_metadata: {
+          provider: 'google',
+          providers: ['google'],
+        },
+      };
+
+      return {
+        valid: true,
+        payload,
+      };
+    }
+
+    // 失敗パターン（未定義トークンはすべて失敗）
     return {
       valid: false,
       error: this.customError || 'Mock verification failed',

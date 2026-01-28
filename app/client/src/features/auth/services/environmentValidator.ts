@@ -275,6 +275,11 @@ export class EnvironmentValidator {
    * 現在の環境変数設定状況をコンソールに表示する
    */
   displayCurrentStatus(): void {
+    // 本番環境では実行しない
+    if (process.env.NODE_ENV !== 'development') {
+      return;
+    }
+
     console.log('\n🔍 環境変数設定状況');
     console.log('==================');
 

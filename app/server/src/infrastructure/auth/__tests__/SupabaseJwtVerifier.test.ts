@@ -14,15 +14,10 @@ import {
   generateTestJwks,
   mockJwksFetch,
   mockJwksFetchFailure,
+  mockJwksFetchWithRetry,
+  mockJwksFetchWithTimeout,
   signTestToken,
 } from './helpers/jwks-test-helper';
-
-// CI環境またはテスト環境では外部JWKS依存のテストをスキップ
-// ネットワーク依存のテストは統合テストで実施
-const skipInCI =
-  process.env.CI === 'true' || process.env.NODE_ENV === 'test'
-    ? describe.skip
-    : describe;
 
 describe('SupabaseJwtVerifier（JWKS検証器）', () => {
   let jwtVerifier: SupabaseJwtVerifier;
@@ -181,6 +176,65 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       expect(userInfo.avatarUrl).toBeUndefined();
     });
 
+    test('pictureフィールドのみ提供される場合にavatarUrlが正しく設定される', async () => {
+      // Given: avatar_urlなし、pictureフィールドあり
+      const payloadWithPictureOnly: JwtPayload = {
+        sub: 'google_picture_user',
+        email: 'picture@example.com',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+        iss: 'https://test-project.supabase.co/auth/v1',
+        user_metadata: {
+          name: 'Picture User',
+          picture: 'https://example.com/picture.jpg',
+        },
+        app_metadata: {
+          provider: 'google',
+        },
+      };
+
+      // When: ユーザー情報抽出を実行
+      const userInfo: ExternalUserInfo = await jwtVerifier.getExternalUserInfo(
+        payloadWithPictureOnly,
+      );
+
+      // Then: pictureフィールドからavatarUrlが設定される
+      expect(userInfo.id).toBe('google_picture_user');
+      expect(userInfo.email).toBe('picture@example.com');
+      expect(userInfo.name).toBe('Picture User');
+      expect(userInfo.provider).toBe('google');
+      expect(userInfo.avatarUrl).toBe('https://example.com/picture.jpg');
+    });
+
+    test('avatar_urlとpictureの両方がある場合にavatar_urlが優先される', async () => {
+      // Given: avatar_urlとpictureの両方あり
+      const payloadWithBoth: JwtPayload = {
+        sub: 'google_both_fields',
+        email: 'both@example.com',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        iat: Math.floor(Date.now() / 1000),
+        iss: 'https://test-project.supabase.co/auth/v1',
+        user_metadata: {
+          name: 'Both Fields User',
+          avatar_url: 'https://example.com/avatar.jpg',
+          picture: 'https://example.com/picture.jpg',
+        },
+        app_metadata: {
+          provider: 'google',
+        },
+      };
+
+      // When: ユーザー情報抽出を実行
+      const userInfo: ExternalUserInfo =
+        await jwtVerifier.getExternalUserInfo(payloadWithBoth);
+
+      // Then: avatar_urlが優先される
+      expect(userInfo.id).toBe('google_both_fields');
+      expect(userInfo.avatarUrl).toBe('https://example.com/avatar.jpg');
+    });
+
     test('必須フィールド不足で適切な例外が発生する', async () => {
       // Given: sub（ユーザーID）が不足したペイロード
       const payloadMissingSub: Partial<JwtPayload> = {
@@ -217,23 +271,27 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
       ).rejects.toThrow('Missing required field: email');
     });
 
-    test('user_metadata.name不足で適切な例外が発生する', async () => {
-      // Given: user_metadata.nameが不足したペイロード
-      const payloadMissingName: Partial<JwtPayload> = {
+    test('user_metadata.nameが空の場合、full_nameにフォールバックする', async () => {
+      // Given: user_metadata.nameが空でfull_nameが存在するペイロード
+      const payloadWithEmptyName: Partial<JwtPayload> = {
         sub: 'google_1234567890',
         email: 'test@example.com',
         user_metadata: {
           name: '',
           email: 'test@example.com',
           full_name: 'Test User',
-        }, // nameが不足
+        },
         app_metadata: { provider: 'google' },
       };
 
-      // When & Then: 適切な例外が発生することを確認
-      await expect(
-        jwtVerifier.getExternalUserInfo(payloadMissingName as JwtPayload),
-      ).rejects.toThrow('Missing required field: user_metadata.name');
+      // When: ユーザー情報を抽出
+      const result = await jwtVerifier.getExternalUserInfo(
+        payloadWithEmptyName as JwtPayload,
+      );
+
+      // Then: full_nameにフォールバックしてユーザー情報が取得される
+      expect(result.name).toBe('Test User');
+      expect(result.email).toBe('test@example.com');
     });
 
     test('app_metadata.provider不足で適切な例外が発生する', async () => {
@@ -257,9 +315,12 @@ describe('SupabaseJwtVerifier（JWKS検証器）', () => {
   });
 });
 
-describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
+describe('SupabaseJwtVerifier(JWKS検証テスト)', () => {
   let jwtVerifier: SupabaseJwtVerifier;
-  let unmockFetch: (() => void) | null = null;
+  let unmockFetch:
+    | (() => void)
+    | { unmock: () => void; getCallCount: () => number }
+    | null = null;
 
   beforeEach(() => {
     process.env.SUPABASE_URL = 'https://test-project.supabase.co';
@@ -267,7 +328,11 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
   afterEach(() => {
     if (unmockFetch) {
-      unmockFetch();
+      if (typeof unmockFetch === 'function') {
+        unmockFetch();
+      } else {
+        unmockFetch.unmock();
+      }
       unmockFetch = null;
     }
   });
@@ -501,51 +566,131 @@ describe('SupabaseJwtVerifier（JWKS検証テスト）', () => {
 
       // Then: JWKS取得失敗エラーが返される
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect(result.error).toBe('Network error during JWKS fetch');
       expect(result.payload).toBeUndefined();
-    });
-  });
-});
-
-skipInCI('SupabaseJwtVerifier（JWKS統合テスト）', () => {
-  let jwtVerifier: SupabaseJwtVerifier;
-
-  beforeEach(() => {
-    // 実際のSupabase環境変数が必要
-    process.env.SUPABASE_URL =
-      process.env.SUPABASE_URL || 'https://test-project.supabase.co';
-    jwtVerifier = new SupabaseJwtVerifier();
+    }, 10000);
   });
 
-  test('実際のJWKSエンドポイントからの公開鍵取得テスト', async () => {
-    // Note: このテストは実際のSupabaseプロジェクトが必要
-    // CI環境では自動スキップされる
-
-    // Given: 実際のSupabase JWTトークン（テスト用）
-    // 注意: 実際のテストでは、テスト用の有効なトークンが必要
-    const realJwtToken = 'your-real-test-jwt-token-here';
-
-    // このテストは手動実行時のみ有効
-    if (realJwtToken === 'your-real-test-jwt-token-here') {
-      console.log('⚠️ 実際のJWKS統合テストには有効なJWTトークンが必要です');
-      return;
-    }
-
-    // When: 実際のJWKS検証を実行
-    const result: JwtVerificationResult =
-      await jwtVerifier.verifyToken(realJwtToken);
-
-    // Then: 検証結果を確認（成功または適切なエラー）
-    expect(result).toBeDefined();
-    expect(typeof result.valid).toBe('boolean');
-
-    if (result.valid) {
-      expect(result.payload).toBeDefined();
-      if (result.payload) {
-        expect(typeof result.payload.sub).toBe('string');
+  describe('リトライ・タイムアウト機能', () => {
+    afterEach(() => {
+      if (unmockFetch) {
+        if (typeof unmockFetch === 'function') {
+          unmockFetch();
+        } else {
+          unmockFetch.unmock();
+        }
+        unmockFetch = null;
       }
-    } else {
-      expect(typeof result.error).toBe('string');
-    }
+    });
+
+    test('ネットワークエラー時に最大3回リトライして成功する', async () => {
+      // Given: 2回失敗した後に成功するJWKSフェッチ
+      const jwksContext = await generateTestJwks();
+      const retryMock = mockJwksFetchWithRetry(2, jwksContext.jwksJson);
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-retry',
+        email: 'retry@example.com',
+        user_metadata: { name: 'Retry Test User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: リトライにより検証が成功する
+      expect(result.valid).toBe(true);
+      expect(result.payload?.sub).toBe('test-user-retry');
+
+      // リトライが3回実行されたことを確認（初回 + 2回リトライ）
+      expect(retryMock.getCallCount()).toBe(3);
+    }, 5000);
+
+    test('リトライ可能なエラーで最大3回までリトライする', async () => {
+      // Given: 常に失敗するJWKSフェッチ
+      const jwksContext = await generateTestJwks();
+      const retryMock = mockJwksFetchWithRetry(10, jwksContext.jwksJson); // 10回失敗設定
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-max-retry',
+        email: 'maxretry@example.com',
+        user_metadata: { name: 'Max Retry Test User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const validToken = await signTestToken(
+        jwksContext.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(validToken);
+
+      // Then: 最大リトライ回数後に失敗する
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Network error during JWKS fetch');
+
+      // 最大4回実行されたことを確認（初回 + 3回リトライ）
+      expect(retryMock.getCallCount()).toBe(4);
+    }, 10000);
+
+    test('署名エラーなどリトライ不可能なエラーは即座に失敗する', async () => {
+      // Given: 正しいJWKSだが異なる鍵で署名されたトークン
+      const jwksContext = await generateTestJwks();
+      const anotherKeyPair = await generateTestJwks();
+
+      const retryMock = mockJwksFetchWithRetry(0, jwksContext.jwksJson);
+      unmockFetch = retryMock;
+
+      const testPayload = {
+        sub: 'test-user-invalid-sig',
+        email: 'invalidsig@example.com',
+        user_metadata: { name: 'Invalid Sig User' },
+        app_metadata: { provider: 'google' },
+      };
+
+      const invalidToken = await signTestToken(
+        anotherKeyPair.privateKey,
+        testPayload,
+        {
+          issuer: 'https://test-project.supabase.co/auth/v1',
+          audience: 'authenticated',
+          expirationTime: '2h',
+        },
+      );
+
+      jwtVerifier = new SupabaseJwtVerifier();
+
+      // When: JWT検証を実行
+      const result = await jwtVerifier.verifyToken(invalidToken);
+
+      // Then: リトライせず即座に失敗する
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid signature');
+
+      // 1回のみ実行されたことを確認（リトライなし）
+      expect(retryMock.getCallCount()).toBe(1);
+    });
   });
 });

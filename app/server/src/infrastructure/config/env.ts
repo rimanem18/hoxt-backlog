@@ -26,7 +26,7 @@ const databaseConfigSchema = z.object({
   maxConnections: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .transform((val) => (val ? parseInt(val, 10) : 2))
     .refine((val) => val > 0, 'DB_MAX_CONNECTIONSは正の数である必要があります'),
 });
 

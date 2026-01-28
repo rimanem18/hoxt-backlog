@@ -94,29 +94,51 @@ jobs:
           # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく処理
           LANG: C.UTF-8
         run: |
+          # デバッグ: 環境変数の存在確認（値は表示しない）
+          echo "=== 環境変数チェック ==="
+          [ -n "$CLOUDFLARE_API_TOKEN" ] && echo "✅ CLOUDFLARE_API_TOKEN: 設定済み" || echo "❌ CLOUDFLARE_API_TOKEN: 未設定"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && echo "✅ CLOUDFLARE_ACCOUNT_ID: 設定済み" || echo "❌ CLOUDFLARE_ACCOUNT_ID: 未設定"
+          [ -n "$CLOUDFLARE_PROJECT_INPUT" ] && echo "✅ CLOUDFLARE_PROJECT_INPUT: 設定済み" || echo "⚠️ CLOUDFLARE_PROJECT_INPUT: 未設定（デフォルト使用）"
+          [ -n "$DEFAULT_PROJECT_NAME" ] && echo "✅ DEFAULT_PROJECT_NAME: 設定済み" || echo "❌ DEFAULT_PROJECT_NAME: 未設定"
+
           # プロジェクト名を決定（入力がない場合はvarsから取得）
-          PROJECT_NAME="$CLOUDFLARE_PROJECT_INPUT"
-          if [ -z "$PROJECT_NAME" ]; then
-            PROJECT_NAME="$DEFAULT_PROJECT_NAME"
+          PROJECT_NAME="${CLOUDFLARE_PROJECT_INPUT:-$DEFAULT_PROJECT_NAME}"
+          [ -n "$PROJECT_NAME" ] && echo "✅ 最終PROJECT_NAME: 設定済み" || { echo "❌ PROJECT_NAME: 未設定"; exit 1; }
+
+          # outディレクトリの確認
+          echo ""
+          echo "=== out ディレクトリチェック ==="
+          if [ -d "out" ]; then
+            echo "✅ out/ ディレクトリ存在"
+            ls -la out/ | head -5
+          else
+            echo "❌ out/ ディレクトリが存在しません"
+            ls -la
+            exit 1
           fi
 
-          echo "CloudFlare Pagesにデプロイ中..."
-          DEPLOYMENT_OUTPUT=$(npx --yes wrangler@latest pages deploy out \
+          # デプロイ実行
+          echo ""
+          echo "=== CloudFlare Pagesにデプロイ中... ==="
+          if ! DEPLOYMENT_OUTPUT=$(npx --yes wrangler@4.61.0 pages deploy out \
             --project-name "$PROJECT_NAME" \
             --branch "${{ github.ref_name == 'main' && 'main' || 'preview' }}" \
-            --commit-dirty=true 2>&1)
-          
+            --commit-dirty=true 2>&1); then
+            echo "❌ デプロイ失敗"
+            echo "Output:"
+            echo "$DEPLOYMENT_OUTPUT"
+            exit 1
+          fi
+
           echo "$DEPLOYMENT_OUTPUT"
-          
-          # デプロイメントURLを抽出（wrangler出力から https:// で始まるURLを取得）
-          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*' | head -1)
-          
+
+          # デプロイメントURLを抽出（wrangler出力から .pages.dev で終わるURLのみ取得）
+          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*\.pages\.dev' | head -1)
+
           if [ -n "$DEPLOYMENT_URL" ]; then
             echo "✅ デプロイメントURL: $DEPLOYMENT_URL"
-            echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+            echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           else
             echo "⚠️ デプロイメントURLを取得できませんでした"
-            echo "デバッグ用出力:"
-            echo "$DEPLOYMENT_OUTPUT"
-            echo "deployment_url=" >> $GITHUB_OUTPUT
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
           fi

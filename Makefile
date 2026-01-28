@@ -123,7 +123,7 @@ frontend-deploy-preview:
 	@docker compose exec client ash -c ' \
 		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		npx --yes wrangler@latest pages deploy ./out \
+		npx --yes wrangler@4.61.0 pages deploy ./out \
 		--project-name ${PROJECT_NAME} \
 		--branch preview \
 		--commit-dirty=true'
