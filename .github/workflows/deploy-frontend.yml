@@ -132,13 +132,13 @@ jobs:
 
           echo "$DEPLOYMENT_OUTPUT"
 
-          # デプロイメントURLを抽出（wrangler出力から https:// で始まるURLを取得）
-          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*' | head -1)
+          # デプロイメントURLを抽出（wrangler出力から .pages.dev で終わるURLのみ取得）
+          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*\.pages\.dev' | head -1)
 
           if [ -n "$DEPLOYMENT_URL" ]; then
             echo "✅ デプロイメントURL: $DEPLOYMENT_URL"
-            echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+            echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           else
             echo "⚠️ デプロイメントURLを取得できませんでした"
-            echo "deployment_url=" >> $GITHUB_OUTPUT
+            echo "deployment_url=" >> "$GITHUB_OUTPUT"
           fi
