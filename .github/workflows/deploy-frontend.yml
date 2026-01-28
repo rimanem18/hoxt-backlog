@@ -120,7 +120,7 @@ jobs:
           # デプロイ実行
           echo ""
           echo "=== CloudFlare Pagesにデプロイ中... ==="
-          if ! DEPLOYMENT_OUTPUT=$(npx --yes wrangler@latest pages deploy out \
+          if ! DEPLOYMENT_OUTPUT=$(npx --yes wrangler@4.61.0 pages deploy out \
             --project-name "$PROJECT_NAME" \
             --branch "${{ github.ref_name == 'main' && 'main' || 'preview' }}" \
             --commit-dirty=true 2>&1); then
