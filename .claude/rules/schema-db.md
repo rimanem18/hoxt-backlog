@@ -1,3 +1,4 @@
+
 # スキーマ駆動開発ガイドライン
 
 Drizzle ORM を Single Source of Truth のベースをしています:

@@ -1,6 +1,8 @@
 ---
-allowed-tools: Bash(make fmt:*), Bash(git diff:*)
+name: git-commit
 description: Jira のプロジェクトキー issue 番号を渡し、git add & git commit をします。
+model: sonnet
+effort: medium
 ---
 
 ## 事前確認
@@ -28,7 +30,6 @@ description: Jira のプロジェクトキー issue 番号を渡し、git add & 
 - feat: 新しい機能
 - fix: バグの修正
 - docs: ドキュメントのみの変更
-  - `.claude/commands/` 配下の Markdown はドキュメントとしては扱わず、「カスタムスラッシュコマンド」という機能ととらえてください。（つまり、docs プレフィックスではなく、feat, fix などが該当します）
 - style: 空白、フォーマット、セミコロン追加など
 - refactor: 仕様に影響がないコード改善(リファクタ)
 - perf: パフォーマンス向上関連

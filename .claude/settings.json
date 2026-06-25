@@ -1,0 +1,44 @@
+{
+  "includeCoAuthoredBy": true,
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [
+      "docker *",
+      "docker-compose *",
+      "git *",
+      "date *",
+      "mkdir *",
+      "mv *",
+      "rm *",
+      "find *",
+      "sleep *",
+      "make *"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(date *)",
+      "Bash(git add *)"
+    ],
+    "deny": [
+      "Bash(git -C *)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Write(//etc/**)",
+      "Read(~/.bashrc)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL": "1",
+    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
+
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
+
+    "CLAUDE_CODE_MCP_ALLOWLIST_ENV": "1",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
+    "CLAUDE_CODE_HIDE_CWD": "1"
+  }
+}

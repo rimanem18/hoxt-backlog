@@ -1,6 +1,7 @@
 .env
 cache
 dist
+*.local*
 
 # Terraform関連
 terraform/backend.tf

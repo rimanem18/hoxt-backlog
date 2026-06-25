@@ -16,4 +16,3 @@ description: 明示的に呼び出されたときにのみ読み込みます。�
 Pull Request 作成には以下を参照してください。
 
 - [Pull Request テンプレート](./references/PULL_REQUEST_TEMPLATE.md)
-- [ドキュメント作成ガイドライン](../common/references/documents.md)
