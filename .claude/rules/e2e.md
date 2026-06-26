@@ -1,3 +1,8 @@
+---
+paths:
+  - "app/client/e2e/**/*.{ts,tsx,js,jsx}"
+---
+
 # E2Eテストガイドライン（Playwright）
 
 ## 実行環境
