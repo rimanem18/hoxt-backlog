@@ -29,7 +29,7 @@ import {
   authProviderType,
   users,
   tasks,
-} from '../src/infrastructure/database/schema';
+} from '../src/shared/database/schema';
 
 /**
  * Enum設定の型定義

@@ -1,5 +1,5 @@
 {
-  "includeCoAuthoredBy": true,
+  "includeCoAuthoredBy": false,
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
@@ -21,7 +21,8 @@
       "Bash(docker *)",
       "Bash(docker-compose *)",
       "Bash(date *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(find *)"
     ],
     "deny": [
       "Bash(git -C *)",

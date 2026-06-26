@@ -32,8 +32,48 @@ docker compose exec server bun run dev
 
 - **必須**: 実装前に `libs`, `utils`, `shared`, `helper` などのディレクトリが存在しないか確認し、車輪の再発明を防ぐ
 - **必須**: ファイルの末尾には改行を入れて空行を作る
-- **必須**: 同一層の import には相対パスを使用し、他の層からの import には `@/...` を使った絶対パス import を使う
+- **必須**: 同一ドメイン内の同一サブディレクトリからの import には相対パスを使用し、他のドメインや他のサブディレクトリからの import には `@/...` を使った絶対パス import を使う
 - **必須**: ドメインエラーは `errors` ディレクトリ、値オブジェクトは `valueobjects` ディレクトリに配置する。エンティティは `index` と同じディレクトリに配置する
+- **必須**: 新機能はドメインファースト構成に従い、対応するドメインディレクトリ（`user/`, `task/` 等）の下に配置する
+
+## ディレクトリ構成（ドメインファースト）
+
+```
+src/
+├── user/                    # ユーザー・認証ドメイン
+│   ├── domain/              # エンティティ, リポジトリIF, ValueObject, サービス
+│   │   ├── services/        # ドメインサービス（IAuthProvider など）
+│   │   └── aggregates/      # 集約（UserAggregate）
+│   ├── application/         # ユースケース（AuthenticateUser, GetUserProfile）
+│   ├── infrastructure/      # リポジトリ実装, JWT検証, DI コンテナ
+│   └── presentation/        # ルート, コントローラー, バリデーター, 認証ミドルウェア
+├── task/                    # タスク管理ドメイン
+│   ├── domain/
+│   ├── application/
+│   ├── infrastructure/
+│   └── presentation/
+├── health/                  # ヘルスチェックドメイン
+│   ├── application/
+│   ├── infrastructure/
+│   └── presentation/
+├── greet/                   # デモドメイン
+│   ├── domain/
+│   ├── application/
+│   └── presentation/
+├── shared/                  # 横断的関心事
+│   ├── config/              # 環境変数設定
+│   ├── database/            # DB 接続・スキーマ・マイグレーション
+│   ├── docs/                # API ドキュメントルート
+│   ├── errors/              # 共通エラー基底クラス
+│   ├── logging/             # ロガーインターフェース
+│   ├── middleware/          # CORS, メトリクス, エラーハンドリング, 認証エラー
+│   ├── monitoring/          # 監視サービス（MonitoringService, CloudWatch 実装）
+│   ├── responses/           # HTTP レスポンスヘルパー
+│   ├── services/            # 共通サービス
+│   └── utils/               # ユーティリティ関数
+├── schemas/                 # Zod スキーマ（OpenAPI 自動生成用）
+└── entrypoints/             # アプリケーション起動ポイント
+```
 - **推奨**: 1 行あたりの文字数は 80 字以内になるように改行
 - **推奨**: `const` の使用
 - **非推奨**: `let` の使用

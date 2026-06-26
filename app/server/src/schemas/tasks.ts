@@ -10,7 +10,7 @@
 
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { tasks } from '@/infrastructure/database/schema';
+import { tasks } from '@/shared/database/schema';
 
 /**
  * TaskテーブルのSelectスキーマ（DB読み取り型）

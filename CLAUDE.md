@@ -20,7 +20,8 @@
   - feature-based ディレクトリ
   - WORKDIR: /home/bun/app/client
 - **`app/server/`**: server コンテナにバインド（Hono API アプリケーション）
-  - DDD + クリーンアーキテクチャ
+  - ドメインファースト構成（DDD + クリーンアーキテクチャ）
+  - ドメインごとに `domain/` `application/` `infrastructure/` `presentation/` を内包
   - WORKDIR: /home/bun/app/server
 - **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
@@ -33,7 +34,7 @@
 
 - **SSG + API 構成**: フロントエンド（Next.js）とバックエンド（Hono API）の完全分離
 - **コンテナベース**: Docker Compose によるコンテナ環境での開発
-- **DDD + クリーンアーキテクチャ**: ドメインごとに関心を分離
+- **DDD + クリーンアーキテクチャ（ドメインファースト）**: ビジネスドメイン（user, task, health, greet）を頂点に、各ドメイン内で domain/application/infrastructure/presentation を階層化
 
 # IaC
 
