@@ -1,6 +1,6 @@
 ---
 paths:
-  - "backend/**/*.{ts,js,tsx,jsx}"
+  - "app/server/**/*.{ts,js,tsx,jsx}"
 ---
 
 # バックエンド開発ガイドライン
