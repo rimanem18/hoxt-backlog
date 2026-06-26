@@ -27,6 +27,11 @@ process.env.ACCESS_ALLOW_ORIGIN ??= 'http://localhost:3000';
 process.env.ACCESS_ALLOW_METHODS ??= 'GET,POST,PUT,DELETE,OPTIONS';
 process.env.ACCESS_ALLOW_HEADERS ??= 'Authorization,Content-Type';
 
+// pg PoolとDrizzle poolの合計がPostgreSQLのmax_connections(100)を超えないよう制限
+// 両プールそれぞれmax:40 → 合計80 < 100
+// NOTE: compose.yamlで100が設定されているため??=では上書きできず=で強制設定
+process.env.DB_MAX_CONNECTIONS = '40';
+
 // Supabase関連環境変数のデフォルト値設定
 process.env.SUPABASE_URL ??= 'http://localhost:54321';
 process.env.SUPABASE_ANON_KEY ??= 'test_anon_key';

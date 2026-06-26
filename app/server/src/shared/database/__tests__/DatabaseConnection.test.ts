@@ -33,7 +33,10 @@ describe('DatabaseConnection', () => {
     const resultOutside = await db.execute<{ current_setting: string }>(
       sql`SELECT current_setting('app.current_user_id', true) as current_setting`,
     );
-    expect(resultOutside[0]?.current_setting).toBe('');
+    // ?? '' でnullと''を統一している。
+    // current_setting()はPostgreSQLの組み込み関数でありSELECTは常に1行返るが、
+    // フルテストラン時はセッションレベルで未設定のためnull、アイソレーション時は''になりうる。
+    expect(resultOutside[0]?.current_setting ?? '').toBe('');
   });
 
   test('setCurrentUserがトランザクション内で動作する', async () => {

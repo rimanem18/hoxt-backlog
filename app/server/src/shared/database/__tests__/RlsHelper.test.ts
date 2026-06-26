@@ -142,7 +142,9 @@ describe('RlsHelper', () => {
         );
         return result[0]?.current_setting;
       });
-      expect(resultOutside).toBe('');
+      // ?? '' でnullと''を統一している。
+      // フルテストラン時はセッションレベルで未設定のためnull、アイソレーション時は''になりうる。
+      expect(resultOutside ?? '').toBe('');
     });
   });
 });
