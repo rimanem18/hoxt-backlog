@@ -99,7 +99,8 @@ const errorSlice = createSlice({
       // 開発環境のみでデバッグログ出力（本番環境での不要処理削減）
       if (isDevelopment) {
         console.log(
-          `Network error displayed [${state.correlationId}]:`,
+          'Network error displayed:',
+          state.correlationId,
           state.message,
         );
       }
@@ -135,7 +136,7 @@ const errorSlice = createSlice({
 
       // 開発環境で詳細情報付きログ出力
       if (isDevelopment) {
-        console.log(`Advanced network error [${state.correlationId}]:`, {
+        console.log('Advanced network error:', state.correlationId, {
           message: state.message,
           severity: action.payload.severity || 'medium',
           retryable: action.payload.retryable !== false,
@@ -197,14 +198,11 @@ const errorSlice = createSlice({
 
       // 開発環境のみでの詳細ログ出力
       if (isDevelopment) {
-        console.log(
-          `Error displayed [${state.type}] [${state.correlationId}]:`,
-          {
-            message: state.message,
-            severity: action.payload.severity || 'error',
-            timestamp: new Date(state.timestamp).toISOString(),
-          },
-        );
+        console.log('Error displayed:', state.type, state.correlationId, {
+          message: state.message,
+          severity: action.payload.severity || 'error',
+          timestamp: new Date(state.timestamp).toISOString(),
+        });
       }
     },
 
@@ -218,7 +216,8 @@ const errorSlice = createSlice({
 
       if (isDevelopment) {
         console.log(
-          `Error state updated [${state.correlationId}]:`,
+          'Error state updated:',
+          state.correlationId,
           action.payload,
         );
       }
@@ -239,7 +238,8 @@ const errorSlice = createSlice({
 
       if (isDevelopment) {
         console.log(
-          `Auto-close timer set [${state.correlationId}]:`,
+          'Auto-close timer set:',
+          state.correlationId,
           action.payload.timerId,
         );
       }

@@ -145,7 +145,12 @@ export abstract class BaseAuthProvider implements AuthProviderInterface {
       error instanceof Error ? error.message : `${operation} failed`;
 
     // デバッグと監視のためのエラーログを出力
-    console.error(`[${this.providerName}] ${operation} error:`, errorMessage);
+    console.error(
+      '[Auth Provider]',
+      this.providerName,
+      operation,
+      errorMessage,
+    );
 
     return {
       success: false,
