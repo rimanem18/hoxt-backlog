@@ -16,16 +16,6 @@ paths:
   - **型チェック**: TypeScript + Zod 実行時検証（client 側とスキーマシェア）
   - **TypeScript**: 全面採用による型安全性確保
 
-## コマンド操作
-
-バックエンド関連のコマンドは server コンテナ内で実行してください：
-
-```bash
-# example
-docker compose exec server bun run dev
-```
-
-
 ## コード品質・フォーマット
 
 以下を考慮し、コードの品質を保ってください：

@@ -20,7 +20,7 @@ docker compose exec client bun run typecheck
 
 ## 新規テーブル追加時の手順
 
-1. `app/server/src/infrastructure/database/schema.ts` にテーブル定義を追加
+1. `app/server/src/shared/database/schema.ts` にテーブル定義を追加
 2. `app/server/scripts/generate-schemas.ts` の `tableConfigs` 配列に設定を追加
 
 ```typescript
@@ -63,7 +63,7 @@ const tableConfigs: TableConfig[] = [
 docker compose exec server bun run db:generate
 
 # 生成されたファイルをコミット
-git add app/server/src/infrastructure/database/migrations/
+git add app/server/src/shared/database/migrations/
 git commit -m "feat: add new migration for XXX"
 
 # CD環境：マイグレーション実行

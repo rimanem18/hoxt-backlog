@@ -17,21 +17,6 @@ paths:
   - **スタイリング**: Tailwind CSS（ユーティリティファースト）
   - **状態管理**: Redux
 
-## コマンド操作
-
-フロントエンド関連のコマンドは client コンテナ内で実行してください：
-
-```bash
-# example
-docker compose exec client bun run dev
-```
-
-E2E テストの実行は e2e コンテナで実施してください
-```bash
-# example
-docker compose exec e2e npx playwright test
-```
-
 ## コード品質・フォーマット
 
 以下を考慮し、コードの品質を保ってください：
@@ -77,11 +62,6 @@ export React.memo(TaskItem)
 ## フロントエンドユニット/統合テストガイドライン
 
 ### 実行環境
-
-#### コマンド
-```bash
-docker compose exec client bun test
-```
 
 #### DOM環境のセットアップ（必須）
 

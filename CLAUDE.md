@@ -23,9 +23,9 @@
   - ドメインファースト構成（DDD + クリーンアーキテクチャ）
   - ドメインごとに `domain/` `application/` `infrastructure/` `presentation/` を内包
   - WORKDIR: /home/bun/app/server
-- **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
+- **`app/packages/shared-schemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
-- **`compose.yml`**: Docker Compose 設定ファイル
+- **`compose.yaml`**: Docker Compose 設定ファイル
 - sub agents に依頼する際は、以下を必ず伝えてください
   - docker compose exec コマンドの活用は重要
   - コンテナの WORKDIR
@@ -35,6 +35,39 @@
 - **SSG + API 構成**: フロントエンド（Next.js）とバックエンド（Hono API）の完全分離
 - **コンテナベース**: Docker Compose によるコンテナ環境での開発
 - **DDD + クリーンアーキテクチャ（ドメインファースト）**: ビジネスドメイン（user, task, health, greet）を頂点に、各ドメイン内で domain/application/infrastructure/presentation を階層化
+
+
+# コマンド操作
+
+各コマンドは、該当するコンテナ内で実行してください
+
+E2Eテスト（playwright）
+```bash
+# example
+docker compose exec e2e npx playwright test <args...>
+```
+
+フロントエンド
+```bash
+# example
+docker compose exec client bun run dev
+docker compose exec client bunx tsc --noEmit
+docker compose exec client bun test
+```
+
+バックエンド
+```bash
+# example
+docker compose exec server bun run dev
+docker compose exec server bunx tsc --noEmit
+```
+
+静的セキュリティチェック
+```bash
+# example
+docker compose run --rm semgrep semgrep <args...>
+```
+
 
 # IaC
 
@@ -267,58 +300,55 @@ export class HogeAuthProvider implements IAuthProvider {
 
 ```
 app/server/src/
-├── domain/
-│   ├── user/
+├── user/
+│   ├── domain/
 │   │   ├── __tests__/
-│   │   │   ├── UserEntity.test.ts
-│   │   │   └── errors.test.ts
-│   │   ├── UserEntity.ts
-│   │   └── errors/
-│   └── services/
+│   │   │   └── UserAggregate.test.ts
+│   │   └── aggregates/
+│   ├── application/
+│   │   ├── __tests__/
+│   │   │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
+│   │   │   ├── GetUserProfile.errors.test.ts
+│   │   │   └── contracts/
+│   │   │       └── auth-provider.contract.test.ts
+│   │   └── usecases/
+│   ├── infrastructure/
+│   │   ├── __tests__/
+│   │   │   └── UserRepository.test.ts
+│   │   └── ...
+│   └── presentation/
 │       ├── __tests__/
-│       │   └── AuthenticationDomainService.test.ts
-│       └── AuthenticationDomainService.ts
+│       │   └── userRoutes.integration.test.ts
+│       └── ...
 │
-├── application/
-│   └── usecases/
-│       ├── __tests__/
-│       │   ├── authenticate-user/          # 大規模(11個以上)
-│       │   │   ├── validation.test.ts
-│       │   │   ├── success-password.test.ts
-│       │   │   └── ...
-│       │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
-│       │   ├── GetUserProfile.errors.test.ts
-│       │   └── contracts/
-│       │       └── auth-provider.contract.test.ts
-│       ├── AuthenticateUserUseCase.ts
-│       └── GetUserProfileUseCase.ts
+├── task/
+│   ├── domain/
+│   │   ├── __tests__/
+│   │   │   └── TaskEntity.test.ts
+│   │   └── ...
+│   ├── application/
+│   │   ├── __tests__/
+│   │   │   ├── create-task/              # 大規模(11個以上)
+│   │   │   │   ├── validation.test.ts
+│   │   │   │   ├── success.test.ts
+│   │   │   │   └── ...
+│   │   │   └── ...
+│   │   └── ...
+│   ├── infrastructure/
+│   │   └── ...
+│   └── presentation/
+│       └── ...
 │
-├── infrastructure/
-│   ├── __tests__/
-│   │   ├── DatabaseConnection.test.ts
-│   │   └── BaseSchemaValidation.test.ts
-│   └── auth/
-│       ├── __tests__/
-│       │   ├── SupabaseJwtVerifier.test.ts
-│       │   └── MockJwtVerifier.test.ts
-│       └── SupabaseJwtVerifier.ts
-│
-└── presentation/
-    └── http/
-        ├── controllers/
-        │   ├── __tests__/
-        │   │   ├── AuthController.test.ts
-        │   │   └── UserController.test.ts
-        │   └── AuthController.ts
-        ├── routes/
-        │   ├── __tests__/
-        │   │   ├── authRoutes.test.ts
-        │   │   └── userRoutes.integration.test.ts
-        │   └── authRoutes.ts
-        └── middleware/
-            ├── __tests__/
-            │   └── metricsMiddleware.test.ts
-            └── metricsMiddleware.ts
+└── shared/
+    ├── database/
+    │   ├── __tests__/
+    │   │   ├── DatabaseConnection.test.ts
+    │   │   └── BaseSchemaValidation.test.ts
+    │   └── ...
+    └── middleware/
+        ├── __tests__/
+        │   └── metricsMiddleware.test.ts
+        └── ...
 ```
 
 ### テストケース数による使い分け
@@ -351,29 +381,28 @@ app/client/src/
 │   │   ├── __tests__/
 │   │   │   ├── sessionRestore.test.ts
 │   │   │   ├── errorHandling.test.ts
-│   │   │   ├── authProviderInterface.test.ts
 │   │   │   └── ui-ux/
 │   │   │       └── LoadingState.test.tsx
 │   │   ├── components/
 │   │   ├── hooks/
-│   │   └── services/
+│   │   ├── services/
+│   │   ├── store/
+│   │   └── types/
 │   │
-│   ├── google-auth/
+│   ├── todo/
 │   │   ├── __tests__/
-│   │   │   ├── authSlice.test.ts
-│   │   │   └── UserProfile.test.tsx
+│   │   │   └── todoList.test.tsx
 │   │   ├── components/
+│   │   ├── hooks/
 │   │   └── store/
 │   │
 │   └── user/
 │       ├── __tests__/
 │       │   ├── useUser.test.tsx
 │       │   └── useUpdateUser.test.tsx
-│       ├── components/
-│       ├── hooks/
-│       │   ├── useUser.ts
-│       │   └── useUpdateUser.ts
-│       └── services/
+│       └── hooks/
+│           ├── useUser.ts
+│           └── useUpdateUser.ts
 │
 └── lib/
     ├── __tests__/

@@ -6,9 +6,6 @@ paths:
 # E2Eテストガイドライン（Playwright）
 
 ## 実行環境
-```bash
-docker compose exec e2e npx playwright test
-```
 
 ## ディレクトリ構造
 
