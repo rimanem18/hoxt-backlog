@@ -1,5 +1,5 @@
 # ベースイメージ
-FROM oven/bun:1.2.20-alpine
+FROM oven/bun:1.3.14-alpine
 
 # 作業ディレクトリを設定
 WORKDIR /home/bun/app/server
