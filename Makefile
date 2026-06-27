@@ -1,5 +1,5 @@
 include .env
-.PHONY: build up down server client e2e db iac iac-init iac-plan-save iac-bootstrap-apply iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production frontend-deploy-preview generate-all
+.PHONY: build up down server client e2e db iac iac-init iac-plan-save iac-bootstrap-apply iac-apply sql ps logs fmt amend restart init db-migrate-preview db-migrate-production frontend-deploy-preview generate-all build-check
 
 up:
 	docker compose up -d
@@ -71,7 +71,7 @@ iac-plan-save:
 		export TF_VAR_database_url=${DATABASE_URL} && \
 		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
 		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
-		export TF_VAR_next_public_supabase_url=${NEXT_PUBLIC_SUPABASE_URL} && \
+		export TF_VAR_next_public_supabase_url=${SUPABASE_URL} && \
 		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
@@ -144,7 +144,7 @@ db-migrate-production:
 		bun run db:setup'
 	@echo "本番環境のデータベースマイグレーションが完了しました。"
 sql:
-	docker compose exec db psql -U postgres -d postgres -h db -p 5432
+	docker compose exec db psql -U ${DB_USER} -d ${DB_USER} -h db -p 5432
 ps:
 	docker compose ps
 logs:
@@ -174,3 +174,7 @@ generate-all:
 	docker compose exec client bun run fix
 	@echo ""
 	@echo "✅ All type definitions generated successfully"
+build-check:
+	docker compose exec client bun run build
+	docker compose exec server bun run build:lambda
+
