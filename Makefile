@@ -155,7 +155,7 @@ fmt:
 amend:
 	git commit --amend --no-edit
 init:
-	test -f .git/hooks/pre-commit || cp scripts/pre-commit .git/hooks/pre-commit
+	cp scripts/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
 generate-all:
 	@echo "型定義自動生成を開始します..."
