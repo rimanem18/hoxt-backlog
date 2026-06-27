@@ -13,6 +13,12 @@ export LC_ALL
 ALLOWLIST_KEYS=(
   "ENVIRONMENT"
   "ACCESS_ALLOW_ORIGIN"
+  "CLIENT_PORT"
+  "SERVER_PORT"
+  "DB_NAME"
+  "DB_USER"
+  "DB_PORT"
+  "SUPABASE_URL"
 )
 
 # prefix 単位で除外したい場合だけ使う
