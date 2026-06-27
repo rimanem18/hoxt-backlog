@@ -6,8 +6,11 @@ type ErrorMapping = {
   errorCode: string;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: エラークラスのコンストラクタを汎用化するため
+type AnyErrorConstructor = new (...args: any[]) => Error;
+
 const ERROR_MAPPINGS: Array<{
-  errorClass: new (...args: any[]) => Error;
+  errorClass: AnyErrorConstructor;
   mapping: ErrorMapping;
 }> = [
   {

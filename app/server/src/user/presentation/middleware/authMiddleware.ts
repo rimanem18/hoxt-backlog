@@ -152,8 +152,10 @@ async function authMiddlewareImpl(
     if (!database) {
       // トランザクションが設定されていない場合は dbProvider またはグローバルシングルトン
       const fallbackDb = dbProvider ? dbProvider() : db;
+      // biome-ignore lint/suspicious/noExplicitAny: DbClientの型がsetCurrentUserの期待型と異なるため
       await setCurrentUser(fallbackDb as any, userId);
     } else {
+      // biome-ignore lint/suspicious/noExplicitAny: DbClientの型がsetCurrentUserの期待型と異なるため
       await setCurrentUser(database as any, userId);
     }
 

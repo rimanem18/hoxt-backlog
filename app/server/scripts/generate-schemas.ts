@@ -279,7 +279,7 @@ function generateSchemaFile(config: TableConfig): string {
 
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { ${tableName}${enumImports} } from '@/infrastructure/database/schema';
+import { ${tableName} } from '@/shared/database/schema';
 
 /**
  * ${capitalizedName}テーブルのSelectスキーマ（DB読み取り型）

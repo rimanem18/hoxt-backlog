@@ -142,7 +142,7 @@ export class TaskController {
    */
   async getById(c: Context): Promise<Response> {
     const userId = c.get('userId') as string;
-    const taskId = c.req.param('id');
+    const taskId = c.req.param('id') as string;
 
     const task = await this.getTaskByIdUseCase.execute({ userId, taskId });
 
@@ -165,7 +165,7 @@ export class TaskController {
    */
   async update(c: Context): Promise<Response> {
     const userId = c.get('userId') as string;
-    const taskId = c.req.param('id');
+    const taskId = c.req.param('id') as string;
     const input = await c.req.json();
 
     const data = {
@@ -201,7 +201,7 @@ export class TaskController {
    */
   async delete(c: Context): Promise<Response> {
     const userId = c.get('userId') as string;
-    const taskId = c.req.param('id');
+    const taskId = c.req.param('id') as string;
 
     await this.deleteTaskUseCase.execute({ userId, taskId });
 
@@ -218,7 +218,7 @@ export class TaskController {
    */
   async changeStatus(c: Context): Promise<Response> {
     const userId = c.get('userId') as string;
-    const taskId = c.req.param('id');
+    const taskId = c.req.param('id') as string;
     const input = await c.req.json();
 
     const task = await this.changeTaskStatusUseCase.execute({

@@ -55,14 +55,19 @@ const taskController = new TaskController(
 tasks.use('*', authMiddleware());
 
 // 6つのエンドポイントを登録
-// Note: `as any`はOpenAPIHonoの型推論の制限により必要
+// biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
 tasks.openapi(createTaskRoute, (c) => taskController.create(c) as any);
+// biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
 tasks.openapi(listTasksRoute, (c) => taskController.getAll(c) as any);
+// biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
 tasks.openapi(getTaskRoute, (c) => taskController.getById(c) as any);
+// biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
 tasks.openapi(updateTaskRoute, (c) => taskController.update(c) as any);
+// biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
 tasks.openapi(deleteTaskRoute, (c) => taskController.delete(c) as any);
 tasks.openapi(
   changeTaskStatusRoute,
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   (c) => taskController.changeStatus(c) as any,
 );
 
@@ -173,12 +178,17 @@ export function createTaskRoutes(
   app.use('*', authMiddleware(dependencies.authMiddlewareOptions));
 
   // 6つのエンドポイントを登録
-  // Note: `as any`はOpenAPIHonoの型推論の制限により必要
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(createTaskRoute, (c) => controller.create(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(listTasksRoute, (c) => controller.getAll(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(getTaskRoute, (c) => controller.getById(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(updateTaskRoute, (c) => controller.update(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(deleteTaskRoute, (c) => controller.delete(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(changeTaskStatusRoute, (c) => controller.changeStatus(c) as any);
 
   // グローバルエラーハンドラー
