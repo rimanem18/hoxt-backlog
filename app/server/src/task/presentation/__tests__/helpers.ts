@@ -1,10 +1,4 @@
 import { mock } from 'bun:test';
-import type { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
-import type { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
-import type { DeleteTaskUseCase } from '@/task/application/DeleteTaskUseCase';
-import type { GetTaskByIdUseCase } from '@/task/application/GetTaskByIdUseCase';
-import type { GetTasksUseCase } from '@/task/application/GetTasksUseCase';
-import type { UpdateTaskUseCase } from '@/task/application/UpdateTaskUseCase';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
 
 /**

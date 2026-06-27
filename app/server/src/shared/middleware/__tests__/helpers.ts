@@ -23,11 +23,11 @@ export function createMockContext(
 ): Context {
   return {
     req: {
-      // biome-ignore lint/suspicious/noExplicitAny: Honoのheader関数の複雑なオーバーロード型をモックするため
       header: (name?: string) => {
         if (!name) return {};
         return headers[name];
       },
+      // biome-ignore lint/suspicious/noExplicitAny: Honoのheader関数の複雑なオーバーロード型をモックするため
     } as any,
     json: mock((data: unknown, status: number) => {
       return new Response(JSON.stringify(data), { status });

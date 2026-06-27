@@ -40,11 +40,17 @@ describe('taskRoutes統合テスト', () => {
     const { createTaskRoutes } = await import('../taskRoutes');
 
     app = createTaskRoutes({
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       createTaskUseCase: useCases.createTaskUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTasksUseCase: useCases.getTasksUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       updateTaskUseCase: useCases.updateTaskUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       deleteTaskUseCase: useCases.deleteTaskUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
@@ -314,11 +320,17 @@ describe('taskRoutes統合テスト', () => {
       // Given: authMiddlewareOptionsなし（JWTなし）でアプリを作成
       const { createTaskRoutes } = await import('../taskRoutes');
       const appWithoutAuth = createTaskRoutes({
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         createTaskUseCase: useCases.createTaskUseCase as any,
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         getTasksUseCase: useCases.getTasksUseCase as any,
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         updateTaskUseCase: useCases.updateTaskUseCase as any,
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         deleteTaskUseCase: useCases.deleteTaskUseCase as any,
+        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
         changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
         // authMiddlewareOptions を渡さない（AuthError発生）
       });

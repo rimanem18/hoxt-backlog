@@ -15,7 +15,6 @@ import {
   mockJwksFetch,
   mockJwksFetchFailure,
   mockJwksFetchWithRetry,
-  mockJwksFetchWithTimeout,
   signTestToken,
 } from './helpers/jwks-test-helper';
 

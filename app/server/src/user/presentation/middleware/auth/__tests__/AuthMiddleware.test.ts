@@ -117,6 +117,7 @@ describe('authMiddleware - ユーザーDB検索', () => {
     // AuthErrorをキャッチしてJSONレスポンスに変換
     app.onError((err, c) => {
       if (err instanceof AuthError) {
+        // biome-ignore lint/suspicious/noExplicitAny: AuthErrorのstatus型がHonoのStatusCode型と不一致
         return c.json(err.toJSON(), err.status as any);
       }
       return c.json({ success: false, error: { message: err.message } }, 500);
@@ -225,6 +226,7 @@ describe('authMiddleware - ユーザーDB検索', () => {
     // AuthErrorをキャッチしてJSONレスポンスに変換
     app.onError((err, c) => {
       if (err instanceof AuthError) {
+        // biome-ignore lint/suspicious/noExplicitAny: AuthErrorのstatus型がHonoのStatusCode型と不一致
         return c.json(err.toJSON(), err.status as any);
       }
       return c.json({ success: false, error: { message: err.message } }, 500);
@@ -279,6 +281,7 @@ describe('authMiddleware - ユーザーDB検索', () => {
     // AuthErrorをキャッチしてJSONレスポンスに変換
     app.onError((err, c) => {
       if (err instanceof AuthError) {
+        // biome-ignore lint/suspicious/noExplicitAny: AuthErrorのstatus型がHonoのStatusCode型と不一致
         return c.json(err.toJSON(), err.status as any);
       }
       return c.json({ success: false, error: { message: err.message } }, 500);

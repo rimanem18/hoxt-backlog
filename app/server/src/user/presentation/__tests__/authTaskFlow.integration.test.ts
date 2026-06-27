@@ -9,8 +9,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { AuthError } from '@/shared/middleware/errors/AuthError';
-import type { TaskEntity } from '@/task/domain/TaskEntity';
 import { createMockTaskEntity } from '@/task/presentation/__tests__/helpers';
 import type { TaskRoutesDependencies } from '@/task/presentation/taskRoutes';
 import { createTaskRoutes } from '@/task/presentation/taskRoutes';
@@ -69,15 +67,21 @@ describe('認証→タスク作成フロー統合テスト', () => {
 
     const mockCreateTaskUseCase = {
       execute: mock(() => Promise.resolve(createdTask)),
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
     } as any;
 
     // Given: taskRoutesにモック依存関係を注入
     const taskRoutesDeps: TaskRoutesDependencies = {
       createTaskUseCase: mockCreateTaskUseCase,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTasksUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTaskByIdUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       updateTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       deleteTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       changeTaskStatusUseCase: { execute: mock() } as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
@@ -129,7 +133,7 @@ describe('認証→タスク作成フロー統合テスト', () => {
     // Then: CreateTaskUseCaseが正しいuserIdで呼ばれた
     expect(mockCreateTaskUseCase.execute).toHaveBeenCalledTimes(1);
     const createTaskCallArgs = mockCreateTaskUseCase.execute.mock.calls[0];
-    if (createTaskCallArgs && createTaskCallArgs[0]) {
+    if (createTaskCallArgs?.[0]) {
       expect(createTaskCallArgs[0].userId).toBe(dbUserId); // DBのUUIDが使用されることを確認
     }
 
@@ -165,15 +169,21 @@ describe('認証→タスク作成フロー統合テスト', () => {
     // Given: タスク作成UseCaseのモック（呼ばれないはず）
     const mockCreateTaskUseCase = {
       execute: mock(() => Promise.resolve(createMockTaskEntity())),
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
     } as any;
 
     // Given: taskRoutesにモック依存関係を注入
     const taskRoutesDeps: TaskRoutesDependencies = {
       createTaskUseCase: mockCreateTaskUseCase,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTasksUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTaskByIdUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       updateTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       deleteTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       changeTaskStatusUseCase: { execute: mock() } as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
@@ -272,15 +282,21 @@ describe('認証→タスク作成フロー統合テスト', () => {
 
     const mockCreateTaskUseCase = {
       execute: mock(() => Promise.resolve(createdTask)),
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
     } as any;
 
     // Given: taskRoutesにモック依存関係を注入
     const taskRoutesDeps: TaskRoutesDependencies = {
       createTaskUseCase: mockCreateTaskUseCase,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTasksUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       getTaskByIdUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       updateTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       deleteTaskUseCase: { execute: mock() } as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
       changeTaskStatusUseCase: { execute: mock() } as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
@@ -327,7 +343,7 @@ describe('認証→タスク作成フロー統合テスト', () => {
     // Then: CreateTaskUseCaseがDBのuserIdで呼ばれた（外部IDではない）
     expect(mockCreateTaskUseCase.execute).toHaveBeenCalledTimes(1);
     const createTaskCallArgs = mockCreateTaskUseCase.execute.mock.calls[0];
-    if (createTaskCallArgs && createTaskCallArgs[0]) {
+    if (createTaskCallArgs?.[0]) {
       expect(createTaskCallArgs[0].userId).toBe(dbUserId);
       expect(createTaskCallArgs[0].userId).not.toBe(externalId); // 外部IDではないことを明示的に確認
     }
