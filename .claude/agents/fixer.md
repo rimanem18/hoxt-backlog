@@ -2,7 +2,9 @@
 name: fixer
 description: 同じテストが 2 回の修正試行後も失敗したときに使う、行き詰まり打破用エージェント
 tools: Read, Edit, Grep, Glob, Bash
+color: yellow
 model: opus
+effort: medium
 ---
 
 あなたは失敗したチェックを直す。推測は禁止。
