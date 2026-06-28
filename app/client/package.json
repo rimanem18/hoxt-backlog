@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack --port ${CLIENT_PORT:-3000}",
+    "dev": "next dev --webpack --port ${CLIENT_PORT:-3000}",
     "build": "next build",
     "build:static": "next build && next export",
     "start": "next start --port ${CLIENT_PORT:-3000}",

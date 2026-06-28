@@ -51,15 +51,6 @@ export interface AuthState {
 }
 
 /**
- * テスト専用のグローバル型定義
- */
-declare global {
-  interface Window {
-    __TEST_REDUX_AUTH_STATE__?: Partial<AuthState>;
-  }
-}
-
-/**
  * 認証成功アクションのペイロード型
  */
 interface AuthSuccessPayload {
@@ -69,34 +60,13 @@ interface AuthSuccessPayload {
   isNewUser: boolean;
 }
 
-/**
- * テスト環境での認証状態読み込み
- * E2Eテスト時にモック状態を適用するための仕組み
- */
-const getTestAuthState = (): Partial<AuthState> | null => {
-  if (typeof window !== 'undefined' && window.__TEST_REDUX_AUTH_STATE__) {
-    try {
-      // テスト状態の基本的な検証
-      const testState = window.__TEST_REDUX_AUTH_STATE__;
-      if (testState && typeof testState === 'object') {
-        return testState;
-      }
-    } catch (error) {
-      console.warn('テスト状態の読み込みでエラーが発生:', error);
-    }
-  }
-  return null;
-};
-
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   isLoading: false,
-  isAuthRestoring: true, // 認証状態復元中フラグ（初期は復元中）
+  isAuthRestoring: true,
   error: null,
   authError: null,
-  // テスト状態があれば適用（E2Eテスト専用）
-  ...getTestAuthState(),
 };
 
 /**
@@ -158,6 +128,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.isLoading = false;
+      state.isAuthRestoring = false;
       state.error = null;
       state.authError = null;
       // LocalStorage操作を削除（sessionListenerで処理）
@@ -189,10 +160,9 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.isLoading = false;
-      state.isAuthRestoring = false; // 復元完了
+      state.isAuthRestoring = false;
       state.error = null;
       state.authError = null;
-      console.log('Authentication state restored from localStorage');
     },
 
     /**
@@ -203,7 +173,6 @@ export const authSlice = createSlice({
      */
     finishAuthRestore: (state) => {
       state.isAuthRestoring = false;
-      console.log('Authentication restore completed - no stored auth found');
     },
 
     /**

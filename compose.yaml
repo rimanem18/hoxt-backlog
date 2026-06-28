@@ -76,6 +76,7 @@ services:
     working_dir: /workspace
     environment:
       - CI=true
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
     depends_on:
       - client
     command: tail -f /dev/null
