@@ -20,9 +20,10 @@
 
 | 確認事項 | 採用 |
 |---|---|
-| サインアップ時の同一メール衝突チェック | サーバー経由先行チェック |
+| サインアップ時の同一メール衝突チェック | サーバー経由先行チェック（app DB + Supabase Admin 二段階） |
 | テストユーザー作成経路 | Supabase Dashboard 手動作成 |
 | email カラムの DB UNIQUE 制約 | 追加（lower(email) 正規化 UNIQUE） |
+| Supabase identity linking 設定 | ON（二段階衝突チェックで未 JIT リンクリスクを解消） |
 
 ## 2. 全体構成
 
@@ -56,7 +57,7 @@ flowchart LR
 | `app/client/src/features/auth/services/authService.ts` | OAuth と Email の経路を委譲 | 既存拡張 |
 | `app/client/src/features/auth/services/authErrorHandler.ts` | Supabase `AuthApiError.code` / `message` → 表示メッセージのマッピング | 既存拡張 |
 | `app/server/src/user/presentation/emailSignupRoutes.ts` | `POST /api/auth/email/signup` ルート | 新規 |
-| `app/server/src/user/application/EmailSignupUseCase.ts` | 衝突チェック → Supabase signUp 発火 | 新規 |
+| `app/server/src/user/application/EmailSignupUseCase.ts` | 衝突チェック（app DB + Supabase Admin 二段階）→ Supabase signUp 発火 | 新規 |
 | `app/server/src/user/domain/AuthProvider.ts` | `email` 値を追加 | 既存拡張 |
 | `app/server/src/user/domain/IUserRepository.ts` | `findByEmail` は既存（確認済み）。変更なし | 既存 |
 | `app/server/src/user/application/AuthenticateUserUseCase.ts` | JIT に `findByEmail` 合流ロジックを追加 | 既存拡張 |
@@ -98,11 +99,17 @@ sequenceDiagram
     else 既存ユーザー(provider=email)
         SV-->>CL: 409 EMAIL_ALREADY_REGISTERED
         CL-->>U: 登録済みメッセージ表示
-    else 既存なし
-        SV->>SB: auth.signUp(email, password)  service_role 経由
-        SB-->>U: 確認メール送信
-        SV-->>CL: 201 { pendingEmailConfirmation: true }
-        CL-->>U: 「確認メールを送信しました」表示
+    else app DB に未存在
+        SV->>SB: auth.admin.getUserByEmail(email)
+        alt Supabase Auth に google 等の identity が存在（未 JIT）
+            SV-->>CL: 409 EMAIL_ALREADY_REGISTERED_GOOGLE + REQ-302 案内文
+            CL-->>U: 案内表示
+        else Supabase Auth にも未存在
+            SV->>SB: auth.signUp(email, password)  service_role 経由
+            SB-->>U: 確認メール送信
+            SV-->>CL: 201 { pendingEmailConfirmation: true }
+            CL-->>U: 「確認メールを送信しました」表示
+        end
     end
 ```
 
@@ -112,7 +119,7 @@ sequenceDiagram
 
 email 正規化はサーバーで `trim()` + `toLowerCase()` を適用。
 
-**衝突チェックのスコープ**: チェック対象はアプリ DB のみ（Supabase Auth 側の未プロビジョニングユーザーは検出対象外）。Supabase Auth 側のみに存在するユーザー（プロビジョニング失敗等）は運用上の例外ケースとして定義し、発生時は運用調査対象とする（後述 §7.2）。
+**衝突チェックのスコープ**: app DB の `findByEmail` を第一チェック、Supabase Admin `getUserByEmail` を第二チェックとする二段階構成。identity linking が ON の環境では、app DB に未プロビジョニングの Google ユーザーが Supabase Auth 側にのみ存在するケースで意図しない identity リンクが発生しうる。第二チェックでこのケースを検出し、REQ-302 案内を返すことでリスクを解消する。`getUserByEmail` のレスポンスに email 以外の identity（google 等）が含まれる場合を「未 JIT Google ユーザー」と判定する。
 
 ### 3.2 サインイン（REQ-103, REQ-201, REQ-301, REQ-303）
 
@@ -347,7 +354,7 @@ UI 詳細文言は要件範囲外（TI-REF-05）。
 | ID | 内容 | 影響 | 格付け |
 |---|---|---|---|
 | DCQ-01 | **service_role クライアント経由の `auth.signUp` で確認メールが発火するか実機検証** | 発火しない場合は `admin.generateLink('signup', email)` + `admin.sendEmailOtp` 等の代替 API を採用 | **実装着手前必須** |
-| DCQ-02 | Supabase の自動 identity linking 設定の現状値（本設計は OFF を前提とする） | ON だと JIT 合流と競合する可能性。事前確認して OFF に設定 | 着手前確認推奨 |
+| DCQ-02 | **[解消] identity linking は ON を採用。** signup API の衝突チェックを app DB 確認後に Supabase Admin `getUserByEmail` による二段階構成へ拡張（§3.1）。未 JIT Google ユーザーへの意図しないリンクリスクを防止。JIT 合流 `findByEmail` フォールバック（§7.2）および `lower(email)` DB UNIQUE 制約と合わせて三重防御を維持する。 | **解消** |
 | DCQ-03 | Supabase Auth リダイレクト URL 許可リストへの本番・preview 環境 URL 追加（IaC 管理か手動か） | 本番デプロイ前に完了が必要 | リリース前必須 |
 | DCQ-04 | 既存 `users.email` に重複データが存在しないことの本番事前確認 | UNIQUE 制約適用前に整合性チェックが必要 | Migration B で確認 |
 

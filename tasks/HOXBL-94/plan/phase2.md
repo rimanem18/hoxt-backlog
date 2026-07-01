@@ -18,7 +18,7 @@
 ## 4. 依存関係
 
 - **前提フェーズ**: Phase 1（`email` を有効プロバイダーとして登録する必要がある）
-- **ブロッカー**: DCQ-02（Supabase の自動 identity linking が OFF であることを確認）
+- **ブロッカー**: DCQ-02 は解消済み。identity linking ON を採用し、signup API の二段階衝突チェックでリスクを解消（design.md §3.1）。
 
 ## 5. タスク一覧
 

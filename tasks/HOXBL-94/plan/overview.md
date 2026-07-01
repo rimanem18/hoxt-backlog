@@ -16,7 +16,7 @@
 | ID | 確認事項 | 影響 |
 |---|---|---|
 | DCQ-01 | **service_role クライアント経由の `auth.signUp` で確認メールが発火するか実機検証** | 発火しない場合は代替 API（`admin.generateLink` + `admin.sendEmailOtp` 等）を採用するため Phase 3 の設計が変わる |
-| DCQ-02 | Supabase の自動 identity linking 設定が OFF であることを確認・設定 | ON のままだと Phase 2 の JIT 合流ロジックと競合する可能性がある |
+| DCQ-02 | **[解消] identity linking は ON を採用。** signup API の衝突チェックを app DB + Supabase Admin `getUserByEmail` の二段階構成に拡張し、未 JIT Google ユーザーへの意図しないリンクリスクを解消済み（design.md §3.1, §10）。 | （解消済み） |
 
 ### リリース前の確認事項
 
