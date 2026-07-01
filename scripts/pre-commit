@@ -19,6 +19,8 @@ ALLOWLIST_KEYS=(
   "DB_USER"
   "DB_PORT"
   "SUPABASE_URL"
+  "PROJECT_NAME"
+  "CLOUDFLARE_PROJECT_NAME"
 )
 
 # prefix 単位で除外したい場合だけ使う
