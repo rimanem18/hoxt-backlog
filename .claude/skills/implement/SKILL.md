@@ -1,6 +1,6 @@
 ---
 name: "implement"
-description: 'This skill is a guide to read and implement a task file. It is used when a user says, "requirement:{requirement_number}, issue:{issue_number}, phase{number}" or "Please implement according to the task plan for {requirement number}, {phase number}.", "{requirement number}, {phase number} のタスク計画に従って実装して", "requirement:{requirement_number}, issue:{issue_number}, phase{number}".'
+description: 'This skill is a guide to read and implement a task file. It is used when a user says, "requirement:{requirement_number}, issue:{issue_number}, phase{number}" or "Please implement according to the task plan for {requirement number}, {phase number}.", "{requirement number}, {phase number} のタスク計画に従って実装して", "requirement:{requirement_number/ID}, phase{number}".'
 model: sonnet
 effort: medium
 ---
@@ -9,21 +9,20 @@ effort: medium
 
 提示されたタスクファイルを読み込んで、実施してください。
 
-- ユーザーから requirement_number が提示されない場合、自己判断で進めずに、ユーザーに指示を仰いでください。
-- requirement_number と issue_number は異なる概念のため、ブランチに含まれる番号とディレクトリの番号が異なっていても OK です。
+- ユーザーから requirement_number/ID が提示されない場合、自己判断で進めずに、ユーザーに指示を仰いでください。
 - タスク計画はあくまで計画です。CLAUDE.md や ガイドラインおよび実装と突合したときに不自然な箇所がある場合は差異を記録した上、強引に計画に沿うのではなく合致を優先してください。
 
 ## タスクの理解
 
 まずは以下のディレクトリに存在するファイルを読んで理解してください。
 
-- `@tasks/{requirement_number}/plan/`
+- `@tasks/{requirement_number/ID}/plan/`
   - overview.md
   - 提示された phase{number}.md の直前の phase{number}.md（存在する場合）
     - 並行で実装が進行している可能性も考慮する
   - 提示された phase{number}.md
-- `@tasks/{requirement_number}/spec/` から関連記述を探して読む
-- `@tasks/{requirement_number}/technical/` から関連記述を探して読む
+- `@tasks/{requirement_number/ID}/spec/` から関連記述を探して読む
+- `@tasks/{requirement_number/ID}/technical/` から関連記述を探して読む
 
 ## 開始時刻の確認と記録
 
@@ -109,7 +108,7 @@ phase1 の実装が完了しました。
 コミット後、`/knowledge` の実行を推奨します。
 
 --- コミットメッセージ: ---
-feat: Redux状態管理を実装 #{issue_number}
+feat: Redux状態管理を実装 {requirement_number/ID}
 
 - Redux Toolkitでストアを設定
 - 型付きhooks（useAppDispatch、useAppSelector）を実装
