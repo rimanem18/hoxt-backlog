@@ -1,5 +1,9 @@
 # Phase 1: Backend - 基盤整備（AuthProvider 拡張・DB マイグレーション・スキーマ再生成）
 
+## 開始時刻
+
+2026-07-01 23:34 JST
+
 ## 1. このフェーズの目的
 
 `email` プロバイダーを型システム・DB スキーマ・共有スキーマの全レイヤーで一貫して使えるようにする。  
@@ -25,7 +29,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-1-01: `shared-schemas/src/auth.ts` の `authProviderSchema` に `email` 追加**
+- [x] **TASK-1-01: `shared-schemas/src/auth.ts` の `authProviderSchema` に `email` 追加**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-002
@@ -36,7 +40,7 @@
   - **完了条件**: `authProviderSchema` に `'email'` が含まれ、`AuthProvider` 型に `'email'` が追加されること
   - **注意点**: `shared-schemas` のビルドは `app/packages/shared-schemas/` で実施。変更後は server/client 両方の型チェックが必要
 
-- [ ] **TASK-1-02: `app/server/src/user/domain/AuthProvider.ts` に `EMAIL` 定数追加**
+- [x] **TASK-1-02: `app/server/src/user/domain/AuthProvider.ts` に `EMAIL` 定数追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: REQ-002
@@ -46,7 +50,7 @@
     - この変更を漏らすと `provider='email'` の JWT 処理時に `InvalidProviderError` が発生する（`isValidAuthProvider` チェックが失敗するため）
   - **完了条件**: `AuthProviders.EMAIL === 'email'` であること。`isValidAuthProvider('email')` が `true` を返すこと
 
-- [ ] **TASK-1-03: `schema.ts` の `authProviderType` enum に `email` 追加**
+- [x] **TASK-1-03: `schema.ts` の `authProviderType` enum に `email` 追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: REQ-002
@@ -56,7 +60,7 @@
     - `app/server/scripts/generate-schemas.ts` の対象テーブル設定に変更が必要な場合は更新する
   - **完了条件**: `schema.ts` の enum 定義に `email` が含まれること
 
-- [ ] **TASK-1-04: `schema.ts` に `lower(email)` UNIQUE インデックス追加**
+- [x] **TASK-1-04: `schema.ts` に `lower(email)` UNIQUE インデックス追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-03
   - **関連要件**: REQ-002
@@ -67,7 +71,7 @@
     - Drizzle ORM での関数インデックス定義: `index('users_email_lower_unique').on(sql\`lower(${users.email})\`).unique()`
   - **完了条件**: Drizzle schema に UNIQUE 関数インデックス定義が含まれること
 
-- [ ] **TASK-1-05: Drizzle migration ファイル生成**
+- [x] **TASK-1-05: Drizzle migration ファイル生成**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-03, TASK-1-04
   - **関連要件**: なし（インフラ）
@@ -82,7 +86,7 @@
     - `CREATE UNIQUE INDEX CONCURRENTLY users_email_lower_unique ON users (lower(email))`
   - **完了条件**: `app/server/src/shared/database/migrations/` に新しいマイグレーションファイルが生成されていること
 
-- [ ] **TASK-1-06: 既存 email データの重複確認スクリプト実施（DCQ-04）**
+- [x] **TASK-1-06: 既存 email データの重複確認スクリプト実施（DCQ-04）**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-002
@@ -99,7 +103,7 @@
     本番適用前には同クエリを本番 DB に対して実施すること（別途手順書に記録）。
   - **完了条件**: ローカル環境でクエリ結果が 0 件であること
 
-- [ ] **TASK-1-07: スキーマ再生成（server スキーマ → OpenAPI → client 型）**
+- [x] **TASK-1-07: スキーマ再生成（server スキーマ → OpenAPI → client 型）**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01, TASK-1-02, TASK-1-03
   - **関連要件**: なし（インフラ）
@@ -113,7 +117,7 @@
     自動生成された `app/server/src/schemas/users.ts` を手動編集しないこと。
   - **完了条件**: 自動生成ファイルが更新されており、`auth_provider_type` enum に `email` が含まれること
 
-- [ ] **TASK-1-08: 型チェックとテスト実行**
+- [x] **TASK-1-08: 型チェックとテスト実行**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-07
   - **関連要件**: なし
@@ -128,6 +132,27 @@
     docker compose exec client bun test
     ```
   - **完了条件**: 型エラー・テスト失敗がないこと
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-01 23:42 JST
+- 合計: 約 8 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| server tsc --noEmit | ~5s |
+| client tsc --noEmit | ~5s |
+| server bun test (669テスト) | ~20s |
+| client bun test (259テスト) | ~5s |
+| server bun run fix | ~3s |
+| client bun run fix | ~2s |
+| db:generate (3環境) | ~10s |
+
+## 差異の記録
+
+- `drizzle.config.ts` のスキーマパスが `./src/infrastructure/database/schema.ts` と古いパスを参照していたため、`./src/shared/database/schema.ts` に修正した（既存のバグ修正）。マイグレーション出力パスも同様に修正。
 
 ## 6. このフェーズの完了条件
 
