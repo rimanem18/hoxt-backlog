@@ -81,6 +81,7 @@ export const authProviderType = schema.enum('auth_provider_type', [
   'github',
   'facebook',
   'line',
+  'email',
 ]);
 
 /**
@@ -127,8 +128,10 @@ export const users = schema.table(
         table.provider,
       ),
 
-      // メールアドレス検索用インデックス
-      emailIndex: index('idx_users_email').on(table.email),
+      // lower(email) 正規化 UNIQUE インデックス（1メール=1ユーザー保証）
+      emailLowerUniqueIndex: uniqueIndex('users_email_lower_unique').on(
+        sql`lower(${table.email})`,
+      ),
 
       // 最終ログイン日時でのソート・フィルタ用インデックス
       lastLoginAtIndex: index('idx_users_last_login_at').on(

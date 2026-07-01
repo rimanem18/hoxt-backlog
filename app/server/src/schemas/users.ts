@@ -44,6 +44,7 @@ export const authProviderSchema = z.enum([
   'github',
   'facebook',
   'line',
+  'email',
 ]);
 
 export type AuthProvider = z.infer<typeof authProviderSchema>;

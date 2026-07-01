@@ -9,11 +9,11 @@ const baseSchema = process.env.BASE_SCHEMA || 'public';
 
 export default defineConfig({
   // スキーマファイルの場所
-  schema: './src/infrastructure/database/schema.ts',
+  schema: './src/shared/database/schema.ts',
 
   // マイグレーションファイルの出力先
   // スキーマごとに別フォルダ
-  out: `./src/infrastructure/database/migrations/${baseSchema}`,
+  out: `./src/shared/database/migrations/${baseSchema}`,
 
   // データベース情報
   dialect: 'postgresql',

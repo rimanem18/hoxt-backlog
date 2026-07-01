@@ -19,7 +19,7 @@ echo "=== マイグレーション生成実行 ==="
 bun run db:generate
 
 # migrations/ ディレクトリのみチェック
-DIFF=$(git status --porcelain src/infrastructure/database/migrations/)
+DIFF=$(git status --porcelain src/shared/database/migrations/)
 
 if [ -n "$DIFF" ]; then
   echo ""
@@ -29,7 +29,7 @@ if [ -n "$DIFF" ]; then
   echo "$DIFF"
   echo ""
   echo "詳細な差分:"
-  git diff src/infrastructure/database/migrations/
+  git diff src/shared/database/migrations/
   echo ""
   echo "対処方法:"
   echo "1. 'bun run db:generate' を実行"
