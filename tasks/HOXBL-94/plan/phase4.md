@@ -88,6 +88,18 @@
     semgrep でシークレット系文字列がハードコードされていないことを確認する。
   - **完了条件**: 型エラー・テスト失敗・semgrep 警告がないこと
 
+- [ ] **TASK-4-05: `ISupabaseAdminClient` リネーム**
+  - **タイプ**: DIRECT（任意）
+  - **依存タスク**: TASK-4-02（`AuthDIContainer` への組み込み完了後）
+  - **関連要件**: なし
+  - **関連設計**: §2.2
+  - **実装詳細**:
+    - `app/server/src/user/application/ISupabaseAdminClient.ts` を `IEmailSignupGateway.ts` へリネーム
+    - `SupabaseAdminClient.ts` の `implements` 宣言も更新
+    - `EmailSignupUseCase.ts` の import も更新
+    - DDD 観点では Application 層の port 名はユースケース語彙に寄せる（vendor 名を含まない）のが望ましい
+  - **実施判断**: Phase 4 完了後に呼び出し元が確定した段階で、必要を感じた場合のみ実施。変更ファイルは 3 件のみ
+
 ## 6. このフェーズの完了条件
 
 - `POST /api/auth/email/signup` が動作し、全レスポンスパターン（201 / 409 × 2 / 400 / 500）が適切に返ること

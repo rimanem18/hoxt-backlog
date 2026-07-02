@@ -1,5 +1,9 @@
 # Phase 3: Backend - EmailSignupUseCase 実装（SupabaseAdminClient + UseCase TDD）
 
+## 開始時刻
+
+2026-07-02 22:30 JST
+
 ## 1. このフェーズの目的
 
 `SupabaseAdminClient.ts` と `EmailSignupUseCase.ts` を実装し、メールアドレス衝突チェック・Supabase サインアップ発火のコアロジックを動作させる。  
@@ -23,7 +27,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-3-01: `SupabaseAdminClient.ts` 新規作成**
+- [x] **TASK-3-01: `SupabaseAdminClient.ts` 新規作成**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-101
@@ -39,7 +43,7 @@
   - **完了条件**: `SupabaseAdminClient` が作成され、型チェックがエラーゼロになること
   - **注意点**: DCQ-01 の実機検証結果によって実装内容が変わる。`auth.signUp` が確認メールを発火しない場合は Supabase Admin の代替 API を調査して実装する
 
-- [ ] **TASK-3-02: `EmailSignupUseCase.ts` 実装（TDD）**
+- [x] **TASK-3-02: `EmailSignupUseCase.ts` 実装（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-01
   - **関連要件**: REQ-101, REQ-002, REQ-302, REQ-304
@@ -78,7 +82,7 @@
   - **単体テスト要件**: 上記テストケースがカバーされていること
   - **注意点**: `SupabaseAdminClient` はコンストラクタから DI で注入し、テストではモックを使う
 
-- [ ] **TASK-3-03: 型チェック**
+- [x] **TASK-3-03: 型チェック**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-3-02
   - **関連要件**: なし
@@ -96,3 +100,25 @@
 - `SupabaseAdminClient.ts` が新規作成されていること
 - `EmailSignupUseCase.ts` が新規作成され、正常系・異常系・境界値のテストがグリーンになること
 - `docker compose exec server bunx tsc --noEmit` がエラーゼロになること
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-02 22:43 JST
+- 合計: 約 13 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| server tsc --noEmit | ~5s |
+| server bun test (678テスト) | ~20s |
+| server bun run fix | ~3s |
+
+## 差異の記録
+
+- `ISupabaseAdminClient` インターフェースを追加（計画に明記なかったが DI テスト容易化のため追加）
+- `SignupFailedError` の `causeMessage` プロパティ追加（外部エラーメッセージ漏洩防止のためレビュー指摘を受けて変更）
+- `SupabaseAdminClient.signUp` に `try/catch` を追加（fetch 例外を契約通り `{ userId: null, error }` に正規化。レビュー指摘）
+- 重複時の `adminClient.signUp` 未呼び出し確認テストを追加（レビュー指摘）
+- 正規化済み email が `signUp` に渡ることの確認テストを追加（レビュー指摘）
+- `@supabase/supabase-js` SDK 不使用: server package.json に未インストールのため、Supabase Auth REST API を fetch で直接呼び出す方式を採用
