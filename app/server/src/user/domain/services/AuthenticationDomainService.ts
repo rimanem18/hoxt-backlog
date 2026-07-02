@@ -82,8 +82,9 @@ export class AuthenticationDomainService
    *
    * 認証フローの中核となるビジネスロジック：
    * 1. 外部IDとプロバイダーで既存ユーザー検索
-   * 2. 存在しない場合はJITプロビジョニング実行
-   * 3. 最終ログイン日時の更新
+   * 2. 存在しない場合はメールアドレスで合流を試みる（REQ-002: 1メール=1ユーザー）
+   * 3. それでも存在しない場合はJITプロビジョニング実行
+   * 4. 最終ログイン日時の更新
    *
    * @param externalInfo - 外部プロバイダーから取得した正規化済みユーザー情報
    * @returns 認証結果（ユーザー情報と新規作成フラグ）
@@ -94,12 +95,10 @@ export class AuthenticationDomainService
     user: UserEntity;
     isNewUser: boolean;
   }> {
-    // プロバイダー情報の検証
     if (!isValidAuthProvider(externalInfo.provider)) {
       throw InvalidProviderError.forProvider(externalInfo.provider);
     }
 
-    // 1. 既存ユーザーの検索
     const userData = await this.userRepository.findByExternalId(
       externalInfo.id,
       externalInfo.provider as AuthProvider,
@@ -108,19 +107,25 @@ export class AuthenticationDomainService
     let isNewUser = false;
     let user: UserEntity;
 
-    // 2. 存在しない場合はJITプロビジョニング実行
     if (!userData) {
-      user = await this.createUserFromExternalInfo(externalInfo);
-      isNewUser = true;
+      // findByExternalId で見つからない場合、同一メールの既存ユーザーと合流を試みる
+      // provider をまたいだ同一人物の二重登録を防ぐため（REQ-002）
+      const emailUser = await this.userRepository.findByEmail(
+        externalInfo.email.trim().toLowerCase(),
+      );
+
+      if (emailUser) {
+        user = UserEntity.restore(emailUser);
+      } else {
+        user = await this.createUserFromExternalInfo(externalInfo);
+        isNewUser = true;
+      }
     } else {
       user = UserEntity.restore(userData);
     }
 
-    // 3. 最終ログイン日時の更新
-    // 新規ユーザーの場合もログイン記録は必要
-    const now = new Date();
     const updatedUserData = await this.userRepository.update(user.id, {
-      lastLoginAt: now,
+      lastLoginAt: new Date(),
     });
 
     return {
