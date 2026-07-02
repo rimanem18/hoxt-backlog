@@ -63,6 +63,7 @@ flowchart LR
 | `app/server/src/user/application/AuthenticateUserUseCase.ts` | JIT に `findByEmail` 合流ロジックを追加 | 既存拡張 |
 | `app/server/src/user/infrastructure/SupabaseAdminClient.ts` | service_role を使う Supabase Admin SDK ラッパー | 新規 |
 | `app/server/src/user/presentation/authRoutes.ts` | 変更なし（`POST /api/auth/verify` を流用） | 既存 |
+| `app/server/src/user/presentation/middleware/auth/AuthMiddleware.ts` | `AuthProvider` 型キャスト修正 + identity linking 合流ユーザー向け `findByEmail` フォールバック追加（`findByExternalId` 失敗時に `payload.email` で再検索） | 既存拡張 |
 | `app/server/src/shared/database/schema.ts` | `auth_provider_type` に `email` 追加、`lower(email)` UNIQUE インデックス | 既存拡張 |
 | `app/server/src/schemas/users.ts`（自動生成） | schema 変更後に再生成 | 自動生成 |
 | `app/packages/shared-schemas/src/auth.ts` | `authProviderSchema` に `email` 追加、signup API スキーマ追加 | 既存拡張 |

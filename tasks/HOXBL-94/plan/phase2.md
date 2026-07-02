@@ -1,5 +1,9 @@
 # Phase 2: Backend - AuthenticationDomainService findByEmail 合流ロジック（TDD）
 
+## 開始時刻
+
+2026-07-02 21:38 JST
+
 ## 1. このフェーズの目的
 
 `AuthenticationDomainService.authenticateUser` に `findByEmail` 合流ロジックを追加し、`provider='email'` の JWT で JIT プロビジョニングが走ったときに同一メールの既存 Google ユーザーと同一ユーザーとして合流できるようにする（REQ-002）。
@@ -22,7 +26,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-2-01: テストケース追加（Red フェーズ）**
+- [x] **TASK-2-01: テストケース追加（Red フェーズ）**
   - **タイプ**: TDD（Red）
   - **依存タスク**: なし（Phase 1 完了後）
   - **関連要件**: REQ-002
@@ -40,7 +44,7 @@
     - Then: 既存 Google ユーザーが返され、`isNewUser === false` になること
     - `userRepository.create` が呼ばれないこと
 
-- [ ] **TASK-2-02: findByEmail 合流ロジック実装（Green フェーズ・サブエージェント）**
+- [x] **TASK-2-02: findByEmail 合流ロジック実装（Green フェーズ・サブエージェント）**
   - **タイプ**: TDD（Green）
   - **依存タスク**: TASK-2-01
   - **関連要件**: REQ-002
@@ -62,7 +66,7 @@
     - 2 度以上テストが通らない、またはテストケースに誤りがあると感じた場合は、その旨をユーザーに報告して指示を仰ぐこと
   - **完了条件**: 全テストがグリーンになること
 
-- [ ] **TASK-2-03: リファクタリング（Refactor フェーズ）**
+- [x] **TASK-2-03: リファクタリング（Refactor フェーズ）**
   - **タイプ**: TDD（Refactor）
   - **依存タスク**: TASK-2-02
   - **関連要件**: なし
@@ -79,3 +83,25 @@
 - `AuthenticationDomainService.authenticateUser` が `findByEmail` 合流ロジックを含んでいること
 - 追加テストケースを含む全テストがグリーンになること
 - `docker compose exec server bunx tsc --noEmit` がエラーゼロになること
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-02 22:03 JST
+- 合計: 約 25 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| server tsc --noEmit | ~5s |
+| server bun test (672テスト) | ~20s |
+| server bun run fix | ~3s |
+| semgrep (2ファイル) | ~10s |
+
+## 差異の記録
+
+- コードレビューにより `AuthMiddleware.ts` の修正が必要と判明（設計書「変更なし」は見落とし）:
+  - `AuthProvider` 型キャストに `'email'` が含まれていなかった（Phase 1 漏れ）→ `as AuthProvider` に修正
+  - identity linking ON 環境で Google 合流ユーザーが後続 API 呼び出しで 401 になる問題 → `findByEmail` フォールバックを追加
+  - 設計書 §2.2 の `AuthMiddleware` 行を「変更なし」→「既存拡張」に更新済み
+- `email` を `validProviders` テストリストに追加（Phase 1 で追加済みのプロバイダーのカバレッジ補完）
