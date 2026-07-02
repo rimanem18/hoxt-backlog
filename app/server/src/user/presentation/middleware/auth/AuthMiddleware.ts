@@ -6,7 +6,10 @@
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { AuthError } from '@/shared/middleware/errors/AuthError';
-import { isValidAuthProvider } from '@/user/domain/AuthProvider';
+import {
+  type AuthProvider,
+  isValidAuthProvider,
+} from '@/user/domain/AuthProvider';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { IAuthProvider } from '@/user/domain/services/IAuthProvider';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
@@ -92,13 +95,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
         );
       }
 
-      const provider = providerStr as
-        | 'google'
-        | 'github'
-        | 'facebook'
-        | 'microsoft'
-        | 'apple'
-        | 'line';
+      const provider = providerStr as AuthProvider;
 
       if (!externalId) {
         throw new AuthError(
@@ -113,7 +110,16 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       const userRepository =
         options.userRepository || AuthDIContainer.getUserRepository();
 
-      const user = await userRepository.findByExternalId(externalId, provider);
+      let user = await userRepository.findByExternalId(externalId, provider);
+
+      // identity linking ON 環境で provider が切り替わった合流ユーザー向けフォールバック
+      // （例: Google 登録済みユーザーが email で再サインインした場合、
+      //   externalId は同一だが DB の provider='google' と JWT の provider='email' が不一致になる）
+      if (!user && payload.email) {
+        user = await userRepository.findByEmail(
+          (payload.email as string).trim().toLowerCase(),
+        );
+      }
 
       if (!user) {
         throw new AuthError(

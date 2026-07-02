@@ -308,4 +308,112 @@ describe('authMiddleware - ユーザーDB検索', () => {
     // Then: findByExternalIdは呼ばれない（providerバリデーションで拒否）
     expect(mockUserRepository.findByExternalId).toHaveBeenCalledTimes(0);
   });
+
+  test('findByExternalId で見つからないが findByEmail で合流ユーザーが見つかる場合、そのユーザーをセットする', async () => {
+    // Given: Google で登録済みユーザー（identity linking で email provider でも同一 sub になる）
+    const googleUser: User = {
+      id: 'db-uuid-google',
+      externalId: 'supabase-uuid-shared',
+      provider: 'google' as AuthProvider,
+      email: 'shared@example.com',
+      name: 'Shared User',
+      avatarUrl: null,
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+      updatedAt: new Date('2024-01-01T00:00:00Z'),
+      lastLoginAt: null,
+    };
+
+    const mockUserRepository: IUserRepository = {
+      // email provider では externalId が見つからない
+      findByExternalId: mock(() => Promise.resolve(null)),
+      findById: mock(() => Promise.resolve(null)),
+      // email で検索すると Google ユーザーが見つかる
+      findByEmail: mock(() => Promise.resolve(googleUser)),
+      create: mock(() => Promise.resolve({} as User)),
+      update: mock(() => Promise.resolve({} as User)),
+      delete: mock(() => Promise.resolve()),
+    };
+
+    // Given: email provider の JWT（identity linking ON で sub は Google と同じ UUID）
+    const mockPayload = {
+      sub: 'supabase-uuid-shared',
+      email: 'shared@example.com',
+      app_metadata: {
+        provider: 'email',
+        providers: ['google', 'email'],
+      },
+    };
+
+    const options: AuthMiddlewareOptions = {
+      userRepository: mockUserRepository,
+      mockPayload,
+    };
+
+    const app = new Hono();
+    app.use('*', authMiddleware(options));
+    app.get('/test', (c) => c.json({ userId: c.get('userId') }));
+
+    // When: email provider の JWT でリクエスト
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer mock-token' },
+    });
+
+    // Then: 合流した Google ユーザーの DB UUID がセットされる
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty('userId', 'db-uuid-google');
+
+    expect(mockUserRepository.findByExternalId).toHaveBeenCalledTimes(1);
+    expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(
+      'shared@example.com',
+    );
+  });
+
+  test('findByExternalId でヒットした場合は findByEmail を呼ばない', async () => {
+    // Given: externalId で直接見つかるユーザー
+    const existingUser: User = {
+      id: 'db-uuid-direct',
+      externalId: 'ext-direct',
+      provider: 'google' as AuthProvider,
+      email: 'direct@example.com',
+      name: 'Direct User',
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastLoginAt: null,
+    };
+
+    const mockUserRepository: IUserRepository = {
+      findByExternalId: mock(() => Promise.resolve(existingUser)),
+      findById: mock(() => Promise.resolve(null)),
+      findByEmail: mock(() => Promise.resolve(null)),
+      create: mock(() => Promise.resolve({} as User)),
+      update: mock(() => Promise.resolve({} as User)),
+      delete: mock(() => Promise.resolve()),
+    };
+
+    const mockPayload = {
+      sub: 'ext-direct',
+      email: 'direct@example.com',
+      app_metadata: { provider: 'google', providers: ['google'] },
+    };
+
+    const app = new Hono();
+    app.use(
+      '*',
+      authMiddleware({ userRepository: mockUserRepository, mockPayload }),
+    );
+    app.get('/test', (c) => c.json({ userId: c.get('userId') }));
+
+    // When
+    const response = await app.request('http://localhost/test', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer mock-token' },
+    });
+
+    // Then: findByEmail は呼ばれない
+    expect(response.status).toBe(200);
+    expect(mockUserRepository.findByEmail).not.toHaveBeenCalled();
+  });
 });
