@@ -2,7 +2,7 @@ import type { IUserRepository } from '@/user/domain';
 import { EmailAlreadyRegisteredError } from '@/user/domain/errors/EmailAlreadyRegisteredError';
 import { EmailAlreadyRegisteredGoogleError } from '@/user/domain/errors/EmailAlreadyRegisteredGoogleError';
 import { SignupFailedError } from '@/user/domain/errors/SignupFailedError';
-import type { ISupabaseAdminClient } from './ISupabaseAdminClient';
+import type { IEmailSignupGateway } from './IEmailSignupGateway';
 
 /**
  * メールアドレス＋パスワードによるユーザー登録ユースケース
@@ -13,7 +13,7 @@ import type { ISupabaseAdminClient } from './ISupabaseAdminClient';
 export class EmailSignupUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly adminClient: ISupabaseAdminClient,
+    private readonly adminClient: IEmailSignupGateway,
   ) {}
 
   /**

@@ -22,9 +22,13 @@
 - **前提フェーズ**: Phase 3（`EmailSignupUseCase` が実装済みである必要がある）
 - **ブロッカー**: なし
 
+## 開始時刻
+
+2026-07-02 23:04 JST
+
 ## 5. タスク一覧
 
-- [ ] **TASK-4-01: `emailSignupRoutes.schema.ts` 新規作成**
+- [x] **TASK-4-01: `emailSignupRoutes.schema.ts` 新規作成**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-304
@@ -37,7 +41,7 @@
     - レスポンス: `201 { pendingEmailConfirmation: true }`, `400`, `409`, `500`
   - **完了条件**: スキーマファイルが作成され、型チェックがエラーゼロになること
 
-- [ ] **TASK-4-02: `emailSignupRoutes.ts` 新規作成 + エントリーポイント登録**
+- [x] **TASK-4-02: `emailSignupRoutes.ts` 新規作成 + エントリーポイント登録**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-4-01
   - **関連要件**: REQ-101, REQ-302, REQ-304
@@ -55,7 +59,7 @@
     - REQ-302 案内文: 「このメールアドレスは Google アカウントで登録済みです。Google ログインのままご利用いただけます。パスワードでのログインを追加したい場合は、Google でログインのうえ設定画面から設定できます」
   - **完了条件**: サーバーが起動し、エンドポイントが応答すること
 
-- [ ] **TASK-4-03: 統合テスト**
+- [x] **TASK-4-03: 統合テスト**
   - **タイプ**: TDD
   - **依存タスク**: TASK-4-02
   - **関連要件**: REQ-101, REQ-302, REQ-304
@@ -73,7 +77,7 @@
     - `SupabaseAdminClient` はモックで注入する（実際の Supabase には接続しない）
   - **完了条件**: 統合テストがすべてグリーンになること
 
-- [ ] **TASK-4-04: 型チェック・Lint・セキュリティチェック**
+- [x] **TASK-4-04: 型チェック・Lint・セキュリティチェック**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-4-03
   - **関連要件**: RISK-03
@@ -88,7 +92,7 @@
     semgrep でシークレット系文字列がハードコードされていないことを確認する。
   - **完了条件**: 型エラー・テスト失敗・semgrep 警告がないこと
 
-- [ ] **TASK-4-05: `ISupabaseAdminClient` リネーム**
+- [x] **TASK-4-05: `ISupabaseAdminClient` リネーム**
   - **タイプ**: DIRECT（任意）
   - **依存タスク**: TASK-4-02（`AuthDIContainer` への組み込み完了後）
   - **関連要件**: なし
@@ -99,6 +103,27 @@
     - `EmailSignupUseCase.ts` の import も更新
     - DDD 観点では Application 層の port 名はユースケース語彙に寄せる（vendor 名を含まない）のが望ましい
   - **実施判断**: Phase 4 完了後に呼び出し元が確定した段階で、必要を感じた場合のみ実施。変更ファイルは 3 件のみ
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-02 23:21 JST
+- 合計: 約 17 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| server tsc --noEmit | ~5s |
+| server bun test (688テスト) | ~20s |
+| server bun run fix (biome) | ~3s |
+| semgrep (4ファイル) | ~30s |
+
+## 差異の記録
+
+- `IEmailSignupUseCase.ts` インターフェースを追加（計画外。`as unknown as` キャスト禁止ルール対応、かつ DDD 観点でプレゼンテーション層が具象クラスに依存しないようにするため追加）
+- `createEmailSignupRouter(getUseCase)` ファクトリ関数パターンを採用（計画では DIContainer 直呼びだったが、テスト可能な DI を実現するために変更）
+- `SignupFailedError` catch 時に `causeMessage` のログ出力を追加（レビュー指摘で追加）
+- `AuthDIContainer.ts` コメントをボーイスカウト整理（絵文字・【XX】スタイルを除去）
 
 ## 6. このフェーズの完了条件
 

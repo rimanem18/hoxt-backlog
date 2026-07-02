@@ -9,6 +9,7 @@ import { metricsMiddleware } from '@/shared/middleware/metricsMiddleware';
 import { CloudWatchMonitoringService } from '@/shared/monitoring/CloudWatchMonitoringService';
 import task from '@/task/presentation/taskRoutes';
 import auth from '@/user/presentation/authRoutes';
+import emailSignup from '@/user/presentation/emailSignupRoutes';
 import user from '@/user/presentation/userRoutes';
 
 /**
@@ -50,6 +51,7 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', greet);
   app.route('/api', health);
   app.route('/api', auth);
+  app.route('/api', emailSignup);
   app.route('/api', user);
   app.route('/api', task);
   app.route('/api', docs);

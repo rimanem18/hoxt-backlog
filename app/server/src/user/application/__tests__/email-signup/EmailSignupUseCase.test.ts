@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { EmailSignupUseCase } from '@/user/application/EmailSignupUseCase';
-import type { ISupabaseAdminClient } from '@/user/application/ISupabaseAdminClient';
+import type { IEmailSignupGateway } from '@/user/application/IEmailSignupGateway';
 import type {
   CreateUserInput,
   IUserRepository,
@@ -49,17 +49,17 @@ function makeAdminClient(
     userId: 'new-user-id',
     error: null,
   },
-): ISupabaseAdminClient {
+): IEmailSignupGateway {
   return {
     signUp: mock((_email: string, _password: string) =>
       Promise.resolve(result),
     ),
-  } satisfies ISupabaseAdminClient;
+  } satisfies IEmailSignupGateway;
 }
 
 function makeSUT(
   userRepository: IUserRepository,
-  adminClient: ISupabaseAdminClient,
+  adminClient: IEmailSignupGateway,
 ): EmailSignupUseCase {
   return new EmailSignupUseCase(userRepository, adminClient);
 }

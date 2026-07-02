@@ -1,4 +1,4 @@
-import type { ISupabaseAdminClient } from '@/user/application/ISupabaseAdminClient';
+import type { IEmailSignupGateway } from '@/user/application/IEmailSignupGateway';
 
 /**
  * Supabase Admin REST API ラッパー（service_role キー使用）
@@ -6,7 +6,7 @@ import type { ISupabaseAdminClient } from '@/user/application/ISupabaseAdminClie
  * service_role キーは環境変数からのみ取得し、ログへの出力を禁止する。
  * EmailSignupUseCase 専用のシングルトン実装。
  */
-export class SupabaseAdminClient implements ISupabaseAdminClient {
+export class SupabaseAdminClient implements IEmailSignupGateway {
   private static instance: SupabaseAdminClient | null = null;
 
   private readonly supabaseUrl: string;
