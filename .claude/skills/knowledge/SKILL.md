@@ -1,6 +1,8 @@
 ---
 name: 'knowledge'
 description: 'This skill is a guide to record knowledge. It is used when a user says, "Please record the knowledge from this session.", "今回のセッションで得た学びや気づきをナレッジとして記録して".'
+model: sonnet
+effort: medium
 ---
 
 ## ナレッジ記録
