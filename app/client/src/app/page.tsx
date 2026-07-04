@@ -79,15 +79,16 @@ export default function Home(): React.ReactNode {
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-6">
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">
-              アカウントでログイン
-            </h2>
-            <p className="text-gray-600 max-w-md mx-auto">
-              メールアドレスまたは Google アカウントでログインしてください。
-            </p>
-            {/* Google ボタン + メールパスワードフォームを統合した LoginForm */}
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-sm space-y-6">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">
+                アカウントでログイン
+              </h2>
+              <p className="text-sm text-gray-500">
+                メールアドレスまたは Google アカウントでログインしてください。
+              </p>
+            </div>
             <LoginFormServicesProvider>
               <LoginForm />
             </LoginFormServicesProvider>
