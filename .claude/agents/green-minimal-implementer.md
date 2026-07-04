@@ -3,7 +3,7 @@ name: green-minimal-implementer
 description: Use only for the TDD Green phase after failing Red tests already exist. Makes the smallest production-code change needed to pass existing failing tests. Do not use for writing tests, refactoring, architecture changes, broad cleanup, or design decisions.
 model: sonnet
 effort: medium
-tools: Read, Grep, Glob, Edit, MultiEdit, Bash
+tools: Read, Grep, Glob, Write, MultiEdit, Bash
 permissionMode: default
 maxTurns: 8
 color: green
