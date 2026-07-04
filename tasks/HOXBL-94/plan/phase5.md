@@ -17,6 +17,10 @@
 - **関連要件**: REQ-301, REQ-303, REQ-305, NFR-101
 - **関連設計**: §6.3（エラーメッセージマッピング）, §13 R2, R3
 
+## 開始時刻
+
+2026-07-04 09:37 JST
+
 ## 4. 依存関係
 
 - **前提フェーズ**: なし（Phase 1 と並行して実施可能）
@@ -24,7 +28,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-5-01: `useOAuthCallback.ts` 未使用パラメータ削除（R2）**
+- [x] **TASK-5-01: `useOAuthCallback.ts` 未使用パラメータ削除（R2）**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: なし（リファクタリング）
@@ -42,7 +46,7 @@
     ```
   - **完了条件**: `handleCallback` が引数なしで呼べること。型チェックがエラーゼロになること
 
-- [ ] **TASK-5-02: `AuthErrorHandler` クラス削除（R3 前半）**
+- [x] **TASK-5-02: `AuthErrorHandler` クラス削除（R3 前半）**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-5-01
   - **関連要件**: なし（デッドコード削除）
@@ -54,7 +58,7 @@
     - ファイル自体が空になる場合はファイルごと削除する
   - **完了条件**: `AuthErrorHandler` クラスへの参照がなくなること。残存テストがグリーンになること
 
-- [ ] **TASK-5-03: `emailPasswordErrorHandler.ts` 新規作成（R3 後半・TDD）**
+- [x] **TASK-5-03: `emailPasswordErrorHandler.ts` 新規作成（R3 後半・TDD）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-02
   - **関連要件**: REQ-301, REQ-303, REQ-305, NFR-101
@@ -86,7 +90,7 @@
   - **完了条件**: テストがすべてグリーンになること
   - **注意点**: NFR-101（列挙攻撃対策）のため、サインイン失敗は原因（ユーザー不存在/パスワード不一致）を区別せず同一メッセージにすること
 
-- [ ] **TASK-5-04: 型チェック・テスト実行**
+- [x] **TASK-5-04: 型チェック・テスト実行**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-5-03
   - **関連要件**: なし
@@ -98,6 +102,25 @@
     docker compose exec client bun test
     ```
   - **完了条件**: 型エラー・テスト失敗がないこと
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-04 09:47 JST
+- 合計: 約 10 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| client tsc --noEmit | ~3s（エラーゼロ）|
+| client bun test (268 テスト) | ~5s |
+| client bun run fix (biome) | ~2s |
+
+## 差異の記録
+
+- Green フェーズでサブエージェントがファイル作成に失敗（Write ではなく Edit を試みて空ファイルが生成）したため、メインエージェントが直接 Write で実装した
+- `@supabase/auth-js` 直接 import を `@supabase/supabase-js` に修正（Codex レビュー指摘対応）
+- JSDoc example の `handleCallback('google')` → `handleCallback()` 修正（Codex レビュー指摘対応）
 
 ## 6. このフェーズの完了条件
 
