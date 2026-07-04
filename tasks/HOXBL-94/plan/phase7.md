@@ -18,6 +18,10 @@
 - **関連要件**: REQ-001, REQ-103, REQ-201, REQ-301, REQ-303, REQ-003
 - **関連設計**: §3.2（サインインフロー）, §6.1（ログイン画面）
 
+## 開始時刻
+
+2026-07-04 10:15 JST
+
 ## 4. 依存関係
 
 - **前提フェーズ**: Phase 2（JIT の findByEmail 合流）, Phase 6（`emailPasswordAuthProvider`）
@@ -25,7 +29,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-7-01: `useEmailSignin` フック新規作成（TDD）**
+- [x] **TASK-7-01: `useEmailSignin` フック新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 6 完了後）
   - **関連要件**: REQ-103, REQ-201, REQ-301, REQ-303
@@ -54,7 +58,7 @@
     **Refactor フェーズ（メインエージェント）**
   - **完了条件**: テストがすべてグリーンになること
 
-- [ ] **TASK-7-02: ホームページにメールパスワードフォームを追加（TDD）**
+- [x] **TASK-7-02: ホームページにメールパスワードフォームを追加（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-7-01
   - **関連要件**: REQ-001, REQ-103, REQ-301, REQ-303
@@ -85,7 +89,7 @@
     - エラー表示: フォーム下部にエラーメッセージを表示する
   - **注意点**: 既存の `LoginButton`（Google）の動作は変更しないこと（RISK-01）
 
-- [ ] **TASK-7-03: 型チェック・テスト実行**
+- [x] **TASK-7-03: 型チェック・テスト実行**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-7-02
   - **関連要件**: なし
@@ -97,6 +101,27 @@
     docker compose exec client bun test
     ```
   - **完了条件**: 型エラー・テスト失敗がないこと
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-04 10:33 JST
+- 合計: 約 18 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| client tsc --noEmit | ~0s（エラーゼロ）|
+| client bun test (292 テスト) | ~5s |
+| client bun run fix (biome) | ~2s |
+
+## 差異の記録
+
+- テストファイルが JSX を使用するため `useEmailSignin.test.ts` → `.tsx` にリネーム（計画では `.ts` 指定だったが、`renderHook` ラッパーに JSX が必要なため変更）
+- Codex レビュー指摘により `verifySession` の URL を `/api/auth/verify` → `/auth/verify` に修正（`getApiBaseUrl()` が既に `/api` を含むため二重になっていた）
+- Codex レビュー指摘により `useEmailSignin.signIn` に try/catch/finally を追加し、例外時も `isLoading` が `false` に戻るよう修正
+- Codex レビュー指摘により `provider.tsx` に `AuthServicesProvider` を追加
+- `page.tsx` を `LoginForm` + `LoginFormServicesProvider` を使用するよう置き換え（旧 `LoginButton` + `OAuthErrorDisplay` の直接配置から移行）
 
 ## 6. このフェーズの完了条件
 

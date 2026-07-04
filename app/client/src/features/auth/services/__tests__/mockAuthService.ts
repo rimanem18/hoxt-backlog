@@ -5,6 +5,7 @@
 
 import { mock } from 'bun:test';
 import type { Provider } from '@supabase/supabase-js';
+import type { User } from '@/packages/shared-schemas/src/auth';
 import type {
   AuthOptions,
   AuthResponse,
@@ -22,6 +23,9 @@ export interface MockAuthService extends AuthServiceInterface {
   >;
   mockSignInWithEmailPassword: import('bun:test').Mock<
     (email: string, password: string) => Promise<SignInResult>
+  >;
+  mockVerifySession: import('bun:test').Mock<
+    (token: string) => Promise<{ user: User; isNewUser: boolean }>
   >;
 }
 
@@ -74,10 +78,18 @@ export const createMockAuthService = (config?: {
     },
   );
 
+  const mockVerifySession = mock(
+    async (_token: string): Promise<{ user: User; isNewUser: boolean }> => {
+      throw new Error('verifySession is not implemented in default mock');
+    },
+  );
+
   return {
     signInWithOAuth: mockSignInWithOAuth,
     mockSignInWithOAuth,
     signInWithEmailPassword: mockSignInWithEmailPassword,
     mockSignInWithEmailPassword,
+    verifySession: mockVerifySession,
+    mockVerifySession,
   };
 };

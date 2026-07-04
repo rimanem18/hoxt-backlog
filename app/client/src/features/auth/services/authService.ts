@@ -4,7 +4,9 @@
  */
 
 import type { Provider } from '@supabase/supabase-js';
+import { getApiBaseUrl } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
+import type { User } from '@/packages/shared-schemas/src/auth';
 import { OAuthErrorHandler } from './oauthErrorHandler';
 import {
   EmailPasswordAuthProvider,
@@ -64,6 +66,13 @@ export interface AuthServiceInterface {
     email: string,
     password: string,
   ): Promise<SignInResult>;
+
+  /**
+   * POST /api/auth/verify を呼び出し JIT プロビジョニングを行う
+   * @param token - Supabase のアクセストークン
+   * @returns ユーザー情報と新規ユーザーフラグのPromise
+   */
+  verifySession(token: string): Promise<{ user: User; isNewUser: boolean }>;
 }
 
 /**
@@ -78,6 +87,41 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
       password: string,
     ): Promise<SignInResult> {
       return emailPasswordProvider.signInWithPassword(email, password);
+    },
+
+    async verifySession(
+      token: string,
+    ): Promise<{ user: User; isNewUser: boolean }> {
+      // getApiBaseUrl() は末尾に /api を含むため /auth/verify を追加
+      const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
+      const response = await fetch(`${baseUrl}/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error?.message || 'セッション検証に失敗しました',
+        );
+      }
+
+      const data = await response.json();
+      const u = data.data.user;
+      const user: User = {
+        id: u.id,
+        externalId: u.externalId,
+        provider: u.provider,
+        email: u.email,
+        name: u.name,
+        avatarUrl: u.avatarUrl || null,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        lastLoginAt: u.lastLoginAt || null,
+      };
+
+      return { user, isNewUser: data.data.isNewUser };
     },
 
     async signInWithOAuth(
