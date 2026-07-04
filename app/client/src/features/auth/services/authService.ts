@@ -6,6 +6,10 @@
 import type { Provider } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { OAuthErrorHandler } from './oauthErrorHandler';
+import {
+  EmailPasswordAuthProvider,
+  type SignInResult,
+} from './providers/emailPasswordAuthProvider';
 
 /**
  * OAuth認証レスポンスの型定義
@@ -49,13 +53,33 @@ export interface AuthServiceInterface {
     provider: Provider,
     options?: AuthOptions,
   ): Promise<AuthResponse>;
+
+  /**
+   * メールパスワード認証でサインインする
+   * @param email - メールアドレス
+   * @param password - パスワード
+   * @returns サインイン結果のPromise
+   */
+  signInWithEmailPassword(
+    email: string,
+    password: string,
+  ): Promise<SignInResult>;
 }
 
 /**
  * デフォルトの認証サービス実装（Supabase使用）
  */
 export const createDefaultAuthService = (): AuthServiceInterface => {
+  const emailPasswordProvider = new EmailPasswordAuthProvider(supabase);
+
   return {
+    async signInWithEmailPassword(
+      email: string,
+      password: string,
+    ): Promise<SignInResult> {
+      return emailPasswordProvider.signInWithPassword(email, password);
+    },
+
     async signInWithOAuth(
       provider: Provider,
       options?: AuthOptions,

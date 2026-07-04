@@ -16,6 +16,10 @@ Supabase Auth SDK の `signInWithPassword` / `resetPasswordForEmail` を呼び�
 - **関連要件**: REQ-103, REQ-201, REQ-301, REQ-303
 - **関連設計**: §6.2（状態管理）, §6.3（エラーマッピング）, §6.4（既存 OAuth フローへの影響）
 
+## 開始時刻
+
+2026-07-04 09:52 JST
+
 ## 4. 依存関係
 
 - **前提フェーズ**: Phase 5（`emailPasswordErrorHandler.ts` が必要）
@@ -23,7 +27,7 @@ Supabase Auth SDK の `signInWithPassword` / `resetPasswordForEmail` を呼び�
 
 ## 5. タスク一覧
 
-- [ ] **TASK-6-01: `emailPasswordAuthProvider.ts` 新規作成（TDD）**
+- [x] **TASK-6-01: `emailPasswordAuthProvider.ts` 新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 5 完了後）
   - **関連要件**: REQ-103, REQ-201, REQ-301, REQ-303
@@ -55,7 +59,7 @@ Supabase Auth SDK の `signInWithPassword` / `resetPasswordForEmail` を呼び�
     - `emailPasswordErrorHandler` との責務境界を確認する
   - **完了条件**: テストがすべてグリーンになること
 
-- [ ] **TASK-6-02: `authService.ts` 拡張**
+- [x] **TASK-6-02: `authService.ts` 拡張**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-6-01
   - **関連要件**: REQ-103
@@ -68,7 +72,7 @@ Supabase Auth SDK の `signInWithPassword` / `resetPasswordForEmail` を呼び�
     - `services/__tests__/mockAuthService.ts` に `signInWithEmailPassword` のモック実装を追加する
   - **完了条件**: `authService.signInWithEmailPassword` が呼び出し可能な状態になること。型チェックがエラーゼロになること
 
-- [ ] **TASK-6-03: 既存テスト影響確認**
+- [x] **TASK-6-03: 既存テスト影響確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-6-02
   - **関連要件**: REQ-003
@@ -82,6 +86,25 @@ Supabase Auth SDK の `signInWithPassword` / `resetPasswordForEmail` を呼び�
     - 既存の `authProviderInterface.test.ts`、`contracts/authProviderInterface.contract.test.ts` がグリーンであること
     - `sessionListener.test.ts`、`sessionRestore.test.ts` がグリーンであること
   - **完了条件**: 全テストがグリーンになること
+
+## 終了時刻・所要時間
+
+- 終了: 2026-07-04 09:58 JST
+- 合計: 約 6 分
+
+## typecheck / test / lint / build 計測
+
+| コマンド | 所要時間 |
+|---|---|
+| client tsc --noEmit | ~0s（エラーゼロ）|
+| client bun test (278 テスト) | ~5s |
+| client bun run fix (biome) | ~2s |
+
+## 差異の記録
+
+- Codex レビュー指摘により try/catch を追加し、ネットワークエラーも `success: false` / `{ errorMessage }` に変換するよう修正
+- Codex レビュー指摘により引数転送テスト（`toHaveBeenCalledWith`）を追加
+- `redirectTo` 未検証指摘は Phase 9（ForgotPassword UI）のスコープとして対応を延期
 
 ## 6. このフェーズの完了条件
 

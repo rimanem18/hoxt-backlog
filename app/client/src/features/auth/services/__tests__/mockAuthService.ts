@@ -10,6 +10,7 @@ import type {
   AuthResponse,
   AuthServiceInterface,
 } from '../authService';
+import type { SignInResult } from '../providers/emailPasswordAuthProvider';
 
 /**
  * テスト用モック認証サービス（呼び出し回数チェック付き）
@@ -18,6 +19,9 @@ export interface MockAuthService extends AuthServiceInterface {
   /** モック関数（呼び出し回数確認用） */
   mockSignInWithOAuth: import('bun:test').Mock<
     (provider: Provider, options?: AuthOptions) => Promise<AuthResponse>
+  >;
+  mockSignInWithEmailPassword: import('bun:test').Mock<
+    (email: string, password: string) => Promise<SignInResult>
   >;
 }
 
@@ -53,8 +57,27 @@ export const createMockAuthService = (config?: {
     };
   });
 
+  const mockSignInWithEmailPassword = mock(
+    async (_email: string, _password: string): Promise<SignInResult> => {
+      if (!shouldSucceed) {
+        return {
+          success: false,
+          errorMessage: mockError || 'Mock authentication failed',
+        };
+      }
+
+      // セッションなしの成功（テスト側で必要に応じてオーバーライド）
+      return {
+        success: false,
+        errorMessage: 'Not implemented in default mock',
+      };
+    },
+  );
+
   return {
     signInWithOAuth: mockSignInWithOAuth,
     mockSignInWithOAuth,
+    signInWithEmailPassword: mockSignInWithEmailPassword,
+    mockSignInWithEmailPassword,
   };
 };

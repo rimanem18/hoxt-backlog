@@ -22,6 +22,18 @@
 
 ## 5. タスク一覧
 
+- [ ] **TASK-9-00: `emailPasswordAuthProvider.resetPasswordForEmail` に redirectTo 検証を追加**
+  - **タイプ**: DIRECT
+  - **依存タスク**: なし
+  - **関連要件**: なし（Phase 6 Codex レビュー指摘対応）
+  - **実装詳細**:
+    - Phase 6 の Codex レビューで `resetPasswordForEmail` の `redirectTo` が未検証との指摘があった
+    - `googleAuthProvider.ts` の `validateRedirectUrl` は allowlist（`NEXT_PUBLIC_TRUSTED_DOMAINS`）による検証を行っている
+    - `useForgotPassword` では `${window.location.origin}/auth/reset-password` を固定で渡すため、現状はオープンリダイレクトリスクはない
+    - ただし将来的に呼び出し元が増えた場合に備え、`emailPasswordAuthProvider.ts` に URL 検証を追加するか、`googleAuthProvider.ts` の `validateRedirectUrl` を共通ユーティリティに切り出して両プロバイダーで共有するかを検討・実施する
+    - **推奨**: `validateRedirectUrl` を `authProviderInterface.ts` の `BaseAuthProvider` に protected メソッドとして移動し、両プロバイダーが継承できるようにする。または `emailPasswordAuthProvider` に同等の検証を追加する
+  - **完了条件**: `resetPasswordForEmail` の `redirectTo` に URL 検証が追加されていること、または allowlist 検証が不要な理由をコードコメントで明記していること
+
 - [ ] **TASK-9-01: `useForgotPassword` フック新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 6 完了後）
