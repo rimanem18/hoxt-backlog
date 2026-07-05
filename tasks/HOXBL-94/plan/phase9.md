@@ -1,5 +1,9 @@
 # Phase 9: Frontend - パスワードリセット要求フロー（ForgotPassword）
 
+## 開始時刻
+
+2026-07-05 10:31 JST
+
 ## 1. このフェーズの目的
 
 `/auth/forgot-password` ページを追加し、パスワードリセットメール送信フローを完成させる。
@@ -22,7 +26,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-9-00: `emailPasswordAuthProvider.resetPasswordForEmail` に redirectTo 検証を追加**
+- [x] **TASK-9-00: `emailPasswordAuthProvider.resetPasswordForEmail` に redirectTo 検証を追加**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: なし（Phase 6 Codex レビュー指摘対応）
@@ -34,7 +38,7 @@
     - **推奨**: `validateRedirectUrl` を `authProviderInterface.ts` の `BaseAuthProvider` に protected メソッドとして移動し、両プロバイダーが継承できるようにする。または `emailPasswordAuthProvider` に同等の検証を追加する
   - **完了条件**: `resetPasswordForEmail` の `redirectTo` に URL 検証が追加されていること、または allowlist 検証が不要な理由をコードコメントで明記していること
 
-- [ ] **TASK-9-01: `useForgotPassword` フック新規作成（TDD）**
+- [x] **TASK-9-01: `useForgotPassword` フック新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 6 完了後）
   - **関連要件**: REQ-104
@@ -60,7 +64,7 @@
     **Refactor フェーズ（メインエージェント）**
   - **完了条件**: テストがすべてグリーンになること
 
-- [ ] **TASK-9-02: `ForgotPasswordForm` コンポーネント新規作成（TDD）**
+- [x] **TASK-9-02: `ForgotPasswordForm` コンポーネント新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-9-01
   - **関連要件**: REQ-104
@@ -86,7 +90,7 @@
   - **UI/UX 要件**:
     - 成功状態: 送信済みメッセージを表示してフォームを非表示にする
 
-- [ ] **TASK-9-03: `/auth/forgot-password` ページ新規作成**
+- [x] **TASK-9-03: `/auth/forgot-password` ページ新規作成**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-9-02
   - **関連要件**: REQ-104
@@ -97,7 +101,7 @@
     - `'use client'` ディレクティブを付与する
   - **完了条件**: `/auth/forgot-password` ルートにアクセスして `ForgotPasswordForm` が表示されること
 
-- [ ] **TASK-9-04: 型チェック・テスト実行**
+- [x] **TASK-9-04: 型チェック・テスト実行**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-9-03
   - **関連要件**: なし
@@ -115,3 +119,31 @@
 - `/auth/forgot-password` ページが存在し、`ForgotPasswordForm` が表示されること
 - `useForgotPassword` が成功・レート制限エラーを適切に処理できること
 - 全テストがグリーンになること
+
+## 7. 実装記録
+
+### 終了時刻・所要時間
+
+- 開始時刻: 2026-07-05 10:31 JST
+- 終了時刻: 2026-07-05 10:45 JST
+- 合計所要時間: 約 14 分
+
+### 計測値
+
+| チェック | 結果 |
+|---------|------|
+| typecheck | PASS |
+| test（330件） | PASS |
+| lint/fix | PASS |
+| semgrep | 0 findings |
+
+### 設計との差異・スキップ事項
+
+1. **TASK-9-00 の実装方式**: タスク計画の「推奨」案（`validateRedirectUrl` を `BaseAuthProvider` に protected メソッドとして移動）は採用しなかった。`EmailPasswordAuthProvider` は `BaseAuthProvider` を継承しない薄いラッパー設計（Phase 6 で意図的に採用）であり、継承させるには `signIn`/`signOut`/`getUser` 等の未使用抽象メソッド実装が必要になり、既存設計との整合性を崩すため。代わりに `app/client/src/shared/utils/redirectUrlValidator.ts` へ検証ロジック（`normalizeDomain`, `getTrustedDomains`, `validateRedirectUrl`）を関数として抽出し、`GoogleAuthProvider` と `EmailPasswordAuthProvider` の両方から共有する形にした。`GoogleAuthProvider.normalizeDomain` は既存テストの import パス（`../services/providers/googleAuthProvider`）を壊さないよう re-export で後方互換を維持。
+2. **既存テストの環境依存排除**: `emailPasswordAuthProvider.test.ts` の `resetPasswordForEmail` テストは当初、テスト環境のグローバル既定値（`test-setup.ts` の `NEXT_PUBLIC_TRUSTED_DOMAINS ??= 'localhost:3000,localhost:3001'`）に暗黙依存する形で redirectTo を `localhost:3000` に変更していたが、これは実行コンテナの `.env` の `CLIENT_PORT`/`SERVER_PORT` が変わると壊れる環境依存テストになってしまうと気づき、`beforeEach`/`afterEach` で `NEXT_PUBLIC_TRUSTED_DOMAINS` をこのテストファイル内に限定して `'example.com'` に固定・復元するよう修正した（CLAUDE.md「環境依存を排除」ガイドライン準拠）。信頼ドメイン外 URL 拒否の新規テストケースも追加。
+3. **DI 対象の選択**: タスク計画では「`emailPasswordAuthProvider.resetPasswordForEmail` を DI でモック」と記載があったが、既存の `useEmailSignin`/`useEmailSignup` が `AuthServicesContext`（`authService` 経由）で DI している既存パターンとの整合性を優先し、`authService.requestPasswordReset(email, redirectTo)` を新設して `useForgotPassword` から DI する形にした（Phase 8 の差異記録と同様の判断）。
+4. **Codex レビュー指摘への対応（resolve-feedback）**:
+   - 妥当性 5/5: `redirectUrlValidator.ts` の境界値テスト不足 → `app/client/src/shared/utils/__tests__/redirectUrlValidator.test.ts` を新規作成し対応済み（11ケース追加）。
+   - 妥当性 3/5: `/auth/reset-password` ページ未実装によるリンク先404 → Phase 10 のスコープのため対応不要と判断（ユーザー承認済み）。
+   - 妥当性 2/5: OAuth 開始経路（`authService.signInWithOAuth`）が共通化した `validateRedirectUrl` を通らない → 本フェーズ以前からの既存設計であり対応不要と判断（ユーザー承認済み）。
+   - 妥当性 3/5: URL検証エラーが `emailPasswordErrorHandler` により汎用メッセージに丸められる → 対応コストに見合わないため対応不要と判断（ユーザー承認済み）。
