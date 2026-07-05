@@ -41,6 +41,13 @@ export interface AuthOptions {
 }
 
 /**
+ * メールサインアップ結果の型定義
+ */
+export type SignupResult =
+  | { status: 'pending_confirmation' }
+  | { status: 'error'; errorMessage: string };
+
+/**
  * 認証サービスインターフェース
  * テスト時の依存性注入とモック化を可能にする
  */
@@ -73,6 +80,14 @@ export interface AuthServiceInterface {
    * @returns ユーザー情報と新規ユーザーフラグのPromise
    */
   verifySession(token: string): Promise<{ user: User; isNewUser: boolean }>;
+
+  /**
+   * メールパスワードでサインアップする
+   * @param email - メールアドレス
+   * @param password - パスワード
+   * @returns サインアップ結果のPromise
+   */
+  signup(email: string, password: string): Promise<SignupResult>;
 }
 
 /**
@@ -265,6 +280,51 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
           error: new Error(errorDetail.userMessage),
         };
       }
+    },
+
+    async signup(email: string, password: string): Promise<SignupResult> {
+      // getApiBaseUrl() は末尾に /api を含むため /auth/email/signup を追加
+      const baseUrl = getApiBaseUrl().replace(/\/+$/, '');
+      const response = await fetch(`${baseUrl}/auth/email/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.status === 201) {
+        return { status: 'pending_confirmation' };
+      }
+
+      const body = await response.json();
+      // サーバーは { success: false, error: { code, message } } 形式で返す
+      const apiError = body?.error ?? body;
+      const code = apiError?.code as string | undefined;
+
+      if (
+        response.status === 409 &&
+        code === 'EMAIL_ALREADY_REGISTERED_GOOGLE'
+      ) {
+        return {
+          status: 'error',
+          errorMessage:
+            apiError?.message ??
+            'このメールアドレスは Google アカウントで登録済みです。',
+        };
+      }
+
+      if (response.status === 409 && code === 'EMAIL_ALREADY_REGISTERED') {
+        return {
+          status: 'error',
+          errorMessage:
+            apiError?.message ?? 'このメールアドレスは既に登録されています',
+        };
+      }
+
+      return {
+        status: 'error',
+        errorMessage:
+          apiError?.message ?? 'サインアップに失敗しました。再度お試しください',
+      };
     },
   };
 };

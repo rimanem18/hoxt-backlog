@@ -10,6 +10,7 @@ import type {
   AuthOptions,
   AuthResponse,
   AuthServiceInterface,
+  SignupResult,
 } from '../authService';
 import type { SignInResult } from '../providers/emailPasswordAuthProvider';
 
@@ -26,6 +27,9 @@ export interface MockAuthService extends AuthServiceInterface {
   >;
   mockVerifySession: import('bun:test').Mock<
     (token: string) => Promise<{ user: User; isNewUser: boolean }>
+  >;
+  mockSignup: import('bun:test').Mock<
+    (email: string, password: string) => Promise<SignupResult>
   >;
 }
 
@@ -84,6 +88,12 @@ export const createMockAuthService = (config?: {
     },
   );
 
+  const mockSignup = mock(
+    async (_email: string, _password: string): Promise<SignupResult> => ({
+      status: 'pending_confirmation',
+    }),
+  );
+
   return {
     signInWithOAuth: mockSignInWithOAuth,
     mockSignInWithOAuth,
@@ -91,5 +101,7 @@ export const createMockAuthService = (config?: {
     mockSignInWithEmailPassword,
     verifySession: mockVerifySession,
     mockVerifySession,
+    signup: mockSignup,
+    mockSignup,
   };
 };

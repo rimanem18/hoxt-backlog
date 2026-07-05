@@ -1,15 +1,16 @@
 'use client';
 
 import { type FormEvent, useState } from 'react';
-import { LoginButton } from '@/features/auth/components/LoginButton';
-import { useLoginFormServices } from '@/features/auth/components/LoginFormServicesContext';
+import { useSignUpFormServices } from '@/features/auth/components/SignUpFormServicesContext';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * メールパスワード + Google OAuth ログインフォーム
+ * メールパスワードサインアップフォーム
  */
-export function LoginForm(): React.ReactNode {
-  const { useEmailSignin } = useLoginFormServices();
-  const { isLoading, errorMessage, signIn } = useEmailSignin();
+export function SignUpForm(): React.ReactNode {
+  const { useEmailSignup } = useSignUpFormServices();
+  const { isLoading, status, errorMessage, signup } = useEmailSignup();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,25 +18,25 @@ export function LoginForm(): React.ReactNode {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    if (!email) {
-      setValidationError('メールアドレスを入力してください');
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setValidationError('メールアドレスの形式が正しくありません');
       return;
     }
+
     setValidationError(null);
-    await signIn(email, password);
+    await signup(email, password);
   };
 
   const displayError = validationError ?? errorMessage;
 
   return (
     <div className="w-full space-y-5">
-      <LoginButton provider="google" className="w-full" />
-
-      <div className="flex items-center gap-3" aria-hidden="true">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400">または</span>
-        <div className="flex-1 h-px bg-gray-200" />
-      </div>
+      {status === 'pending_confirmation' && (
+        <p className="text-sm text-gray-700">
+          確認メールを送信しました。受信トレイを確認してください。
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-1">
@@ -71,7 +72,7 @@ export function LoginForm(): React.ReactNode {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
             disabled={isLoading}
             className="w-full px-3 py-3 border border-gray-300 rounded-lg
               text-sm focus:outline-none focus:ring-2 focus:ring-primary
@@ -98,19 +99,13 @@ export function LoginForm(): React.ReactNode {
             disabled:opacity-50 disabled:cursor-not-allowed
             transition-opacity"
         >
-          {isLoading ? 'サインイン中...' : 'サインイン'}
+          {isLoading ? '送信中...' : 'アカウントを作成'}
         </button>
       </form>
 
-      <div className="space-y-2 text-center text-sm">
-        <a
-          href="/auth/forgot-password"
-          className="block text-primary hover:underline"
-        >
-          パスワードを忘れた方はこちら
-        </a>
-        <a href="/signup" className="block text-gray-500 hover:underline">
-          アカウントをお持ちでない方はこちら
+      <div className="text-center text-sm">
+        <a href="/" className="block text-primary hover:underline">
+          ログインはこちら
         </a>
       </div>
     </div>
