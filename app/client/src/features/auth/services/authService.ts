@@ -48,6 +48,13 @@ export type SignupResult =
   | { status: 'error'; errorMessage: string };
 
 /**
+ * パスワードリセットリクエスト結果の型定義
+ */
+export type RequestPasswordResetResult =
+  | { status: 'sent' }
+  | { status: 'error'; errorMessage: string };
+
+/**
  * 認証サービスインターフェース
  * テスト時の依存性注入とモック化を可能にする
  */
@@ -88,6 +95,17 @@ export interface AuthServiceInterface {
    * @returns サインアップ結果のPromise
    */
   signup(email: string, password: string): Promise<SignupResult>;
+
+  /**
+   * パスワードリセットをリクエストする
+   * @param email - メールアドレス
+   * @param redirectTo - リセット後のリダイレクト先URL
+   * @returns リクエスト結果のPromise
+   */
+  requestPasswordReset(
+    email: string,
+    redirectTo: string,
+  ): Promise<RequestPasswordResetResult>;
 }
 
 /**
@@ -325,6 +343,20 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
         errorMessage:
           apiError?.message ?? 'サインアップに失敗しました。再度お試しください',
       };
+    },
+
+    async requestPasswordReset(
+      email: string,
+      redirectTo: string,
+    ): Promise<RequestPasswordResetResult> {
+      const { errorMessage } =
+        await emailPasswordProvider.resetPasswordForEmail(email, redirectTo);
+
+      if (errorMessage) {
+        return { status: 'error', errorMessage };
+      }
+
+      return { status: 'sent' };
     },
   };
 };

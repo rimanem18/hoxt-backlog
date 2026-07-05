@@ -10,6 +10,7 @@ import type {
   AuthOptions,
   AuthResponse,
   AuthServiceInterface,
+  RequestPasswordResetResult,
   SignupResult,
 } from '../authService';
 import type { SignInResult } from '../providers/emailPasswordAuthProvider';
@@ -30,6 +31,9 @@ export interface MockAuthService extends AuthServiceInterface {
   >;
   mockSignup: import('bun:test').Mock<
     (email: string, password: string) => Promise<SignupResult>
+  >;
+  mockRequestPasswordReset: import('bun:test').Mock<
+    (email: string, redirectTo: string) => Promise<RequestPasswordResetResult>
   >;
 }
 
@@ -94,6 +98,15 @@ export const createMockAuthService = (config?: {
     }),
   );
 
+  const mockRequestPasswordReset = mock(
+    async (
+      _email: string,
+      _redirectTo: string,
+    ): Promise<RequestPasswordResetResult> => ({
+      status: 'sent',
+    }),
+  );
+
   return {
     signInWithOAuth: mockSignInWithOAuth,
     mockSignInWithOAuth,
@@ -103,5 +116,7 @@ export const createMockAuthService = (config?: {
     mockVerifySession,
     signup: mockSignup,
     mockSignup,
+    requestPasswordReset: mockRequestPasswordReset,
+    mockRequestPasswordReset,
   };
 };
