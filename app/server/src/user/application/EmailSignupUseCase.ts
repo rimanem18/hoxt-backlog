@@ -13,7 +13,7 @@ import type { IEmailSignupGateway } from './IEmailSignupGateway';
 export class EmailSignupUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly adminClient: IEmailSignupGateway,
+    private readonly signupGateway: IEmailSignupGateway,
   ) {}
 
   /**
@@ -41,7 +41,7 @@ export class EmailSignupUseCase {
       throw new EmailAlreadyRegisteredError();
     }
 
-    const result = await this.adminClient.signUp(
+    const result = await this.signupGateway.signUp(
       normalizedEmail,
       input.password,
     );

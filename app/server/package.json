@@ -26,6 +26,7 @@
   "dependencies": {
     "@hono/node-server": "^1.19.14",
     "@hono/zod-openapi": "^1.4.0",
+    "@supabase/supabase-js": "^2.108.2",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.12.27",

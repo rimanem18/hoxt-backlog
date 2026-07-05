@@ -35,7 +35,7 @@ flowchart LR
     CL -->|"signInWithPassword<br/>resetPasswordForEmail<br/>updateUser"| SB["Supabase Auth"]
     CL -->|"POST /api/auth/email/signup"| SV["Hono server"]
     CL -->|"POST /api/auth/verify"| SV
-    SV -->|"signUp（service_role）"| SB
+    SV -->|"signUp（publishableキー）"| SB
     SV -->|"JWKS"| SB
     SV --> DB[("PostgreSQL users")]
     SB -->|"確認メール / リセットメール"| U
@@ -61,7 +61,7 @@ flowchart LR
 | `app/server/src/user/domain/AuthProvider.ts` | `email` 値を追加 | 既存拡張 |
 | `app/server/src/user/domain/IUserRepository.ts` | `findByEmail` は既存（確認済み）。変更なし | 既存 |
 | `app/server/src/user/application/AuthenticateUserUseCase.ts` | JIT に `findByEmail` 合流ロジックを追加 | 既存拡張 |
-| `app/server/src/user/infrastructure/SupabaseAdminClient.ts` | service_role を使う Supabase Admin SDK ラッパー | 新規 |
+| `app/server/src/user/infrastructure/SupabaseEmailSignupGateway.ts` | publishable key を使う Supabase signUp ラッパー | 新規 |
 | `app/server/src/user/presentation/authRoutes.ts` | 変更なし（`POST /api/auth/verify` を流用） | 既存 |
 | `app/server/src/user/presentation/middleware/auth/AuthMiddleware.ts` | `AuthProvider` 型キャスト修正 + identity linking 合流ユーザー向け `findByEmail` フォールバック追加（`findByExternalId` 失敗時に `payload.email` で再検索） | 既存拡張 |
 | `app/server/src/shared/database/schema.ts` | `auth_provider_type` に `email` 追加、`lower(email)` UNIQUE インデックス | 既存拡張 |
@@ -106,7 +106,7 @@ sequenceDiagram
             SV-->>CL: 409 EMAIL_ALREADY_REGISTERED_GOOGLE + REQ-302 案内文
             CL-->>U: 案内表示
         else Supabase Auth にも未存在
-            SV->>SB: auth.signUp(email, password)  service_role 経由
+            SV->>SB: auth.signUp(email, password)  publishableキー経由
             SB-->>U: 確認メール送信
             SV-->>CL: 201 { pendingEmailConfirmation: true }
             CL-->>U: 「確認メールを送信しました」表示
@@ -114,9 +114,9 @@ sequenceDiagram
     end
 ```
 
-**採用 Supabase API**: `supabase.auth.signUp({ email, password })` をサーバーから service_role クライアント経由で実行する。`email_confirm: false` の `admin.createUser` は確認メールを自動送信しないため採用しない。
+**採用 Supabase API**: `supabase.auth.signUp({ email, password })` をサーバーから publishable キー（`SUPABASE_PUBLISHABLE_KEY`）の `@supabase/supabase-js` クライアント経由で実行する。signUp は Supabase の公開サインアップフローであり admin 操作ではないため、`service_role` / secret key は使用しない。`email_confirm: false` の `admin.createUser` は確認メールを自動送信しないため採用しない。
 
-**根拠**: Supabase ドキュメント上、`auth.signUp` は `email_confirm` 設定に応じて確認メールを送信する。service_role 経由の `signUp` で確認メールが発火するかは DCQ-01 で実機確認する（実装着手前の必須確認事項に格上げ）。
+**根拠**: Supabase ドキュメント上、`auth.signUp` は `email_confirm` 設定に応じて確認メールを送信する。publishable キー経由の公開 `signUp` は Supabase 標準の確認メールフローそのものであるため、実機確認前提だった DCQ-01 は解消済み（§10 参照）。
 
 email 正規化はサーバーで `trim()` + `toLowerCase()` を適用。
 
@@ -345,7 +345,7 @@ UI 詳細文言は要件範囲外（TI-REF-05）。
 5. shared-schemas 拡張 → サーバー OpenAPI / クライアント型を再生成（`app/server/src/schemas/users.ts` は自動生成）
 6. Supabase Auth ダッシュボードでパスワードポリシー設定（大小英字 + 記号 + 8 文字以上）を確認・設定
 7. Supabase Auth Email Provider 有効化、リダイレクト URL の許可リストに `/auth/reset-password`、`/auth/confirm` を追加（Local / Preview / Production 各環境）
-8. サーバー実装（EmailSignupUseCase / SupabaseAdminClient / AuthenticateUserUseCase 拡張）
+8. サーバー実装（EmailSignupUseCase / SupabaseEmailSignupGateway / AuthenticateUserUseCase 拡張）
 9. クライアント実装（EmailPasswordAuthProvider / 各画面 / authErrorHandler 拡張）
 10. E2E（サインアップ → 確認 → サインイン / リセットフロー）
 11. リリース後、Supabase Dashboard で運用担当向けにテストユーザー作成手順を周知
@@ -354,7 +354,7 @@ UI 詳細文言は要件範囲外（TI-REF-05）。
 
 | ID | 内容 | 影響 | 格付け |
 |---|---|---|---|
-| DCQ-01 | **service_role クライアント経由の `auth.signUp` で確認メールが発火するか実機検証** | 発火しない場合は `admin.generateLink('signup', email)` + `admin.sendEmailOtp` 等の代替 API を採用 | **実装着手前必須** |
+| DCQ-01 | **[解消]** publishable キー経由の公開 `auth.signUp` を採用したため、Supabase 標準の確認メールフローがそのまま発火する。service_role 前提だった実機検証は不要 | - | **解消** |
 | DCQ-02 | **[解消] identity linking は ON を採用。** signup API の衝突チェックを app DB 確認後に Supabase Admin `getUserByEmail` による二段階構成へ拡張（§3.1）。未 JIT Google ユーザーへの意図しないリンクリスクを防止。JIT 合流 `findByEmail` フォールバック（§7.2）および `lower(email)` DB UNIQUE 制約と合わせて三重防御を維持する。 | **解消** |
 | DCQ-03 | Supabase Auth リダイレクト URL 許可リストへの本番・preview 環境 URL 追加（IaC 管理か手動か） | 本番デプロイ前に完了が必要 | リリース前必須 |
 | DCQ-04 | 既存 `users.email` に重複データが存在しないことの本番事前確認 | UNIQUE 制約適用前に整合性チェックが必要 | Migration B で確認 |
@@ -365,7 +365,7 @@ UI 詳細文言は要件範囲外（TI-REF-05）。
 |---|---|---|
 | RISK-01 | 既存 OAuth フローへの非互換変更 | `authService` の OAuth メソッドシグネチャ不変・既存 E2E グリーンを CI 必須化 |
 | RISK-02 | 同一メールで別ユーザー作成（REQ-002 違反） | サインアップ前 `findByEmail` + JIT 合流 + `lower(email)` DB UNIQUE 三重防御 |
-| RISK-03 | service_role 鍵の取り扱い | サーバーの環境変数経由でのみ参照、クライアントへ露出させない。使用範囲は signup API 内の `SupabaseAdminClient` のみ |
+| RISK-03 | publishable 鍵の取り扱い | publishable キーは公開前提の鍵でありクライアントにも露出しうる。サーバーは `SUPABASE_PUBLISHABLE_KEY` を環境変数経由で参照する。使用範囲は signup API 内の `SupabaseEmailSignupGateway` のみ。service_role / secret key は本フローで使用しない |
 | RISK-04 | 列挙攻撃 | サインイン経路で固定文言。REQ-302 は案内明示が要件として確定のため例外 |
 
 ## 12. 要件トレーサビリティ

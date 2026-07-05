@@ -44,7 +44,7 @@ function makeUserRepository(
   } satisfies IUserRepository;
 }
 
-function makeAdminClient(
+function makeSignupGateway(
   result: { userId: string | null; error: Error | null } = {
     userId: 'new-user-id',
     error: null,
@@ -59,9 +59,9 @@ function makeAdminClient(
 
 function makeSUT(
   userRepository: IUserRepository,
-  adminClient: IEmailSignupGateway,
+  signupGateway: IEmailSignupGateway,
 ): EmailSignupUseCase {
-  return new EmailSignupUseCase(userRepository, adminClient);
+  return new EmailSignupUseCase(userRepository, signupGateway);
 }
 
 // ─── テストスイート ────────────────────────────────────────────────────────
@@ -75,11 +75,11 @@ describe('EmailSignupUseCase', () => {
     test('既存ユーザーが存在しない場合、signUp が呼ばれ pendingEmailConfirmation:true を返す', async () => {
       // Given: app DB にユーザーが存在しない
       const userRepository = makeUserRepository(null);
-      const adminClient = makeAdminClient({
+      const signupGateway = makeSignupGateway({
         userId: 'new-user-id',
         error: null,
       });
-      const sut = makeSUT(userRepository, adminClient);
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When: サインアップを実行
       const result = await sut.execute({
@@ -89,7 +89,7 @@ describe('EmailSignupUseCase', () => {
 
       // Then: pendingEmailConfirmation: true を返す
       expect(result).toEqual({ pendingEmailConfirmation: true });
-      expect(adminClient.signUp).toHaveBeenCalledTimes(1);
+      expect(signupGateway.signUp).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -97,37 +97,37 @@ describe('EmailSignupUseCase', () => {
     test('既存 Google ユーザーが存在する場合、EmailAlreadyRegisteredGoogleError を throw し signUp は呼ばれない', async () => {
       // Given: app DB に google プロバイダーのユーザーが存在する
       const userRepository = makeUserRepository(makeUser('google'));
-      const adminClient = makeAdminClient();
-      const sut = makeSUT(userRepository, adminClient);
+      const signupGateway = makeSignupGateway();
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When & Then: 実行すると EmailAlreadyRegisteredGoogleError が throw される
       await expect(
         sut.execute({ email: 'existing@example.com', password: 'Password1!' }),
       ).rejects.toThrow(EmailAlreadyRegisteredGoogleError);
-      expect(adminClient.signUp).not.toHaveBeenCalled();
+      expect(signupGateway.signUp).not.toHaveBeenCalled();
     });
 
     test('既存 email ユーザーが存在する場合、EmailAlreadyRegisteredError を throw し signUp は呼ばれない', async () => {
       // Given: app DB に email プロバイダーのユーザーが存在する
       const userRepository = makeUserRepository(makeUser('email'));
-      const adminClient = makeAdminClient();
-      const sut = makeSUT(userRepository, adminClient);
+      const signupGateway = makeSignupGateway();
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When & Then: 実行すると EmailAlreadyRegisteredError が throw される
       await expect(
         sut.execute({ email: 'existing@example.com', password: 'Password1!' }),
       ).rejects.toThrow(EmailAlreadyRegisteredError);
-      expect(adminClient.signUp).not.toHaveBeenCalled();
+      expect(signupGateway.signUp).not.toHaveBeenCalled();
     });
 
     test('Supabase signUp が失敗した場合、SignupFailedError を throw する', async () => {
       // Given: app DB にユーザーが存在しないが Supabase がエラーを返す
       const userRepository = makeUserRepository(null);
-      const adminClient = makeAdminClient({
+      const signupGateway = makeSignupGateway({
         userId: null,
         error: new Error('Supabase error'),
       });
-      const sut = makeSUT(userRepository, adminClient);
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When & Then: 実行すると SignupFailedError が throw される
       await expect(
@@ -140,8 +140,8 @@ describe('EmailSignupUseCase', () => {
     test('大文字混じりメールアドレスが正規化されて findByEmail と signUp に渡される', async () => {
       // Given: 大文字混じりのメールアドレス
       const userRepository = makeUserRepository(null);
-      const adminClient = makeAdminClient();
-      const sut = makeSUT(userRepository, adminClient);
+      const signupGateway = makeSignupGateway();
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When: 大文字混じりのメールでサインアップ実行
       await sut.execute({ email: 'User@EXAMPLE.com', password: 'Password1!' });
@@ -150,7 +150,7 @@ describe('EmailSignupUseCase', () => {
       expect(userRepository.findByEmail).toHaveBeenCalledWith(
         'user@example.com',
       );
-      expect(adminClient.signUp).toHaveBeenCalledWith(
+      expect(signupGateway.signUp).toHaveBeenCalledWith(
         'user@example.com',
         'Password1!',
       );
@@ -159,8 +159,8 @@ describe('EmailSignupUseCase', () => {
     test('前後空白ありのメールアドレスが正規化されて重複チェックに使われる', async () => {
       // Given: 前後空白があるメールアドレス
       const userRepository = makeUserRepository(null);
-      const adminClient = makeAdminClient();
-      const sut = makeSUT(userRepository, adminClient);
+      const signupGateway = makeSignupGateway();
+      const sut = makeSUT(userRepository, signupGateway);
 
       // When: 前後空白ありのメールでサインアップ実行
       await sut.execute({

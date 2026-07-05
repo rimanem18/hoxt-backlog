@@ -3,7 +3,7 @@ import { UserDomainError } from './UserDomainError';
 /**
  * Supabase サインアップ失敗エラー
  *
- * SupabaseAdminClient.signUp がエラーを返した場合に throw する。
+ * メールサインアップ Gateway の signUp がエラーを返した場合に throw する。
  * ユーザー向けメッセージは固定し、内部原因は causeMessage に保持する。
  */
 export class SignupFailedError extends UserDomainError {

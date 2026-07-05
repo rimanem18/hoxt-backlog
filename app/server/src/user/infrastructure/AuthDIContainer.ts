@@ -6,7 +6,7 @@ import type { IUserRepository } from '@/user/domain';
 import { AuthenticationDomainService } from '@/user/domain/services/AuthenticationDomainService';
 import type { IAuthProvider } from '@/user/domain/services/IAuthProvider';
 import { PostgreSQLUserRepository } from '@/user/infrastructure/PostgreSQLUserRepository';
-import { SupabaseAdminClient } from '@/user/infrastructure/SupabaseAdminClient';
+import { SupabaseEmailSignupGateway } from '@/user/infrastructure/SupabaseEmailSignupGateway';
 import { SupabaseJwtVerifier } from '@/user/infrastructure/SupabaseJwtVerifier';
 
 /**
@@ -52,13 +52,13 @@ export class AuthDIContainer {
   /**
    * EmailSignupUseCase のシングルトンインスタンスを返す
    *
-   * SupabaseAdminClient（service_role）と UserRepository を DI する。
+   * SupabaseEmailSignupGateway（publishable key）と UserRepository を DI する。
    */
   static getEmailSignupUseCase(): EmailSignupUseCase {
     if (!AuthDIContainer.emailSignupUseCaseInstance) {
       AuthDIContainer.emailSignupUseCaseInstance = new EmailSignupUseCase(
         AuthDIContainer.getUserRepository(),
-        SupabaseAdminClient.getInstance(),
+        SupabaseEmailSignupGateway.getInstance(),
       );
     }
 
