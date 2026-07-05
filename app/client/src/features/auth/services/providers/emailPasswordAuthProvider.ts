@@ -1,4 +1,8 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import {
+  getTrustedDomains,
+  validateRedirectUrl,
+} from '@/shared/utils/redirectUrlValidator';
 import { handleEmailPasswordError } from '../emailPasswordErrorHandler';
 
 export type SignInResult =
@@ -7,9 +11,11 @@ export type SignInResult =
 
 export class EmailPasswordAuthProvider {
   private supabase: SupabaseClient;
+  private trustedDomains: Set<string>;
 
   constructor(supabaseClient: SupabaseClient) {
     this.supabase = supabaseClient;
+    this.trustedDomains = getTrustedDomains();
   }
 
   async signInWithPassword(
@@ -43,6 +49,9 @@ export class EmailPasswordAuthProvider {
     redirectTo: string,
   ): Promise<{ errorMessage?: string }> {
     try {
+      // オープンリダイレクト脆弱性対策の厳密なリダイレクト検証
+      validateRedirectUrl(redirectTo, this.trustedDomains);
+
       const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       });

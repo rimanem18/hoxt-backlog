@@ -25,11 +25,14 @@ function createMockSupabase(auth: {
 }
 
 describe('EmailPasswordAuthProvider', () => {
+  const originalTrustedDomains = process.env.NEXT_PUBLIC_TRUSTED_DOMAINS;
   let mockSignInWithPassword: ReturnType<typeof mock>;
   let mockResetPasswordForEmail: ReturnType<typeof mock>;
   let provider: EmailPasswordAuthProvider;
 
   beforeEach(() => {
+    // 実行環境の .env (CLIENT_PORT/SERVER_PORT) から独立させるため明示的に固定する
+    process.env.NEXT_PUBLIC_TRUSTED_DOMAINS = 'example.com';
     mockSignInWithPassword = mock();
     mockResetPasswordForEmail = mock();
     const supabase = createMockSupabase({
@@ -40,6 +43,11 @@ describe('EmailPasswordAuthProvider', () => {
   });
 
   afterEach(() => {
+    if (originalTrustedDomains === undefined) {
+      delete process.env.NEXT_PUBLIC_TRUSTED_DOMAINS;
+    } else {
+      process.env.NEXT_PUBLIC_TRUSTED_DOMAINS = originalTrustedDomains;
+    }
     mock.restore();
     mock.clearAllMocks();
   });
@@ -242,6 +250,21 @@ describe('EmailPasswordAuthProvider', () => {
       expect(result.errorMessage).toBe(
         'リクエストが多すぎます。しばらくしてから再度お試しください',
       );
+    });
+
+    test('信頼ドメイン外の redirectTo は拒否されSupabaseを呼ばない', async () => {
+      // Given: 信頼ドメイン一覧に含まれない redirectTo
+      const untrustedRedirectTo = 'https://attacker.example/phishing';
+
+      // When: パスワードリセット要求を実行
+      const result = await provider.resetPasswordForEmail(
+        'test@example.com',
+        untrustedRedirectTo,
+      );
+
+      // Then: エラーメッセージが返され、Supabase は呼ばれない
+      expect(result.errorMessage).toBeDefined();
+      expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
     });
   });
 });

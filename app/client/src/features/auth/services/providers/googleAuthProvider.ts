@@ -5,28 +5,19 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AuthProvider, User } from '@/packages/shared-schemas/src/auth';
-import { parseCommaSeparated } from '@/shared/array';
+import {
+  getTrustedDomains,
+  normalizeDomain,
+  validateRedirectUrl as validateRedirectUrlAgainstTrustedDomains,
+} from '@/shared/utils/redirectUrlValidator';
 import {
   type AuthResult,
   BaseAuthProvider,
   type SessionInfo,
 } from './authProviderInterface';
 
-/**
- * ドメイン文字列を正規化する
- * プロトコル、www、空白、末尾スラッシュを削除し、小文字化する
- *
- * @param domain - 正規化対象のドメイン文字列
- * @returns 正規化されたドメイン文字列
- */
-export function normalizeDomain(domain: string): string {
-  return domain
-    .trim() // 前後空白除去
-    .replace(/^https?:\/\//i, '') // プロトコル除去（ケースインセンシティブ）
-    .replace(/^www\./i, '') // www. 除去（ケースインセンシティブ）
-    .replace(/\/$/, '') // 末尾スラッシュ除去
-    .toLowerCase(); // 小文字化
-}
+// 既存の import 元との互換性を維持するための re-export
+export { normalizeDomain };
 
 /**
  * Google OAuth認証プロバイダー。
@@ -67,12 +58,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
       })();
 
     // 信頼ドメインリストを事前処理してURL検証時のパフォーマンスを向上
-    const trusted_domains_raw = parseCommaSeparated(
-      process.env.NEXT_PUBLIC_TRUSTED_DOMAINS,
-    );
-    this.trustedDomains = new Set(
-      trusted_domains_raw.map((domain) => normalizeDomain(domain)),
-    );
+    this.trustedDomains = getTrustedDomains();
   }
 
   /**
@@ -82,48 +68,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
    * @throws 不正なURL、プロトコル、ドメインの場合
    */
   validateRedirectUrl(redirectTo: string): void {
-    let parsedUrl: URL;
-    try {
-      // URLオブジェクトで厳密な解析を実行
-      parsedUrl = new URL(redirectTo);
-    } catch (error) {
-      // 詳細なエラーはログに記録、ユーザーには安全なメッセージを返却
-      console.error('Invalid URL format detected:', redirectTo, error);
-      throw new Error('不正な URL 形式です');
-    }
-
-    // http/https以外のプロトコルを拒否
-    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-      console.error(
-        'Invalid protocol detected:',
-        parsedUrl.protocol,
-        'for URL:',
-        redirectTo,
-      );
-      throw new Error('許可されていないプロトコルです');
-    }
-
-    // ホスト名（ポート含む）を小文字に正規化してケースインセンシティブ攻撃を防ぐ
-    const redirectHost = parsedUrl.host.toLowerCase();
-
-    // 信頼ドメインリストとの厳密な照合でオープンリダイレクト攻撃を防止
-    const isTrusted = Array.from(this.trustedDomains).some((trustedDomain) => {
-      // 完全一致チェック（ポート含む）
-      if (redirectHost === trustedDomain) {
-        return true;
-      }
-      // 正規のサブドメインかチェック（evil.com.trusted.comのような偽装を防ぐ）
-      if (redirectHost.endsWith(`.${trustedDomain}`)) {
-        return redirectHost.length > trustedDomain.length + 1;
-      }
-      return false;
-    });
-
-    if (!isTrusted) {
-      // セキュリティログとして記録
-      console.error(`Untrusted redirect URL detected: ${redirectTo}`);
-      throw new Error('不正なリダイレクト先です');
-    }
+    validateRedirectUrlAgainstTrustedDomains(redirectTo, this.trustedDomains);
   }
   /**
    * Google OAuth認証フローを開始する
