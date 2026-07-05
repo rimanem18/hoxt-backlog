@@ -45,6 +45,9 @@ effort: medium
 プランの実行は1フェーズ単位で実施して、自己判断で次のフェーズに進行はしないでください:
 
 1. Red - Green - Refactor のサイクルで実装します。ただし、「TDD が適さないタスクである」と判断した場合は、DIRECT に実装して OK です。
+  - Green を実装するサブエージェントは以下から内容の重みに応じて選択します
+    - @green-haiku-worker
+    - @green-minimal-implementer
 
 2. Code-review サブエージェントにレビューを依頼してください。このとき、以下を伝えてください。
 
