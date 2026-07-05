@@ -146,7 +146,7 @@
 - `DATABASE_URL` ✅
 - `BASE_SCHEMA` ✅
 - `NEXT_PUBLIC_SUPABASE_URL` ✅
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` ✅
 
 **結果**: Supabase認証とデータベース接続に必要な環境変数が設定済み
 

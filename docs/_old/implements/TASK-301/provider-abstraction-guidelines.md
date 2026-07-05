@@ -210,7 +210,7 @@ export class GoogleAuthProvider implements AuthProviderInterface {
   readonly providerName = 'google' as const;
   private supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   );
 
   async signIn(options?: AuthOptions): Promise<AuthResult> {

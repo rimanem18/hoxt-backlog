@@ -76,11 +76,11 @@ export class EnvironmentValidator {
       example: 'https://your-project.supabase.co',
     });
 
-    this.envConfigs.set('NEXT_PUBLIC_SUPABASE_ANON_KEY', {
-      name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    this.envConfigs.set('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', {
+      name: 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       required: true,
-      description: 'Supabaseの匿名認証キー（公開キー）',
-      example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      description: 'Supabaseのpublishable key（公開キー）',
+      example: 'sb_publishable_xxxxx',
     });
 
     this.envConfigs.set('NEXT_PUBLIC_SITE_URL', {

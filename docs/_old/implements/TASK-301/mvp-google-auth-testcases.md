@@ -280,7 +280,7 @@
   - **境界値での動作保証**: 設定ミス・未設定時の適切なエラー表示
 - **入力値**:
   - `NEXT_PUBLIC_SUPABASE_URL: undefined`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY: ""`（空文字列）
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ""`（空文字列）
   - **境界値選択の根拠**: 本番デプロイ時の設定ミス・環境変数漏れを想定
   - **実際の使用場面**: 新環境デプロイ・CI/CD設定ミス・ローカル開発初期設定
 - **期待される結果**:

@@ -149,7 +149,7 @@ interface AuthSuccessPayload {
 - **依存性逆転の原則**: 上位モジュールが下位の認証プロバイダー実装に依存しない
 - **開放閉鎖の原則**: 新規プロバイダー追加時に既存コードを変更しない
 - **Supabase Auth統合**: createClient経由のSupabaseクライアント使用
-- **環境変数依存**: `NEXT_PUBLIC_SUPABASE_URL`・`NEXT_PUBLIC_SUPABASE_ANON_KEY`必須
+- **環境変数依存**: `NEXT_PUBLIC_SUPABASE_URL`・`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`必須
 
 ### 実装制約
 🔴 **赤信号**: 現在の実装で不完全な部分（要実装）

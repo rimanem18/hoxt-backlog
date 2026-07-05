@@ -120,13 +120,13 @@ describe('認証エラーハンドリング', () => {
     // Given: 未設定の必須環境変数と検証設定
     const missingEnvVars = {
       NEXT_PUBLIC_SUPABASE_URL: undefined,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
       NEXT_PUBLIC_SITE_URL: null,
     };
 
     const requiredEnvVars = [
       'NEXT_PUBLIC_SUPABASE_URL',
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       'NEXT_PUBLIC_SITE_URL',
     ];
 
