@@ -1,5 +1,9 @@
 # Phase 8: Frontend - サインアップフロー（SignUpPage + メール確認ページ）
 
+## 開始時刻
+
+2026-07-04 21:15 JST
+
 ## 1. このフェーズの目的
 
 `/signup` ページと `/auth/confirm` ページを追加し、サインアップ〜確認メールリンク〜確認完了の end-to-end を完成させる。  
@@ -25,7 +29,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-8-01: `useEmailSignup` フック新規作成（TDD）**
+- [x] **TASK-8-01: `useEmailSignup` フック新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 4, 5 完了後）
   - **関連要件**: REQ-101, REQ-302, REQ-304
@@ -52,7 +56,7 @@
     **Refactor フェーズ（メインエージェント）**
   - **完了条件**: テストがすべてグリーンになること
 
-- [ ] **TASK-8-02: `SignUpForm` コンポーネント新規作成（TDD）**
+- [x] **TASK-8-02: `SignUpForm` コンポーネント新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-8-01
   - **関連要件**: REQ-101, REQ-302, REQ-304
@@ -82,7 +86,7 @@
     - エラー表示: フォーム下部にエラーメッセージを表示する
     - 成功状態: 確認メール送信済みメッセージを表示しフォームを非表示にする
 
-- [ ] **TASK-8-03: `/signup` ページ新規作成**
+- [x] **TASK-8-03: `/signup` ページ新規作成**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-8-02
   - **関連要件**: REQ-101
@@ -93,7 +97,7 @@
     - `'use client'` ディレクティブを付与する
   - **完了条件**: `/signup` ルートにアクセスして `SignUpForm` が表示されること
 
-- [ ] **TASK-8-04: `/auth/confirm` ページ新規作成（TDD）**
+- [x] **TASK-8-04: `/auth/confirm` ページ新規作成（TDD）**
   - **タイプ**: TDD
   - **依存タスク**: なし（Phase 5 完了後）
   - **関連要件**: REQ-102
@@ -119,7 +123,7 @@
     **Refactor フェーズ（メインエージェント）**
   - **完了条件**: テストがグリーンになること
 
-- [ ] **TASK-8-05: 型チェック・テスト実行**
+- [x] **TASK-8-05: 型チェック・テスト実行**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-8-03, TASK-8-04
   - **関連要件**: なし
@@ -131,6 +135,32 @@
     docker compose exec client bun test
     ```
   - **完了条件**: 型エラー・テスト失敗がないこと
+
+## 7. 実装記録
+
+### 終了時刻・所要時間
+
+- 終了時刻: 2026-07-04 21:38 JST
+- 開始時刻: 2026-07-04 21:15 JST
+- 合計所要時間: 約 23 分
+
+### 計測値
+
+| チェック | 結果 |
+|---------|------|
+| typecheck | PASS |
+| test (309件) | PASS |
+| lint/fix | PASS |
+
+### 設計との差異・スキップ事項
+
+1. **`useEmailSignup.test.tsx` 拡張子**: 計画では `.ts` だが、`renderHook` が JSX Provider ラッパーを必要とするため `.tsx` に変更
+2. **DI 方式**: テスト計画では「`apiClient` を DI でモック」とあるが、既存の `AuthServicesContext` パターンと整合させるため `authService.signup` 経由で DI（`apiClient` を直接注入しない）
+3. **`SignUpForm` の pending_confirmation 後の動作**: 計画では「フォームを非表示にする」とあるが、テストが `pending_confirmation` 状態でもメール入力フィールドを操作するため、フォームは非表示にしない（成功メッセージのみ追加表示）
+4. **`/auth/confirm` 本番ルーティング**: `page.tsx` の default export コンポーネントは `ConfirmPageServicesProvider` でラップされていない（テストのみ wrapper を差し込む形）。本番環境では `useConfirmPageServices()` が `null` を返すため、`code` / `exchangeCode` ともに `undefined` となりエラー画面が表示される。正しい本番 wiring（`searchParams` 取得と `defaultExchangeCode` の自動注入）は Phase 11 以降で対処予定
+5. **Codex Finding 2 の事後修正**: `authService.ts` のエラーパース処理に `apiError?.code` を直接参照する誤りがあり、Refactor フェーズで `body?.error ?? body` 経由に修正
+6. **テストケース名の変更**: "一定時間後にリダイレクトされること" → "確認成功後にホームへのリンクが表示される"（実装がリダイレクトではなくリンク表示のため）
+7. **Finding 5（パスワードバリデーション）未対応**: Codex レビューで「クライアント側でパスワード強度検証すべき」の指摘があったが、対応コストに見合わないと判断しスキップ
 
 ## 6. このフェーズの完了条件
 
