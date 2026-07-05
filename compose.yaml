@@ -42,7 +42,7 @@ services:
       - ./docs/api:/home/bun/docs/api:ro
     environment:
       - CLIENT_PORT=${CLIENT_PORT}
-      - NEXT_PUBLIC_TRUSTED_DOMAINS=http://localhost:${CLIENT_PORT},http://localhost:${SERVER_PORT}
+      - NEXT_PUBLIC_TRUSTED_DOMAINS=http://localhost:${CLIENT_PORT},http://localhost:${SERVER_PORT},http://client:${CLIENT_PORT}
       - NEXT_PUBLIC_SITE_URL=http://localhost:${CLIENT_PORT}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
