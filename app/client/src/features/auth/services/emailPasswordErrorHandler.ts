@@ -3,6 +3,9 @@ import { isAuthApiError } from '@supabase/supabase-js';
 const DEFAULT_MESSAGE =
   '認証に失敗しました。しばらく待ってから再度お試しください';
 
+export const INVALID_RESET_LINK_MESSAGE =
+  'リンクが無効か期限切れです。再度パスワードリセットを要求してください';
+
 export function handleEmailPasswordError(error: unknown): string {
   if (!isAuthApiError(error)) {
     return DEFAULT_MESSAGE;
@@ -24,7 +27,7 @@ export function handleEmailPasswordError(error: unknown): string {
   }
 
   if (error.code === 'otp_expired') {
-    return 'リンクが無効か期限切れです。再度パスワードリセットを要求してください';
+    return INVALID_RESET_LINK_MESSAGE;
   }
 
   return DEFAULT_MESSAGE;

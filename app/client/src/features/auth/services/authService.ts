@@ -3,7 +3,7 @@
  * DIパターンによりテスト分離を実現し、supabaseへの直接依存を排除
  */
 
-import type { Provider } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Provider } from '@supabase/supabase-js';
 import { getApiBaseUrl } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/packages/shared-schemas/src/auth';
@@ -52,6 +52,13 @@ export type SignupResult =
  */
 export type RequestPasswordResetResult =
   | { status: 'sent' }
+  | { status: 'error'; errorMessage: string };
+
+/**
+ * パスワード更新結果の型定義
+ */
+export type UpdatePasswordResult =
+  | { status: 'success' }
   | { status: 'error'; errorMessage: string };
 
 /**
@@ -106,6 +113,20 @@ export interface AuthServiceInterface {
     email: string,
     redirectTo: string,
   ): Promise<RequestPasswordResetResult>;
+
+  /**
+   * 認証状態変更リスナーを設定する
+   * @param callback - 状態変更時のコールバック関数
+   * @returns リスナー解除関数
+   */
+  onAuthStateChange(callback: (event: AuthChangeEvent) => void): () => void;
+
+  /**
+   * 新しいパスワードに更新する
+   * @param newPassword - 新しいパスワード
+   * @returns 更新結果のPromise
+   */
+  updatePassword(newPassword: string): Promise<UpdatePasswordResult>;
 }
 
 /**
@@ -357,6 +378,21 @@ export const createDefaultAuthService = (): AuthServiceInterface => {
       }
 
       return { status: 'sent' };
+    },
+
+    onAuthStateChange(callback: (event: AuthChangeEvent) => void): () => void {
+      return emailPasswordProvider.onAuthStateChange(callback);
+    },
+
+    async updatePassword(newPassword: string): Promise<UpdatePasswordResult> {
+      const { errorMessage } =
+        await emailPasswordProvider.updatePassword(newPassword);
+
+      if (errorMessage) {
+        return { status: 'error', errorMessage };
+      }
+
+      return { status: 'success' };
     },
   };
 };

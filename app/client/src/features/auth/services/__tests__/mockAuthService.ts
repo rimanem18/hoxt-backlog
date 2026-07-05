@@ -4,7 +4,7 @@
  */
 
 import { mock } from 'bun:test';
-import type { Provider } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Provider } from '@supabase/supabase-js';
 import type { User } from '@/packages/shared-schemas/src/auth';
 import type {
   AuthOptions,
@@ -12,6 +12,7 @@ import type {
   AuthServiceInterface,
   RequestPasswordResetResult,
   SignupResult,
+  UpdatePasswordResult,
 } from '../authService';
 import type { SignInResult } from '../providers/emailPasswordAuthProvider';
 
@@ -34,6 +35,12 @@ export interface MockAuthService extends AuthServiceInterface {
   >;
   mockRequestPasswordReset: import('bun:test').Mock<
     (email: string, redirectTo: string) => Promise<RequestPasswordResetResult>
+  >;
+  mockOnAuthStateChange: import('bun:test').Mock<
+    (callback: (event: AuthChangeEvent) => void) => () => void
+  >;
+  mockUpdatePassword: import('bun:test').Mock<
+    (newPassword: string) => Promise<UpdatePasswordResult>
   >;
 }
 
@@ -107,6 +114,17 @@ export const createMockAuthService = (config?: {
     }),
   );
 
+  const mockOnAuthStateChange = mock(
+    (_callback: (event: AuthChangeEvent) => void): (() => void) =>
+      () => {},
+  );
+
+  const mockUpdatePassword = mock(
+    async (_newPassword: string): Promise<UpdatePasswordResult> => ({
+      status: 'success',
+    }),
+  );
+
   return {
     signInWithOAuth: mockSignInWithOAuth,
     mockSignInWithOAuth,
@@ -118,5 +136,9 @@ export const createMockAuthService = (config?: {
     mockSignup,
     requestPasswordReset: mockRequestPasswordReset,
     mockRequestPasswordReset,
+    onAuthStateChange: mockOnAuthStateChange,
+    mockOnAuthStateChange,
+    updatePassword: mockUpdatePassword,
+    mockUpdatePassword,
   };
 };
