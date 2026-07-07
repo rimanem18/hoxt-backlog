@@ -1,3 +1,4 @@
+import { createConsoleLogger } from '@/shared/logging/ConsoleLogger';
 import type { Logger } from '@/shared/logging/Logger';
 import { AuthenticateUserUseCase } from '@/user/application/AuthenticateUserUseCase';
 import { EmailSignupUseCase } from '@/user/application/EmailSignupUseCase';
@@ -162,51 +163,9 @@ export class AuthDIContainer {
   /** 構造化ログを出力する Logger のシングルトンインスタンスを返す */
   static getLogger(): Logger {
     if (!AuthDIContainer.loggerInstance) {
-      AuthDIContainer.loggerInstance = {
-        info: (message: string, meta?: unknown) => {
-          const logData = {
-            timestamp: new Date().toISOString(),
-            level: 'INFO',
-            message,
-            meta,
-          };
-          console.log(JSON.stringify(logData));
-        },
-        warn: (message: string, meta?: unknown) => {
-          const logData = {
-            timestamp: new Date().toISOString(),
-            level: 'WARN',
-            message,
-            meta,
-          };
-          console.warn(JSON.stringify(logData));
-        },
-        error: (message: string, meta?: unknown) => {
-          const logData = {
-            timestamp: new Date().toISOString(),
-            level: 'ERROR',
-            message,
-            meta,
-          };
-          console.error(JSON.stringify(logData));
-        },
-        debug: (message: string, meta?: unknown) => {
-          if (process.env.NODE_ENV !== 'production') {
-            const logData = {
-              timestamp: new Date().toISOString(),
-              level: 'DEBUG',
-              message,
-              meta,
-            };
-            console.debug(JSON.stringify(logData));
-          }
-        },
-      };
+      AuthDIContainer.loggerInstance = createConsoleLogger();
     }
 
-    if (!AuthDIContainer.loggerInstance) {
-      throw new Error('Logger instance not initialized');
-    }
     return AuthDIContainer.loggerInstance;
   }
 
