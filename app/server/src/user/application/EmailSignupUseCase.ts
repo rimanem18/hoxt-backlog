@@ -2,6 +2,7 @@ import type { IUserRepository } from '@/user/domain';
 import { EmailAlreadyRegisteredError } from '@/user/domain/errors/EmailAlreadyRegisteredError';
 import { EmailAlreadyRegisteredGoogleError } from '@/user/domain/errors/EmailAlreadyRegisteredGoogleError';
 import { SignupFailedError } from '@/user/domain/errors/SignupFailedError';
+import { EmailAddress } from '@/user/domain/valueobjects/EmailAddress';
 import type { IEmailSignupGateway } from './IEmailSignupGateway';
 
 /**
@@ -30,7 +31,7 @@ export class EmailSignupUseCase {
     email: string;
     password: string;
   }): Promise<{ pendingEmailConfirmation: true }> {
-    const normalizedEmail = input.email.trim().toLowerCase();
+    const normalizedEmail = EmailAddress.of(input.email).value;
 
     const existingUser = await this.userRepository.findByEmail(normalizedEmail);
 

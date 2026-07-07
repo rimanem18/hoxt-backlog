@@ -12,6 +12,7 @@ import {
 } from '@/user/domain/AuthProvider';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { IAuthProvider } from '@/user/domain/services/IAuthProvider';
+import { EmailAddress } from '@/user/domain/valueobjects/EmailAddress';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
 import { verifyJWT } from './jwks';
 
@@ -117,7 +118,7 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       //   externalId は同一だが DB の provider='google' と JWT の provider='email' が不一致になる）
       if (!user && payload.email) {
         user = await userRepository.findByEmail(
-          (payload.email as string).trim().toLowerCase(),
+          EmailAddress.of(payload.email as string).value,
         );
       }
 

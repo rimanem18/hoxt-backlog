@@ -117,6 +117,27 @@ describe('AuthenticationDomainService', () => {
         await authenticationService.createUserFromExternalInfo(externalInfo);
       }).toThrow(InvalidProviderError);
     });
+
+    test('外部プロバイダーのメールアドレスが前後空白・大文字混じりでも正規化されて永続化される', async () => {
+      // Given: 前後空白と大文字混じりのメールアドレスを含む外部ユーザー情報
+      const externalInfo: ExternalUserInfo = {
+        id: 'google-789',
+        provider: 'google',
+        email: '  Mixed.Case@Example.com ',
+        name: 'Test User',
+      };
+
+      mockUserRepository.findByExternalId = mock(async () => null);
+      mockUserRepository.create = mock(async () => ({}) as User);
+
+      // When: JITプロビジョニングを実行
+      await authenticationService.createUserFromExternalInfo(externalInfo);
+
+      // Then: 正規化済みのメールアドレスでユーザーが作成される
+      expect(mockUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'mixed.case@example.com' }),
+      );
+    });
   });
 
   describe('authenticateUser', () => {

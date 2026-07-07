@@ -4,6 +4,7 @@ import type {
   IUserRepository,
 } from '@/user/domain';
 import {
+  EmailAddress,
   InvalidProviderError,
   isValidAuthProvider,
   UserEntity,
@@ -64,7 +65,7 @@ export class AuthenticationDomainService
     const createInput: CreateUserInput = {
       externalId: externalInfo.id,
       provider: externalInfo.provider as AuthProvider,
-      email: externalInfo.email,
+      email: EmailAddress.of(externalInfo.email).value,
       name: externalInfo.name,
       ...(externalInfo.avatarUrl ? { avatarUrl: externalInfo.avatarUrl } : {}),
     };
@@ -111,7 +112,7 @@ export class AuthenticationDomainService
       // findByExternalId で見つからない場合、同一メールの既存ユーザーと合流を試みる
       // provider をまたいだ同一人物の二重登録を防ぐため（REQ-002）
       const emailUser = await this.userRepository.findByEmail(
-        externalInfo.email.trim().toLowerCase(),
+        EmailAddress.of(externalInfo.email).value,
       );
 
       if (emailUser) {

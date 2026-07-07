@@ -30,6 +30,7 @@ export {
   isValidEmail,
   validateCreateUserInput,
 } from './valueobjects/CreateUserInput';
+export { EmailAddress } from './valueobjects/EmailAddress';
 export type { UpdateUserInput } from './valueobjects/UpdateUserInput';
 export {
   UpdateUserInputValidation,
