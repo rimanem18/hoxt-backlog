@@ -13,15 +13,18 @@ export type SignInResult =
   | { success: true; session: Session }
   | { success: false; errorMessage: string };
 
+/** SupabaseClient の auth プロパティのみを必要とする型 */
+type SupabaseAuthClient = Pick<SupabaseClient, 'auth'>;
+
 export class EmailPasswordAuthProvider {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseAuthClient;
   private trustedDomains: Set<string>;
   private lastAuthEvent: AuthChangeEvent | null = null;
   private readonly authEventListeners = new Set<
     (event: AuthChangeEvent) => void
   >();
 
-  constructor(supabaseClient: SupabaseClient) {
+  constructor(supabaseClient: SupabaseAuthClient) {
     this.supabase = supabaseClient;
     this.trustedDomains = getTrustedDomains();
 

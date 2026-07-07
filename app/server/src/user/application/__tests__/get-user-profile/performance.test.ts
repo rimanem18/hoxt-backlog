@@ -22,10 +22,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       const user = UserProfileFactory.existingUser();
       const input = UserProfileFactory.validInput(user.id);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(user);
+      sut.userRepository.findById.mockResolvedValue(user);
 
       // When: 処理時間を測定しながら実行
       const startTime = performance.now();
@@ -49,13 +46,9 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
         }),
       );
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-
       // When & Then: 各ユーザーの処理時間を測定し、制限時間内で完了することを確認
       for (const user of users) {
-        mockFindById.mockResolvedValue(user);
+        sut.userRepository.findById.mockResolvedValue(user);
         const input = UserProfileFactory.validInput(user.id);
 
         const startTime = performance.now();
@@ -78,10 +71,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       });
       const input = UserProfileFactory.validInput(largeUser.id);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(largeUser);
+      sut.userRepository.findById.mockResolvedValue(largeUser);
 
       // When: 大容量データの処理時間を測定しながら実行
       const startTime = performance.now();
@@ -100,10 +90,7 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       const nonExistentUserId = '33333333-4444-5555-6666-777777777777';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(null);
+      sut.userRepository.findById.mockResolvedValue(null);
 
       // When & Then: エラー処理の時間を測定し、制限時間内で完了することを確認
       const startTime = performance.now();
@@ -124,11 +111,8 @@ describe('GetUserProfileUseCase パフォーマンステスト', () => {
       // Given: インフラエラーが発生するテストデータ
       const validInput = UserProfileFactory.validInput();
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockRejectedValue: (error: Error) => void;
-      };
       const infraError = new Error('データベース接続エラー');
-      mockFindById.mockRejectedValue(infraError);
+      sut.userRepository.findById.mockRejectedValue(infraError);
 
       // When & Then: インフラエラー処理の時間を測定し、制限時間内で完了することを確認
       const startTime = performance.now();

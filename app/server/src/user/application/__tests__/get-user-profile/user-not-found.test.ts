@@ -23,10 +23,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
       const nonExistentUserId = '12345678-1234-4321-abcd-123456789999';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(null);
+      sut.userRepository.findById.mockResolvedValue(null);
 
       // When: 存在しないユーザーIDでプロフィール取得処理を実行
       const promise = sut.sut.execute(input);
@@ -58,10 +55,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
       // Given: 各パターンの存在しないユーザーID
       const input = UserProfileFactory.validInput(userId);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(null);
+      sut.userRepository.findById.mockResolvedValue(null);
 
       // When: 存在しないユーザーIDでプロフィール取得処理を実行
       const promise = sut.sut.execute(input);
@@ -81,10 +75,7 @@ describe('GetUserProfileUseCase ユーザー未存在エラーテスト', () => 
       const nonExistentUserId = '22222222-3333-4444-5555-666666666666';
       const input = UserProfileFactory.validInput(nonExistentUserId);
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(null);
+      sut.userRepository.findById.mockResolvedValue(null);
 
       // When: エラーログ出力を含むユーザー未存在エラー処理を実行
       try {

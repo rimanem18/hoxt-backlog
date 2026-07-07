@@ -7,6 +7,9 @@ import type {
 import { AuthApiError } from '@supabase/supabase-js';
 import { EmailPasswordAuthProvider } from '../services/providers/emailPasswordAuthProvider';
 
+/** SupabaseClient の auth プロパティのみを必要とする型 */
+type SupabaseAuthClient = Pick<SupabaseClient, 'auth'>;
+
 const MOCK_SESSION: Session = {
   access_token: 'test-access-token',
   refresh_token: 'test-refresh-token',
@@ -26,8 +29,8 @@ function createMockSupabase(auth: {
   resetPasswordForEmail?: ReturnType<typeof mock>;
   updateUser?: ReturnType<typeof mock>;
   onAuthStateChange?: ReturnType<typeof mock>;
-}): SupabaseClient {
-  return { auth } as unknown as SupabaseClient;
+}): SupabaseAuthClient {
+  return { auth };
 }
 
 describe('EmailPasswordAuthProvider', () => {
