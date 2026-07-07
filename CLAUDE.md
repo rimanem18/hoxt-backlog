@@ -98,6 +98,8 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
 
+- test / lint / typecheck / semgrep / build は、 @quality-gate-runner サブエージェントに依頼してください。
+
 ## コード品質
 
 - **必須**: リトライ対象は allowlist で明示する（「未知エラー＝リトライ」の否定）
