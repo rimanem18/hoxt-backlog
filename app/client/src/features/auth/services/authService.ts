@@ -41,25 +41,28 @@ export interface AuthOptions {
 }
 
 /**
+ * 認証系アクション結果の共通型
+ *
+ * 成功時のstatusのみ呼び出し側で指定し、エラー形状は共通化する。
+ */
+export type AuthActionResult<TSuccessStatus extends string> =
+  | { status: TSuccessStatus }
+  | { status: 'error'; errorMessage: string };
+
+/**
  * メールサインアップ結果の型定義
  */
-export type SignupResult =
-  | { status: 'pending_confirmation' }
-  | { status: 'error'; errorMessage: string };
+export type SignupResult = AuthActionResult<'pending_confirmation'>;
 
 /**
  * パスワードリセットリクエスト結果の型定義
  */
-export type RequestPasswordResetResult =
-  | { status: 'sent' }
-  | { status: 'error'; errorMessage: string };
+export type RequestPasswordResetResult = AuthActionResult<'sent'>;
 
 /**
  * パスワード更新結果の型定義
  */
-export type UpdatePasswordResult =
-  | { status: 'success' }
-  | { status: 'error'; errorMessage: string };
+export type UpdatePasswordResult = AuthActionResult<'success'>;
 
 /**
  * 認証サービスインターフェース

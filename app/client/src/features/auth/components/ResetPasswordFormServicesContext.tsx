@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { usePasswordReset } from '@/features/auth/hooks/usePasswordReset';
+import { createFormServicesContext } from '@/shared/context/createFormServicesContext';
 
 /**
  * ResetPasswordFormServicesContext に渡す usePasswordReset の型
@@ -12,8 +13,10 @@ interface ResetPasswordFormServices {
   usePasswordReset: UsePasswordResetHook;
 }
 
-const ResetPasswordFormServicesContext =
-  createContext<ResetPasswordFormServices | null>(null);
+const { Context: ResetPasswordFormServicesContext, useFormServices } =
+  createFormServicesContext<ResetPasswordFormServices>(
+    'useResetPasswordFormServices',
+  );
 
 export interface ResetPasswordFormServicesProviderProps {
   /** テスト用サービス注入（省略時はデフォルトのhookを使用） */
@@ -51,13 +54,5 @@ export function ResetPasswordFormServicesProvider(
  * @throws {Error} ResetPasswordFormServicesProviderが見つからない場合
  */
 export function useResetPasswordFormServices(): ResetPasswordFormServices {
-  const services = useContext(ResetPasswordFormServicesContext);
-  if (!services) {
-    throw new Error(
-      'useResetPasswordFormServices must be used within ' +
-        'ResetPasswordFormServicesProvider. ' +
-        'Wrap your component with <ResetPasswordFormServicesProvider>.',
-    );
-  }
-  return services;
+  return useFormServices();
 }

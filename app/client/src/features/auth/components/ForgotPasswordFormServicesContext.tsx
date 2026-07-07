@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useForgotPassword } from '@/features/auth/hooks/useForgotPassword';
+import { createFormServicesContext } from '@/shared/context/createFormServicesContext';
 
 /**
  * ForgotPasswordFormServicesContext に渡す useForgotPassword の型
@@ -12,8 +13,10 @@ interface ForgotPasswordFormServices {
   useForgotPassword: UseForgotPasswordHook;
 }
 
-const ForgotPasswordFormServicesContext =
-  createContext<ForgotPasswordFormServices | null>(null);
+const { Context: ForgotPasswordFormServicesContext, useFormServices } =
+  createFormServicesContext<ForgotPasswordFormServices>(
+    'useForgotPasswordFormServices',
+  );
 
 export interface ForgotPasswordFormServicesProviderProps {
   /** テスト用サービス注入（省略時はデフォルトのhookを使用） */
@@ -51,13 +54,5 @@ export function ForgotPasswordFormServicesProvider(
  * @throws {Error} ForgotPasswordFormServicesProviderが見つからない場合
  */
 export function useForgotPasswordFormServices(): ForgotPasswordFormServices {
-  const services = useContext(ForgotPasswordFormServicesContext);
-  if (!services) {
-    throw new Error(
-      'useForgotPasswordFormServices must be used within ' +
-        'ForgotPasswordFormServicesProvider. ' +
-        'Wrap your component with <ForgotPasswordFormServicesProvider>.',
-    );
-  }
-  return services;
+  return useFormServices();
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useEmailSignin } from '@/features/auth/hooks/useEmailSignin';
+import { createFormServicesContext } from '@/shared/context/createFormServicesContext';
 
 /**
  * LoginFormServicesContext に渡す useEmailSignin の型
@@ -12,7 +13,8 @@ interface LoginFormServices {
   useEmailSignin: UseEmailSigninHook;
 }
 
-const LoginFormServicesContext = createContext<LoginFormServices | null>(null);
+const { Context: LoginFormServicesContext, useFormServices } =
+  createFormServicesContext<LoginFormServices>('useLoginFormServices');
 
 export interface LoginFormServicesProviderProps {
   /** テスト用サービス注入（省略時はデフォルトのhookを使用） */
@@ -51,12 +53,5 @@ export function LoginFormServicesProvider({
  * @throws {Error} LoginFormServicesProviderが見つからない場合
  */
 export function useLoginFormServices(): LoginFormServices {
-  const services = useContext(LoginFormServicesContext);
-  if (!services) {
-    throw new Error(
-      'useLoginFormServices must be used within LoginFormServicesProvider. ' +
-        'Wrap your component with <LoginFormServicesProvider>.',
-    );
-  }
-  return services;
+  return useFormServices();
 }
