@@ -11,7 +11,8 @@
 'use client';
 import Image from 'next/image';
 import type React from 'react';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
+import { InitialAvatar } from '@/features/auth/components/InitialAvatar';
 import { logout } from '@/features/auth/store/authSlice';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/packages/shared-schemas/src/auth';
@@ -70,23 +71,25 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
     }
   }, [dispatch]);
 
-  // 【パフォーマンス最適化】: アバター画像URLのメモ化
-  const avatarImageSrc = useMemo(
-    () => user.avatarUrl || '/default-avatar.png',
-    [user.avatarUrl],
-  );
-
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       {/* アバター画像表示 */}
-      <Image
-        src={avatarImageSrc}
-        alt="プロフィール画像"
-        width={64}
-        height={64}
-        className="rounded-full mx-auto mb-4"
-        priority
-      />
+      {user.avatarUrl ? (
+        <Image
+          src={user.avatarUrl}
+          alt={`${user.name}のプロフィール画像`}
+          width={64}
+          height={64}
+          className="rounded-full mx-auto mb-4"
+          priority
+        />
+      ) : (
+        <InitialAvatar
+          name={user.name}
+          size={64}
+          className="rounded-full mx-auto mb-4"
+        />
+      )}
 
       {/* ユーザー名表示 */}
       <h2 className="text-xl font-bold text-center mb-2">{user.name}</h2>
