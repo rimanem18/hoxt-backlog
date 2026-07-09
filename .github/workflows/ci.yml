@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
     # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
   workflow_call:
 
