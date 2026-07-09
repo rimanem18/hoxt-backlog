@@ -40,6 +40,8 @@ export function getSupabaseStorageKey(): string {
 interface SupabaseUserMetadata {
   avatar_url?: string;
   picture?: string;
+  name?: string;
+  full_name?: string;
   [key: string]: unknown;
 }
 
@@ -215,10 +217,15 @@ export function validateStoredAuth(): AuthValidationResult {
     }
 
     // Supabase の user_metadata を User 型に変換
-    // OAuth プロバイダーから取得した avatar_url を avatarUrl に変換
+    // name は SupabaseJwtVerifier.getExternalUserInfo() と同じ優先順位に揃える
     const supabaseUser = authData.user as SupabaseUser;
     const transformedUser: User = {
       ...(authData.user as User),
+      name:
+        supabaseUser.user_metadata?.name ||
+        supabaseUser.user_metadata?.full_name ||
+        supabaseUser.email ||
+        '',
       avatarUrl:
         supabaseUser.user_metadata?.avatar_url ||
         supabaseUser.user_metadata?.picture ||
