@@ -11,9 +11,7 @@ interface DemoLoginButtonProps {
 
 export function DemoLoginButton(props: DemoLoginButtonProps): React.ReactNode {
   const credentials =
-    props.credentials === undefined
-      ? getDemoCredentials()
-      : props.credentials;
+    props.credentials === undefined ? getDemoCredentials() : props.credentials;
 
   if (!credentials) {
     return null;
