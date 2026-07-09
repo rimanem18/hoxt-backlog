@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent, useState } from 'react';
+import { DemoLoginButton } from '@/features/auth/components/DemoLoginButton';
 import { EmailField } from '@/features/auth/components/fields/EmailField';
 import { FormErrorAlert } from '@/features/auth/components/fields/FormErrorAlert';
 import { PasswordField } from '@/features/auth/components/fields/PasswordField';
@@ -80,6 +81,8 @@ export function LoginForm(): React.ReactNode {
           アカウントをお持ちでない方はこちら
         </a>
       </div>
+
+      <DemoLoginButton signIn={signIn} isLoading={isLoading} />
     </div>
   );
 }
