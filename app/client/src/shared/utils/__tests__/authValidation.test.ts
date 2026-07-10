@@ -4,7 +4,14 @@
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';
-import { getSupabaseStorageKey, validateStoredAuth } from '../authValidation';
+import type { User } from '@/packages/shared-schemas/src/auth';
+import {
+  clearStoredAuth,
+  getSupabaseStorageKey,
+  persistVerifiedUserDisplay,
+  VERIFIED_USER_DISPLAY_STORAGE_KEY,
+  validateStoredAuth,
+} from '../authValidation';
 
 function storeSupabaseSession(overrides: {
   userMetadata?: Record<string, unknown>;
@@ -26,6 +33,24 @@ function storeSupabaseSession(overrides: {
       },
     }),
   );
+}
+
+// externalId はSupabase Authのuser.id（storeSupabaseSessionの'user-id-1'）と
+// 同一値。idはアプリ内部DBの主キーであり、Supabaseのuser.idとは別値のため
+// あえて異なる値にしている（実運用の形状を反映するため）
+function buildVerifiedUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 'internal-db-id-1',
+    externalId: 'user-id-1',
+    provider: 'email',
+    email: 'sample-user@example.test',
+    name: 'デモユーザー',
+    avatarUrl: null,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    lastLoginAt: null,
+    ...overrides,
+  };
 }
 
 /**
@@ -217,5 +242,106 @@ describe('validateStoredAuth', () => {
     // Then: idとemailがそのまま維持される
     expect(result.data?.user.id).toBe('user-id-1');
     expect(result.data?.user.email).toBe('sample-user@example.test');
+  });
+
+  it('バックエンド検証済みキャッシュが存在する場合、nameはキャッシュの値が優先されメールにフォールバックしない', () => {
+    // Given: user_metadataに名前情報がなくメールにフォールバックする状況で、
+    // 同一externalId（Supabaseセッションのuser.idと同じ値）の
+    // バックエンド検証済みキャッシュ（例: デモユーザー）が存在する
+    storeSupabaseSession({
+      userMetadata: {},
+    });
+    persistVerifiedUserDisplay(buildVerifiedUser({ name: 'デモユーザー' }));
+
+    // When: validateStoredAuthを実行
+    const result = validateStoredAuth();
+
+    // Then: nameはキャッシュの値になり、メールにフォールバックしない
+    expect(result.data?.user.name).toBe('デモユーザー');
+  });
+
+  it('バックエンド検証済みキャッシュのavatarUrlが優先される', () => {
+    // Given: user_metadataのavatar_urlとは異なるキャッシュ済みavatarUrlが存在する
+    storeSupabaseSession({
+      userMetadata: { avatar_url: 'https://example.com/metadata.png' },
+    });
+    persistVerifiedUserDisplay(
+      buildVerifiedUser({ avatarUrl: 'https://example.com/cached.png' }),
+    );
+
+    // When: validateStoredAuthを実行
+    const result = validateStoredAuth();
+
+    // Then: avatarUrlはキャッシュの値になる
+    expect(result.data?.user.avatarUrl).toBe('https://example.com/cached.png');
+  });
+
+  it('キャッシュのexternalIdが現在のSupabaseセッションのuser.idと一致しない場合は無視される', () => {
+    // Given: 別ユーザーexternalId宛のキャッシュが残っている状況
+    storeSupabaseSession({
+      userMetadata: {},
+    });
+    persistVerifiedUserDisplay(
+      buildVerifiedUser({ externalId: 'other-user-id', name: '別ユーザー' }),
+    );
+
+    // When: validateStoredAuthを実行
+    const result = validateStoredAuth();
+
+    // Then: キャッシュは使われず、既存のフォールバック（email）が使われる
+    expect(result.data?.user.name).toBe('sample-user@example.test');
+  });
+
+  it('キャッシュのJSONが不正な場合でも例外を投げず既存のフォールバックが使われる', () => {
+    // Given: キャッシュキーに不正なJSON文字列が入っている
+    storeSupabaseSession({
+      userMetadata: {},
+    });
+    localStorage.setItem(VERIFIED_USER_DISPLAY_STORAGE_KEY, 'not-json');
+
+    // When: validateStoredAuthを実行
+    const result = validateStoredAuth();
+
+    // Then: 例外にならず既存のフォールバック（email）が使われる
+    expect(result.isValid).toBe(true);
+    expect(result.data?.user.name).toBe('sample-user@example.test');
+  });
+
+  it('キャッシュの形状が不正な場合（nameが欠落）でも例外を投げず既存のフォールバックが使われる', () => {
+    // Given: JSONとしては正しいがnameフィールドが欠落した壊れたキャッシュ
+    storeSupabaseSession({
+      userMetadata: {},
+    });
+    localStorage.setItem(
+      VERIFIED_USER_DISPLAY_STORAGE_KEY,
+      JSON.stringify({ externalId: 'user-id-1' }),
+    );
+
+    // When: validateStoredAuthを実行
+    const result = validateStoredAuth();
+
+    // Then: 壊れたキャッシュは使われず、既存のフォールバック（email）が使われる
+    expect(result.isValid).toBe(true);
+    expect(result.data?.user.name).toBe('sample-user@example.test');
+  });
+});
+
+/**
+ * clearStoredAuth 関数のテスト
+ */
+describe('clearStoredAuth', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('clearStoredAuthは検証済みユーザーキャッシュも削除する', () => {
+    // Given: 検証済みユーザーキャッシュが保存されている
+    persistVerifiedUserDisplay(buildVerifiedUser());
+
+    // When: clearStoredAuthを実行
+    clearStoredAuth();
+
+    // Then: キャッシュも削除される
+    expect(localStorage.getItem(VERIFIED_USER_DISPLAY_STORAGE_KEY)).toBeNull();
   });
 });

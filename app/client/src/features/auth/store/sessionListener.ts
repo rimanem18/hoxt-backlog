@@ -3,6 +3,7 @@ import { authSlice } from '@/features/auth/store/authSlice';
 import { clearAuthToken, setAuthToken } from '@/lib/api';
 import {
   clearStoredAuth,
+  persistVerifiedUserDisplay,
   validateStoredAuth,
 } from '@/shared/utils/authValidation';
 
@@ -61,6 +62,19 @@ authListenerMiddleware.startListening({
         'Auth token not found in localStorage after successful auth',
       );
     }
+  },
+});
+
+/**
+ * 実ログイン成功時のみバックエンドDB検証済みユーザー表示情報をキャッシュ
+ *
+ * restoreAuthState（リロード時の復元）ではキャッシュを書き込まない。
+ * リロード時に誤った値で正しいキャッシュを上書きしないため。
+ */
+authListenerMiddleware.startListening({
+  actionCreator: authSuccess,
+  effect: (action) => {
+    persistVerifiedUserDisplay(action.payload.user);
   },
 });
 
