@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 import { GoogleAuthProvider } from '@/features/auth/services/providers/googleAuthProvider';
 import { MockAuthProvider } from '@/features/auth/services/providers/mockAuthProvider';
 import { authSlice } from '@/features/auth/store/authSlice';
+import { debugLog } from '@/lib/utils/logger';
 import { useAppDispatch } from '@/store/hooks';
 
 type CallbackStatus = 'processing' | 'success' | 'error';
@@ -49,7 +50,7 @@ export const useOAuthCallback = () => {
 
       if (!result.success) {
         // ユーザーキャンセル（access_denied）
-        console.log('ユーザーが認証をキャンセルしました');
+        debugLog.auth('ユーザーが認証をキャンセルしました');
         setStatus('error');
         setErrorMessage('認証がキャンセルされました');
         setTimeout(() => {
@@ -70,7 +71,10 @@ export const useOAuthCallback = () => {
         }),
       );
 
-      console.log('認証が正常に完了しました:', result.user);
+      debugLog.auth('認証が正常に完了しました', {
+        userId: result.user.id,
+        provider: result.user.provider,
+      });
       setStatus('success');
 
       // 認証成功後はダッシュボードに遷移
@@ -110,7 +114,7 @@ export const useOAuthCallback = () => {
       }
 
       // デバッグ情報とエラースタックを記録
-      console.error('Auth callback error:', String(logMessage), {
+      debugLog.error(logMessage, {
         error,
         stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
