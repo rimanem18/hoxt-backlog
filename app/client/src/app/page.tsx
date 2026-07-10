@@ -45,7 +45,7 @@ export default function Home(): React.ReactNode {
     <div className="font-sans min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="max-w-4xl mx-auto space-y-8">
         {/* Hello World コンポーネント */}
-        <HelloWorld />
+        {/* <HelloWorld /> */}
 
         {/* JWT期限切れエラーメッセージ表示 */}
         {authError && authError.code === 'EXPIRED' && (
