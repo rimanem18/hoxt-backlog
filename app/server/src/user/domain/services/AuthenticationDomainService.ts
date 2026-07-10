@@ -119,7 +119,7 @@ export class AuthenticationDomainService
         user = UserEntity.restore(emailUser);
       } else {
         user = await this.createUserFromExternalInfo(externalInfo);
-        isNewUser = true;
+        isNewUser = user.isNewUser();
       }
     } else {
       user = UserEntity.restore(userData);

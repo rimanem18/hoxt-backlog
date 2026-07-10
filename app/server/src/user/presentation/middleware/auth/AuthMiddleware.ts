@@ -116,10 +116,14 @@ export const authMiddleware = (options: AuthMiddlewareOptions = {}) => {
       // identity linking ON 環境で provider が切り替わった合流ユーザー向けフォールバック
       // （例: Google 登録済みユーザーが email で再サインインした場合、
       //   externalId は同一だが DB の provider='google' と JWT の provider='email' が不一致になる）
+      // externalId が一致しない場合は別ユーザーの可能性があるため認証失敗として扱う
       if (!user && payload.email) {
-        user = await userRepository.findByEmail(
+        const userByEmail = await userRepository.findByEmail(
           EmailAddress.of(payload.email as string).value,
         );
+        if (userByEmail && userByEmail.externalId === externalId) {
+          user = userByEmail;
+        }
       }
 
       if (!user) {
