@@ -36,7 +36,7 @@ jobs:
           --health-start-period 5s
 
     container:
-      image: mcr.microsoft.com/playwright:v1.55.0-jammy
+      image: mcr.microsoft.com/playwright:v1.61.1-jammy
       options: --shm-size=1gb
       env:
         CI: true
