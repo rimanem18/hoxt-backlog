@@ -67,8 +67,9 @@ export function getBaseSchema(): string {
 }
 
 // スキーマオブジェクトの作成
+// drizzle-kitがpushコマンドでスキーマ自体を管理対象と認識するためexportが必須
 const schemaName = getBaseSchema();
-const schema = pgSchema(schemaName);
+export const schema = pgSchema(schemaName);
 
 /**
  * 認証プロバイダー種別のenum定義

@@ -17,6 +17,7 @@ export default defineConfig({
 
   // データベース情報
   dialect: 'postgresql',
+  schemaFilter: [baseSchema],
 
   // データベース接続設定
   dbCredentials: {
