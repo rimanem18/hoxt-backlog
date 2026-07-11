@@ -170,11 +170,13 @@ export async function mockEmailSignupConflictForNormalizedEmail(
 
 /**
  * Supabase の POST /auth/v1/recover（パスワードリセットメール送信）をモックする。
+ * SDKがredirectToをredirect_toクエリパラメータとして付与するため、
+ * 末尾に**を付けてクエリ文字列付きURLにもマッチさせる。
  */
 export async function mockPasswordResetRequestSuccess(
   page: Page,
 ): Promise<void> {
-  await page.route('**/auth/v1/recover', async (route) => {
+  await page.route('**/auth/v1/recover**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
