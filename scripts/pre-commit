@@ -13,12 +13,17 @@ export LC_ALL
 ALLOWLIST_KEYS=(
   "ENVIRONMENT"
   "ACCESS_ALLOW_ORIGIN"
+  "ACCESS_ALLOW_METHODS"
+  "ACCESS_ALLOW_HEADERS"
   "CLIENT_PORT"
   "SERVER_PORT"
   "DB_NAME"
   "DB_USER"
   "DB_PORT"
   "SUPABASE_URL"
+  "PROJECT_NAME"
+  "CLOUDFLARE_PROJECT_NAME"
+  "AWS_REGION"
 )
 
 # prefix 単位で除外したい場合だけ使う
@@ -110,8 +115,31 @@ if ! [ -s "$staged_files_tmp" ]; then
   exit 0
 fi
 
-# .env/.env.* が直接ステージされていれば即ブロック
+# テンプレートとして正当にコミットしてよいファイル（実値を含まない前提）
+ENV_TEMPLATE_ALLOWLIST=(
+  "$ENV_BASENAME.example"
+  "$ENV_BASENAME.sample"
+)
+
+is_allowlisted_env_template() {
+  local f="$1"
+  local allow
+
+  for allow in "${ENV_TEMPLATE_ALLOWLIST[@]}"; do
+    if [ "$f" = "$allow" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+# .env/.env.* が直接ステージされていれば即ブロック（テンプレートファイルは除く）
 while IFS= read -r f; do
+  if is_allowlisted_env_template "$f"; then
+    continue
+  fi
+
   case "$f" in
     "$ENV_BASENAME"|"$ENV_BASENAME".*)
       printf '%s\n' "ERROR: '$f' をコミットしようとしています。中止します。"

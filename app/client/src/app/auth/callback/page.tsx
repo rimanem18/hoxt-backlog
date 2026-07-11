@@ -13,7 +13,7 @@ export default function AuthCallbackPage(): React.ReactNode {
   const { status, errorMessage, handleCallback } = useOAuthCallback();
 
   useEffect(() => {
-    handleCallback('google');
+    handleCallback();
   }, [handleCallback]);
 
   // 処理状態に応じたUIを表示

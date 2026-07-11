@@ -2,16 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { LoginButton } from '@/features/auth/components/LoginButton';
-import OAuthErrorDisplay from '@/features/auth/components/OAuthErrorDisplay';
-import { OAuthErrorHandler } from '@/features/auth/services/oauthErrorHandler';
-import {
-  clearOAuthError,
-  setOAuthError,
-} from '@/features/auth/store/oauthErrorSlice';
+import { LoginForm } from '@/features/auth/components/LoginForm';
+import { LoginFormServicesProvider } from '@/features/auth/components/LoginFormServicesContext';
 import { HelloWorld } from '@/features/hello-world';
 import { debugLog } from '@/lib/utils/logger';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppSelector } from '@/store/hooks';
 
 /**
  * ホームページコンポーネント
@@ -23,7 +18,6 @@ export default function Home(): React.ReactNode {
   const { isAuthenticated, user, authError, isAuthRestoring } = useAppSelector(
     (state) => state.auth,
   );
-  const dispatch = useAppDispatch();
   const router = useRouter();
 
   // 認証済みユーザーは自動的にダッシュボードへリダイレクト
@@ -51,9 +45,9 @@ export default function Home(): React.ReactNode {
     <div className="font-sans min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="max-w-4xl mx-auto space-y-8">
         {/* Hello World コンポーネント */}
-        <HelloWorld />
+        {/* <HelloWorld /> */}
 
-        {/* 認証エラーメッセージ表示 */}
+        {/* JWT期限切れエラーメッセージ表示 */}
         {authError && authError.code === 'EXPIRED' && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
@@ -85,52 +79,19 @@ export default function Home(): React.ReactNode {
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-6">
-          {/* 未認証ユーザー向けのログインボタンと促進メッセージ */}
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">
-              アカウントでログイン
-            </h2>
-            <p className="text-gray-600 max-w-md mx-auto">
-              Googleアカウントを使用してログインし、すべての機能をお楽しみください。
-            </p>
-            <LoginButton
-              provider="google"
-              className="mx-auto"
-              onAuthStart={() => {
-                // Redux経由でエラー状態をクリア
-                dispatch(clearOAuthError());
-                debugLog.auth('認証を開始しました');
-              }}
-              onAuthSuccess={() => {
-                // Redux経由でエラー状態をクリア
-                dispatch(clearOAuthError());
-                debugLog.auth('認証に成功しました');
-              }}
-              onAuthError={(error) => {
-                console.error('認証エラー:', error);
-
-                // 統合エラーハンドラーでエラー分析とRedux状態更新
-                const errorDetail = OAuthErrorHandler.analyzeError(error);
-                dispatch(
-                  setOAuthError({
-                    type: errorDetail.type,
-                    message: errorDetail.userMessage,
-                    correlationId: errorDetail.correlationId,
-                  }),
-                );
-              }}
-            />
-
-            {/* OAuth認証エラー表示コンポーネント */}
-            <OAuthErrorDisplay
-              className="mt-4"
-              onRetry={() => {
-                // ログインボタンの再クリックをシミュレート
-                debugLog.auth('OAuth認証を再試行中');
-                // 実際の再試行処理は LoginButton 内部で処理される
-              }}
-            />
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-sm space-y-6">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-gray-800">
+                アカウントでログイン
+              </h2>
+              <p className="text-sm text-gray-500">
+                メールアドレスまたは Google アカウントでログインしてください。
+              </p>
+            </div>
+            <LoginFormServicesProvider>
+              <LoginForm />
+            </LoginFormServicesProvider>
           </div>
         </div>
 

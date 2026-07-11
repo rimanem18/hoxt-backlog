@@ -2,7 +2,7 @@
 name: green-haiku-worker
 description: Use only for very small isolated TDD Green tasks where failing tests already exist and the implementation path is obvious. Suitable for simple mapper, schema, props, type, or boilerplate changes. Do not use for domain logic, architecture decisions, cross-layer changes, or ambiguous implementation.
 model: haiku
-tools: Read, Grep, Glob, Edit, MultiEdit, Bash
+tools: Read, Grep, Glob, Write, MultiEdit, Bash
 permissionMode: default
 maxTurns: 5
 color: green

@@ -22,11 +22,8 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
       // Given: データベース接続エラーが発生するテストデータ
       const validInput = UserProfileFactory.validInput();
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockRejectedValue: (error: Error) => void;
-      };
       const databaseError = new Error('データベース接続に失敗しました');
-      mockFindById.mockRejectedValue(databaseError);
+      sut.userRepository.findById.mockRejectedValue(databaseError);
 
       // When: データベースエラーが発生する状況で処理を実行
       const promise = sut.sut.execute(validInput);
@@ -61,10 +58,7 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
         // Given: システムエラーが発生するテストデータ
         const validInput = UserProfileFactory.validInput();
 
-        const mockFindById = sut.userRepository.findById as unknown as {
-          mockRejectedValue: (error: Error) => void;
-        };
-        mockFindById.mockRejectedValue(systemError);
+        sut.userRepository.findById.mockRejectedValue(systemError);
 
         // When: システムエラーが発生する状況で処理を実行
         const promise = sut.sut.execute(validInput);
@@ -87,11 +81,8 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
       // Given: クエリタイムアウトが発生するテストデータ
       const validInput = UserProfileFactory.validInput();
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockRejectedValue: (error: Error) => void;
-      };
       const timeoutError = new Error('Query execution timeout');
-      mockFindById.mockRejectedValue(timeoutError);
+      sut.userRepository.findById.mockRejectedValue(timeoutError);
 
       // When: タイムアウトが発生する状況で処理を実行
       const promise = sut.sut.execute(validInput);
@@ -113,10 +104,7 @@ describe('GetUserProfileUseCase インフラエラーテスト', () => {
       );
       const infraError = new Error('データベース接続障害');
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockRejectedValue: (error: Error) => void;
-      };
-      mockFindById.mockRejectedValue(infraError);
+      sut.userRepository.findById.mockRejectedValue(infraError);
 
       // When: インフラエラー処理を実行
       try {

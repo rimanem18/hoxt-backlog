@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'app/server/src/infrastructure/database/schema.ts'
+      - 'app/server/src/shared/database/schema.ts'
       - 'app/server/scripts/generate-schemas.ts'
       - 'app/server/scripts/generate-openapi.ts'
       - 'app/packages/shared-schemas/**'

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
     # Fork PRのみ実行（同一リポジトリPRはpreview.ymlでテスト）
   workflow_call:
 
@@ -26,9 +27,10 @@ jobs:
     # 実行条件:
     # 1. workflow_call で呼び出された場合（Productionデプロイ時）
     # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    # 3. develop宛PRの場合（プレビュー環境は作らずテストのみ実行）
     if: |
       github.event_name == 'workflow_call' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.base.ref == 'develop'))
     uses: ./.github/workflows/schema-check.yml
 
   # Client (Next.js) のユニットテスト
@@ -37,9 +39,10 @@ jobs:
     # 実行条件:
     # 1. workflow_call で呼び出された場合（Productionデプロイ時）
     # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    # 3. develop宛PRの場合（プレビュー環境は作らずテストのみ実行）
     if: |
       github.event_name == 'workflow_call' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.base.ref == 'develop'))
     uses: ./.github/workflows/client-test.yml
     with:
       working-directory: ./app/client
@@ -50,9 +53,10 @@ jobs:
     # 実行条件:
     # 1. workflow_call で呼び出された場合（Productionデプロイ時）
     # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    # 3. develop宛PRの場合（プレビュー環境は作らずテストのみ実行）
     if: |
       github.event_name == 'workflow_call' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.base.ref == 'develop'))
     uses: ./.github/workflows/server-test.yml
     with:
       working-directory: ./app/server
@@ -63,14 +67,15 @@ jobs:
     # 実行条件:
     # 1. workflow_call で呼び出された場合（Productionデプロイ時）
     # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    # 3. develop宛PRの場合（プレビュー環境は作らずテストのみ実行）
     if: |
       github.event_name == 'workflow_call' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.base.ref == 'develop'))
     # 完全並行にするか、依存関係を維持するかはプロジェクトの方針次第
     # needs: [client-test, server-test]  # コスト効率重視の場合
     uses: ./.github/workflows/e2e-test.yml
     with:
-      concurrency_suffix: 'fork-pr-${{ github.event.pull_request.number }}'
+      concurrency_suffix: 'ci-pr-${{ github.event.pull_request.number }}'
       cancel_in_progress: true
 
   # 全テスト成功の明示的チェック
@@ -80,9 +85,10 @@ jobs:
     # 実行条件:
     # 1. workflow_call で呼び出された場合（Productionデプロイ時）
     # 2. Fork PRの場合（同一リポジトリPRはpreview.ymlでテスト）
+    # 3. develop宛PRの場合（プレビュー環境は作らずテストのみ実行）
     if: |
       github.event_name == 'workflow_call' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)
+      (github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.base.ref == 'develop'))
     needs: [schema-check, client-test, server-test, e2e-test]
     steps:
       - name: Check all tests passed

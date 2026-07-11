@@ -69,7 +69,7 @@ describe('UserProfile', () => {
     expect(screen.getByRole('button', { name: 'ログアウト' })).toBeTruthy();
   });
 
-  test('アバター画像フォールバック処理', () => {
+  test('avatarUrlがnullのときイニシャルアバターSVGが表示される', () => {
     // Given: アバター画像URLがnullのユーザー情報を準備
     const mockUserWithoutAvatar: User = {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -97,9 +97,12 @@ describe('UserProfile', () => {
       </Provider>,
     );
 
-    // Then: デフォルトアバター画像が表示され、他の情報も正常に表示される
-    const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
-    expect(avatarImage.getAttribute('src')).toContain('%2Fdefault-avatar.png');
+    // Then: イニシャルアバターSVGが表示され、他の情報も正常に表示される
+    const avatarImage = screen.getByRole('img', {
+      name: 'テストユーザーのプロフィール画像',
+    });
+    expect(avatarImage.tagName).toBe('svg');
+    expect(screen.getByText('テ')).toBeTruthy();
 
     expect(screen.getByText('テストユーザー')).toBeTruthy();
     expect(screen.getByText('user@example.com')).toBeTruthy();

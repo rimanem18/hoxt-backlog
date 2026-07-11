@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
   /**
+   * Docker Compose環境ではブラウザが `client` サービス名でdevサーバーへ
+   * アクセスするため、Next.jsのDNSリバインディング対策（Origin検証）が
+   * localhost以外を許可せずHMR WebSocketハンドシェイクを破棄してしまう。
+   * E2E実行時のハイドレーション不全を防ぐため明示的に許可する。
+   */
+  allowedDevOrigins: ['client'],
+  /**
    * 外部画像ホストの安全な許可リスト設定
    */
   images: {

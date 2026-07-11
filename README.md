@@ -11,22 +11,21 @@
 
 | カテゴリ | 名前 | バージョン | 用途 |
 |---------|------|-----------|------|
-| **ランタイム** | Bun | 1.2 | JavaScript/TypeScript ランタイム・パッケージマネージャー |
-| **フロントエンド** | Next.js | 15.4 | React フレームワーク |
-| | TanStack Query | 5.84 | データフェッチ・キャッシュ管理 |
+| **ランタイム** | Bun | 1.3 | JavaScript/TypeScript ランタイム・パッケージマネージャー |
+| **フロントエンド** | Next.js | 16.2 | React フレームワーク |
+| | TanStack Query | 5.101 | データフェッチ・キャッシュ管理 |
 | | Tailwind CSS | 4 | CSS フレームワーク |
-| **バックエンド** | Hono | 4.9 | 軽量 Web フレームワーク |
-| | Drizzle ORM | 0.44 | TypeScript ORM |
-| | Supabase | 2.44 | 認証・データベースサービス |
+| **バックエンド** | Hono | 4.12 | 軽量 Web フレームワーク |
+| | Drizzle ORM | 0.45 | TypeScript ORM |
+| | Supabase | 2.108 | 認証・データベースサービス |
 | **スキーマ** | Zod | 4.1 | TypeScript スキーマ検証 |
 | | drizzle-zod | 0.8 | Drizzle と Zod の統合 |
-| | @hono/zod-openapi | 1.1 | Hono + Zod + OpenAPI 統合 |
-| | js-yaml | 4.1 | YAML パーサー・生成 |
-| **型安全性** | openapi-typescript | 7.10 | OpenAPI から TypeScript 型定義生成 |
+| | @hono/zod-openapi | 1.4 | Hono + Zod + OpenAPI 統合 |
+| | js-yaml | 4.3 | YAML パーサー・生成 |
+| **型安全性** | openapi-typescript | 7.13 | OpenAPI から TypeScript 型定義生成 |
 | | openapi-fetch | 0.15 | 型安全な API クライアント |
 | **開発ツール** | TypeScript | 5 | 型安全性 |
-| | Biome | 2.1 | リンター・フォーマッター |
-| | uuid | 11.1 | UUID 生成 |
+| | Biome | 2.3 | リンター・フォーマッター |
 
 ### 技術選定理由
 

@@ -1,5 +1,6 @@
 import { HealthCheckUseCase } from '@/health/application/HealthCheckUseCase';
 import { HealthCheckService } from '@/health/infrastructure/HealthCheckService';
+import { createConsoleLogger } from '@/shared/logging/ConsoleLogger';
 import type { Logger } from '@/shared/logging/Logger';
 
 /**
@@ -50,59 +51,11 @@ export class HealthDIContainer {
    */
   static getLogger(): Logger {
     if (!HealthDIContainer.loggerInstance) {
-      HealthDIContainer.loggerInstance = {
-        info: (message: string, meta?: unknown) => {
-          const timestamp = new Date().toISOString();
-          const logData = {
-            timestamp,
-            level: 'INFO',
-            service: 'HEALTH',
-            message,
-            meta,
-          };
-          console.log(JSON.stringify(logData));
-        },
-        warn: (message: string, meta?: unknown) => {
-          const timestamp = new Date().toISOString();
-          const logData = {
-            timestamp,
-            level: 'WARN',
-            service: 'HEALTH',
-            message,
-            meta,
-          };
-          console.warn(JSON.stringify(logData));
-        },
-        error: (message: string, meta?: unknown) => {
-          const timestamp = new Date().toISOString();
-          const logData = {
-            timestamp,
-            level: 'ERROR',
-            service: 'HEALTH',
-            message,
-            meta,
-          };
-          console.error(JSON.stringify(logData));
-        },
-        debug: (message: string, meta?: unknown) => {
-          if (process.env.NODE_ENV !== 'production') {
-            const timestamp = new Date().toISOString();
-            const logData = {
-              timestamp,
-              level: 'DEBUG',
-              service: 'HEALTH',
-              message,
-              meta,
-            };
-            console.debug(JSON.stringify(logData));
-          }
-        },
-      };
+      HealthDIContainer.loggerInstance = createConsoleLogger({
+        service: 'HEALTH',
+      });
     }
 
-    if (!HealthDIContainer.loggerInstance) {
-      throw new Error('Health Logger instance not initialized');
-    }
     return HealthDIContainer.loggerInstance;
   }
 

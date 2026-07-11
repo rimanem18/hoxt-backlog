@@ -35,7 +35,8 @@ export interface paths {
               | 'microsoft'
               | 'github'
               | 'facebook'
-              | 'line';
+              | 'line'
+              | 'email';
             /** Format: email */
             email: string;
             name: string;
@@ -65,7 +66,8 @@ export interface paths {
                   | 'microsoft'
                   | 'github'
                   | 'facebook'
-                  | 'line';
+                  | 'line'
+                  | 'email';
                 /** Format: email */
                 email: string;
                 name: string;
@@ -173,7 +175,8 @@ export interface paths {
                   | 'microsoft'
                   | 'github'
                   | 'facebook'
-                  | 'line';
+                  | 'line'
+                  | 'email';
                 /** Format: email */
                 email: string;
                 name: string;
@@ -318,7 +321,8 @@ export interface paths {
                   | 'microsoft'
                   | 'github'
                   | 'facebook'
-                  | 'line';
+                  | 'line'
+                  | 'email';
                 /** Format: email */
                 email: string;
                 name: string;
@@ -478,7 +482,8 @@ export interface paths {
                     | 'microsoft'
                     | 'github'
                     | 'facebook'
-                    | 'line';
+                    | 'line'
+                    | 'email';
                   /** Format: email */
                   email: string;
                   name: string;
@@ -611,7 +616,8 @@ export interface paths {
                   | 'microsoft'
                   | 'github'
                   | 'facebook'
-                  | 'line';
+                  | 'line'
+                  | 'email';
                 /** Format: email */
                 email: string;
                 name: string;

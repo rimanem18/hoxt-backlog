@@ -17,6 +17,8 @@ export const AuthProviders = {
   FACEBOOK: 'facebook',
   /** LINE Login（将来実装予定） */
   LINE: 'line',
+  /** メールアドレス＋パスワード認証 */
+  EMAIL: 'email',
 } as const;
 
 /**

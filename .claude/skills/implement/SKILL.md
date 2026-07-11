@@ -1,6 +1,6 @@
 ---
 name: "implement"
-description: 'This skill is a guide to read and implement a task file. It is used when a user says, "requirement:{requirement_number}, issue:{issue_number}, phase{number}" or "Please implement according to the task plan for {requirement number}, {phase number}.", "{requirement number}, {phase number} のタスク計画に従って実装して", "requirement:{requirement_number}, issue:{issue_number}, phase{number}".'
+description: 'This skill is a guide to read and implement a task file. It is used when a user says, "requirement:{requirement_number}, issue:{issue_number}, phase{number}" or "Please implement according to the task plan for {requirement number}, {phase number}.", "{requirement number}, {phase number} のタスク計画に従って実装して", "requirement:{requirement_number/ID}, phase{number}".'
 model: sonnet
 effort: medium
 ---
@@ -9,21 +9,20 @@ effort: medium
 
 提示されたタスクファイルを読み込んで、実施してください。
 
-- ユーザーから requirement_number が提示されない場合、自己判断で進めずに、ユーザーに指示を仰いでください。
-- requirement_number と issue_number は異なる概念のため、ブランチに含まれる番号とディレクトリの番号が異なっていても OK です。
+- ユーザーから requirement_number/ID が提示されない場合、自己判断で進めずに、ユーザーに指示を仰いでください。
 - タスク計画はあくまで計画です。CLAUDE.md や ガイドラインおよび実装と突合したときに不自然な箇所がある場合は差異を記録した上、強引に計画に沿うのではなく合致を優先してください。
 
 ## タスクの理解
 
 まずは以下のディレクトリに存在するファイルを読んで理解してください。
 
-- `@tasks/{requirement_number}/plan/`
+- `@tasks/{requirement_number/ID}/plan/`
   - overview.md
   - 提示された phase{number}.md の直前の phase{number}.md（存在する場合）
     - 並行で実装が進行している可能性も考慮する
   - 提示された phase{number}.md
-- `@tasks/{requirement_number}/spec/` から関連記述を探して読む
-- `@tasks/{requirement_number}/technical/` から関連記述を探して読む
+- `@tasks/{requirement_number/ID}/spec/` から関連記述を探して読む
+- `@tasks/{requirement_number/ID}/technical/` から関連記述を探して読む
 
 ## 開始時刻の確認と記録
 
@@ -39,13 +38,16 @@ effort: medium
 
 ## ナレッジの確認
 
-作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。
+作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。knowledge にはフロントマターがあるものもあるため、まずは必要かどうかそこで見極めて読みます。
 
 ## 実行内容
 
 プランの実行は1フェーズ単位で実施して、自己判断で次のフェーズに進行はしないでください:
 
 1. Red - Green - Refactor のサイクルで実装します。ただし、「TDD が適さないタスクである」と判断した場合は、DIRECT に実装して OK です。
+  - Green を実装するサブエージェントは以下から内容の重みに応じて選択します
+    - @green-haiku-worker
+    - @green-minimal-implementer
 
 2. Code-review サブエージェントにレビューを依頼してください。このとき、以下を伝えてください。
 
@@ -59,7 +61,7 @@ effort: medium
 - Yes -> 改善する
 - No -> ユーザーに成果物の確認を促す。
 
-4. Code-review サブエージェントを待つ間、テストやリントと型チェック、docker compose exec {コンテナ名} build によるビルドチェックおよび静的セキュリティチェックを実施してください。これらは Haiku または gpt mini などの軽量モデルのサブエージェントに依頼してください。
+4. Code-review サブエージェントを待つ間、テストやリントと型チェック、docker compose exec {コンテナ名} build によるビルドチェックおよび静的セキュリティチェックを実施してください。これらは @quality-gate-runner サブエージェントに依頼してください。
 
 5. レビュー後の改善に関して 対応に完全は求めていない。（原則、成果60%程度で承認）:
 
@@ -109,7 +111,7 @@ phase1 の実装が完了しました。
 コミット後、`/knowledge` の実行を推奨します。
 
 --- コミットメッセージ: ---
-feat: Redux状態管理を実装 #{issue_number}
+feat: Redux状態管理を実装 {requirement_number/ID}
 
 - Redux Toolkitでストアを設定
 - 型付きhooks（useAppDispatch、useAppSelector）を実装

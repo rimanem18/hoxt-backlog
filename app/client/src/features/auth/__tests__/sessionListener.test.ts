@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { configureStore } from '@reduxjs/toolkit';
 import { authSlice } from '@/features/auth/store/authSlice';
 import { authListenerMiddleware } from '@/features/auth/store/sessionListener';
-import type { User } from '@/features/auth/types/auth';
+import type { User } from '@/packages/shared-schemas/src/auth';
+import { VERIFIED_USER_DISPLAY_STORAGE_KEY } from '@/shared/utils/authValidation';
 
 describe('sessionListener', () => {
   let store: ReturnType<typeof configureStore>;
@@ -28,6 +29,10 @@ describe('sessionListener', () => {
       middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware().prepend(authListenerMiddleware.middleware),
     });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   it('authSuccess時にListenerが正常に動作する', () => {
@@ -97,5 +102,48 @@ describe('sessionListener', () => {
     // Then: エラーなく処理される
     const state = store.getState().auth;
     expect(state.isLoading).toBe(true);
+  });
+
+  it('authSuccess時に検証済みユーザー表示情報がlocalStorageにキャッシュされる', () => {
+    // Given: 初期状態
+
+    // When: authSuccess アクションをディスパッチ
+    store.dispatch(
+      authSlice.actions.authSuccess({ user: mockUser, isNewUser: false }),
+    );
+
+    // Then: name/avatarUrlがexternalIdと紐づけてキャッシュされる
+    const cached = JSON.parse(
+      localStorage.getItem(VERIFIED_USER_DISPLAY_STORAGE_KEY) ?? 'null',
+    );
+    expect(cached).toEqual({
+      externalId: mockUser.externalId,
+      name: mockUser.name,
+      avatarUrl: mockUser.avatarUrl,
+    });
+  });
+
+  it('restoreAuthState時はキャッシュへの書き込みが行われない', () => {
+    // Given: 別ユーザー宛の検証済みキャッシュが既に存在する
+    const existingCache = {
+      externalId: 'other-external-id',
+      name: '既存キャッシュ',
+      avatarUrl: null,
+    };
+    localStorage.setItem(
+      VERIFIED_USER_DISPLAY_STORAGE_KEY,
+      JSON.stringify(existingCache),
+    );
+
+    // When: restoreAuthState アクションをディスパッチ（リロード時の復元相当）
+    store.dispatch(
+      authSlice.actions.restoreAuthState({ user: mockUser, isNewUser: false }),
+    );
+
+    // Then: 既存キャッシュは上書きされない
+    const cached = JSON.parse(
+      localStorage.getItem(VERIFIED_USER_DISPLAY_STORAGE_KEY) ?? 'null',
+    );
+    expect(cached).toEqual(existingCache);
   });
 });

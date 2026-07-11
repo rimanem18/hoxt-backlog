@@ -34,12 +34,50 @@ export function getSupabaseStorageKey(): string {
 }
 
 /**
+ * バックエンドDB検証済みのユーザー表示情報（name/avatarUrl）を
+ * キャッシュするためのlocalStorageキー
+ *
+ * Supabaseが自身で管理する`sb-*-auth-token`キーとは別に用意し、
+ * リロード時にuser_metadataベースのフォールバック値へ
+ * 表示名が化けてしまう問題を防ぐ
+ */
+export const VERIFIED_USER_DISPLAY_STORAGE_KEY =
+  'app-verified-user-display-cache';
+
+/**
+ * バックエンドDB検証済みのユーザー表示情報をlocalStorageにキャッシュする
+ *
+ * リロード時の照合キーには externalId（Supabase Auth の user.id と同一）を使う。
+ * User.id はアプリ内部DBの主キーであり、Supabaseセッションのuser.idとは別値のため。
+ *
+ * @param user - バックエンドDBから取得した検証済みユーザー情報
+ */
+export function persistVerifiedUserDisplay(user: User): void {
+  try {
+    const cache: VerifiedUserDisplayCache = {
+      externalId: user.externalId,
+      name: user.name,
+      avatarUrl: user.avatarUrl ?? null,
+    };
+    localStorage.setItem(
+      VERIFIED_USER_DISPLAY_STORAGE_KEY,
+      JSON.stringify(cache),
+    );
+  } catch (error) {
+    // localStorage へのアクセス失敗時も安全に処理
+    debugLog.error('検証済みユーザー表示情報の保存中にエラーが発生', error);
+  }
+}
+
+/**
  * Supabase から取得される生のユーザーメタデータ構造
  * OAuth プロバイダーから提供される情報を含む
  */
 interface SupabaseUserMetadata {
   avatar_url?: string;
   picture?: string;
+  name?: string;
+  full_name?: string;
   [key: string]: unknown;
 }
 
@@ -91,6 +129,59 @@ export interface AuthValidationResult {
     | 'expired'
     | 'invalid_token'
     | 'invalid_user';
+}
+
+/**
+ * バックエンドDB検証済みのユーザー表示情報キャッシュの構造
+ *
+ * externalId は Supabase Auth の user.id と同一値（JWTのsubクレーム由来）。
+ * User.id（アプリ内部DBの主キー）とは異なるため区別する。
+ */
+type VerifiedUserDisplayCache = Pick<User, 'externalId' | 'name'> & {
+  avatarUrl: string | null;
+};
+
+/**
+ * キャッシュの形状が期待通りかを検証する
+ * 破損・改ざんされたJSONを誤ってnameに反映させないための型ガード
+ */
+function isVerifiedUserDisplayCache(
+  value: unknown,
+): value is VerifiedUserDisplayCache {
+  if (!value || typeof value !== 'object') return false;
+  const cache = value as Record<string, unknown>;
+  return (
+    typeof cache.externalId === 'string' &&
+    typeof cache.name === 'string' &&
+    (cache.avatarUrl === null || typeof cache.avatarUrl === 'string')
+  );
+}
+
+/**
+ * localStorageのバックエンドDB検証済みキャッシュを読み取り、
+ * 現在のSupabaseセッションのuser.id（= externalId）と一致する場合のみ返す
+ *
+ * JSONパース失敗・形状不正・externalId不一致の場合はnullを返し、
+ * 呼び出し元の既存フォールバック結果をそのまま使わせる
+ *
+ * @param currentExternalId - 現在のSupabaseセッションのuser.id
+ * @returns 一致するキャッシュ、またはnull
+ */
+function readVerifiedUserDisplayCache(
+  currentExternalId: string,
+): VerifiedUserDisplayCache | null {
+  try {
+    const raw = localStorage.getItem(VERIFIED_USER_DISPLAY_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!isVerifiedUserDisplayCache(parsed)) return null;
+    if (parsed.externalId !== currentExternalId) return null;
+
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -215,16 +306,33 @@ export function validateStoredAuth(): AuthValidationResult {
     }
 
     // Supabase の user_metadata を User 型に変換
-    // OAuth プロバイダーから取得した avatar_url を avatarUrl に変換
+    // name は SupabaseJwtVerifier.getExternalUserInfo() と同じ優先順位に揃える
     const supabaseUser = authData.user as SupabaseUser;
-    const transformedUser: User = {
+    const fallbackUser: User = {
       ...(authData.user as User),
+      name:
+        supabaseUser.user_metadata?.name ||
+        supabaseUser.user_metadata?.full_name ||
+        supabaseUser.email ||
+        '',
       avatarUrl:
         supabaseUser.user_metadata?.avatar_url ||
         supabaseUser.user_metadata?.picture ||
         (authData.user as User).avatarUrl ||
         null,
     };
+
+    // バックエンドDB検証済みのキャッシュがあれば、user_metadataベースの
+    // フォールバック値（最終的にメールアドレス）より優先して上書きする
+    // 照合はSupabaseセッションのuser.id（= externalId）で行う
+    const verifiedCache = readVerifiedUserDisplayCache(supabaseUser.id);
+    const transformedUser: User = verifiedCache
+      ? {
+          ...fallbackUser,
+          name: verifiedCache.name,
+          avatarUrl: verifiedCache.avatarUrl,
+        }
+      : fallbackUser;
 
     // すべての検証を通過した場合
     debugLog.auth('Validation successful!');
@@ -277,6 +385,7 @@ export function clearStoredAuth(): void {
   try {
     const storageKey = getSupabaseStorageKey();
     localStorage.removeItem(storageKey);
+    localStorage.removeItem(VERIFIED_USER_DISPLAY_STORAGE_KEY);
   } catch (error) {
     // localStorage へのアクセス失敗時も安全に処理
     console.error('認証データクリア中にエラーが発生:', error);

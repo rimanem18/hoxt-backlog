@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import type { Dispatch, UnknownAction } from 'redux';
 import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
+import { AuthServicesProvider } from '@/features/auth/services/AuthServicesContext';
 import {
   finishAuthRestore,
   handleExpiredToken,
@@ -137,9 +138,11 @@ export default function Provider({ children, services }: ProviderProps) {
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <ApiClientProvider>
-          {children}
-          {/* グローバルエラー表示コンポーネント */}
-          <GlobalErrorToast />
+          <AuthServicesProvider>
+            {children}
+            {/* グローバルエラー表示コンポーネント */}
+            <GlobalErrorToast />
+          </AuthServicesProvider>
         </ApiClientProvider>
       </QueryClientProvider>
     </ReduxProvider>

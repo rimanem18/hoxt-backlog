@@ -34,5 +34,4 @@ process.env.DB_MAX_CONNECTIONS = '40';
 
 // Supabase関連環境変数のデフォルト値設定
 process.env.SUPABASE_URL ??= 'http://localhost:54321';
-process.env.SUPABASE_ANON_KEY ??= 'test_anon_key';
-process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test_service_key';
+process.env.SUPABASE_PUBLISHABLE_KEY ??= 'sb_publishable_test_key';

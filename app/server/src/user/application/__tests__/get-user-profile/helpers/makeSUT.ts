@@ -5,17 +5,31 @@
  * テストの共通セットアップを簡素化し、個々のテストケースに特化したモックを提供する。
  */
 
-import { mock } from 'bun:test';
+import { type Mock, mock } from 'bun:test';
 import type { Logger } from '@/shared/logging/Logger';
 import { GetUserProfileUseCase } from '@/user/application/GetUserProfileUseCase';
 import type { IUserRepository } from '@/user/domain';
 
 /**
+ * IUserRepositoryのモック型
+ */
+type MockedUserRepository = {
+  [K in keyof IUserRepository]: Mock<IUserRepository[K]>;
+};
+
+/**
+ * Loggerのモック型
+ */
+type MockedLogger = {
+  [K in keyof Logger]: Mock<Logger[K]>;
+};
+
+/**
  * SUT構築時の依存関係の型定義
  */
 export interface SUTDependencies {
-  readonly userRepository: IUserRepository;
-  readonly logger: Logger;
+  readonly userRepository: MockedUserRepository;
+  readonly logger: MockedLogger;
 }
 
 /**
@@ -23,8 +37,8 @@ export interface SUTDependencies {
  */
 export interface SUTResult {
   readonly sut: GetUserProfileUseCase;
-  readonly userRepository: IUserRepository;
-  readonly logger: Logger;
+  readonly userRepository: MockedUserRepository;
+  readonly logger: MockedLogger;
 }
 
 /**
@@ -41,13 +55,13 @@ function createDefaultDependencies(): SUTDependencies {
       create: mock(),
       update: mock(),
       delete: mock(),
-    },
+    } as MockedUserRepository,
     logger: {
       info: mock(),
       warn: mock(),
       error: mock(),
       debug: mock(),
-    } as Logger,
+    } as MockedLogger,
   };
 }
 
@@ -67,8 +81,8 @@ export function makeSUT(overrides: Partial<SUTDependencies> = {}): SUTResult {
 
   // SUTインスタンスを作成
   const sut = new GetUserProfileUseCase(
-    dependencies.userRepository,
-    dependencies.logger,
+    dependencies.userRepository as IUserRepository,
+    dependencies.logger as Logger,
   );
 
   return {

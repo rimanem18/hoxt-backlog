@@ -117,6 +117,27 @@ describe('AuthenticationDomainService', () => {
         await authenticationService.createUserFromExternalInfo(externalInfo);
       }).toThrow(InvalidProviderError);
     });
+
+    test('外部プロバイダーのメールアドレスが前後空白・大文字混じりでも正規化されて永続化される', async () => {
+      // Given: 前後空白と大文字混じりのメールアドレスを含む外部ユーザー情報
+      const externalInfo: ExternalUserInfo = {
+        id: 'google-789',
+        provider: 'google',
+        email: '  Mixed.Case@Example.com ',
+        name: 'Test User',
+      };
+
+      mockUserRepository.findByExternalId = mock(async () => null);
+      mockUserRepository.create = mock(async () => ({}) as User);
+
+      // When: JITプロビジョニングを実行
+      await authenticationService.createUserFromExternalInfo(externalInfo);
+
+      // Then: 正規化済みのメールアドレスでユーザーが作成される
+      expect(mockUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'mixed.case@example.com' }),
+      );
+    });
   });
 
   describe('authenticateUser', () => {
@@ -232,6 +253,49 @@ describe('AuthenticationDomainService', () => {
         await authenticationService.authenticateUser(externalInfo);
       }).toThrow(InvalidProviderError);
     });
+
+    test('findByExternalId で見つからないが findByEmail で同一メールの既存ユーザーが見つかる場合、既存ユーザーを返し isNewUser=false になること', async () => {
+      // Given: findByExternalId は null を返すが、findByEmail は既存 Google ユーザーを返す
+      const existingGoogleUser: User = {
+        id: 'existing-google-user-uuid',
+        externalId: 'google-abc',
+        provider: 'google',
+        email: 'shared@example.com',
+        name: 'Google User',
+        avatarUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastLoginAt: new Date(),
+      };
+
+      const updatedUser: User = {
+        ...existingGoogleUser,
+        lastLoginAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockUserRepository.findByExternalId = mock(async () => null);
+      mockUserRepository.findByEmail = mock(async () => existingGoogleUser);
+      mockUserRepository.update = mock(async () => updatedUser);
+
+      const externalInfo: ExternalUserInfo = {
+        id: 'email-user-sub',
+        provider: 'email',
+        email: 'shared@example.com',
+        name: 'Google User',
+      };
+
+      // When: email プロバイダーで authenticateUser を呼ぶ
+      const result = await authenticationService.authenticateUser(externalInfo);
+
+      // Then: 既存 Google ユーザーが返され、isNewUser は false
+      expect(result.user.toObject()).toEqual(updatedUser);
+      expect(result.isNewUser).toBe(false);
+      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(
+        'shared@example.com',
+      );
+      expect(mockUserRepository.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('プロバイダー検証', () => {
@@ -243,6 +307,7 @@ describe('AuthenticationDomainService', () => {
         'github',
         'facebook',
         'line',
+        'email',
       ];
 
       for (const provider of validProviders) {

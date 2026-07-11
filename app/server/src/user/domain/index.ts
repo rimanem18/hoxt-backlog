@@ -12,8 +12,11 @@ export {
   getSupportedProviders,
   isValidAuthProvider,
 } from './AuthProvider';
-export { InvalidProviderError } from './errors/InvalidProviderError';
 // ドメインエラー
+export { EmailAlreadyRegisteredError } from './errors/EmailAlreadyRegisteredError';
+export { EmailAlreadyRegisteredGoogleError } from './errors/EmailAlreadyRegisteredGoogleError';
+export { InvalidProviderError } from './errors/InvalidProviderError';
+export { SignupFailedError } from './errors/SignupFailedError';
 export { UserDomainError } from './errors/UserDomainError';
 export { UserNotFoundError } from './errors/UserNotFoundError';
 // リポジトリインターフェース
@@ -27,6 +30,7 @@ export {
   isValidEmail,
   validateCreateUserInput,
 } from './valueobjects/CreateUserInput';
+export { EmailAddress } from './valueobjects/EmailAddress';
 export type { UpdateUserInput } from './valueobjects/UpdateUserInput';
 export {
   UpdateUserInputValidation,

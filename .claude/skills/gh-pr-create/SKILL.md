@@ -1,4 +1,5 @@
 ---
+name: gh-pr-create
 allowed-tools: Bash(git push:*),Bash(git fetch:*)
 description: 現在のブランチとプッシュ先のブランチの diff を確認し、テンプレートに従ってプルリクを出します。
 ---

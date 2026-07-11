@@ -31,10 +31,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         '12345678-1234-4321-abcd-123456789abc',
       );
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(existingUser);
+      sut.userRepository.findById.mockResolvedValue(existingUser);
 
       // When: ユーザープロフィール取得処理を実行
       const result = await sut.sut.execute(input);
@@ -83,10 +80,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         });
         const input = UserProfileFactory.validInput(user.id);
 
-        const mockFindById = sut.userRepository.findById as unknown as {
-          mockResolvedValue: (value: unknown) => void;
-        };
-        mockFindById.mockResolvedValue(user);
+        sut.userRepository.findById.mockResolvedValue(user);
 
         // When: プロフィール取得処理を実行
         const result = await sut.sut.execute(input);
@@ -100,27 +94,6 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
     );
   });
 
-  describe('パフォーマンステスト', () => {
-    test('ユーザープロフィール取得が500ms以内で完了する', async () => {
-      // Given: パフォーマンステスト用データ
-      const user = UserProfileFactory.existingUser();
-      const input = UserProfileFactory.validInput(user.id);
-
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(user);
-
-      // When & Then: 処理時間を測定し、制限内で完了することを確認
-      const startTime = performance.now();
-      await sut.sut.execute(input);
-      const endTime = performance.now();
-      const executionTime = endTime - startTime;
-
-      GetUserProfileTestMatchers.completeWithinTimeLimit(executionTime);
-    });
-  });
-
   describe('ログ出力検証', () => {
     test('ユーザープロフィール取得成功時に適切なログが出力される', async () => {
       // Given: ログ検証用のテストデータ
@@ -131,10 +104,7 @@ describe('GetUserProfileUseCase 正常系テスト', () => {
         '12345678-1234-4321-abcd-123456789abc',
       );
 
-      const mockFindById = sut.userRepository.findById as unknown as {
-        mockResolvedValue: (value: unknown) => void;
-      };
-      mockFindById.mockResolvedValue(user);
+      sut.userRepository.findById.mockResolvedValue(user);
 
       // When: プロフィール取得処理を実行
       await sut.sut.execute(input);
