@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
+// Date.now()はミリ秒精度のため高速実行時にクエリが衝突しモジュールキャッシュが
+// 再利用されてしまう。テストごとに一意なクエリにするためカウンタを使用する。
+let importCounter = 0;
+const importSchemaFresh = () => import(`../schema?t=${++importCounter}`);
+
 describe('BASE_SCHEMA環境変数検証', () => {
   // 元の環境変数を保存
   const originalBASE_SCHEMA = process.env.BASE_SCHEMA;
@@ -31,9 +36,7 @@ describe('BASE_SCHEMA環境変数検証', () => {
     // beforeEach でクリア済み
 
     // When & Then: 動的importでschema.tsを読み込むと例外が発生
-    await expect(import(`../schema?t=${Date.now()}`)).rejects.toThrow(
-      '環境変数設定エラー',
-    );
+    await expect(importSchemaFresh()).rejects.toThrow('環境変数設定エラー');
   });
 
   test('空文字のBASE_SCHEMAでgetBaseSchema()で例外がスローされること', async () => {
@@ -41,9 +44,7 @@ describe('BASE_SCHEMA環境変数検証', () => {
     process.env.BASE_SCHEMA = '';
 
     // When & Then: 動的importでschema.tsを読み込むと例外が発生
-    await expect(import(`../schema?t=${Date.now()}`)).rejects.toThrow(
-      '環境変数設定エラー',
-    );
+    await expect(importSchemaFresh()).rejects.toThrow('環境変数設定エラー');
   });
 
   test('有効なBASE_SCHEMAが設定されている場合にschema.tsが正常にロードされること', async () => {
@@ -51,7 +52,7 @@ describe('BASE_SCHEMA環境変数検証', () => {
     process.env.BASE_SCHEMA = 'test_schema';
 
     // When: schema.tsを動的にimport
-    const schemaModule = await import(`../schema?t=${Date.now()}`);
+    const schemaModule = await importSchemaFresh();
 
     // Then: getBaseSchema関数が存在し、正しい値を返す
     expect(schemaModule.getBaseSchema).toBeDefined();
@@ -64,7 +65,7 @@ describe('BASE_SCHEMA環境変数検証', () => {
     delete process.env.DATABASE_URL;
 
     // When: schema.tsを動的にimport
-    const schemaModule = await import(`../schema?t=${Date.now()}`);
+    const schemaModule = await importSchemaFresh();
 
     // Then: 正常にロードされる（drizzle-kit対応）
     expect(schemaModule.getBaseSchema()).toBe('production_schema');
