@@ -76,6 +76,7 @@ interface RenderDashboardShellOptions {
   createTaskSection?: ReactNode;
   filterSortSection?: ReactNode;
   taskListHeading?: ReactNode;
+  devDebugSlot?: ReactNode;
 }
 
 /**
@@ -108,6 +109,7 @@ export function renderDashboardShell(
             taskListHeading={
               options.taskListHeading ?? <div>TASK_LIST_HEADING_SLOT</div>
             }
+            devDebugSlot={options.devDebugSlot ?? <div>DEV_DEBUG_SLOT</div>}
           />
         </TaskServicesProvider>
       </DashboardServicesProvider>

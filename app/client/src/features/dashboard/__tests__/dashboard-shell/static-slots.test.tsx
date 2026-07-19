@@ -24,4 +24,15 @@ describe('DashboardShell 静的スロットの描画', () => {
     expect(screen.getByText('FILTER_SORT_SLOT')).toBeInTheDocument();
     expect(screen.getByText('TASK_LIST_HEADING_SLOT')).toBeInTheDocument();
   });
+
+  test('devDebugSlotスロットが描画される', () => {
+    // Given: page.tsx（Server）から渡される想定のdevDebugSlot
+    // When: DashboardShellをレンダリング
+    renderDashboardShell({
+      devDebugSlot: <div>DEV_DEBUG_SLOT</div>,
+    });
+
+    // Then: devDebugSlotが描画される
+    expect(screen.getByText('DEV_DEBUG_SLOT')).toBeInTheDocument();
+  });
 });

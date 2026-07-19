@@ -1,3 +1,4 @@
+import { DashboardDebugInfo } from '@/features/dashboard/components/DashboardDebugInfo';
 import { DashboardGreeting } from '@/features/dashboard/components/DashboardGreeting';
 import { DashboardShell } from '@/features/dashboard/components/DashboardShell';
 import { DashboardServicesProvider } from '@/features/dashboard/lib/DashboardServicesContext';
@@ -5,6 +6,7 @@ import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
 import TaskFilter from '@/features/todo/components/TaskFilter';
 import TaskSort from '@/features/todo/components/TaskSort';
 import { TaskServicesProvider } from '@/features/todo/lib/TaskServicesContext';
+import { DevOnly } from '@/shared/components/DevOnly';
 
 /**
  * 認証済みユーザー専用のダッシュボードページ（Server Component）
@@ -50,6 +52,11 @@ export default function DashboardPage(): React.ReactNode {
                 <div className="p-4 sm:p-6 border-b border-gray-200">
                   <h2 className="text-xl font-semibold">タスク一覧</h2>
                 </div>
+              }
+              devDebugSlot={
+                <DevOnly>
+                  <DashboardDebugInfo />
+                </DevOnly>
               }
             />
           </TaskServicesProvider>

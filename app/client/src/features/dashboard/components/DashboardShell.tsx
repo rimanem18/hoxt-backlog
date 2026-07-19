@@ -16,6 +16,7 @@ interface DashboardShellProps {
   createTaskSection: ReactNode;
   filterSortSection: ReactNode;
   taskListHeading: ReactNode;
+  devDebugSlot: ReactNode;
 }
 
 /**
@@ -23,7 +24,7 @@ interface DashboardShellProps {
  * page.tsx（Server Component）から静的なスロットを受け取り、
  * JWT期限切れ検出とネットワークエラーハンドリングを担当する
  *
- * @param props - createTaskSection・filterSortSection・taskListHeadingの各スロット
+ * @param props - createTaskSection・filterSortSection・taskListHeading・devDebugSlotの各スロット
  * @returns 認証済みユーザー向けダッシュボード画面
  */
 export function DashboardShell(props: DashboardShellProps): React.ReactNode {
@@ -123,19 +124,7 @@ export function DashboardShell(props: DashboardShellProps): React.ReactNode {
         </div>
       </div>
 
-      {/* 開発環境での認証状態デバッグ表示 */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-          <h3 className="font-semibold text-blue-800 mb-2">開発情報:</h3>
-          <p className="text-blue-700">認証状態: 認証済み（AuthGuard保証）</p>
-          <p className="text-blue-700">
-            ユーザーID: {user?.id ? '設定済み' : '未設定'}
-          </p>
-          <p className="text-blue-700">
-            最終ログイン: {user?.lastLoginAt ? '記録あり' : '未設定'}
-          </p>
-        </div>
-      )}
+      {props.devDebugSlot}
     </>
   );
 }

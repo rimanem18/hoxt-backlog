@@ -4,12 +4,12 @@ import { type ReactNode, useEffect } from 'react';
 import { useHomeShellServices } from '@/features/auth/components/HomeShellServicesContext';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { LoginFormServicesProvider } from '@/features/auth/components/LoginFormServicesContext';
-import { HelloWorld } from '@/features/hello-world';
 import { debugLog } from '@/lib/utils/logger';
 import { useAppSelector } from '@/store/hooks';
 
 export interface HomeAuthShellProps {
   children: ReactNode;
+  devDebugSlot: ReactNode;
 }
 
 /**
@@ -92,21 +92,7 @@ export function HomeAuthShell(props: HomeAuthShellProps): React.ReactNode {
           </div>
         </div>
 
-        {/* 開発環境でのみ認証状態をデバッグ表示 */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
-            <h3 className="font-semibold mb-2">開発情報:</h3>
-            <p>
-              認証状態:{' '}
-              {isAuthenticated
-                ? '認証済み（ダッシュボードへリダイレクト中）'
-                : '未認証'}
-            </p>
-            <p>
-              ユーザー情報: {user ? `${user.name} (${user.email})` : 'なし'}
-            </p>
-          </div>
-        )}
+        {props.devDebugSlot}
       </main>
     </div>
   );

@@ -1,6 +1,8 @@
+import { HomeAuthDebugInfo } from '@/features/auth/components/HomeAuthDebugInfo';
 import { HomeAuthShell } from '@/features/auth/components/HomeAuthShell';
 import { HomeShellServicesProvider } from '@/features/auth/components/HomeShellServicesContext';
 import { LoginPageHeader } from '@/features/auth/components/LoginPageHeader';
+import { DevOnly } from '@/shared/components/DevOnly';
 
 /**
  * ホームページコンポーネント（Server Component）
@@ -10,7 +12,13 @@ import { LoginPageHeader } from '@/features/auth/components/LoginPageHeader';
 export default function Home(): React.ReactNode {
   return (
     <HomeShellServicesProvider>
-      <HomeAuthShell>
+      <HomeAuthShell
+        devDebugSlot={
+          <DevOnly>
+            <HomeAuthDebugInfo />
+          </DevOnly>
+        }
+      >
         <LoginPageHeader />
       </HomeAuthShell>
     </HomeShellServicesProvider>

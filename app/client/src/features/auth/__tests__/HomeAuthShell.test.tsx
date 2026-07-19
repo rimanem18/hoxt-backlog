@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { configureStore } from '@reduxjs/toolkit';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -39,6 +39,7 @@ function renderHomeAuthShell(
   authState: AuthState,
   navigate: (path: string) => void,
   children: ReactNode = <div>SENTINEL_CHILD</div>,
+  devDebugSlot: ReactNode = <div>DEV_DEBUG_SLOT</div>,
 ) {
   const store = configureStore({
     reducer: { auth: authReducer },
@@ -49,7 +50,7 @@ function renderHomeAuthShell(
     <ReduxProvider store={store}>
       <AuthServicesProvider>
         <HomeShellServicesProvider services={{ navigate }}>
-          <HomeAuthShell>{children}</HomeAuthShell>
+          <HomeAuthShell devDebugSlot={devDebugSlot}>{children}</HomeAuthShell>
         </HomeShellServicesProvider>
       </AuthServicesProvider>
     </ReduxProvider>,
@@ -80,14 +81,7 @@ describe('LoginPageHeader', () => {
 });
 
 describe('HomeAuthShell', () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-
-  beforeEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
-  });
-
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
     cleanup();
     mock.restore();
     mock.clearAllMocks();
@@ -176,29 +170,15 @@ describe('HomeAuthShell', () => {
     expect(screen.getByText('SENTINEL_CHILD')).toBeInTheDocument();
   });
 
-  test('開発環境の場合に開発情報が表示される', () => {
-    // Given: 開発環境・未認証・復元完了の状態
-    process.env.NODE_ENV = 'development';
+  test('devDebugSlotが正しい位置に描画される', () => {
+    // Given: 未認証・復元完了の状態
     const mockNavigate = mock(() => {});
     const authState = buildAuthState();
 
     // When: HomeAuthShellをレンダリング
     renderHomeAuthShell(authState, mockNavigate);
 
-    // Then: 開発情報が表示される
-    expect(screen.getByText('開発情報:')).toBeInTheDocument();
-  });
-
-  test('本番環境の場合に開発情報が表示されない', () => {
-    // Given: 本番環境・未認証・復元完了の状態
-    process.env.NODE_ENV = 'production';
-    const mockNavigate = mock(() => {});
-    const authState = buildAuthState();
-
-    // When: HomeAuthShellをレンダリング
-    renderHomeAuthShell(authState, mockNavigate);
-
-    // Then: 開発情報は表示されない
-    expect(screen.queryByText('開発情報:')).not.toBeInTheDocument();
+    // Then: devDebugSlotに渡したコンテンツが描画される
+    expect(screen.getByText('DEV_DEBUG_SLOT')).toBeInTheDocument();
   });
 });
