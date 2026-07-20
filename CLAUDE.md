@@ -173,6 +173,7 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
 
 # コメントガイドライン
 
+- What よりも **Why を重視**
 - 機能の「What」を明確に記述
   - クラスDocコメント：冗長な説明を削除し、機能概要や使用例のみに簡潔化
   - メソッドDocコメント：基本的な役割と引数・戻り値の説明に集約
