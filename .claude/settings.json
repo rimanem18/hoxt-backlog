@@ -24,6 +24,7 @@
       "Bash(git add *)",
       "Bash(find *)"
     ],
+    "ask":["Bash(git commit *)"],
     "deny": [
       "Bash(git -C *)",
       "Bash(rm -rf *)",

@@ -29,8 +29,8 @@ describe('UserProfile', () => {
     cleanup();
   });
 
-  test('認証済みユーザー情報の表示', () => {
-    // Given: 認証済みユーザーの完全なプロフィール情報を準備
+  test('ユーザー名とログアウトボタンが合成表示される', () => {
+    // Given: 認証済みユーザーのプロフィール情報を準備
     const mockUser: User = {
       id: '550e8400-e29b-41d4-a716-446655440000',
       externalId: 'google_123456789',
@@ -57,55 +57,9 @@ describe('UserProfile', () => {
       </Provider>,
     );
 
-    // Then: ユーザー情報が正しく表示される
+    // Then: UserProfileViewの表示とLogoutButtonが合成されて表示される
     expect(screen.getByText('山田太郎')).toBeTruthy();
-    expect(screen.getByText('user@example.com')).toBeTruthy();
-
-    const avatarImage = screen.getByRole('img', { name: /プロフィール画像/i });
-    expect(avatarImage.getAttribute('src')).toContain(
-      'https%3A%2F%2Flh3.googleusercontent.com%2Fa%2Favatar.jpg',
-    );
-
     expect(screen.getByRole('button', { name: 'ログアウト' })).toBeTruthy();
-  });
-
-  test('avatarUrlがnullのときイニシャルアバターSVGが表示される', () => {
-    // Given: アバター画像URLがnullのユーザー情報を準備
-    const mockUserWithoutAvatar: User = {
-      id: '550e8400-e29b-41d4-a716-446655440000',
-      externalId: 'google_123456789',
-      provider: 'google' as const,
-      email: 'user@example.com',
-      name: 'テストユーザー',
-      avatarUrl: null,
-      createdAt: '2025-08-29T10:30:00.000Z',
-      updatedAt: '2025-08-29T10:30:00.000Z',
-      lastLoginAt: '2025-08-29T13:45:00.000Z',
-    };
-
-    // Redux store を準備
-    const store = configureStore({
-      reducer: {
-        auth: authReducer,
-      },
-    });
-
-    // When: avatarUrl=nullでUserProfileコンポーネントをレンダリング
-    render(
-      <Provider store={store}>
-        <UserProfile user={mockUserWithoutAvatar} />
-      </Provider>,
-    );
-
-    // Then: イニシャルアバターSVGが表示され、他の情報も正常に表示される
-    const avatarImage = screen.getByRole('img', {
-      name: 'テストユーザーのプロフィール画像',
-    });
-    expect(avatarImage.tagName).toBe('svg');
-    expect(screen.getByText('テ')).toBeTruthy();
-
-    expect(screen.getByText('テストユーザー')).toBeTruthy();
-    expect(screen.getByText('user@example.com')).toBeTruthy();
   });
 
   test('ログアウトボタンをクリックするとsupabaseのsignOutとReduxのlogoutアクションが呼ばれる', async () => {
