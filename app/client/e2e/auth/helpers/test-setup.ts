@@ -86,14 +86,20 @@ export async function setupUnauthenticatedApiMocks(page: Page): Promise<void> {
 export async function setMockAuthSession(
   page: Page,
   user: TestUser = DEFAULT_TEST_USER,
+  overrides?: { expiresAt?: number; accessToken?: string },
 ): Promise<void> {
   const storageKey = getSupabaseStorageKey();
   const session = {
+    // E2Eテスト専用のモックトークン（sub: "test-user"）。実際の署名鍵を持たず、
+    // Supabaseや本番環境に対する認証には使用できないため秘密情報ではない
     access_token:
+      overrides?.accessToken ??
+      // nosemgrep: generic.secrets.security.detected-jwt-token.detected-jwt-token
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.mock_e2e_sig',
     refresh_token: 'mock_refresh_token',
     expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    expires_at:
+      overrides?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
     token_type: 'bearer',
     user: {
       id: user.id,
