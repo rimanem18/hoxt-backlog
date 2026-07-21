@@ -1,5 +1,15 @@
-import type { Page } from '@playwright/test';
+import type {
+  BrowserContext,
+  BrowserContextOptions,
+  Page,
+} from '@playwright/test';
+import { test as base } from '@playwright/test';
 import type { AuthProvider } from '@/packages/shared-schemas/src/auth';
+
+type StorageState = Exclude<
+  BrowserContextOptions['storageState'],
+  string | undefined
+>;
 
 export interface TestUser {
   id: string;
@@ -80,14 +90,13 @@ export async function setupUnauthenticatedApiMocks(page: Page): Promise<void> {
 }
 
 /**
- * storageState API での認証セッション設定に移行予定。
- * addInitScript でナビゲーション前に localStorage をセットする。
+ * ハイドレーション競合を避けるため、認証済みセッションのstorageStateを構築する。
  */
-export async function setMockAuthSession(
-  page: Page,
+export function buildMockAuthStorageState(
+  origin: string,
   user: TestUser = DEFAULT_TEST_USER,
   overrides?: { expiresAt?: number; accessToken?: string },
-): Promise<void> {
+): StorageState {
   const storageKey = getSupabaseStorageKey();
   const session = {
     // E2Eテスト専用のモックトークン（sub: "test-user"）。実際の署名鍵を持たず、
@@ -98,8 +107,7 @@ export async function setMockAuthSession(
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.mock_e2e_sig',
     refresh_token: 'mock_refresh_token',
     expires_in: 3600,
-    expires_at:
-      overrides?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
+    expires_at: overrides?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
     token_type: 'bearer',
     user: {
       id: user.id,
@@ -118,13 +126,45 @@ export async function setMockAuthSession(
     },
   };
 
-  await page.addInitScript(
-    ({ key, value }) => {
-      localStorage.setItem(key, value);
-    },
-    { key: storageKey, value: JSON.stringify(session) },
-  );
+  return {
+    cookies: [],
+    origins: [
+      {
+        origin,
+        localStorage: [
+          { name: storageKey, value: JSON.stringify(session) },
+        ],
+      },
+    ],
+  };
 }
+
+export const test = base.extend<{
+  createAuthenticatedPage: (options?: {
+    user?: TestUser;
+    expiresAt?: number;
+    accessToken?: string;
+  }) => Promise<Page>;
+}>({
+  createAuthenticatedPage: async ({ browser, baseURL }, use) => {
+    const contexts: BrowserContext[] = [];
+
+    await use(async (options) => {
+      const storageState = buildMockAuthStorageState(
+        baseURL ?? '',
+        options?.user,
+        options,
+      );
+      const context = await browser.newContext({ baseURL, storageState });
+      contexts.push(context);
+      return context.newPage();
+    });
+
+    for (const context of contexts) {
+      await context.close();
+    }
+  },
+});
 
 export async function cleanupTestState(page: Page): Promise<void> {
   try {
