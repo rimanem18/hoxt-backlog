@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   cleanupTestState,
   setupAuthenticatedApiMocks,
-} from '../auth/helpers/test-setup';
+} from '../shared/helpers/auth-session';
 import { expectDashboard } from '../shared/helpers/dashboard';
 import {
   mockSupabaseSignInError,

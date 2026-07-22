@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cleanupTestState } from '../auth/helpers/test-setup';
+import { cleanupTestState } from '../shared/helpers/auth-session';
 import {
   mockEmailSignupConflict,
   mockEmailSignupConflictForNormalizedEmail,
