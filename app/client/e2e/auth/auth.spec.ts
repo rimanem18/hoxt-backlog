@@ -1,11 +1,11 @@
 import { expect, type Page } from '@playwright/test';
-import { expectDashboard } from '../shared/helpers/dashboard';
 import {
   cleanupTestState,
   setupAuthenticatedApiMocks,
   setupUnauthenticatedApiMocks,
   test,
-} from './helpers/test-setup';
+} from '../shared/helpers/auth-session';
+import { expectDashboard } from '../shared/helpers/dashboard';
 
 async function expectHomeScreen(page: Page): Promise<void> {
   await expect(
