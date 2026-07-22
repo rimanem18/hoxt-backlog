@@ -3,6 +3,7 @@ import {
   cleanupTestState,
   setupAuthenticatedApiMocks,
 } from '../auth/helpers/test-setup';
+import { expectDashboard } from '../shared/helpers/dashboard';
 import {
   mockSupabaseSignInError,
   mockSupabaseSignInSuccess,
@@ -29,10 +30,7 @@ test.describe('メールパスワード認証 E2Eテスト - サインイン', (
     await page.getByRole('button', { name: 'サインイン' }).click();
 
     // Then: ダッシュボードに遷移し、コンテンツが表示される
-    await expect(
-      page.getByRole('heading', { name: 'ダッシュボード' }),
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expectDashboard(page);
   });
 
   test('誤ったパスワードでサインインすると、原因を区別しないエラーメッセージが表示される', async ({
