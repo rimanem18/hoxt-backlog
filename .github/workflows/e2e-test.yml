@@ -105,7 +105,7 @@ jobs:
         env:
           CLIENT_PORT: 3000
           SERVER_PORT: 3001
-          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/api"
+          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001"
           # Supabase test environment variables (mocked)
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: test_publishable_key

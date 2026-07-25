@@ -1,9 +1,14 @@
 import type { Page } from '@playwright/test';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
+import type {
+  ChangeTaskStatusBody,
+  Task,
+  UpdateTaskBody,
+} from '@/packages/shared-schemas/src/tasks';
 import { setupAuthenticatedApiMocks } from '../../shared/helpers/auth-session';
 import { expectDashboard } from '../../shared/helpers/dashboard';
 
 const DEFAULT_USER_ID = '22222222-2222-4222-8222-222222222222';
+const TASK_ID_PATH = /^\/api\/tasks\/([^/]+)(?:\/status)?$/;
 
 /**
  * テスト用タスクオブジェクトを生成するファクトリ関数。
@@ -27,11 +32,23 @@ export function buildMockTask(overrides?: Partial<Task>): Task {
 export interface SetupTaskApiMocksOptions {
   initialTasks?: Task[];
   failCreate?: boolean;
+  failUpdate?: boolean;
+}
+
+function notFoundResponse() {
+  return {
+    status: 404 as const,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: false,
+      error: { message: 'タスクが見つかりません' },
+    }),
+  };
 }
 
 /**
- * `/api/tasks` への一覧取得・作成リクエストをインターセプトするモック。
- * 作成成功時はクロージャ内のタスク配列へ反映し、以降のGETに反映する。
+ * `/api/tasks` への一覧取得・作成・更新・削除・ステータス変更リクエストをインターセプトするモック。
+ * 変更成功時はクロージャ内のタスク配列へ反映し、以降のGETに反映する。
  */
 export async function setupTaskApiMocks(
   page: Page,
@@ -39,7 +56,7 @@ export async function setupTaskApiMocks(
 ): Promise<void> {
   const tasks: Task[] = [...(options?.initialTasks ?? [])];
 
-  await page.route('**/api/tasks*', async (route) => {
+  await page.route('**/api/tasks**', async (route) => {
     const request = route.request();
     const method = request.method();
 
@@ -79,6 +96,82 @@ export async function setupTaskApiMocks(
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ success: true, data: newTask }),
+      });
+      return;
+    }
+
+    const idMatch = new URL(request.url()).pathname.match(TASK_ID_PATH);
+    if (!idMatch) {
+      await route.continue();
+      return;
+    }
+
+    const taskId = idMatch[1];
+    const taskIndex = tasks.findIndex((t) => t.id === taskId);
+
+    if (method === 'PUT') {
+      if (options?.failUpdate) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: { message: 'タスク更新に失敗しました' },
+          }),
+        });
+        return;
+      }
+
+      if (taskIndex === -1) {
+        await route.fulfill(notFoundResponse());
+        return;
+      }
+
+      const requestBody = request.postDataJSON() as Partial<UpdateTaskBody>;
+      const updatedTask: Task = {
+        ...tasks[taskIndex],
+        ...requestBody,
+        updatedAt: new Date().toISOString(),
+      };
+      tasks[taskIndex] = updatedTask;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: updatedTask }),
+      });
+      return;
+    }
+
+    if (method === 'DELETE') {
+      if (taskIndex === -1) {
+        await route.fulfill(notFoundResponse());
+        return;
+      }
+      tasks.splice(taskIndex, 1);
+
+      await route.fulfill({ status: 204 });
+      return;
+    }
+
+    if (method === 'PATCH') {
+      if (taskIndex === -1) {
+        await route.fulfill(notFoundResponse());
+        return;
+      }
+
+      const requestBody = request.postDataJSON() as ChangeTaskStatusBody;
+      const updatedTask: Task = {
+        ...tasks[taskIndex],
+        status: requestBody.status,
+        updatedAt: new Date().toISOString(),
+      };
+      tasks[taskIndex] = updatedTask;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: updatedTask }),
       });
       return;
     }
