@@ -29,6 +29,8 @@ describe('Provider', () => {
   let mockFinishAuthRestore: Mock<[], { type: string }>;
   let mockHandleExpiredToken: Mock<[], { type: string }>;
   let mockLogout: Mock<[], { type: string }>;
+  let mockUnsubscribeTokenRefresh: Mock<[], void>;
+  let mockStartTokenRefreshSync: Mock<[], () => void>;
   let registeredCallback:
     | ((error: { status: number; message?: string }) => void)
     | null = null;
@@ -51,6 +53,8 @@ describe('Provider', () => {
     mockFinishAuthRestore = mock(() => ({ type: 'auth/finishAuthRestore' }));
     mockHandleExpiredToken = mock(() => ({ type: 'auth/handleExpiredToken' }));
     mockLogout = mock(() => ({ type: 'auth/logout' }));
+    mockUnsubscribeTokenRefresh = mock(() => {});
+    mockStartTokenRefreshSync = mock(() => mockUnsubscribeTokenRefresh);
 
     // モックサービスを作成
     mockServices = {
@@ -64,6 +68,7 @@ describe('Provider', () => {
       finishAuthRestore: mockFinishAuthRestore,
       handleExpiredToken: mockHandleExpiredToken,
       logout: mockLogout,
+      startTokenRefreshSync: mockStartTokenRefreshSync,
     };
   });
 
@@ -291,5 +296,32 @@ describe('Provider', () => {
       isNewUser: false,
     });
     expect(mockSetAuthToken).not.toHaveBeenCalled();
+  });
+
+  test('Provider mount 時に startTokenRefreshSync が呼び出される', () => {
+    // When: Provider をレンダリング
+    render(
+      <Provider services={mockServices}>
+        <div>Test</div>
+      </Provider>,
+    );
+
+    // Then: startTokenRefreshSync が呼び出される
+    expect(mockStartTokenRefreshSync).toHaveBeenCalledTimes(1);
+  });
+
+  test('Provider unmount 時にトークン更新購読が解除される', () => {
+    // Given: Provider をレンダリング
+    const { unmount } = render(
+      <Provider services={mockServices}>
+        <div>Test</div>
+      </Provider>,
+    );
+
+    // When: Provider を unmount
+    unmount();
+
+    // Then: startTokenRefreshSync が返した解除関数が呼び出される
+    expect(mockUnsubscribeTokenRefresh).toHaveBeenCalledTimes(1);
   });
 });

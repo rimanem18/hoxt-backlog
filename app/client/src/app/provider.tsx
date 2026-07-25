@@ -5,6 +5,7 @@ import { Provider as ReduxProvider } from 'react-redux';
 import type { Dispatch, UnknownAction } from 'redux';
 import GlobalErrorToast from '@/features/auth/components/GlobalErrorToast';
 import { AuthServicesProvider } from '@/features/auth/services/AuthServicesContext';
+import { startDefaultTokenRefreshSync } from '@/features/auth/services/tokenRefreshSync';
 import {
   finishAuthRestore,
   handleExpiredToken,
@@ -46,6 +47,8 @@ export interface ProviderServices {
   handleExpiredToken: typeof handleExpiredToken;
   /** ログアウトアクション */
   logout: typeof logout;
+  /** トークン更新購読開始関数 */
+  startTokenRefreshSync: () => () => void;
 }
 
 type ProviderProps = {
@@ -72,6 +75,7 @@ export default function Provider({ children, services }: ProviderProps) {
         finishAuthRestore,
         handleExpiredToken,
         logout,
+        startTokenRefreshSync: startDefaultTokenRefreshSync,
       },
     [services],
   );
@@ -132,6 +136,13 @@ export default function Provider({ children, services }: ProviderProps) {
       // 予期しないケース（認証データなし）の場合も復元完了をマーク
       authServices.store.dispatch(authServices.finishAuthRestore());
     }
+
+    // トークン自動更新を購読し、アンマウント時に解除する
+    const unsubscribeTokenRefresh = authServices.startTokenRefreshSync();
+
+    return () => {
+      unsubscribeTokenRefresh();
+    };
   }, [authServices]);
 
   return (
