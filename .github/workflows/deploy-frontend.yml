@@ -25,6 +25,9 @@ on:
         required: false
         type: string
         default: ''
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
     outputs:
       deployment-url:
         description: 'CloudFlare Pages deployment URL'
@@ -42,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Bun Workspace
         uses: ./.github/actions/setup-bun-workspace
@@ -91,6 +94,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PROJECT_INPUT: ${{ inputs.cloudflare-project-name }}
           DEFAULT_PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+          DEPLOY_BRANCH: ${{ github.ref_name == 'main' && 'main' || 'preview' }}
           # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく処理
           LANG: C.UTF-8
         run: |
@@ -122,7 +126,7 @@ jobs:
           echo "=== CloudFlare Pagesにデプロイ中... ==="
           if ! DEPLOYMENT_OUTPUT=$(npx --yes wrangler@4.61.0 pages deploy out \
             --project-name "$PROJECT_NAME" \
-            --branch "${{ github.ref_name == 'main' && 'main' || 'preview' }}" \
+            --branch "$DEPLOY_BRANCH" \
             --commit-dirty=true 2>&1); then
             echo "❌ デプロイ失敗"
             echo "Output:"

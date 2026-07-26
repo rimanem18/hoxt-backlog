@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 
+// nosemgrep: generic.secrets.security.detected-jwt-token.detected-jwt-token -- E2Eモック用の固定ダミートークンで実際の署名鍵は含まない
 const MOCK_ACCESS_TOKEN =
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlbWFpbC10ZXN0LXVzZXIifQ.mock_e2e_sig';
 

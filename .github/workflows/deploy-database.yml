@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: 'production'
+    secrets:
+      DATABASE_URL_MIGRATE:
+        required: true
+      DATABASE_URL_MIGRATE_PREVIEW:
+        required: true
     outputs:
       migration-status:
         description: 'Database migration status'
@@ -34,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Bun Workspace
         uses: ./.github/actions/setup-bun-workspace

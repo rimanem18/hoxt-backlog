@@ -56,7 +56,7 @@ runs:
 
     - name: Deploy Lambda Function
       id: deploy
-      uses: nick-fields/retry@v3.0.1
+      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082 # v3.0.1
       env:
         WORKING_DIR: ${{ inputs.working-directory }}
         FUNCTION_NAME: ${{ inputs.function-name }}

@@ -39,7 +39,7 @@ jobs:
       is-preview: ${{ steps.env.outputs.is-preview }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # PRマージの場合はマージコミットを使用
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
@@ -62,7 +62,7 @@ jobs:
       severity: ${{ steps.scan.outputs.severity }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0  # Git履歴全スキャンのため全履歴取得
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
@@ -92,7 +92,7 @@ jobs:
       high_critical_count: ${{ steps.scan.outputs.high_critical_count }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -119,7 +119,7 @@ jobs:
     timeout-minutes: 8
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -155,7 +155,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -196,7 +196,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -228,7 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -258,7 +258,9 @@ jobs:
       terraform-version: ${{ vars.TERRAFORM_VERSION }}
       aws-region: ${{ vars.AWS_REGION }}
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPS_EMAIL: ${{ secrets.OPS_EMAIL }}
 
   # Phase 6: データベースマイグレーション - Frontendと並列実行
   deploy-database:
@@ -274,7 +276,9 @@ jobs:
     with:
       timeout-minutes: 10
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
-    secrets: inherit
+    secrets:
+      DATABASE_URL_MIGRATE: ${{ secrets.DATABASE_URL_MIGRATE }}
+      DATABASE_URL_MIGRATE_PREVIEW: ${{ secrets.DATABASE_URL_MIGRATE_PREVIEW }}
 
   # Phase 7: バックエンドデプロイ（database完了後）
   deploy-backend:
@@ -295,7 +299,8 @@ jobs:
       environment-type: ${{ needs.setup-environment.outputs.environment-type }}
       aws-region: ${{ vars.AWS_REGION }}
       cors-allow-origin: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.access-allow-origin-production || needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # Debug: インフラ出力確認
   debug-infrastructure-outputs:
@@ -345,7 +350,8 @@ jobs:
       next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
       next-public-trusted-domains: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-trusted-domains-production || needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
       cloudflare-project-name: ${{ vars.PROJECT_NAME }}
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   # Phase 9: デプロイ成功通知
   notify-success:
@@ -355,7 +361,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
@@ -401,7 +407,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 

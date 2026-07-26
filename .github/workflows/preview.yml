@@ -56,7 +56,7 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.checkout_ref.outputs.ref }}
           persist-credentials: false
@@ -75,7 +75,7 @@ jobs:
       severity: ${{ steps.scan.outputs.severity }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0  # Git履歴全スキャンのため全履歴取得
 
@@ -102,7 +102,7 @@ jobs:
       high_critical_count: ${{ steps.scan.outputs.high_critical_count }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Run Semgrep Scan
         id: scan
@@ -132,7 +132,7 @@ jobs:
     timeout-minutes: 8
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Run Client Tests
         uses: ./.github/actions/client-test
@@ -164,7 +164,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Run Server Tests
         uses: ./.github/actions/server-test
@@ -201,7 +201,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Install PostgreSQL client
         run: |
@@ -232,7 +232,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Record Preview Deployment Start
         uses: ./.github/actions/deployment-logger
@@ -259,7 +259,9 @@ jobs:
       terraform-version: 1.6.0
       aws-region: ap-northeast-1
       environment-type: 'preview'
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPS_EMAIL: ${{ secrets.OPS_EMAIL }}
 
   # Phase 2: データベース（Preview schema）- Frontendと並列実行
   deploy-database:
@@ -277,7 +279,9 @@ jobs:
     with:
       timeout-minutes: 10
       environment-type: 'preview'
-    secrets: inherit
+    secrets:
+      DATABASE_URL_MIGRATE: ${{ secrets.DATABASE_URL_MIGRATE }}
+      DATABASE_URL_MIGRATE_PREVIEW: ${{ secrets.DATABASE_URL_MIGRATE_PREVIEW }}
 
   # Phase 3: バックエンド（Preview Lambda）- Database完了後
   deploy-backend:
@@ -297,7 +301,8 @@ jobs:
       environment-type: 'preview'
       aws-region: ap-northeast-1
       cors-allow-origin: ${{ needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # Phase 2: フロントエンド（Preview Pages）- Database/Backendと並列実行
   deploy-frontend:
@@ -318,7 +323,8 @@ jobs:
       next-public-site-url: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
       next-public-trusted-domains: ${{ needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
       cloudflare-project-name: ${{ vars.PROJECT_NAME }}
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   # デプロイ完了ログ
   log-deployment-result:
@@ -335,7 +341,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Record Preview Deployment Success
         if: needs.deploy-frontend.result == 'success'
@@ -376,7 +382,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment Preview URLs
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           FRONTEND_URL: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
           API_URL: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
@@ -425,7 +431,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment Fork Warning
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const forkWarning = `## ⚠️ Preview Environment Unavailable
