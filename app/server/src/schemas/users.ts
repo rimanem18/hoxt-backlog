@@ -8,6 +8,7 @@
  *   bun run generate:schemas
  */
 
+
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { users } from '@/shared/database/schema';
