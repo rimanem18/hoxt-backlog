@@ -177,4 +177,6 @@ generate-all:
 build-check:
 	docker compose exec client bun run build
 	docker compose exec server bun run build:lambda
+semgrep:
+	docker compose run --rm semgrep semgrep --config=auto
 
