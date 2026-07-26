@@ -174,6 +174,7 @@ module "cloudflare_pages" {
 resource "aws_kms_key" "terraform_state" {
   description             = "KMS key for Terraform state encryption"
   deletion_window_in_days = 7
+  enable_key_rotation     = true
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-terraform-state-key"
@@ -230,6 +231,10 @@ resource "aws_dynamodb_table" "terraform_locks" {
   attribute {
     name = "LockID"
     type = "S"
+  }
+
+  server_side_encryption {
+    enabled = true
   }
 
   tags = merge(local.common_tags, {
