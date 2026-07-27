@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      ref:
+        description: 'Git ref to checkout (defaults to the caller workflow ref)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -49,6 +54,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Cache Playwright browsers
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

@@ -115,18 +115,10 @@ jobs:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-
-      - name: Run Client Tests
-        uses: ./.github/actions/client-test
-        with:
-          working-directory: ./app/client
+    uses: ./.github/workflows/client-test.yml
+    with:
+      working-directory: ./app/client
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
   # Phase 2: Server テスト実行（並列）
   server-test:
@@ -135,38 +127,10 @@ jobs:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-
-      - name: Run Server Tests
-        uses: ./.github/actions/server-test
-        with:
-          working-directory: ./app/server
-          db-host: localhost
-          db-name: postgres
-          db-user: postgres
-          db-password: test_password
+    uses: ./.github/workflows/server-test.yml
+    with:
+      working-directory: ./app/server
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
   # Phase 3: E2E テスト実行（並列）
   e2e-test:
@@ -175,45 +139,11 @@ jobs:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    services:
-      db:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-          --health-start-period 5s
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Run E2E Tests
-        uses: ./.github/actions/e2e-test
-        with:
-          client-directory: ./app/client
-          server-directory: ./app/server
-          db-host: localhost
-          db-name: postgres
-          db-user: postgres
-          db-password: test_password
+    uses: ./.github/workflows/e2e-test.yml
+    with:
+      concurrency_suffix: 'deploy-${{ github.event.pull_request.number || github.run_id }}'
+      cancel_in_progress: false
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
   # Phase 4: デプロイ開始記録
   log-deployment-start:
