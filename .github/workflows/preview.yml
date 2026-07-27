@@ -14,7 +14,9 @@ permissions:
 
 concurrency:
   group: preview-shared-environment
-  cancel-in-progress: true
+  # Terraform適用中に強制キャンセルするとS3/DynamoDB間でstateの整合性が壊れるため、
+  # キャンセルせずキューイングして直列実行する
+  cancel-in-progress: false
 
 env:
   AWS_REGION: ap-northeast-1
