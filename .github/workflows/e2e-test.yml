@@ -143,6 +143,7 @@ jobs:
           ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
           ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
           SUPABASE_URL=http://localhost:54321 \
+          SUPABASE_PUBLISHABLE_KEY=test_publishable_key \
           DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \
@@ -165,6 +166,14 @@ jobs:
           
           echo "--- Waiting for services to be ready ---"
           for i in $(seq 1 30); do
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "Server process exited unexpectedly. Aborting wait."
+              exit 1
+            fi
+            if ! kill -0 $CLIENT_PID 2>/dev/null; then
+              echo "Client process exited unexpectedly. Aborting wait."
+              exit 1
+            fi
             if curl -f http://localhost:3000 >/dev/null 2>&1 && \
                curl -f http://localhost:3001/api/health >/dev/null 2>&1; then
               echo "All services are ready!"
@@ -173,7 +182,7 @@ jobs:
             echo "Waiting for services... (attempt $i/30)"
             if [ $i -lt 10 ]; then
               sleep 2
-            else  
+            else
               sleep 5
             fi
           done
