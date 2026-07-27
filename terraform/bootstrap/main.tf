@@ -86,6 +86,11 @@ resource "aws_lambda_function" "production" {
   }
 
   tags = merge(local.common_tags, { Environment = "production" })
+
+  # 実運用コードはCI/CDが直接更新するため、placeholderとの差分検知を無視する
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
 
 # Preview Lambda Function (placeholder for CI/CD updates)
@@ -118,6 +123,11 @@ resource "aws_lambda_function" "preview" {
   }
 
   tags = merge(local.common_tags, { Environment = "preview" })
+
+  # 実運用コードはCI/CDが直接更新するため、placeholderとの差分検知を無視する
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
 
 # Placeholder Lambda package
