@@ -77,6 +77,9 @@ jobs:
           # Supabase設定
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          # デモユーザーログイン設定
+          NEXT_PUBLIC_DEMO_USER_EMAIL: ${{ vars.NEXT_PUBLIC_DEMO_USER_EMAIL }}
+          NEXT_PUBLIC_DEMO_USER_PASSWORD: ${{ vars.NEXT_PUBLIC_DEMO_USER_PASSWORD }}
         run: |
           echo "🔍 Build-time Environment Variables:"
           echo "NEXT_PUBLIC_API_BASE_URL: $NEXT_PUBLIC_API_BASE_URL"
