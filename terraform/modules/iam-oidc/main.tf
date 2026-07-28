@@ -226,6 +226,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
         Effect = "Allow"
         Action = [
           "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
           "sns:CreateTopic",
           "sns:DeleteTopic",
           "sns:TagResource",

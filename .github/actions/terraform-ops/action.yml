@@ -119,6 +119,9 @@ runs:
         retry_on: error
         command: |
           cd "$TF_WORKDIR"
+          # 直前の試行でstateが変化していると保存済みplanが陳腐化するため、
+          # 適用直前に毎回planを再生成してから適用する（Saved plan is staleの防止）
+          terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
 
     - name: Extract Terraform Outputs
