@@ -53,3 +53,9 @@ variable "next_public_supabase_url" {
   type        = string
   sensitive   = true
 }
+
+variable "supabase_publishable_key" {
+  description = "Supabase publishable key for backend Supabase client initialization"
+  type        = string
+  sensitive   = true
+}

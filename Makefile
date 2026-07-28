@@ -72,6 +72,7 @@ iac-plan-save:
 		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
 		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
 		export TF_VAR_next_public_supabase_url=${SUPABASE_URL} && \
+		export TF_VAR_supabase_publishable_key=${SUPABASE_PUBLISHABLE_KEY} && \
 		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
