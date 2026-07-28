@@ -161,6 +161,11 @@ resource "aws_lambda_alias" "production_stable" {
   description      = "Production stable deployment alias"
   function_name    = aws_lambda_function.production.function_name
   function_version = "$LATEST"
+
+  # CDがpublish-version後にstableへ向け直すバージョンをterraform applyで巻き戻さないため
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 resource "aws_lambda_alias" "preview_stable" {
@@ -168,6 +173,11 @@ resource "aws_lambda_alias" "preview_stable" {
   description      = "Preview stable deployment alias"
   function_name    = aws_lambda_function.preview.function_name
   function_version = "$LATEST"
+
+  # CDがpublish-version後にstableへ向け直すバージョンをterraform applyで巻き戻さないため
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 # CloudFlare Pages
