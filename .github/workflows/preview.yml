@@ -20,7 +20,6 @@ concurrency:
 
 env:
   AWS_REGION: ap-northeast-1
-  TERRAFORM_VERSION: 1.6.0
 
 jobs:
   # Fork制限チェック（セキュリティ）
@@ -191,7 +190,7 @@ jobs:
     needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
-      terraform-version: 1.6.0
+      terraform-version: 1.6.1
       aws-region: ap-northeast-1
       environment-type: 'preview'
     secrets:
