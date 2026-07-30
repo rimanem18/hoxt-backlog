@@ -94,3 +94,23 @@ export type AuthProviderConfig = typeof AUTH_PROVIDER_CONFIG;
 export type AuthTimingConfig = typeof AUTH_TIMING_CONFIG;
 export type AuthRedirectConfig = typeof AUTH_REDIRECT_CONFIG;
 export type AuthMessages = typeof AUTH_MESSAGES;
+
+export interface DemoCredentials {
+  email: string;
+  password: string;
+}
+
+/**
+ * ハードコード回避のため環境変数から取得。片方のみ設定時はnullを返す
+ */
+export function getDemoCredentials(): DemoCredentials | null {
+  // 本番ビルドにも乗せる前提
+  const email = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL;
+  const password = process.env.NEXT_PUBLIC_DEMO_USER_PASSWORD;
+
+  if (!email || !password) {
+    return null;
+  }
+
+  return { email, password };
+}

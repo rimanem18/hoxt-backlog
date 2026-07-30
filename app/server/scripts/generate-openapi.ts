@@ -29,11 +29,11 @@ import {
 	getUserProfileRoute,
 	listUsersRoute,
 	updateUserRoute,
-} from "../src/presentation/http/routes/userRoutes.schema";
-import { authCallbackRoute } from "../src/presentation/http/routes/authRoutes.schema";
+} from "../src/user/presentation/userRoutes.schema";
+import { authCallbackRoute } from "../src/user/presentation/authRoutes.schema";
 import {
 	taskRoutes,
-} from "../src/presentation/http/routes/taskRoutes.schema";
+} from "../src/task/presentation/taskRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力

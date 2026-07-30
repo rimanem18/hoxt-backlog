@@ -72,7 +72,7 @@ runs:
   using: 'composite'
   steps:
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
       with:
         terraform_version: ${{ inputs.terraform-version }}
 
@@ -110,7 +110,7 @@ runs:
         fi
 
     - name: Terraform Apply
-      uses: nick-fields/retry@v3.0.1
+      uses: nick-fields/retry@c97818ca39074beaea45180dba704f92496a0082 # v3.0.1
       env:
         TF_WORKDIR: ${{ inputs.working-directory }}
       with:
@@ -119,6 +119,9 @@ runs:
         retry_on: error
         command: |
           cd "$TF_WORKDIR"
+          # 直前の試行でstateが変化していると保存済みplanが陳腐化するため、
+          # 適用直前に毎回planを再生成してから適用する（Saved plan is staleの防止）
+          terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
 
     - name: Extract Terraform Outputs

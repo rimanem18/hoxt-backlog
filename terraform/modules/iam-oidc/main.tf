@@ -167,6 +167,9 @@ resource "aws_iam_policy" "terraform_management_policy" {
         Resource = var.terraform_locks_table_arn
       },
       # IAM関連の権限（読み取り・アタッチのみ）
+      # Resourceを自ロール（github-actions）自身に含めない: PassRole+AttachRolePolicyを
+      # 自ロールに対して許可すると、AttachRolePolicyで管理者ポリシーを自ロールに付与する
+      # 権限昇格経路が成立するため
       {
         Effect = "Allow"
         Action = [
@@ -179,8 +182,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
           "iam:PassRole"
         ]
         Resource = [
-          "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role",
-          "arn:aws:iam::*:role/${var.project_name}-github-actions"
+          "arn:aws:iam::*:role/${var.project_name}-lambda-exec-role"
         ]
       },
       # Lambda関数の権限（Update系のみ、Create権限なし）
@@ -224,6 +226,7 @@ resource "aws_iam_policy" "terraform_management_policy" {
         Effect = "Allow"
         Action = [
           "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
           "sns:CreateTopic",
           "sns:DeleteTopic",
           "sns:TagResource",

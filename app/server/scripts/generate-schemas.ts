@@ -29,7 +29,7 @@ import {
   authProviderType,
   users,
   tasks,
-} from '../src/infrastructure/database/schema';
+} from '../src/shared/database/schema';
 
 /**
  * Enum設定の型定義
@@ -279,7 +279,7 @@ function generateSchemaFile(config: TableConfig): string {
 
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { ${tableName}${enumImports} } from '@/infrastructure/database/schema';
+import { ${tableName} } from '@/shared/database/schema';
 
 /**
  * ${capitalizedName}テーブルのSelectスキーマ（DB読み取り型）

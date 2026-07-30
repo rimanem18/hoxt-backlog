@@ -21,6 +21,9 @@ on:
         description: 'CORS allow origin setting'
         required: true
         type: string
+    secrets:
+      DATABASE_URL:
+        required: true
     outputs:
       deployed-version:
         description: 'Deployed Lambda version'
@@ -39,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Bun Workspace
         uses: ./.github/actions/setup-bun-workspace
@@ -66,7 +69,7 @@ jobs:
         run: bun run build:lambda
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           role-session-name: GitHubActions-Backend-Deploy

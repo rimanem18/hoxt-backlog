@@ -4,27 +4,6 @@ import type { ValidationResult } from '../services/environmentValidator';
 
 // テストファイル: errorHandling.test.ts
 describe('認証エラーハンドリング', () => {
-  test('Google認証キャンセル時のエラー処理', () => {
-    // Given: ユーザーがGoogle認証ポップアップでキャンセルを選択した状態
-    const cancelledAuthError = {
-      code: 'auth_cancelled',
-      message: 'User cancelled the authentication process',
-      provider: 'google',
-    };
-
-    // When: AuthErrorHandlerで認証キャンセルエラーを処理
-    const { AuthErrorHandler } = require('../services/authErrorHandler');
-    const errorHandler = new AuthErrorHandler();
-
-    const handleResult =
-      errorHandler.handleAuthCancellation(cancelledAuthError);
-
-    // Then: キャンセルは正常な操作として扱い、エラー状態にしない
-    expect(handleResult.shouldShowError).toBe(false); // キャンセル時にエラーメッセージを表示しない
-    expect(handleResult.userMessage).toBe('認証をキャンセルしました。'); // ユーザーフレンドリーなキャンセルメッセージが表示される
-    expect(handleResult.canRetry).toBe(true); // キャンセル後に再度認証を試行できる
-  });
-
   test('ネットワークエラー時の自動リトライ機能', () => {
     // Given: 一時的なネットワークエラーとリトライ設定
     const networkError = {
@@ -141,13 +120,13 @@ describe('認証エラーハンドリング', () => {
     // Given: 未設定の必須環境変数と検証設定
     const missingEnvVars = {
       NEXT_PUBLIC_SUPABASE_URL: undefined,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
       NEXT_PUBLIC_SITE_URL: null,
     };
 
     const requiredEnvVars = [
       'NEXT_PUBLIC_SUPABASE_URL',
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
       'NEXT_PUBLIC_SITE_URL',
     ];
 

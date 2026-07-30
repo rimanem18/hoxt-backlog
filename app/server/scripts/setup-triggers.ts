@@ -90,7 +90,7 @@ async function applyTriggers(): Promise<void> {
 		console.log("トリガー適用完了");
 	} catch (error) {
 		console.error(
-			`${ERROR_MESSAGES.TRIGGER_APPLICATION_FAILED}:`,
+			ERROR_MESSAGES.TRIGGER_APPLICATION_FAILED,
 			error instanceof Error ? error.message : String(error),
 		);
 		process.exit(1);

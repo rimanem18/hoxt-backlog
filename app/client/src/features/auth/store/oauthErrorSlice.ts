@@ -154,7 +154,7 @@ const oauthErrorSlice = createSlice({
 
       // 開発環境のみでデバッグログ出力
       if (process.env.NODE_ENV === 'development') {
-        console.log(`OAuth Error Set [${state.correlationId}]:`, {
+        console.log('OAuth Error Set:', state.correlationId, {
           type: state.type,
           message: state.message,
           timestamp: new Date(state.timestamp).toISOString(),

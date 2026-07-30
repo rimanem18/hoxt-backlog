@@ -124,7 +124,7 @@ async function applyRlsPolicies(): Promise<void> {
 		console.log("RLSポリシー適用完了");
 	} catch (error) {
 		console.error(
-			`${ERROR_MESSAGES.RLS_APPLICATION_FAILED}:`,
+			ERROR_MESSAGES.RLS_APPLICATION_FAILED,
 			error instanceof Error ? error.message : String(error),
 		);
 

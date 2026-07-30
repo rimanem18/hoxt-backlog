@@ -51,7 +51,7 @@ export const debugLog = {
    */
   auth: (message: string, data?: Record<string, unknown>): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, data || '');
+      console.log('[Auth Debug]', message, data || '');
     }
   },
 
@@ -65,7 +65,7 @@ export const debugLog = {
    */
   redactedAuth: (message: string, result: AuthValidationResult): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, {
+      console.log('[Auth Debug]', message, {
         isValid: result.isValid,
         reason: result.reason,
         hasData: !!result.data,
@@ -82,7 +82,7 @@ export const debugLog = {
    */
   storageKey: (message: string, value: string | null | undefined): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, value ? '[SET]' : '[NOT SET]');
+      console.log('[Auth Debug]', message, value ? '[SET]' : '[NOT SET]');
     }
   },
 
@@ -102,7 +102,7 @@ export const debugLog = {
     },
   ): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, data);
+      console.log('[Auth Debug]', message, data);
     }
   },
 
@@ -121,7 +121,7 @@ export const debugLog = {
     },
   ): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, data);
+      console.log('[Auth Debug]', message, data);
     }
   },
 
@@ -141,7 +141,7 @@ export const debugLog = {
     },
   ): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, data);
+      console.log('[Auth Debug]', message, data);
     }
   },
 
@@ -160,7 +160,7 @@ export const debugLog = {
     },
   ): void => {
     if (isDevelopment()) {
-      console.log(`[Auth Debug] ${message}`, data);
+      console.log('[Auth Debug]', message, data);
     }
   },
 
@@ -172,7 +172,7 @@ export const debugLog = {
    */
   error: (message: string, error: unknown): void => {
     if (isDevelopment()) {
-      console.error(`[Auth Debug] ${message}`, error);
+      console.error('[Auth Debug]', message, error);
     }
   },
 
@@ -183,7 +183,7 @@ export const debugLog = {
    */
   warn: (message: string): void => {
     if (isDevelopment()) {
-      console.warn(`[Auth Debug] ${message}`);
+      console.warn('[Auth Debug]', message);
     }
   },
 
@@ -195,7 +195,7 @@ export const debugLog = {
    */
   apiRequest: (message: string, data: { url: string }): void => {
     if (isDevelopment()) {
-      console.log(`[API Client] ${message}`, {
+      console.log('[API Client]', message, {
         safeUrl: sanitizeUrl(data.url),
       });
     }
@@ -212,7 +212,7 @@ export const debugLog = {
     data: { url: string; status: number; statusText: string },
   ): void => {
     if (isDevelopment()) {
-      console.log(`[API Client] ${message}`, {
+      console.log('[API Client]', message, {
         safeUrl: sanitizeUrl(data.url),
         status: data.status,
         statusText: data.statusText,
@@ -228,7 +228,7 @@ export const debugLog = {
    */
   network: (message: string, data?: Record<string, unknown>): void => {
     if (isDevelopment()) {
-      console.log(`[Network] ${message}`, data || '');
+      console.log('[Network]', message, data || '');
     }
   },
 
@@ -240,7 +240,7 @@ export const debugLog = {
    */
   ui: (message: string, data?: Record<string, unknown>): void => {
     if (isDevelopment()) {
-      console.log(`[UI] ${message}`, data || '');
+      console.log('[UI]', message, data || '');
     }
   },
 };

@@ -33,7 +33,8 @@ describe('formatZodError', () => {
         path: ['id'],
         message: 'Invalid uuid',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -50,7 +51,8 @@ describe('formatZodError', () => {
         path: ['email'],
         message: 'Invalid email',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -70,7 +72,8 @@ describe('formatZodError', () => {
         path: ['name'],
         message: 'String must contain at least 1 character(s)',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -90,7 +93,8 @@ describe('formatZodError', () => {
         path: ['description'],
         message: 'String must contain at most 100 character(s)',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -108,7 +112,8 @@ describe('formatZodError', () => {
         path: ['user', 'profile', 'name'],
         message: 'Required',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -132,7 +137,8 @@ describe('formatZodError', () => {
         path: ['email'],
         message: 'Invalid email',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -149,7 +155,8 @@ describe('formatZodError', () => {
         path: ['customField'],
         message: 'Custom validation failed',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);
@@ -167,7 +174,8 @@ describe('formatZodError', () => {
         path: [],
         message: 'Expected object, received null',
       },
-    ] as any; // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+      // biome-ignore lint/suspicious/noExplicitAny: ZodIssueの内部型との互換性のため型アサーションが必要
+    ] as any;
 
     // When & Then
     const result = formatZodError(issues);

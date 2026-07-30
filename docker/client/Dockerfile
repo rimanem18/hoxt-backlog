@@ -1,5 +1,5 @@
 # ベースイメージ
-FROM oven/bun:1.2.20-alpine
+FROM oven/bun:1.3.14-alpine
 
 # Node.jsをインストール（wrangler用）
 # 注: パッケージマネージャ(apk)による依存インストールのため一時的にrootに切り替え

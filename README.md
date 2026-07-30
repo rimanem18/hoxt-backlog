@@ -11,26 +11,25 @@
 
 | カテゴリ | 名前 | バージョン | 用途 |
 |---------|------|-----------|------|
-| **ランタイム** | Bun | 1.2 | JavaScript/TypeScript ランタイム・パッケージマネージャー |
-| **フロントエンド** | Next.js | 15.4 | React フレームワーク |
-| | TanStack Query | 5.84 | データフェッチ・キャッシュ管理 |
+| **ランタイム** | Bun | 1.3 | JavaScript/TypeScript ランタイム・パッケージマネージャー |
+| **フロントエンド** | Next.js | 16.2 | React フレームワーク |
+| | TanStack Query | 5.101 | データフェッチ・キャッシュ管理 |
 | | Tailwind CSS | 4 | CSS フレームワーク |
-| **バックエンド** | Hono | 4.9 | 軽量 Web フレームワーク |
-| | Drizzle ORM | 0.44 | TypeScript ORM |
-| | Supabase | 2.44 | 認証・データベースサービス |
+| **バックエンド** | Hono | 4.12 | 軽量 Web フレームワーク |
+| | Drizzle ORM | 0.45 | TypeScript ORM |
+| | Supabase | 2.108 | 認証・データベースサービス |
 | **スキーマ** | Zod | 4.1 | TypeScript スキーマ検証 |
 | | drizzle-zod | 0.8 | Drizzle と Zod の統合 |
-| | @hono/zod-openapi | 1.1 | Hono + Zod + OpenAPI 統合 |
-| | js-yaml | 4.1 | YAML パーサー・生成 |
-| **型安全性** | openapi-typescript | 7.10 | OpenAPI から TypeScript 型定義生成 |
+| | @hono/zod-openapi | 1.4 | Hono + Zod + OpenAPI 統合 |
+| | js-yaml | 4.3 | YAML パーサー・生成 |
+| **型安全性** | openapi-typescript | 7.13 | OpenAPI から TypeScript 型定義生成 |
 | | openapi-fetch | 0.15 | 型安全な API クライアント |
 | **開発ツール** | TypeScript | 5 | 型安全性 |
-| | Biome | 2.1 | リンター・フォーマッター |
-| | uuid | 11.1 | UUID 生成 |
+| | Biome | 2.3 | リンター・フォーマッター |
 
 ### 技術選定理由
 
-クラスメソッド社の AI駆動開発支援フレームワーク [tsumiki](https://github.com/classmethod/tsumiki) を前提とした AI 駆動開発と、ドメイン駆動設計 + クリーンアーキテクチャを中核に据えた開発。
+AI 駆動開発と、ドメイン駆動設計 + クリーンアーキテクチャを中核に据えた開発。
 
 - 開発効率を重視して Bun を採用。
   - 本番環境は安定性を最優先に Node.js で運用した。
@@ -45,9 +44,9 @@
 
 #### よかったところ
 
-AI にコードを書かせることで「新しいことを学ぶきっかけが失われるのではないか？」という懸念があったが、むしろ知らないことを知ることができるいいきっかけが生まれた。 とくに実装の説明をおこなわせるカスタムスラッシュコマンドを作成したことで、知らなかった技術を深く知ることができた。 semgrep や Single Source of Truth というキーワードを得ることができ、学びの幅が広がった。  
-仕様がコードレベルで固まりやすいドメイン駆動設計に対して、Tsumiki の仕様駆動 + AI 駆動が非常にマッチしているのが身を持って感じることができた。コーディング中の Claude Code の脱線はほとんどなかった。  
-gh コマンドで Claude Code からプルリクを作成できるカスタムスラッシュコマンドを作って diff の確認まで任せたことでテンプレートに則ったプルリクをシームレスに出すことができた。  
+AI にコードを書かせることで「新しいことを学ぶきっかけが失われるのではないか？」という懸念があったが、むしろ知らないことを知ることができるいいきっかけが生まれた。 semgrep や Single Source of Truth というキーワードを得ることができ、学びの幅が広がった。  
+仕様駆動 + AI 駆動が非常にマッチしているのが身を持って感じることができた。コーディング中の Claude Code の脱線はほとんどなかった。  
+gh コマンドで Claude Code からプルリクを作成できるAgent Skillを作って diff の確認まで任せたことでテンプレートに則ったプルリクをシームレスに出すことができた。  
 
 #### 大変だったところ
 
@@ -66,9 +65,14 @@ make build
 make up
 ```
 
-サーバーからフェッチした文字列で、鮮やかな Hello World が表示されます。
+ログイン画面が表示されます。
+Google アカウントであれば、そのまま登録とログインができます。
 
-<img width="1143" height="346" alt="image" src="https://github.com/user-attachments/assets/65dd41c0-4ca7-4558-ae87-197347bda2c8" />
+<img width="740" height="646" alt="image" src="https://github.com/user-attachments/assets/7e1431b7-e1aa-466e-bda4-ffda0cd14f92" />
+
+ログインすると、タスクの管理ができる画面に遷移します。
+
+<img width="747" height="824" alt="image" src="https://github.com/user-attachments/assets/bb253e6f-78c6-46d6-9308-65271fcf131a" />
 
 コンテナを終了
 ```sh

@@ -6,7 +6,7 @@ describe('validateClientEnv', () => {
     // Given: すべての必須環境変数が設定されている
     const testEnv = {
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       NEXT_PUBLIC_SITE_URL: 'https://example.com',
     };
 
@@ -22,7 +22,7 @@ describe('validateClientEnv', () => {
   test('NEXT_PUBLIC_SUPABASE_URLが未設定の場合、console.errorが呼ばれる', () => {
     // Given: NEXT_PUBLIC_SUPABASE_URLが未設定
     const testEnv = {
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       NEXT_PUBLIC_SITE_URL: 'https://example.com',
     };
 
@@ -64,14 +64,14 @@ describe('validateClientEnv', () => {
 
     // Then: すべての未設定項目がエラーメッセージに含まれる
     expect(errorMessage).toContain('NEXT_PUBLIC_SUPABASE_URL');
-    expect(errorMessage).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    expect(errorMessage).toContain('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
   });
 
   test('空文字列の環境変数は未設定として扱われる', () => {
     // Given: 環境変数が空文字列
     const testEnv = {
       NEXT_PUBLIC_SUPABASE_URL: '',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-anon-key',
       NEXT_PUBLIC_SITE_URL: 'https://example.com',
     };
 

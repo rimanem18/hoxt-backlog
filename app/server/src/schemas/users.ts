@@ -8,9 +8,10 @@
  *   bun run generate:schemas
  */
 
+
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { authProviderType, users } from '@/infrastructure/database/schema';
+import { users } from '@/shared/database/schema';
 
 /**
  * UserテーブルのSelectスキーマ（DB読み取り型）
@@ -44,6 +45,7 @@ export const authProviderSchema = z.enum([
   'github',
   'facebook',
   'line',
+  'email',
 ]);
 
 export type AuthProvider = z.infer<typeof authProviderSchema>;

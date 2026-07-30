@@ -7,7 +7,7 @@
 
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { AuthLoadingSpinner } from '@/features/auth/components/LoadingSpinner';
+import { LoadingSpinner } from '@/features/auth/components/LoadingSpinner';
 import {
   AUTH_MESSAGES,
   AUTH_PROVIDER_CONFIG,
@@ -127,13 +127,12 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
     authService,
   ]);
 
-  // 動的スタイルをメモ化してパフォーマンス最適化
   const buttonClasses = useMemo(() => {
     const baseClasses =
-      'px-6 py-3 rounded-md font-medium text-white transition-all duration-200';
+      'px-4 py-3 rounded-lg text-sm font-medium transition-colors';
     const stateClasses = isLoading
-      ? 'bg-gray-400 cursor-not-allowed'
-      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800';
+      ? 'bg-gray-50 border border-gray-200 text-gray-400 cursor-not-allowed'
+      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100';
 
     return [baseClasses, stateClasses, className].filter(Boolean).join(' ');
   }, [isLoading, className]);
@@ -149,7 +148,13 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
         className={buttonClasses}
       >
         <div className="flex items-center justify-center gap-2">
-          {isLoading && <AuthLoadingSpinner />}
+          {isLoading && (
+            <LoadingSpinner
+              aria-label="認証処理中"
+              size="medium"
+              color="gray"
+            />
+          )}
           <span>{buttonLabel}</span>
         </div>
       </button>

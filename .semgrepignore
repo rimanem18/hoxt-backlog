@@ -1,0 +1,5 @@
+# ナレッジ文書内でブラウザのエラーメッセージ文字列（ws://...）を引用しているだけで
+# 実際にコード上でinsecure websocketを使用していないため誤検知として除外
+knowledge/e2e/nextjs-dev-origin-check-breaks-hydration-in-docker.md
+
+.semgrepignore

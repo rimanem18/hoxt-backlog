@@ -71,21 +71,27 @@ resource "aws_lambda_function" "production" {
 
   environment {
     variables = {
-      NODE_ENV                  = "production"
-      BASE_SCHEMA               = "app_${local.project_name}"
-      DATABASE_URL              = var.database_url
-      SUPABASE_URL              = var.next_public_supabase_url
-      ACCESS_ALLOW_ORIGIN       = var.access_allow_origin_production
-      ACCESS_ALLOW_METHODS      = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS      = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
-      USE_JWKS_VERIFIER         = "true"
-      ENABLE_JWKS_VERIFICATION  = "true"
-      ENVIRONMENT               = "production"
-      METRICS_NAMESPACE         = var.metrics_namespace
+      NODE_ENV                 = "production"
+      BASE_SCHEMA              = "app_${local.project_name}"
+      DATABASE_URL             = var.database_url
+      SUPABASE_URL             = var.next_public_supabase_url
+      SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
+      ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_production
+      ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      USE_JWKS_VERIFIER        = "true"
+      ENABLE_JWKS_VERIFICATION = "true"
+      ENVIRONMENT              = "production"
+      METRICS_NAMESPACE        = var.metrics_namespace
     }
   }
 
   tags = merge(local.common_tags, { Environment = "production" })
+
+  # 実運用コードはCI/CDが直接更新するため、placeholderとの差分検知を無視する
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
 
 # Preview Lambda Function (placeholder for CI/CD updates)
@@ -103,21 +109,27 @@ resource "aws_lambda_function" "preview" {
 
   environment {
     variables = {
-      NODE_ENV                  = "development"
-      BASE_SCHEMA               = "app_${local.project_name}_preview"
-      DATABASE_URL              = var.database_url
-      SUPABASE_URL              = var.next_public_supabase_url
-      ACCESS_ALLOW_ORIGIN       = var.access_allow_origin_preview
-      ACCESS_ALLOW_METHODS      = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS      = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
-      USE_JWKS_VERIFIER         = "true"
-      ENABLE_JWKS_VERIFICATION  = "true"
-      ENVIRONMENT               = "preview"
-      METRICS_NAMESPACE         = var.metrics_namespace
+      NODE_ENV                 = "development"
+      BASE_SCHEMA              = "app_${local.project_name}_preview"
+      DATABASE_URL             = var.database_url
+      SUPABASE_URL             = var.next_public_supabase_url
+      SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
+      ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_preview
+      ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      USE_JWKS_VERIFIER        = "true"
+      ENABLE_JWKS_VERIFICATION = "true"
+      ENVIRONMENT              = "preview"
+      METRICS_NAMESPACE        = var.metrics_namespace
     }
   }
 
   tags = merge(local.common_tags, { Environment = "preview" })
+
+  # 実運用コードはCI/CDが直接更新するため、placeholderとの差分検知を無視する
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
 
 # Placeholder Lambda package
@@ -149,6 +161,11 @@ resource "aws_lambda_alias" "production_stable" {
   description      = "Production stable deployment alias"
   function_name    = aws_lambda_function.production.function_name
   function_version = "$LATEST"
+
+  # CDがpublish-version後にstableへ向け直すバージョンをterraform applyで巻き戻さないため
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 resource "aws_lambda_alias" "preview_stable" {
@@ -156,6 +173,11 @@ resource "aws_lambda_alias" "preview_stable" {
   description      = "Preview stable deployment alias"
   function_name    = aws_lambda_function.preview.function_name
   function_version = "$LATEST"
+
+  # CDがpublish-version後にstableへ向け直すバージョンをterraform applyで巻き戻さないため
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 # CloudFlare Pages
@@ -174,6 +196,7 @@ module "cloudflare_pages" {
 resource "aws_kms_key" "terraform_state" {
   description             = "KMS key for Terraform state encryption"
   deletion_window_in_days = 7
+  enable_key_rotation     = true
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-terraform-state-key"
@@ -230,6 +253,10 @@ resource "aws_dynamodb_table" "terraform_locks" {
   attribute {
     name = "LockID"
     type = "S"
+  }
+
+  server_side_encryption {
+    enabled = true
   }
 
   tags = merge(local.common_tags, {

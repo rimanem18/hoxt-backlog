@@ -1,17 +1,16 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { validateEnv } from '@/infrastructure/config/env';
-import { CloudWatchMonitoringService } from '@/infrastructure/monitoring/CloudWatchMonitoringService';
-import { createErrorHandler } from '@/presentation/http/middleware';
-import corsMiddleware from '@/presentation/http/middleware/corsMiddleware';
-import { metricsMiddleware } from '@/presentation/http/middleware/metricsMiddleware';
-import {
-  auth,
-  docs,
-  greet,
-  health,
-  task,
-  user,
-} from '@/presentation/http/routes';
+import greet from '@/greet/presentation/greetRoutes';
+import health from '@/health/presentation/healthRoutes';
+import { validateEnv } from '@/shared/config/env';
+import docs from '@/shared/docs/docsRoutes';
+import corsMiddleware from '@/shared/middleware/corsMiddleware';
+import { createErrorHandler } from '@/shared/middleware/errors/ErrorHandlerMiddleware';
+import { metricsMiddleware } from '@/shared/middleware/metricsMiddleware';
+import { CloudWatchMonitoringService } from '@/shared/monitoring/CloudWatchMonitoringService';
+import task from '@/task/presentation/taskRoutes';
+import auth from '@/user/presentation/authRoutes';
+import emailSignup from '@/user/presentation/emailSignupRoutes';
+import user from '@/user/presentation/userRoutes';
 
 /**
  * OpenAPIHono アプリケーションサーバーを作成する
@@ -52,6 +51,7 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', greet);
   app.route('/api', health);
   app.route('/api', auth);
+  app.route('/api', emailSignup);
   app.route('/api', user);
   app.route('/api', task);
   app.route('/api', docs);

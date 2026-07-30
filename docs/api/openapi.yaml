@@ -51,6 +51,7 @@ paths:
                     - github
                     - facebook
                     - line
+                    - email
                 email:
                   type: string
                   format: email
@@ -95,6 +96,7 @@ paths:
                           - github
                           - facebook
                           - line
+                          - email
                       email:
                         type: string
                         format: email
@@ -227,6 +229,7 @@ paths:
                           - github
                           - facebook
                           - line
+                          - email
                       email:
                         type: string
                         format: email
@@ -431,6 +434,7 @@ paths:
                           - github
                           - facebook
                           - line
+                          - email
                       email:
                         type: string
                         format: email
@@ -650,6 +654,7 @@ paths:
                                 - github
                                 - facebook
                                 - line
+                                - email
                             email:
                               type: string
                               format: email
@@ -822,6 +827,7 @@ paths:
                           - github
                           - facebook
                           - line
+                          - email
                       email:
                         type: string
                         format: email

@@ -18,7 +18,7 @@ runs:
     - name: Run TruffleHog Secret Scanning
       id: trufflehog
       continue-on-error: true
-      uses: trufflesecurity/trufflehog@main
+      uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # main (2026-07-26時点、手動更新)
       with:
         # Git履歴全スキャン
         path: ./

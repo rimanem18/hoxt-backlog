@@ -192,7 +192,7 @@ export const OAuthErrorHandler = {
     // 開発環境でのデバッグ情報付加
     if (process.env.NODE_ENV === 'development') {
       errorDetail.debugInfo = sanitizedMessage;
-      console.log(`OAuth Error Analysis [${correlationId}]:`, {
+      console.log('OAuth Error Analysis:', correlationId, {
         originalMessage: sanitizedMessage,
         detectedType,
         severity: config.severity,
@@ -252,7 +252,8 @@ export const OAuthErrorHandler = {
       ) {
         patterns.push(pattern);
         console.log(
-          `Custom OAuth error pattern added for ${type}:`,
+          'Custom OAuth error pattern added for',
+          type,
           pattern.source,
         );
       }

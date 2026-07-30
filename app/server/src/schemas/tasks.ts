@@ -8,9 +8,10 @@
  *   bun run generate:schemas
  */
 
+
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { tasks } from '@/infrastructure/database/schema';
+import { tasks } from '@/shared/database/schema';
 
 /**
  * TaskテーブルのSelectスキーマ（DB読み取り型）
@@ -38,7 +39,11 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
  * taskPrioritySchema（enumから自動生成）
  * タスクの優先度
  */
-export const taskPrioritySchema = z.enum(['high', 'medium', 'low']);
+export const taskPrioritySchema = z.enum([
+  'high',
+  'medium',
+  'low',
+]);
 
 export type TaskPriority = z.infer<typeof taskPrioritySchema>;
 
@@ -60,10 +65,7 @@ export type TaskStatus = z.infer<typeof taskStatusSchema>;
  * API リクエストのバリデーションに使用する
  */
 export const createTaskSchema = z.object({
-  title: z
-    .string()
-    .min(1, { message: 'タイトルを入力してください' })
-    .max(100, { message: 'タイトルは100文字以内で入力してください' }),
+    title: z.string().min(1, { message: 'タイトルを入力してください' }).max(100, { message: 'タイトルは100文字以内で入力してください' }),
 });
 
 export type CreateTask = z.infer<typeof createTaskSchema>;

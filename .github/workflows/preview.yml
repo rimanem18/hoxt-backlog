@@ -14,11 +14,12 @@ permissions:
 
 concurrency:
   group: preview-shared-environment
-  cancel-in-progress: true
+  # Terraform適用中に強制キャンセルするとS3/DynamoDB間でstateの整合性が壊れるため、
+  # キャンセルせずキューイングして直列実行する
+  cancel-in-progress: false
 
 env:
   AWS_REGION: ap-northeast-1
-  TERRAFORM_VERSION: 1.6.0
 
 jobs:
   # Fork制限チェック（セキュリティ）
@@ -56,7 +57,7 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.checkout_ref.outputs.ref }}
           persist-credentials: false
@@ -75,7 +76,7 @@ jobs:
       severity: ${{ steps.scan.outputs.severity }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0  # Git履歴全スキャンのため全履歴取得
 
@@ -102,7 +103,7 @@ jobs:
       high_critical_count: ${{ steps.scan.outputs.high_critical_count }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Run Semgrep Scan
         id: scan
@@ -128,95 +129,28 @@ jobs:
     name: Run Client Tests
     if: needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Run Client Tests
-        uses: ./.github/actions/client-test
-        with:
-          working-directory: ./app/client
+    uses: ./.github/workflows/client-test.yml
+    with:
+      working-directory: ./app/client
 
   # Server テスト実行（並列）
   server-test:
     name: Run Server Tests
     if: needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Run Server Tests
-        uses: ./.github/actions/server-test
-        with:
-          working-directory: ./app/server
-          db-host: localhost
-          db-name: postgres
-          db-user: postgres
-          db-password: test_password
+    uses: ./.github/workflows/server-test.yml
+    with:
+      working-directory: ./app/server
 
   # E2E テスト実行（並列）
   e2e-test:
     name: Run E2E Tests
     if: needs.security-check.outputs.can-deploy == 'true'
     needs: [security-check]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
-    services:
-      db:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-          --health-start-period 5s
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-      
-      - name: Run E2E Tests
-        uses: ./.github/actions/e2e-test
-        with:
-          client-directory: ./app/client
-          server-directory: ./app/server
-          db-host: localhost
-          db-name: postgres
-          db-user: postgres
-          db-password: test_password
+    uses: ./.github/workflows/e2e-test.yml
+    with:
+      concurrency_suffix: 'preview-pr-${{ github.event.pull_request.number }}'
+      cancel_in_progress: true
 
   # デプロイ開始ログ
   log-deployment-start:
@@ -232,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Record Preview Deployment Start
         uses: ./.github/actions/deployment-logger
@@ -256,10 +190,12 @@ jobs:
     needs: [security-check, schema-check, client-test, server-test, e2e-test, trufflehog, semgrep, log-deployment-start]
     uses: ./.github/workflows/deploy-infra.yml
     with:
-      terraform-version: 1.6.0
+      terraform-version: 1.6.1
       aws-region: ap-northeast-1
       environment-type: 'preview'
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPS_EMAIL: ${{ secrets.OPS_EMAIL }}
 
   # Phase 2: データベース（Preview schema）- Frontendと並列実行
   deploy-database:
@@ -277,7 +213,9 @@ jobs:
     with:
       timeout-minutes: 10
       environment-type: 'preview'
-    secrets: inherit
+    secrets:
+      DATABASE_URL_MIGRATE: ${{ secrets.DATABASE_URL_MIGRATE }}
+      DATABASE_URL_MIGRATE_PREVIEW: ${{ secrets.DATABASE_URL_MIGRATE_PREVIEW }}
 
   # Phase 3: バックエンド（Preview Lambda）- Database完了後
   deploy-backend:
@@ -297,7 +235,8 @@ jobs:
       environment-type: 'preview'
       aws-region: ap-northeast-1
       cors-allow-origin: ${{ needs.deploy-infrastructure.outputs.access-allow-origin-preview }}
-    secrets: inherit
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # Phase 2: フロントエンド（Preview Pages）- Database/Backendと並列実行
   deploy-frontend:
@@ -318,7 +257,8 @@ jobs:
       next-public-site-url: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
       next-public-trusted-domains: ${{ needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
       cloudflare-project-name: ${{ vars.PROJECT_NAME }}
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   # デプロイ完了ログ
   log-deployment-result:
@@ -335,7 +275,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Record Preview Deployment Success
         if: needs.deploy-frontend.result == 'success'
@@ -376,7 +316,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment Preview URLs
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           FRONTEND_URL: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
           API_URL: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
@@ -425,7 +365,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment Fork Warning
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const forkWarning = `## ⚠️ Preview Environment Unavailable

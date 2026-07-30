@@ -4,6 +4,7 @@
 - README.md には実装済み機能などを記載しないでください。
 - ホストマシンのユーザー名やプロジェクトよりも上位のディレクトリ名が露出しないようにハードコードを避けてください。記録が必要な場合はマスクしてください。
 - プロジェクト名やリポジトリ名を推測できる値をハードコードしないでください。
+- ファイル探索の Explore サブエージェントは haiku や gpt-mini などの軽量モデルを選択してください。
 
 # プロジェクト概要
 
@@ -19,11 +20,12 @@
   - feature-based ディレクトリ
   - WORKDIR: /home/bun/app/client
 - **`app/server/`**: server コンテナにバインド（Hono API アプリケーション）
-  - DDD + クリーンアーキテクチャ
+  - ドメインファースト構成（DDD + クリーンアーキテクチャ）
+  - ドメインごとに `domain/` `application/` `infrastructure/` `presentation/` を内包
   - WORKDIR: /home/bun/app/server
-- **`app/packages/shared-shemas/`**: client と server でシェアされるスキーマ
+- **`app/packages/shared-schemas/`**: client と server でシェアされるスキーマ
 - **`docker/`**: Dockerfile とコンテナ設定
-- **`compose.yml`**: Docker Compose 設定ファイル
+- **`compose.yaml`**: Docker Compose 設定ファイル
 - sub agents に依頼する際は、以下を必ず伝えてください
   - docker compose exec コマンドの活用は重要
   - コンテナの WORKDIR
@@ -32,7 +34,40 @@
 
 - **SSG + API 構成**: フロントエンド（Next.js）とバックエンド（Hono API）の完全分離
 - **コンテナベース**: Docker Compose によるコンテナ環境での開発
-- **DDD + クリーンアーキテクチャ**: ドメインごとに関心を分離
+- **DDD + クリーンアーキテクチャ（ドメインファースト）**: ビジネスドメイン（user, task, health, greet）を頂点に、各ドメイン内で domain/application/infrastructure/presentation を階層化
+
+
+# コマンド操作
+
+各コマンドは、該当するコンテナ内で実行してください
+
+E2Eテスト（playwright）
+```bash
+# example
+docker compose exec e2e npx playwright test <args...>
+```
+
+フロントエンド
+```bash
+# example
+docker compose exec client bun run dev
+docker compose exec client bunx tsc --noEmit
+docker compose exec client bun test
+```
+
+バックエンド
+```bash
+# example
+docker compose exec server bun run dev
+docker compose exec server bunx tsc --noEmit
+```
+
+静的セキュリティチェック
+```bash
+# example
+docker compose run --rm semgrep semgrep <args...>
+```
+
 
 # IaC
 
@@ -62,6 +97,8 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
+
+- test / lint / typecheck / semgrep / build は、 @quality-gate-runner サブエージェントに依頼してください。
 
 ## コード品質
 
@@ -94,10 +131,49 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
 3. タイミング依存を排除（`setTimeout`や固定待機時間を避ける）
 4. 環境依存を排除（ハードコードされたURLや日時を避ける）
 
----
+## テスト
+
+### TDD (Red-Green-Refactor) の重要な注意点
+
+この文脈での TDD は、以下の4つのフェーズによって構成されています。Green を**サブエージェントに依頼**することが重要です。
+
+1. Test cases phase: メインエージェント
+2. Red phase: メインエージェント
+3. Green phase: サブエージェント（内容の重みに応じて、Green 実装者を選択）
+4. Refactor phase: メインエージェント
+
+## 各フェーズの詳細
+
+- Test cases: 仕様に則ってテストケースを考えます。
+- Red: 仕様に則り、落ちるテストを書いてください。
+- Green: サブエージェントでテストを通すことだけを考えた最小限の実装を依頼してください。サブエージェントに伝える情報は最小限にしてください。
+  - 実装や変更の意図、対象ファイルを伝える。具体的なコード例を伝える必要はない
+  - テストコードは変更してはならないという制約を伝える
+  - 2度以上テストが通らない、またはテストケースに誤りがあると感じる場合、その旨を伝えて結果を返して指示を仰ぐように伝えておく
+- Refactor: 戻された結果を確認し、Refactor してください。テストを通すことだけではなく、コード品質向上をおこなってください。
+  - 将来の変更や機能変更が容易にするための保守性の確保
+  - コードの重複を排除したり、複雑さを取り除いてシンプルさの確保
+
+テスト駆動開発では、Refactor フェーズでコードとテストの両方を整理することが重要です。
+
+**Refactor フェーズで必ず行うこと**:
+
+- 実装コードの重複を排除
+- テストコードの重複を排除
+- テストケース名と検証内容が一致しているか確認
+- 新しいテストを追加したら、古い重複テストを削除
+- 責任範囲外のテストがないか確認
+
+**よくある間違い（避けるべきパターン）**:
+
+- 実装だけリファクタリングして、テストは放置
+- 新しいテストを追加したが、古いテストを削除しない
+- テストケース名と実際の検証内容が乖離している
+- 同じシナリオを異なる名前で複数回テストしている
 
 # コメントガイドライン
 
+- What よりも **Why を重視**
 - 機能の「What」を明確に記述
   - クラスDocコメント：冗長な説明を削除し、機能概要や使用例のみに簡潔化
   - メソッドDocコメント：基本的な役割と引数・戻り値の説明に集約
@@ -227,58 +303,55 @@ export class HogeAuthProvider implements IAuthProvider {
 
 ```
 app/server/src/
-├── domain/
-│   ├── user/
+├── user/
+│   ├── domain/
 │   │   ├── __tests__/
-│   │   │   ├── UserEntity.test.ts
-│   │   │   └── errors.test.ts
-│   │   ├── UserEntity.ts
-│   │   └── errors/
-│   └── services/
+│   │   │   └── UserAggregate.test.ts
+│   │   └── aggregates/
+│   ├── application/
+│   │   ├── __tests__/
+│   │   │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
+│   │   │   ├── GetUserProfile.errors.test.ts
+│   │   │   └── contracts/
+│   │   │       └── auth-provider.contract.test.ts
+│   │   └── usecases/
+│   ├── infrastructure/
+│   │   ├── __tests__/
+│   │   │   └── UserRepository.test.ts
+│   │   └── ...
+│   └── presentation/
 │       ├── __tests__/
-│       │   └── AuthenticationDomainService.test.ts
-│       └── AuthenticationDomainService.ts
+│       │   └── userRoutes.integration.test.ts
+│       └── ...
 │
-├── application/
-│   └── usecases/
-│       ├── __tests__/
-│       │   ├── authenticate-user/          # 大規模(11個以上)
-│       │   │   ├── validation.test.ts
-│       │   │   ├── success-password.test.ts
-│       │   │   └── ...
-│       │   ├── GetUserProfile.success.test.ts  # 小規模(10個以下)
-│       │   ├── GetUserProfile.errors.test.ts
-│       │   └── contracts/
-│       │       └── auth-provider.contract.test.ts
-│       ├── AuthenticateUserUseCase.ts
-│       └── GetUserProfileUseCase.ts
+├── task/
+│   ├── domain/
+│   │   ├── __tests__/
+│   │   │   └── TaskEntity.test.ts
+│   │   └── ...
+│   ├── application/
+│   │   ├── __tests__/
+│   │   │   ├── create-task/              # 大規模(11個以上)
+│   │   │   │   ├── validation.test.ts
+│   │   │   │   ├── success.test.ts
+│   │   │   │   └── ...
+│   │   │   └── ...
+│   │   └── ...
+│   ├── infrastructure/
+│   │   └── ...
+│   └── presentation/
+│       └── ...
 │
-├── infrastructure/
-│   ├── __tests__/
-│   │   ├── DatabaseConnection.test.ts
-│   │   └── BaseSchemaValidation.test.ts
-│   └── auth/
-│       ├── __tests__/
-│       │   ├── SupabaseJwtVerifier.test.ts
-│       │   └── MockJwtVerifier.test.ts
-│       └── SupabaseJwtVerifier.ts
-│
-└── presentation/
-    └── http/
-        ├── controllers/
-        │   ├── __tests__/
-        │   │   ├── AuthController.test.ts
-        │   │   └── UserController.test.ts
-        │   └── AuthController.ts
-        ├── routes/
-        │   ├── __tests__/
-        │   │   ├── authRoutes.test.ts
-        │   │   └── userRoutes.integration.test.ts
-        │   └── authRoutes.ts
-        └── middleware/
-            ├── __tests__/
-            │   └── metricsMiddleware.test.ts
-            └── metricsMiddleware.ts
+└── shared/
+    ├── database/
+    │   ├── __tests__/
+    │   │   ├── DatabaseConnection.test.ts
+    │   │   └── BaseSchemaValidation.test.ts
+    │   └── ...
+    └── middleware/
+        ├── __tests__/
+        │   └── metricsMiddleware.test.ts
+        └── ...
 ```
 
 ### テストケース数による使い分け
@@ -311,29 +384,28 @@ app/client/src/
 │   │   ├── __tests__/
 │   │   │   ├── sessionRestore.test.ts
 │   │   │   ├── errorHandling.test.ts
-│   │   │   ├── authProviderInterface.test.ts
 │   │   │   └── ui-ux/
 │   │   │       └── LoadingState.test.tsx
 │   │   ├── components/
 │   │   ├── hooks/
-│   │   └── services/
+│   │   ├── services/
+│   │   ├── store/
+│   │   └── types/
 │   │
-│   ├── google-auth/
+│   ├── todo/
 │   │   ├── __tests__/
-│   │   │   ├── authSlice.test.ts
-│   │   │   └── UserProfile.test.tsx
+│   │   │   └── todoList.test.tsx
 │   │   ├── components/
+│   │   ├── hooks/
 │   │   └── store/
 │   │
 │   └── user/
 │       ├── __tests__/
 │       │   ├── useUser.test.tsx
 │       │   └── useUpdateUser.test.tsx
-│       ├── components/
-│       ├── hooks/
-│       │   ├── useUser.ts
-│       │   └── useUpdateUser.ts
-│       └── services/
+│       └── hooks/
+│           ├── useUser.ts
+│           └── useUpdateUser.ts
 │
 └── lib/
     ├── __tests__/

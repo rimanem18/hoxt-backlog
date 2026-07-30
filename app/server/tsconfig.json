@@ -12,9 +12,8 @@
     "verbatimModuleSyntax": true,
 
     // パスエイリアス設定
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@/packages/*":["./../packages/*"]
     },
 
