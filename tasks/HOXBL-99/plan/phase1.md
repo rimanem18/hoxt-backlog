@@ -24,7 +24,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-1-01: `projects`テーブルのDBスキーマ定義とマイグレーション生成**
+- [x] **TASK-1-01: `projects`テーブルのDBスキーマ定義とマイグレーション生成**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-001, REQ-002
@@ -37,7 +37,7 @@
   - **完了条件**: `schema.ts`に`projects`テーブル定義が追加され、`app/server/src/shared/database/migrations/`に新規マイグレーションファイルが生成されていること
   - **注意点**: 自動生成されたマイグレーションファイルは手動編集しない
 
-- [ ] **TASK-1-02: `generate-schemas.ts`への`projects`テーブル設定追加**
+- [x] **TASK-1-02: `generate-schemas.ts`への`projects`テーブル設定追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: REQ-001, REQ-002
@@ -46,7 +46,7 @@
     - `app/server/scripts/generate-schemas.ts`の`tableConfigs`配列に`projects`エントリを追加する。`customValidations.name`に`min: 1, max: 100`と`title`と同型のエラーメッセージを設定する。`description`は`optional: true`とする
   - **完了条件**: `tableConfigs`に`projects`設定が追加されていること（生成実行はTASK-1-08で行う）
 
-- [ ] **TASK-1-03: `scripts/setup-rls.ts`への`projects`テーブルRLSポリシー追加**
+- [x] **TASK-1-03: `scripts/setup-rls.ts`への`projects`テーブルRLSポリシー追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: NFR-101（多層防御）
@@ -56,7 +56,7 @@
   - **完了条件**: `setup-rls.ts`に`projects`テーブル向けのRLS有効化・ポリシー作成処理が追加されていること。実際の適用（`db:setup`実行）はローカル確認のみとし、Preview/Production適用は本フェーズの対象外とする
   - **注意点**: リポジトリ層の`userId`条件が一次防御であり、RLSは多層防御である点（design.md §3.1, §9）を実装コメント等で誤解を招かないようにする
 
-- [ ] **TASK-1-04: project用ドメインエラーの実装（Red→Green）**
+- [x] **TASK-1-04: project用ドメインエラーの実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-301, REQ-306
@@ -67,7 +67,7 @@
   - **完了条件**: `InvalidProjectDataError`が`ProjectDomainError`を継承し、`status`・`code`プロパティを持つこと
   - **単体テスト要件**: `app/server/src/project/domain/__tests__/errors.test.ts`に、`TaskDomainError`系のテスト（`app/server/src/task/domain/__tests__/errors.test.ts`）と同等の観点でエラークラスの型・プロパティを検証する
 
-- [ ] **TASK-1-05: `ProjectName`値オブジェクトの実装（Red→Green）**
+- [x] **TASK-1-05: `ProjectName`値オブジェクトの実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-1-04
   - **関連要件**: REQ-001, REQ-301, REQ-306
@@ -79,7 +79,7 @@
   - **完了条件**: 空文字列・空白のみ・101文字で`InvalidProjectDataError`がスローされ、100文字ちょうど・trim後1文字以上で正常にインスタンス生成できること
   - **単体テスト要件**: 正常系（1文字、100文字、trim対象の前後空白）、異常系（空文字列、空白のみ、101文字）、境界値（100文字/101文字）
 
-- [ ] **TASK-1-06: `ProjectEntity`の実装（Red→Green）**
+- [x] **TASK-1-06: `ProjectEntity`の実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-1-05
   - **関連要件**: REQ-001, REQ-101
@@ -91,7 +91,7 @@
   - **完了条件**: `ProjectEntity.create({ userId, name, description })`で正常にインスタンスが生成され、不正な`name`の場合は`InvalidProjectDataError`が伝播すること
   - **単体テスト要件**: 正常系（説明文あり/なし）、異常系（不正な名前でのエラー伝播）
 
-- [ ] **TASK-1-07: `IProjectRepository.save`と`PostgreSQLProjectRepository.save`の実装（Red→Green）**
+- [x] **TASK-1-07: `IProjectRepository.save`と`PostgreSQLProjectRepository.save`の実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-1-01, TASK-1-02, TASK-1-06
   - **関連要件**: REQ-101
@@ -103,7 +103,7 @@
   - **完了条件**: `save`実行後、DBに`projects`レコードが永続化され、返却された`ProjectEntity`のプロパティがDB値と一致すること
   - **統合テスト要件**: 正常系（説明文あり/なし）、同名project重複保存が成功すること
 
-- [ ] **TASK-1-08: スキーマ生成実行と型チェック**
+- [x] **TASK-1-08: スキーマ生成実行と型チェック**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01, TASK-1-02, TASK-1-07
   - **関連要件**: なし（インフラ）
@@ -123,3 +123,17 @@
 - `ProjectName` / `ProjectEntity` / `IProjectRepository.save` / `PostgreSQLProjectRepository.save`が実装されていること
 - サーバー側の型チェックがエラーゼロであること
 - 新規テスト・既存テストがすべてグリーンであること
+
+## 7. 実施記録
+
+### 計画との差異
+
+- **TASK-1-01実施中に判明した問題**: `docker compose exec server bun run db:generate`で生成された0002マイグレーション（`app_test`/`app_hoxbl`/`app_hoxbl_preview`の3環境すべて）に、drizzle-kitが`CREATE SCHEMA "app_xxx";`（`IF NOT EXISTS`なし）を誤って混入させた。既存の0000/0001マイグレーションはスキーマ作成文を含んでおらず、実際は全環境（ローカル`app_test`、preview、production）でスキーマは既に作成済みであるため、このまま`db:migrate:production`/`db:migrate:preview`を実行すると「schema already exists」エラーで失敗する状態だった（ローカル`db:migrate:test`で実際に再現・確認済み）。原因は0001時点のスナップショット（`meta/0001_snapshot.json`）が`schemas: {}`のままスキーマ作成を追跡していなかったこと。
+  - **対応**: ユーザーに判断を仰ぎ、生成された3つのマイグレーションSQLの該当行のみ`CREATE SCHEMA IF NOT EXISTS "app_xxx";`に手動で書き換えた（自動生成ファイルの手動編集禁止ルールの例外対応）。修正後、ローカルの`db:migrate:test`が正常に成功することを確認済み。
+- **`scripts/check-migration-sync.sh`の実行不可**: サーバーコンテナに`bash`が存在せず`sh`で代替実行したが、コンテナ内に`git`コマンドが存在せずスクリプトが完走しなかった。加えてローカルの`app_test`マイグレーションのmeta配下にセッション実行環境由来の空ディレクトリ（`.claude/.cc-writes/`、gitignore対象・サンドボックス権限により削除不可）が生成されており、drizzle-kitの`generate`実行時にスナップショットとして誤読されエラーになった。preview/production向けの`generate`は正常に`No schema changes, nothing to migrate`となり、生成物とコミット対象に差分がないことは確認できている。
+
+### 所要時間
+
+- 開始: 2026-08-01 10:32 JST
+- 終了: 2026-08-01 10:44 JST
+- 合計: 約12分（typecheck/test/lint/semgrepの実行時間含む。品質ゲート実行はサブエージェントに委譲）
