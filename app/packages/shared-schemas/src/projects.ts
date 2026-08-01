@@ -36,8 +36,17 @@ export const createProjectSchema = z.object({
 export const createProjectResponseSchema = apiResponseSchema(projectSchema)
   .openapi('CreateProjectResponse');
 
+export const listProjectsResponseSchema = apiResponseSchema(
+  z.array(projectSchema),
+).openapi('ListProjectsResponse');
+
+export const getProjectResponseSchema = apiResponseSchema(projectSchema)
+  .openapi('GetProjectResponse');
+
 // ===== 型エクスポート =====
 
 export type Project = z.infer<typeof projectSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
+export type ListProjectsResponse = z.infer<typeof listProjectsResponseSchema>;
+export type GetProjectResponse = z.infer<typeof getProjectResponseSchema>;

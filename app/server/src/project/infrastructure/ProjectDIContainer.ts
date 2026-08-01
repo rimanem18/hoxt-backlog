@@ -1,4 +1,6 @@
 import { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
+import { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
+import { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { db } from '@/shared/database/DatabaseConnection';
 import { PostgreSQLProjectRepository } from './PostgreSQLProjectRepository';
@@ -11,6 +13,9 @@ import { PostgreSQLProjectRepository } from './PostgreSQLProjectRepository';
  */
 export class ProjectDIContainer {
   private static createProjectUseCaseInstance: CreateProjectUseCase | null =
+    null;
+  private static getProjectsUseCaseInstance: GetProjectsUseCase | null = null;
+  private static getProjectByIdUseCaseInstance: GetProjectByIdUseCase | null =
     null;
   private static projectRepositoryInstance: PostgreSQLProjectRepository | null =
     null;
@@ -27,6 +32,35 @@ export class ProjectDIContainer {
         new CreateProjectUseCase(projectRepository);
     }
     return ProjectDIContainer.createProjectUseCaseInstance;
+  }
+
+  /**
+   * GetProjectsUseCaseのインスタンスを返す
+   *
+   * シングルトンパターンで効率的にインスタンスを管理
+   */
+  static getGetProjectsUseCase(): GetProjectsUseCase {
+    if (!ProjectDIContainer.getProjectsUseCaseInstance) {
+      const projectRepository = ProjectDIContainer.getProjectRepository();
+      ProjectDIContainer.getProjectsUseCaseInstance = new GetProjectsUseCase(
+        projectRepository,
+      );
+    }
+    return ProjectDIContainer.getProjectsUseCaseInstance;
+  }
+
+  /**
+   * GetProjectByIdUseCaseのインスタンスを返す
+   *
+   * シングルトンパターンで効率的にインスタンスを管理
+   */
+  static getGetProjectByIdUseCase(): GetProjectByIdUseCase {
+    if (!ProjectDIContainer.getProjectByIdUseCaseInstance) {
+      const projectRepository = ProjectDIContainer.getProjectRepository();
+      ProjectDIContainer.getProjectByIdUseCaseInstance =
+        new GetProjectByIdUseCase(projectRepository);
+    }
+    return ProjectDIContainer.getProjectByIdUseCaseInstance;
   }
 
   /**
@@ -53,6 +87,8 @@ export class ProjectDIContainer {
     }
 
     ProjectDIContainer.createProjectUseCaseInstance = null;
+    ProjectDIContainer.getProjectsUseCaseInstance = null;
+    ProjectDIContainer.getProjectByIdUseCaseInstance = null;
     ProjectDIContainer.projectRepositoryInstance = null;
   }
 }

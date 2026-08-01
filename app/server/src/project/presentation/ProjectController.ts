@@ -1,5 +1,7 @@
 import type { Context } from 'hono';
 import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
+import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
+import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 
 /**
@@ -23,6 +25,14 @@ interface SuccessResponseSingle {
 }
 
 /**
+ * 成功レスポンス型（配列）
+ */
+interface SuccessResponseArray {
+  success: true;
+  data: ProjectDTO[];
+}
+
+/**
  * ProjectControllerクラス
  *
  * Presentation層のコントローラ。HTTPリクエストを受け取り、
@@ -31,12 +41,20 @@ interface SuccessResponseSingle {
  *
  * @example
  * ```typescript
- * const controller = new ProjectController(createProjectUseCase);
+ * const controller = new ProjectController(
+ *   createProjectUseCase,
+ *   getProjectsUseCase,
+ *   getProjectByIdUseCase,
+ * );
  * app.post('/api/projects', (c) => controller.create(c));
  * ```
  */
 export class ProjectController {
-  constructor(private readonly createProjectUseCase: CreateProjectUseCase) {}
+  constructor(
+    private readonly createProjectUseCase: CreateProjectUseCase,
+    private readonly getProjectsUseCase: GetProjectsUseCase,
+    private readonly getProjectByIdUseCase: GetProjectByIdUseCase,
+  ) {}
 
   /**
    * プロジェクト作成エンドポイント
@@ -64,6 +82,54 @@ export class ProjectController {
         data: this.toDTO(project),
       },
       201,
+    );
+  }
+
+  /**
+   * プロジェクト一覧取得エンドポイント
+   *
+   * GET /api/projects
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（プロジェクト配列）
+   */
+  async getAll(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+
+    const projects = await this.getProjectsUseCase.execute({ userId });
+
+    return c.json<SuccessResponseArray>(
+      {
+        success: true,
+        data: projects.map((project) => this.toDTO(project)),
+      },
+      200,
+    );
+  }
+
+  /**
+   * プロジェクト詳細取得エンドポイント
+   *
+   * GET /api/projects/:id
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（単一プロジェクト）
+   */
+  async getById(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const projectId = c.req.param('id') as string;
+
+    const project = await this.getProjectByIdUseCase.execute({
+      userId,
+      projectId,
+    });
+
+    return c.json<SuccessResponseSingle>(
+      {
+        success: true,
+        data: this.toDTO(project),
+      },
+      200,
     );
   }
 

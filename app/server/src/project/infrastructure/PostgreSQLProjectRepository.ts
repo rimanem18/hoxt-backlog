@@ -1,3 +1,4 @@
+import { and, desc, eq } from 'drizzle-orm';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { ProjectEntity } from '@/project/domain/ProjectEntity';
 import { ProjectName } from '@/project/domain/valueobjects/ProjectName';
@@ -31,6 +32,29 @@ export class PostgreSQLProjectRepository implements IProjectRepository {
     }
 
     return this.toDomain(result[0]);
+  }
+
+  async findById(
+    userId: string,
+    projectId: string,
+  ): Promise<ProjectEntity | null> {
+    const result = await this.db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+      .limit(1);
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
+  async findByUserId(userId: string): Promise<ProjectEntity[]> {
+    const results = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.userId, userId))
+      .orderBy(desc(projects.createdAt));
+
+    return results.map((row) => this.toDomain(row));
   }
 
   /**

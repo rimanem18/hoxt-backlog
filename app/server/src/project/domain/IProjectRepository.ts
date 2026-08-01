@@ -13,4 +13,19 @@ export interface IProjectRepository {
    * @returns 保存されたProjectEntity
    */
   save(project: ProjectEntity): Promise<ProjectEntity>;
+
+  /**
+   * ユーザーIDとプロジェクトIDでプロジェクトを取得する
+   * @param userId - プロジェクト所有者のユーザーID
+   * @param projectId - 取得するプロジェクトのID
+   * @returns 見つかったProjectEntity、存在しない場合はnull
+   */
+  findById(userId: string, projectId: string): Promise<ProjectEntity | null>;
+
+  /**
+   * 指定ユーザーが所有するプロジェクトを全件取得する
+   * @param userId - プロジェクト所有者のユーザーID
+   * @returns ProjectEntityの配列
+   */
+  findByUserId(userId: string): Promise<ProjectEntity[]>;
 }

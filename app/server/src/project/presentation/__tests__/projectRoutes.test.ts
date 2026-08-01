@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { InvalidProjectDataError } from '@/project/domain/errors';
+import {
+  InvalidProjectDataError,
+  ProjectNotFoundError,
+} from '@/project/domain/errors';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { User } from '@/user/domain/UserEntity';
 import type { MockUseCases } from './helpers';
@@ -42,6 +45,10 @@ describe('projectRoutes統合テスト', () => {
     app = createProjectRoutes({
       // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
       createProjectUseCase: useCases.createProjectUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
+      getProjectsUseCase: useCases.getProjectsUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
+      getProjectByIdUseCase: useCases.getProjectByIdUseCase as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
         mockPayload: {
@@ -219,6 +226,131 @@ describe('projectRoutes統合テスト', () => {
         },
         body: JSON.stringify({ name: '正常な名前' }),
       });
+
+      // Then: 401 Unauthorizedレスポンスを返す
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /projects - プロジェクト一覧取得', () => {
+    test('正常系: 自分のプロジェクト一覧を取得し200 OKを返す', async () => {
+      // Given: 自分のプロジェクト一覧を返すモック
+      const mockProjects = [
+        createMockProjectEntity({ id: 'p1', name: 'プロジェクト1' }),
+        createMockProjectEntity({ id: 'p2', name: 'プロジェクト2' }),
+      ];
+      useCases.getProjectsUseCase.execute.mockResolvedValue(mockProjects);
+
+      // When: GET /projectsでプロジェクト一覧を取得
+      const res = await app.request('/projects', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer mock-token' },
+      });
+
+      // Then: 200 OKレスポンスと自分のプロジェクト一覧を返す（AC-06）
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data).toHaveLength(2);
+    });
+
+    test('正常系: プロジェクトが0件の場合は空配列を返す', async () => {
+      // Given: 空配列を返すモック
+      useCases.getProjectsUseCase.execute.mockResolvedValue([]);
+
+      // When: GET /projectsでプロジェクト一覧を取得
+      const res = await app.request('/projects', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer mock-token' },
+      });
+
+      // Then: 200 OKレスポンスと空配列を返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data).toEqual([]);
+    });
+
+    test('異常系: 認証なしで401 Unauthorizedを返す', async () => {
+      // When: Authorizationヘッダーなしでプロジェクト一覧を取得
+      const res = await app.request('/projects', { method: 'GET' });
+
+      // Then: 401 Unauthorizedレスポンスを返す
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('GET /projects/{id} - プロジェクト詳細取得', () => {
+    test('正常系: 自分のプロジェクト詳細を取得し200 OKを返す', async () => {
+      // Given: 自分のプロジェクトを返すモック
+      const mockProject = createMockProjectEntity({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: '詳細取得プロジェクト',
+      });
+      useCases.getProjectByIdUseCase.execute.mockResolvedValue(mockProject);
+
+      // When: GET /projects/{id}でプロジェクト詳細を取得
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer mock-token' },
+        },
+      );
+
+      // Then: 200 OKレスポンスとプロジェクト詳細を返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.name).toBe('詳細取得プロジェクト');
+    });
+
+    test('異常系: 他ユーザーのプロジェクト指定時に404 Not Foundを返す（AC-06）', async () => {
+      // Given: ProjectNotFoundErrorを発生させるモック
+      useCases.getProjectByIdUseCase.execute.mockRejectedValue(
+        new ProjectNotFoundError('550e8400-e29b-41d4-a716-446655440000'),
+      );
+
+      // When: 他ユーザーのプロジェクトIDで詳細を取得
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer mock-token' },
+        },
+      );
+
+      // Then: 404 Not Foundレスポンスを返す（403ではない）
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
+
+    test('異常系: 存在しないプロジェクトIDで404 Not Foundを返す', async () => {
+      // Given: ProjectNotFoundErrorを発生させるモック
+      useCases.getProjectByIdUseCase.execute.mockRejectedValue(
+        new ProjectNotFoundError('660e8400-e29b-41d4-a716-446655440099'),
+      );
+
+      // When: 存在しないプロジェクトIDで詳細を取得
+      const res = await app.request(
+        '/projects/660e8400-e29b-41d4-a716-446655440099',
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer mock-token' },
+        },
+      );
+
+      // Then: 404 Not Foundレスポンスを返す
+      expect(res.status).toBe(404);
+    });
+
+    test('異常系: 認証なしで401 Unauthorizedを返す', async () => {
+      // When: Authorizationヘッダーなしでプロジェクト詳細を取得
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        { method: 'GET' },
+      );
 
       // Then: 401 Unauthorizedレスポンスを返す
       expect(res.status).toBe(401);

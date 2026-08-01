@@ -1,6 +1,11 @@
 import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
 import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
-import { InvalidProjectDataError } from '@/project/domain/errors';
+import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
+import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
+import {
+  InvalidProjectDataError,
+  ProjectNotFoundError,
+} from '@/project/domain/errors';
 import { ProjectDIContainer } from '@/project/infrastructure/ProjectDIContainer';
 import { AuthError } from '@/shared/middleware/errors/AuthError';
 import { formatZodError } from '@/shared/utils/zodErrorFormatter';
@@ -9,7 +14,11 @@ import {
   authMiddleware,
 } from '@/user/presentation/middleware/auth/AuthMiddleware';
 import { ProjectController } from './ProjectController';
-import { createProjectRoute } from './projectRoutes.schema';
+import {
+  createProjectRoute,
+  getProjectRoute,
+  listProjectsRoute,
+} from './projectRoutes.schema';
 
 /**
  * リクエストボディのZodバリデーション失敗をハンドリングするフック
@@ -58,6 +67,8 @@ const projects = new OpenAPIHono({ defaultHook: validationHook });
  */
 const projectController = new ProjectController(
   ProjectDIContainer.getCreateProjectUseCase(),
+  ProjectDIContainer.getGetProjectsUseCase(),
+  ProjectDIContainer.getGetProjectByIdUseCase(),
 );
 
 // authMiddlewareでJWT認証を実施
@@ -68,6 +79,16 @@ projects.openapi(
   createProjectRoute,
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   (c) => projectController.create(c) as any,
+);
+projects.openapi(
+  listProjectsRoute,
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  (c) => projectController.getAll(c) as any,
+);
+projects.openapi(
+  getProjectRoute,
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  (c) => projectController.getById(c) as any,
 );
 
 // グローバルエラーハンドラー
@@ -85,6 +106,19 @@ projects.onError((err, c) => {
         },
       },
       401,
+    );
+  }
+
+  if (err instanceof ProjectNotFoundError) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: err.message,
+        },
+      },
+      404,
     );
   }
 
@@ -123,6 +157,10 @@ projects.onError((err, c) => {
 export interface ProjectRoutesDependencies {
   /** プロジェクト作成ユースケース */
   createProjectUseCase: CreateProjectUseCase;
+  /** プロジェクト一覧取得ユースケース */
+  getProjectsUseCase: GetProjectsUseCase;
+  /** プロジェクト詳細取得ユースケース */
+  getProjectByIdUseCase: GetProjectByIdUseCase;
   /** 認証ミドルウェアオプション（テスト用mockPayloadを含む） */
   authMiddlewareOptions?: AuthMiddlewareOptions;
 }
@@ -139,7 +177,11 @@ export interface ProjectRoutesDependencies {
 export function createProjectRoutes(
   dependencies: ProjectRoutesDependencies,
 ): OpenAPIHono {
-  const controller = new ProjectController(dependencies.createProjectUseCase);
+  const controller = new ProjectController(
+    dependencies.createProjectUseCase,
+    dependencies.getProjectsUseCase,
+    dependencies.getProjectByIdUseCase,
+  );
 
   const app = new OpenAPIHono({ defaultHook: validationHook });
 
@@ -149,6 +191,10 @@ export function createProjectRoutes(
   // エンドポイントを登録
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(createProjectRoute, (c) => controller.create(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  app.openapi(listProjectsRoute, (c) => controller.getAll(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  app.openapi(getProjectRoute, (c) => controller.getById(c) as any);
 
   // グローバルエラーハンドラー
   app.onError((err, c) => {
@@ -165,6 +211,19 @@ export function createProjectRoutes(
           },
         },
         401,
+      );
+    }
+
+    if (err instanceof ProjectNotFoundError) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: err.message,
+          },
+        },
+        404,
       );
     }
 
