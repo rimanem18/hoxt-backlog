@@ -28,4 +28,17 @@ export interface IProjectRepository {
    * @returns ProjectEntityの配列
    */
   findByUserId(userId: string): Promise<ProjectEntity[]>;
+
+  /**
+   * プロジェクトを更新する（検証済みEntityを永続化）
+   * @param userId - プロジェクト所有者のユーザーID
+   * @param projectId - 更新対象のプロジェクトID
+   * @param project - 更新済みの内容を持つProjectEntity
+   * @returns 更新されたProjectEntity、所有者本人でない場合はnull
+   */
+  update(
+    userId: string,
+    projectId: string,
+    project: ProjectEntity,
+  ): Promise<ProjectEntity | null>;
 }

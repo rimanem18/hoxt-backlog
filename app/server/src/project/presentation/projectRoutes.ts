@@ -2,6 +2,7 @@ import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
 import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
 import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
 import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
+import type { UpdateProjectUseCase } from '@/project/application/UpdateProjectUseCase';
 import {
   InvalidProjectDataError,
   ProjectNotFoundError,
@@ -18,6 +19,7 @@ import {
   createProjectRoute,
   getProjectRoute,
   listProjectsRoute,
+  updateProjectRoute,
 } from './projectRoutes.schema';
 
 /**
@@ -69,6 +71,7 @@ const projectController = new ProjectController(
   ProjectDIContainer.getCreateProjectUseCase(),
   ProjectDIContainer.getGetProjectsUseCase(),
   ProjectDIContainer.getGetProjectByIdUseCase(),
+  ProjectDIContainer.getUpdateProjectUseCase(),
 );
 
 // authMiddlewareでJWT認証を実施
@@ -89,6 +92,11 @@ projects.openapi(
   getProjectRoute,
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   (c) => projectController.getById(c) as any,
+);
+projects.openapi(
+  updateProjectRoute,
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  (c) => projectController.update(c) as any,
 );
 
 // グローバルエラーハンドラー
@@ -161,6 +169,8 @@ export interface ProjectRoutesDependencies {
   getProjectsUseCase: GetProjectsUseCase;
   /** プロジェクト詳細取得ユースケース */
   getProjectByIdUseCase: GetProjectByIdUseCase;
+  /** プロジェクト編集ユースケース */
+  updateProjectUseCase: UpdateProjectUseCase;
   /** 認証ミドルウェアオプション（テスト用mockPayloadを含む） */
   authMiddlewareOptions?: AuthMiddlewareOptions;
 }
@@ -181,6 +191,7 @@ export function createProjectRoutes(
     dependencies.createProjectUseCase,
     dependencies.getProjectsUseCase,
     dependencies.getProjectByIdUseCase,
+    dependencies.updateProjectUseCase,
   );
 
   const app = new OpenAPIHono({ defaultHook: validationHook });
@@ -195,6 +206,8 @@ export function createProjectRoutes(
   app.openapi(listProjectsRoute, (c) => controller.getAll(c) as any);
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(getProjectRoute, (c) => controller.getById(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  app.openapi(updateProjectRoute, (c) => controller.update(c) as any);
 
   // グローバルエラーハンドラー
   app.onError((err, c) => {

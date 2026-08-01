@@ -13,6 +13,8 @@ import {
   createProjectSchema,
   getProjectResponseSchema,
   listProjectsResponseSchema,
+  updateProjectResponseSchema,
+  updateProjectSchema,
 } from '@/packages/shared-schemas/src/projects';
 
 // ===== POST /api/projects - プロジェクト作成 =====
@@ -168,10 +170,80 @@ export const getProjectRoute = createRoute({
   },
 });
 
+// ===== PUT /api/projects/:id - プロジェクト編集 =====
+
+export const updateProjectRoute = createRoute({
+  method: 'put',
+  path: '/projects/{id}',
+  tags: ['プロジェクト管理'],
+  summary: 'プロジェクト編集',
+  description: 'プロジェクトの名称・説明文を更新します（部分更新）。',
+  security: [{ BearerAuth: [] }],
+  request: {
+    params: z.object({
+      id: z.uuid().openapi({
+        param: { name: 'id', in: 'path' },
+        example: '550e8400-e29b-41d4-a716-446655440000',
+      }),
+    }),
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: updateProjectSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: updateProjectResponseSchema,
+        },
+      },
+      description: 'プロジェクトを更新しました',
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'バリデーションエラー',
+    },
+    401: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'JWT認証失敗',
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'プロジェクトが見つかりません',
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: 'サーバーエラー',
+    },
+  },
+});
+
 // ===== ルート配列のエクスポート =====
 
 export const projectRoutes = [
   createProjectRoute,
   listProjectsRoute,
   getProjectRoute,
+  updateProjectRoute,
 ];

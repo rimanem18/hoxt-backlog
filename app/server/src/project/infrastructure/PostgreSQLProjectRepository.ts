@@ -47,6 +47,24 @@ export class PostgreSQLProjectRepository implements IProjectRepository {
     return result[0] ? this.toDomain(result[0]) : null;
   }
 
+  async update(
+    userId: string,
+    projectId: string,
+    project: ProjectEntity,
+  ): Promise<ProjectEntity | null> {
+    const result = await this.db
+      .update(projects)
+      .set({
+        name: project.getName(),
+        description: project.getDescription(),
+        updatedAt: project.getUpdatedAt(),
+      })
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+      .returning();
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
   async findByUserId(userId: string): Promise<ProjectEntity[]> {
     const results = await this.db
       .select()

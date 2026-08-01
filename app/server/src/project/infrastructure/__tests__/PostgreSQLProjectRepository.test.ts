@@ -234,4 +234,82 @@ describe('PostgreSQLProjectRepository', () => {
       expect(result[1]?.getName()).toBe('古いプロジェクト');
     });
   });
+
+  describe('update', () => {
+    test('所有者本人のプロジェクトが更新されDBに反映される', async () => {
+      // Given: 保存済みのプロジェクトを名前・説明文とも変更
+      const projectEntity = ProjectEntity.create({
+        userId: testUserId1,
+        name: '更新前の名前',
+        description: '更新前の説明',
+      });
+      await repository.save(projectEntity);
+      projectEntity.updateName('更新後の名前');
+      projectEntity.updateDescription('更新後の説明');
+
+      // When: プロジェクトを更新
+      const updatedProject = await repository.update(
+        testUserId1,
+        projectEntity.getId(),
+        projectEntity,
+      );
+
+      // Then: 更新後の値が返り、DBにも反映される
+      expect(updatedProject).not.toBeNull();
+      expect(updatedProject?.getName()).toBe('更新後の名前');
+      expect(updatedProject?.getDescription()).toBe('更新後の説明');
+
+      const rows = await db
+        .select()
+        .from(projects)
+        .where(sql`${projects.id} = ${projectEntity.getId()}`);
+      expect(rows[0]?.name).toBe('更新後の名前');
+      expect(rows[0]?.description).toBe('更新後の説明');
+    });
+
+    test('他のユーザーのプロジェクトを更新しようとするとnullを返す', async () => {
+      // Given: ユーザー1のプロジェクト
+      const projectEntity = ProjectEntity.create({
+        userId: testUserId1,
+        name: 'ユーザー1のプロジェクト',
+      });
+      await repository.save(projectEntity);
+      projectEntity.updateName('不正な更新');
+
+      // When: ユーザー2として更新を試みる
+      const updatedProject = await repository.update(
+        testUserId2,
+        projectEntity.getId(),
+        projectEntity,
+      );
+
+      // Then: nullが返され、DBの値は変更されない
+      expect(updatedProject).toBeNull();
+
+      const rows = await db
+        .select()
+        .from(projects)
+        .where(sql`${projects.id} = ${projectEntity.getId()}`);
+      expect(rows[0]?.name).toBe('ユーザー1のプロジェクト');
+    });
+
+    test('存在しないプロジェクトIDを指定するとnullを返す', async () => {
+      // Given: 存在しないプロジェクトID
+      const nonExistentProjectId = '999e4567-e89b-12d3-a456-426614174999';
+      const projectEntity = ProjectEntity.create({
+        userId: testUserId1,
+        name: '存在しないプロジェクト',
+      });
+
+      // When: 存在しないプロジェクトIDで更新を試みる
+      const updatedProject = await repository.update(
+        testUserId1,
+        nonExistentProjectId,
+        projectEntity,
+      );
+
+      // Then: nullが返される
+      expect(updatedProject).toBeNull();
+    });
+  });
 });

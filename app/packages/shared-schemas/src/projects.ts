@@ -31,6 +31,10 @@ export const createProjectSchema = z.object({
   description: z.string().optional(),
 }).openapi('CreateProjectBody');
 
+export const updateProjectSchema = createProjectSchema
+  .partial()
+  .openapi('UpdateProjectBody');
+
 // ===== レスポンススキーマ =====
 
 export const createProjectResponseSchema = apiResponseSchema(projectSchema)
@@ -43,10 +47,15 @@ export const listProjectsResponseSchema = apiResponseSchema(
 export const getProjectResponseSchema = apiResponseSchema(projectSchema)
   .openapi('GetProjectResponse');
 
+export const updateProjectResponseSchema = apiResponseSchema(projectSchema)
+  .openapi('UpdateProjectResponse');
+
 // ===== 型エクスポート =====
 
 export type Project = z.infer<typeof projectSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type CreateProjectResponse = z.infer<typeof createProjectResponseSchema>;
 export type ListProjectsResponse = z.infer<typeof listProjectsResponseSchema>;
 export type GetProjectResponse = z.infer<typeof getProjectResponseSchema>;
+export type UpdateProjectResponse = z.infer<typeof updateProjectResponseSchema>;

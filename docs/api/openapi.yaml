@@ -2549,3 +2549,193 @@ paths:
                 required:
                   - success
                   - error
+    put:
+      tags:
+        - プロジェクト管理
+      summary: プロジェクト編集
+      description: プロジェクトの名称・説明文を更新します（部分更新）。
+      security:
+        - BearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            example: 550e8400-e29b-41d4-a716-446655440000
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+      responses:
+        '200':
+          description: プロジェクトを更新しました
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      description:
+                        type: string
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - userId
+                      - name
+                      - description
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '401':
+          description: JWT認証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: プロジェクトが見つかりません
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error

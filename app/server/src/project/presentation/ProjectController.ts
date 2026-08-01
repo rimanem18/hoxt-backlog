@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
 import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
 import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
+import type { UpdateProjectUseCase } from '@/project/application/UpdateProjectUseCase';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 
 /**
@@ -45,6 +46,7 @@ interface SuccessResponseArray {
  *   createProjectUseCase,
  *   getProjectsUseCase,
  *   getProjectByIdUseCase,
+ *   updateProjectUseCase,
  * );
  * app.post('/api/projects', (c) => controller.create(c));
  * ```
@@ -54,6 +56,7 @@ export class ProjectController {
     private readonly createProjectUseCase: CreateProjectUseCase,
     private readonly getProjectsUseCase: GetProjectsUseCase,
     private readonly getProjectByIdUseCase: GetProjectByIdUseCase,
+    private readonly updateProjectUseCase: UpdateProjectUseCase,
   ) {}
 
   /**
@@ -122,6 +125,37 @@ export class ProjectController {
     const project = await this.getProjectByIdUseCase.execute({
       userId,
       projectId,
+    });
+
+    return c.json<SuccessResponseSingle>(
+      {
+        success: true,
+        data: this.toDTO(project),
+      },
+      200,
+    );
+  }
+
+  /**
+   * プロジェクト編集エンドポイント
+   *
+   * PUT /api/projects/:id
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（更新後のプロジェクト）
+   */
+  async update(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const id = c.req.param('id') as string;
+    const input = await c.req.json();
+
+    const project = await this.updateProjectUseCase.execute({
+      userId,
+      projectId: id,
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
     });
 
     return c.json<SuccessResponseSingle>(

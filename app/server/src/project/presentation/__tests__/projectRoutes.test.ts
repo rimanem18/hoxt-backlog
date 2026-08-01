@@ -49,6 +49,8 @@ describe('projectRoutes統合テスト', () => {
       getProjectsUseCase: useCases.getProjectsUseCase as any,
       // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
       getProjectByIdUseCase: useCases.getProjectByIdUseCase as any,
+      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
+      updateProjectUseCase: useCases.updateProjectUseCase as any,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
         mockPayload: {
@@ -350,6 +352,121 @@ describe('projectRoutes統合テスト', () => {
       const res = await app.request(
         '/projects/550e8400-e29b-41d4-a716-446655440000',
         { method: 'GET' },
+      );
+
+      // Then: 401 Unauthorizedレスポンスを返す
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('PUT /projects/{id} - プロジェクト編集', () => {
+    test('正常系: 自分のプロジェクトの名称・説明文を更新し200 OKを返す（AC-08）', async () => {
+      // Given: 更新後のプロジェクトを返すモック
+      const mockProject = createMockProjectEntity({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        name: '更新後の名前',
+        description: '更新後の説明',
+      });
+      useCases.updateProjectUseCase.execute.mockResolvedValue(mockProject);
+
+      // When: PUT /projects/{id}で更新リクエストを送信
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({
+            name: '更新後の名前',
+            description: '更新後の説明',
+          }),
+        },
+      );
+
+      // Then: 200 OKレスポンスと更新後のプロジェクトデータを返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.name).toBe('更新後の名前');
+      expect(data.data.description).toBe('更新後の説明');
+    });
+
+    test('異常系: 空白のみの名前で400 Bad Requestを返す（AC-09）', async () => {
+      // When: 空白のみの名前で更新リクエストを送信
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({ name: '   ' }),
+        },
+      );
+
+      // Then: 400 Bad Requestバリデーションエラーレスポンスを返す
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
+
+    test('異常系: 101文字の名前で400 Bad Requestを返す（AC-09）', async () => {
+      // When: 101文字の名前で更新リクエストを送信
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({ name: 'a'.repeat(101) }),
+        },
+      );
+
+      // Then: 400 Bad Requestバリデーションエラーレスポンスを返す
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
+
+    test('異常系: 他ユーザーのプロジェクト指定時に404 Not Foundを返す（AC-09）', async () => {
+      // Given: ProjectNotFoundErrorを発生させるモック
+      useCases.updateProjectUseCase.execute.mockRejectedValue(
+        new ProjectNotFoundError('550e8400-e29b-41d4-a716-446655440000'),
+      );
+
+      // When: 他ユーザーのプロジェクトIDで更新リクエストを送信
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({ name: '新しい名前' }),
+        },
+      );
+
+      // Then: 404 Not Foundレスポンスを返す（403ではない）
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
+
+    test('異常系: 認証なしで401 Unauthorizedを返す', async () => {
+      // When: Authorizationヘッダーなしで更新リクエストを送信
+      const res = await app.request(
+        '/projects/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: '新しい名前' }),
+        },
       );
 
       // Then: 401 Unauthorizedレスポンスを返す

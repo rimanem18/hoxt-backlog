@@ -14,6 +14,9 @@ export interface MockUseCases {
   getProjectByIdUseCase: {
     execute: ReturnType<typeof mock>;
   };
+  updateProjectUseCase: {
+    execute: ReturnType<typeof mock>;
+  };
 }
 
 /**
@@ -28,6 +31,9 @@ export function mockUseCases(): MockUseCases {
       execute: mock(),
     },
     getProjectByIdUseCase: {
+      execute: mock(),
+    },
+    updateProjectUseCase: {
       execute: mock(),
     },
   };

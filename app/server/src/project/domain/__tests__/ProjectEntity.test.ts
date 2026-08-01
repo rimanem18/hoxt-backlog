@@ -107,4 +107,97 @@ describe('ProjectEntity', () => {
       expect(project.getDescription()).toBeNull();
     });
   });
+
+  // ==========================================================================
+  // ビジネスロジック: updateName / updateDescription
+  // ==========================================================================
+  describe('updateName', () => {
+    test('正常な名前でnameが更新され、updatedAtも更新される', async () => {
+      // Given: プロジェクトを作成
+      const project = ProjectEntity.create({
+        userId: 'user-uuid-123',
+        name: '元の名前',
+      });
+      const originalUpdatedAt = project.getUpdatedAt();
+
+      // 時間差を確保するための待機
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When: 名前を更新
+      project.updateName('新しい名前');
+
+      // Then: 名前とupdatedAtが更新される
+      expect(project.getName()).toBe('新しい名前');
+      expect(project.getUpdatedAt().getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+    });
+
+    test('空白のみの名前を指定するとInvalidProjectDataErrorがスローされ、nameが変更されない', () => {
+      // Given: プロジェクトを作成
+      const project = ProjectEntity.create({
+        userId: 'user-uuid-123',
+        name: '元の名前',
+      });
+
+      // When & Then: InvalidProjectDataErrorがスローされる
+      expect(() => project.updateName('   ')).toThrow(InvalidProjectDataError);
+
+      // Then: nameは変更されない
+      expect(project.getName()).toBe('元の名前');
+    });
+
+    test('101文字の名前を指定するとInvalidProjectDataErrorがスローされ、nameが変更されない', () => {
+      // Given: プロジェクトを作成
+      const project = ProjectEntity.create({
+        userId: 'user-uuid-123',
+        name: '元の名前',
+      });
+
+      // When & Then: InvalidProjectDataErrorがスローされる
+      expect(() => project.updateName('a'.repeat(101))).toThrow(
+        InvalidProjectDataError,
+      );
+
+      // Then: nameは変更されない
+      expect(project.getName()).toBe('元の名前');
+    });
+  });
+
+  describe('updateDescription', () => {
+    test('説明文が更新され、updatedAtも更新される', async () => {
+      // Given: プロジェクトを作成
+      const project = ProjectEntity.create({
+        userId: 'user-uuid-123',
+        name: 'テストプロジェクト',
+      });
+      const originalUpdatedAt = project.getUpdatedAt();
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When: 説明文を更新
+      project.updateDescription('新しい説明');
+
+      // Then: 説明文とupdatedAtが更新される
+      expect(project.getDescription()).toBe('新しい説明');
+      expect(project.getUpdatedAt().getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+    });
+
+    test('undefinedを指定するとdescriptionがnullになる', () => {
+      // Given: 説明文ありでプロジェクトを作成
+      const project = ProjectEntity.create({
+        userId: 'user-uuid-123',
+        name: 'テストプロジェクト',
+        description: '元の説明',
+      });
+
+      // When: 説明文をundefinedで更新
+      project.updateDescription(undefined);
+
+      // Then: descriptionがnullになる
+      expect(project.getDescription()).toBeNull();
+    });
+  });
 });

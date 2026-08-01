@@ -1,6 +1,7 @@
 import { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
 import { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
 import { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
+import { UpdateProjectUseCase } from '@/project/application/UpdateProjectUseCase';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { db } from '@/shared/database/DatabaseConnection';
 import { PostgreSQLProjectRepository } from './PostgreSQLProjectRepository';
@@ -18,6 +19,8 @@ export class ProjectDIContainer {
   private static getProjectByIdUseCaseInstance: GetProjectByIdUseCase | null =
     null;
   private static projectRepositoryInstance: PostgreSQLProjectRepository | null =
+    null;
+  private static updateProjectUseCaseInstance: UpdateProjectUseCase | null =
     null;
 
   /**
@@ -64,6 +67,20 @@ export class ProjectDIContainer {
   }
 
   /**
+   * UpdateProjectUseCaseのインスタンスを返す
+   *
+   * シングルトンパターンで効率的にインスタンスを管理
+   */
+  static getUpdateProjectUseCase(): UpdateProjectUseCase {
+    if (!ProjectDIContainer.updateProjectUseCaseInstance) {
+      const projectRepository = ProjectDIContainer.getProjectRepository();
+      ProjectDIContainer.updateProjectUseCaseInstance =
+        new UpdateProjectUseCase(projectRepository);
+    }
+    return ProjectDIContainer.updateProjectUseCaseInstance;
+  }
+
+  /**
    * PostgreSQLProjectRepositoryの共有インスタンスを返す
    *
    * データベース接続プールを効率的に活用
@@ -89,6 +106,7 @@ export class ProjectDIContainer {
     ProjectDIContainer.createProjectUseCaseInstance = null;
     ProjectDIContainer.getProjectsUseCaseInstance = null;
     ProjectDIContainer.getProjectByIdUseCaseInstance = null;
+    ProjectDIContainer.updateProjectUseCaseInstance = null;
     ProjectDIContainer.projectRepositoryInstance = null;
   }
 }

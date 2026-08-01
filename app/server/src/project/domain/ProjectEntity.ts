@@ -21,12 +21,12 @@ export class ProjectEntity {
   /**
    * プロジェクト名（値オブジェクト）
    */
-  private readonly name: ProjectName;
+  private name: ProjectName;
 
   /**
    * プロジェクト説明（オプション）
    */
-  private readonly description: string | null;
+  private description: string | null;
 
   /**
    * 作成日時
@@ -36,7 +36,7 @@ export class ProjectEntity {
   /**
    * 更新日時
    */
-  private readonly updatedAt: Date;
+  private updatedAt: Date;
 
   /**
    * プライベートコンストラクタ
@@ -154,5 +154,33 @@ export class ProjectEntity {
    */
   public getUpdatedAt(): Date {
     return this.updatedAt;
+  }
+
+  /**
+   * プロジェクト名を更新する
+   *
+   * @param name - 新しいプロジェクト名
+   * @throws {InvalidProjectDataError} 名前が不正な場合
+   */
+  public updateName(name: unknown): void {
+    this.name = ProjectName.create(name);
+    this.touch();
+  }
+
+  /**
+   * プロジェクト説明を更新する
+   *
+   * @param description - 新しいプロジェクト説明
+   */
+  public updateDescription(description: string | undefined): void {
+    this.description = description ?? null;
+    this.touch();
+  }
+
+  /**
+   * 更新日時を現在時刻に更新する
+   */
+  private touch(): void {
+    this.updatedAt = new Date();
   }
 }
