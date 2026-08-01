@@ -29,6 +29,7 @@ import {
   authProviderType,
   users,
   tasks,
+  projects,
 } from '../src/shared/database/schema';
 
 /**
@@ -125,6 +126,24 @@ const tableConfigs: TableConfig[] = [
       },
       status: {
         defaultValue: 'not_started',
+      },
+    },
+  },
+  {
+    tableName: 'projects',
+    tableObject: projects,
+    outputFile: 'projects.ts',
+    customValidations: {
+      name: {
+        min: 1,
+        max: 100,
+        errorMessages: {
+          min: '名前を入力してください',
+          max: '名前は100文字以内で入力してください',
+        },
+      },
+      description: {
+        optional: true,
       },
     },
   },

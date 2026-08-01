@@ -15,6 +15,13 @@
       "when": 1782916594308,
       "tag": "0001_lovely_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785548030553,
+      "tag": "0002_wonderful_deathbird",
+      "breakpoints": true
     }
   ]
 }
