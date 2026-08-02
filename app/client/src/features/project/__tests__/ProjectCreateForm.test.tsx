@@ -11,7 +11,11 @@ function renderWithProviders(
 ) {
   return render(
     <ProjectServicesProvider
-      services={{ useProjects: mock(), useProjectMutations }}
+      services={{
+        useProjects: mock(),
+        useProjectMutations,
+        useProject: mock(),
+      }}
     >
       <ProjectCreateForm />
     </ProjectServicesProvider>,

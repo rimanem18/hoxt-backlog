@@ -37,7 +37,11 @@ function renderWithProviders(
 ) {
   return render(
     <ProjectServicesProvider
-      services={{ useProjects, useProjectMutations: mock() }}
+      services={{
+        useProjects,
+        useProjectMutations: mock(),
+        useProject: mock(),
+      }}
     >
       <TaskServicesProvider services={taskServices}>{ui}</TaskServicesProvider>
     </ProjectServicesProvider>,
@@ -674,5 +678,103 @@ describe('TaskCreateForm', () => {
       priority: 'high',
       projectId: mockProjectId,
     });
+  });
+
+  // fixedProjectId指定時のテストケース
+
+  test('fixedProjectId指定時はプロジェクト選択セレクトが表示されない', () => {
+    // Given: fixedProjectIdを指定したTaskCreateForm
+    const mockUseTaskMutations = mock(() => ({
+      createTask: { mutate: mock(() => {}), isPending: false },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(<TaskCreateForm fixedProjectId={mockProjectId} />, {
+      useTasks: mockUseTasks,
+      useTaskMutations: mockUseTaskMutations,
+    });
+
+    // Then: プロジェクト選択セレクトが表示されない
+    expect(screen.queryByLabelText('プロジェクト')).toBeNull();
+  });
+
+  test('fixedProjectId指定時はproject選択操作なしにそのprojectIdでタスクが作成される', async () => {
+    // Given: fixedProjectIdを指定したTaskCreateForm
+    const mockMutate = mock(() => {});
+    const mockUseTaskMutations = mock(() => ({
+      createTask: { mutate: mockMutate, isPending: false },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(<TaskCreateForm fixedProjectId={mockProjectId} />, {
+      useTasks: mockUseTasks,
+      useTaskMutations: mockUseTaskMutations,
+    });
+
+    // When: プロジェクトを選択せずタイトルのみ入力して送信
+    await user.type(
+      screen.getByPlaceholderText('タスクを入力...'),
+      'プロジェクト詳細画面からのタスク',
+    );
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    // Then: fixedProjectIdがそのままprojectIdとして送信される
+    expect(mockMutate).toHaveBeenCalledWith(
+      {
+        title: 'プロジェクト詳細画面からのタスク',
+        priority: 'medium',
+        projectId: mockProjectId,
+      },
+      expect.any(Object),
+    );
+  });
+
+  test('fixedProjectId未指定時は既存動作どおりプロジェクト選択が必須のまま', async () => {
+    // Given: fixedProjectIdを指定しないTaskCreateForm（既存動作の回帰確認）
+    const mockMutate = mock(() => {});
+    const mockUseTaskMutations = mock(() => ({
+      createTask: { mutate: mockMutate, isPending: false },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(<TaskCreateForm />, {
+      useTasks: mockUseTasks,
+      useTaskMutations: mockUseTaskMutations,
+    });
+
+    // Then: プロジェクト選択セレクトが表示される
+    expect(screen.getByLabelText('プロジェクト')).toBeDefined();
+
+    // When: プロジェクトを選択せず送信
+    await user.type(
+      screen.getByPlaceholderText('タスクを入力...'),
+      'プロジェクト未選択タスク',
+    );
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    // Then: バリデーションエラーが表示され送信されない
+    expect(screen.getByText('プロジェクトを選択してください')).toBeDefined();
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 });

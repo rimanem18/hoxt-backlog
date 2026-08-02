@@ -9,6 +9,7 @@ import { useApiClient } from '@/lib/apiClientContext';
 import type {
   CreateProjectInput,
   Project,
+  UpdateProjectInput,
 } from '@/packages/shared-schemas/src/projects';
 
 /**
@@ -18,12 +19,19 @@ export interface UseProjectMutationsResult {
   createProject: ReturnType<
     typeof useMutation<Project, Error, CreateProjectInput>
   >;
+  updateProject: ReturnType<
+    typeof useMutation<
+      Project,
+      Error,
+      { id: string; input: UpdateProjectInput }
+    >
+  >;
 }
 
 /**
  * プロジェクトのCRUD操作を提供するReact Queryフック
  *
- * @returns createProject のMutation結果
+ * @returns createProject、updateProject のMutation結果
  */
 export function useProjectMutations(): UseProjectMutationsResult {
   const apiClient = useApiClient();
@@ -58,7 +66,46 @@ export function useProjectMutations(): UseProjectMutationsResult {
     },
   });
 
+  const updateProject = useMutation({
+    mutationFn: async (variables: {
+      id: string;
+      input: UpdateProjectInput;
+    }) => {
+      const { data, error } = await apiClient.PUT('/projects/{id}', {
+        params: { path: { id: variables.id } },
+        body: variables.input,
+      });
+
+      // エラーレスポンスの場合はthrow
+      if (error) {
+        throw new Error(
+          error.error?.message || 'プロジェクト更新に失敗しました',
+        );
+      }
+
+      // dataが存在しない場合（204 No Content等）もthrow
+      if (!data) {
+        throw new Error('プロジェクトを更新できませんでした');
+      }
+
+      return data.data;
+    },
+    onSuccess: (_, variables) => {
+      // プロジェクト一覧のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['projects'],
+        exact: false,
+      });
+      // 該当プロジェクト詳細のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['project', variables.id],
+        exact: false,
+      });
+    },
+  });
+
   return {
     createProject,
+    updateProject,
   };
 }

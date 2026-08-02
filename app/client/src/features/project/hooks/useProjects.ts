@@ -5,12 +5,21 @@
  * TanStack React Queryで型安全にサーバー状態を管理する
  */
 import { useQuery } from '@tanstack/react-query';
-import { handleApiError } from '@/features/todo/hooks/apiErrorHandler';
 import { useApiClient } from '@/lib/apiClientContext';
+import { handleApiError } from '@/lib/apiErrorHandler';
+
+/**
+ * useProjectsのオプション
+ */
+export interface UseProjectsOptions {
+  /** falseの場合はクエリを実行しない（project選択が不要な画面での無駄な取得を避ける） */
+  enabled?: boolean;
+}
 
 /**
  * 自分のproject一覧を取得するフック
  *
+ * @param options - `enabled`でクエリの実行有無を制御できる（省略時は常に実行）
  * @returns useQueryの返り値（data, isLoading, error, isSuccess等）
  *
  * @example
@@ -20,11 +29,12 @@ import { useApiClient } from '@/lib/apiClientContext';
  * }
  * ```
  */
-export function useProjects() {
+export function useProjects(options?: UseProjectsOptions) {
   const apiClient = useApiClient();
 
   return useQuery({
     queryKey: ['projects'],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       try {
         const { data, error } = await apiClient.GET('/projects');

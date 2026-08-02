@@ -32,7 +32,11 @@ function renderWithProviders(
 ) {
   return render(
     <ProjectServicesProvider
-      services={{ useProjects, useProjectMutations: mock() }}
+      services={{
+        useProjects,
+        useProjectMutations: mock(),
+        useProject: mock(),
+      }}
     >
       <ProjectList />
     </ProjectServicesProvider>,

@@ -11,6 +11,7 @@ import { useAppSelector } from '@/store/hooks';
 /**
  * Redux状態からタスク一覧を取得するフック
  *
+ * @param projectId - 特定プロジェクト内のタスクのみを取得する場合に指定
  * @returns useQueryの返り値（data, isLoading, error, isSuccess等）
  *
  * @example
@@ -32,16 +33,21 @@ import { useAppSelector } from '@/store/hooks';
  * }
  * ```
  */
-export function useTasks() {
+export function useTasks(projectId?: string) {
   const apiClient = useApiClient();
   const filters = useAppSelector((state) => state.task.filters);
   const sort = useAppSelector((state) => state.task.sort);
 
   return useQuery({
-    queryKey: ['tasks', filters, sort],
+    queryKey: ['tasks', filters, sort, projectId],
     queryFn: async () => {
       // クエリパラメータを構築
       const queryParams: Record<string, string> = {};
+
+      // projectIdが指定されている場合は追加
+      if (projectId !== undefined) {
+        queryParams.projectId = projectId;
+      }
 
       // 優先度フィルタ（'all'の場合は除外）
       if (filters.priority !== 'all') {
@@ -62,8 +68,17 @@ export function useTasks() {
           params: { query: queryParams },
         });
 
-        // エラーレスポンスの場合はthrow
+        // エラーレスポンスの場合
         if (error) {
+          // projectId指定時のPROJECT_NOT_FOUNDエラーは空配列として扱う
+          // （プロジェクト詳細取得フック側が404を表示するため二重表示を防ぐ）
+          if (
+            projectId !== undefined &&
+            error.error?.code === 'PROJECT_NOT_FOUND'
+          ) {
+            return [];
+          }
+
           throw new Error(
             error.error?.message || 'タスク一覧の取得に失敗しました',
           );
