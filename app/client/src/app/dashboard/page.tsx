@@ -2,6 +2,7 @@ import { DashboardDebugInfo } from '@/features/dashboard/components/DashboardDeb
 import { DashboardGreeting } from '@/features/dashboard/components/DashboardGreeting';
 import { DashboardShell } from '@/features/dashboard/components/DashboardShell';
 import { DashboardServicesProvider } from '@/features/dashboard/lib/DashboardServicesContext';
+import { ProjectServicesProvider } from '@/features/project/lib/ProjectServicesContext';
 import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
 import TaskFilter from '@/features/todo/components/TaskFilter';
 import TaskSort from '@/features/todo/components/TaskSort';
@@ -30,35 +31,37 @@ export default function DashboardPage(): React.ReactNode {
 
         <DashboardServicesProvider>
           <TaskServicesProvider>
-            <DashboardShell
-              createTaskSection={
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h2 className="text-xl font-semibold mb-4">新しいタスク</h2>
-                  <TaskCreateForm />
-                </div>
-              }
-              filterSortSection={
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h2 className="text-xl font-semibold mb-4">
-                    絞り込み・並び替え
-                  </h2>
-                  <div className="space-y-4">
-                    <TaskFilter />
-                    <TaskSort />
+            <ProjectServicesProvider>
+              <DashboardShell
+                createTaskSection={
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <h2 className="text-xl font-semibold mb-4">新しいタスク</h2>
+                    <TaskCreateForm />
                   </div>
-                </div>
-              }
-              taskListHeading={
-                <div className="p-4 sm:p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold">タスク一覧</h2>
-                </div>
-              }
-              devDebugSlot={
-                <DevOnly>
-                  <DashboardDebugInfo />
-                </DevOnly>
-              }
-            />
+                }
+                filterSortSection={
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <h2 className="text-xl font-semibold mb-4">
+                      絞り込み・並び替え
+                    </h2>
+                    <div className="space-y-4">
+                      <TaskFilter />
+                      <TaskSort />
+                    </div>
+                  </div>
+                }
+                taskListHeading={
+                  <div className="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 className="text-xl font-semibold">タスク一覧</h2>
+                  </div>
+                }
+                devDebugSlot={
+                  <DevOnly>
+                    <DashboardDebugInfo />
+                  </DevOnly>
+                }
+              />
+            </ProjectServicesProvider>
           </TaskServicesProvider>
         </DashboardServicesProvider>
       </div>

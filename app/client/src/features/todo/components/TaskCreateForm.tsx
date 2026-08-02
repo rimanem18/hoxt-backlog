@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 /**
@@ -19,19 +20,27 @@ import { useTaskServices } from '../lib/TaskServicesContext';
 function TaskCreateForm(): React.ReactNode {
   const services = useTaskServices();
   const { createTask } = services.useTaskMutations();
+  const { useProjects } = useProjectServices();
+  const { data: projects } = useProjects();
 
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [projectId, setProjectId] = useState('');
   const [error, setError] = useState('');
   const [hasRetry, setHasRetry] = useState(false);
 
   // タスク作成のロジックを集約したヘルパー関数
   const mutateTask = useCallback(
-    (input: { title: string; priority: 'high' | 'medium' | 'low' }) => {
+    (input: {
+      title: string;
+      priority: 'high' | 'medium' | 'low';
+      projectId: string;
+    }) => {
       createTask.mutate(input, {
         onSuccess: () => {
           setTitle('');
           setPriority('medium');
+          setProjectId('');
           setHasRetry(false);
           setError('');
         },
@@ -62,15 +71,21 @@ function TaskCreateForm(): React.ReactNode {
       return;
     }
 
+    // クライアント側バリデーション：project未選択チェック
+    if (!projectId) {
+      setError('プロジェクトを選択してください');
+      return;
+    }
+
     // API呼び出し（最新の入力値を使用）
-    mutateTask({ title, priority });
+    mutateTask({ title, priority, projectId });
   };
 
   // 再試行ハンドラ（常に最新の入力値を使用）
   const handleRetry = useCallback(() => {
-    if (createTask.isPending) return;
-    mutateTask({ title, priority });
-  }, [title, priority, createTask.isPending, mutateTask]);
+    if (createTask.isPending || !projectId) return;
+    mutateTask({ title, priority, projectId });
+  }, [title, priority, projectId, createTask.isPending, mutateTask]);
 
   return (
     <div className="mb-4 sm:mb-6">
@@ -87,6 +102,19 @@ function TaskCreateForm(): React.ReactNode {
           maxLength={100}
           aria-label="タスクのタイトル"
         />
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+          aria-label="プロジェクト"
+        >
+          <option value="">プロジェクトを選択</option>
+          {projects?.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
         <select
           value={priority}
           onChange={(e) => {
