@@ -36,7 +36,9 @@ function renderWithProviders(
   useProjects: typeof mockUseProjectsWithOne = mockUseProjectsWithOne,
 ) {
   return render(
-    <ProjectServicesProvider services={{ useProjects }}>
+    <ProjectServicesProvider
+      services={{ useProjects, useProjectMutations: mock() }}
+    >
       <TaskServicesProvider services={taskServices}>{ui}</TaskServicesProvider>
     </ProjectServicesProvider>,
   );
@@ -126,18 +128,51 @@ describe('TaskCreateForm', () => {
     // When: タスクを作成
     const titleInput = screen.getByPlaceholderText('タスクを入力...');
     const prioritySelect = screen.getByLabelText('優先度');
+    const projectSelect = screen.getByLabelText('プロジェクト');
 
     await user.type(titleInput, 'テストタスク');
     await user.selectOptions(prioritySelect, 'high');
-    await user.selectOptions(
-      screen.getByLabelText('プロジェクト'),
-      mockProjectId,
-    );
+    await user.selectOptions(projectSelect, mockProjectId);
     await user.click(screen.getByRole('button', { name: '追加' }));
 
-    // Then: フォームがリセットされる
+    // Then: タイトル・優先度はリセットされる
     expect(titleInput).toHaveValue('');
     expect(prioritySelect).toHaveValue('medium');
+  });
+
+  test('作成成功後も選択中のプロジェクトが保持される', async () => {
+    // Given: タスク作成が成功する設定（同じprojectへの連続追加を想定）
+    const mockMutateSuccess = mock((_input, { onSuccess }) => {
+      onSuccess?.();
+    });
+    const mockUseTaskMutationsSuccess = mock(() => ({
+      createTask: {
+        mutate: mockMutateSuccess,
+        isPending: false,
+      },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(<TaskCreateForm />, {
+      useTasks: mockUseTasks,
+      useTaskMutations: mockUseTaskMutationsSuccess,
+    });
+
+    // When: projectを選択してタスクを作成
+    const projectSelect = screen.getByLabelText('プロジェクト');
+    await user.type(screen.getByPlaceholderText('タスクを入力...'), 'タスク1');
+    await user.selectOptions(projectSelect, mockProjectId);
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    // Then: 同じprojectへ連続追加できるよう、選択中のprojectは維持される
+    expect(projectSelect).toHaveValue(mockProjectId);
   });
 
   test('タイトル100文字が正常に送信される', async () => {

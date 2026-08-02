@@ -38,9 +38,9 @@ function TaskCreateForm(): React.ReactNode {
     }) => {
       createTask.mutate(input, {
         onSuccess: () => {
+          // 同じprojectへの連続追加が多いため、projectIdは維持する
           setTitle('');
           setPriority('medium');
-          setProjectId('');
           setHasRetry(false);
           setError('');
         },
