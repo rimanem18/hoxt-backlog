@@ -8,6 +8,7 @@
  */
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { useProjectMutations } from '../hooks/useProjectMutations';
 import { useProjects } from '../hooks/useProjects';
 
 /**
@@ -17,6 +18,7 @@ import { useProjects } from '../hooks/useProjects';
  */
 export interface ProjectServices {
   useProjects: typeof useProjects;
+  useProjectMutations: typeof useProjectMutations;
 }
 
 const ProjectServicesContext = createContext<ProjectServices | null>(null);
@@ -58,6 +60,7 @@ export function ProjectServicesProvider({
     () =>
       services || {
         useProjects,
+        useProjectMutations,
       },
     [services],
   );
