@@ -1,5 +1,21 @@
 # Phase 9: フロントエンド - task作成・編集へのproject選択統合
 
+> **⚠️ 一部前倒し済み: 着手前に必ずPhase 6の実施記録を確認すること**
+>
+> Phase 6実装時、`createTaskBodySchema`の`projectId`必須化によりクライアントの型チェックが壊れる問題が発生し、ユーザーと協議のうえ、本フェーズ（TASK-9-01相当）の一部を前倒しで実装済み。詳細は`tasks/HOXBL-99/plan/phase6.md`の「7. 実施記録 > 計画との差異」を参照。
+>
+> **前倒し済み**:
+> - `app/client/src/features/project/hooks/useProjects.ts`（TASK-7-01相当、`useProjectMutations`は未実装）
+> - `app/client/src/features/project/lib/ProjectServicesContext.tsx`（TASK-7-03相当の一部）
+> - `TaskCreateForm.tsx`へのproject選択セレクト・未選択時の送信ブロック（TASK-9-01相当）
+> - `dashboard/page.tsx`への`ProjectServicesProvider`追加
+>
+> **未対応（本フェーズで引き続き対応が必要）**:
+> - `TaskEditModal.tsx`へのproject選択UI（TASK-9-02、未着手）
+> - project0件時の「project作成画面への導線」案内（`/dashboard/projects`ページ自体がPhase 7未実装のため簡易メッセージのみ）
+> - `app/client/e2e/todo/helpers/task-setup.ts`に`/api/projects`のモックルートが未整備。現状のE2Eヘルパーではproject選択肢が0件になり、task作成フローのE2Eが失敗する
+> - `TaskCreateForm.test.tsx`は前倒し実装に合わせて更新済みだが、TASK-9-01のタスク一覧の単体テスト要件を満たしているか改めて確認すること
+
 ## 1. このフェーズの目的
 
 `TaskCreateForm`/`TaskEditModal`にproject選択UIを組み込み、task新規作成時のproject必須選択、既存taskの所属project変更、project未所属taskの継続表示をユーザー操作として成立させる。

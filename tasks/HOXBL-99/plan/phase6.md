@@ -25,7 +25,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-6-01: `CreateTaskUseCase`への所有権検証組み込み（Red→Green）**
+- [x] **TASK-6-01: `CreateTaskUseCase`への所有権検証組み込み（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-102, REQ-302, REQ-303
@@ -36,7 +36,7 @@
   - **完了条件**: 自分のproject指定時は成功、他ユーザーproject指定時は`ProjectNotFoundError`が伝播すること
   - **単体テスト要件**: 正常系（自分のprojectでtask作成成功）、異常系（他ユーザーprojectで`ProjectNotFoundError`）、`IProjectRepository.findById`の呼び出し回数が1回であることの検証
 
-- [ ] **TASK-6-02: `UpdateTaskUseCase`への所有権検証組み込み（Red→Green）**
+- [x] **TASK-6-02: `UpdateTaskUseCase`への所有権検証組み込み（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-103
@@ -46,7 +46,7 @@
   - **完了条件**: project未所属task・project所属済みtaskいずれについても、`projectId`を指定した更新で所属projectが変更されること。他ユーザーproject指定時は`ProjectNotFoundError`が伝播すること
   - **単体テスト要件**: 正常系（未所属→所属、所属済み→別project）、異常系（他ユーザーprojectで`ProjectNotFoundError`）
 
-- [ ] **TASK-6-03: `GetTasksUseCase`への`projectId`フィルタと所有権検証の組み込み（Red→Green）**
+- [x] **TASK-6-03: `GetTasksUseCase`への`projectId`フィルタと所有権検証の組み込み（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-106, REQ-303
@@ -58,7 +58,7 @@
   - **完了条件**: `projectId`指定時はそのprojectのtaskのみ、未指定時は従来どおり全task。他ユーザー・存在しないprojectId指定時は`ProjectNotFoundError`が伝播すること
   - **単体テスト要件**: 正常系（`projectId`指定時の絞り込み）、異常系（他ユーザー・存在しないprojectIdで`ProjectNotFoundError`）、境界値（対象projectにtaskが0件の場合は空配列）
 
-- [ ] **TASK-6-04: task関連APIスキーマ・ルートの拡張（Red→Green）**
+- [x] **TASK-6-04: task関連APIスキーマ・ルートの拡張（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-6-01, TASK-6-02, TASK-6-03
   - **関連要件**: REQ-102, REQ-103, REQ-106, REQ-302
@@ -70,7 +70,7 @@
   - **完了条件**: `POST /api/tasks`で`projectId`未指定が`400`（`VALIDATION_ERROR`）になること。`GET /api/tasks?projectId=`が所有権検証込みで機能すること
   - **統合テスト要件**: `taskRoutes.test.ts`にAC-03（project未選択で作成失敗）、AC-05（所属project変更）、AC-10（project詳細向け絞り込み、0件時空配列）、AC-04（project未所属taskが一覧に引き続き含まれる）、他ユーザー・存在しないprojectId指定時の`GET /api/tasks?projectId=`が404になるケースを追加する
 
-- [ ] **TASK-6-05: スキーマ再生成・型チェック・既存テスト回帰確認**
+- [x] **TASK-6-05: スキーマ再生成・型チェック・既存テスト回帰確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-6-04
   - **関連要件**: なし（インフラ）
@@ -94,3 +94,35 @@
 - `IProjectRepository.findById`によるtask作成・更新・一覧時の所有権検証がN+1にならないこと
 - サーバー・クライアント両方の型チェックがエラーゼロであること
 - 新規テスト・既存テストがすべてグリーンであること
+
+## 7. 実施記録
+
+### 計画との差異
+
+- **サーバー側（本来のPhase 6スコープ）**: 計画通り`CreateTaskUseCase`/`UpdateTaskUseCase`/`GetTasksUseCase`への所有権検証、`taskRoutes.schema.ts`/`taskRoutes.ts`/`TaskController`/`shared-schemas/src/tasks.ts`の拡張、`TaskDIContainer`への`IProjectRepository`注入を実装した。
+- **フロントエンドの前倒し実装（計画外・重要な差異）**: `createTaskBodySchema`の`projectId`必須化に伴い、既存の`useTaskMutations.ts`/`TaskCreateForm.tsx`のクライアント型チェックがエラーになることが判明した。本来はPhase 7（project一覧取得フック）・Phase 9（`TaskCreateForm`へのproject選択UI統合）の担当範囲だが、Phase 6の完了条件に「サーバー・クライアント両方の型チェックがエラーゼロであること」と明記されていたため、ユーザーと協議のうえ、以下を前倒しで最小限実装した:
+  - `app/client/src/features/project/hooks/useProjects.ts`（`GET /api/projects`取得フック、Phase 7 TASK-7-01相当）
+  - `app/client/src/features/project/lib/ProjectServicesContext.tsx`（Context DI、Phase 7 TASK-7-03相当の一部）
+  - `TaskCreateForm.tsx`へのproject選択セレクト追加、未選択時の送信ブロック＋エラー表示（Phase 9 TASK-9-01相当）
+  - `dashboard/page.tsx`への`ProjectServicesProvider`追加
+  - `TaskCreateForm.test.tsx`の全面更新（project選択関連テストケース追加）
+  - **前倒ししなかった範囲**（Phase 7・Phase 9で改めて対応が必要）: `useProjectMutations`、`ProjectList`/`ProjectCreateForm`/`/dashboard/projects`ページ、`TaskEditModal`へのproject選択UI（`updateTaskBodySchema`の`projectId`は任意項目のため型チェック上は今回未対応でも問題ないが、UI/UXとしては未実装）、project0件時の「project作成画面への導線」案内（Phase 7のページが存在しないため簡易メッセージのみ）
+  - **未対応の既知ギャップ**: `app/client/e2e/todo/helpers/task-setup.ts`の型エラー（`buildMockTask`への`projectId: null`追加）は修正したが、`/api/projects`のモックルートが未整備のため、E2E上でtask作成フローを実行するとproject選択肢が0件になりtask作成が完了しない状態になっている。Phase 7/9でE2Eヘルパーの`/api/projects`モック追加が必要
+  - 詳細は`tasks/HOXBL-99/plan/phase9.md`にも前倒し実施の旨を記載した
+
+### コードレビュー
+
+Codex MCPで8観点（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）のレビューを実施。妥当性の高い指摘は反映した:
+
+- **line-by-line指摘（採用）**: `TaskCreateForm.tsx`の`onSuccess`で`projectId`stateがリセットされておらず、連続作成時に前回選択したprojectが意図せず残る不具合を修正（`setProjectId('')`を追加）
+- **conventions指摘（採用）**: `taskRoutes.schema.ts`の新規`projectId`クエリパラメータ定義が`z.string().uuid()`を使っており、バックエンド規約（禁止: `z.string().uuid()`）に違反していたため`z.uuid()`に修正。同ファイル内の既存`id`パラメータ定義は同じ違反が複数箇所に既存していたが、本フェーズのスコープ外のため今回は変更していない
+- **simplification指摘（採用）**: `useProjects.ts`のエラーハンドリングが`useTasks.ts`のパターンを踏襲した結果、既存の未使用共通関数`handleApiError`（`features/todo/hooks/apiErrorHandler.ts`）と重複する実装になっていたため、`handleApiError`を利用する形に簡潔化した
+- **conventions指摘（一部採用）**: `useProjects.test.tsx`に`cleanup()`が呼ばれていなかったため追加（フロントエンド規約で必須）。ただしコピー元の`useTasks.test.tsx`も同様に`cleanup()`を呼んでいない既存の逸脱があり、そちらは本フェーズのスコープ外のため変更していない
+- **cross-file指摘（見送り）**: `useTaskMutations.test.tsx`等の既存テストファイルで、`Task`/`CreateTaskBody`型に追加された`projectId`が一部フィクスチャに反映されていないという指摘。`app/client/tsconfig.json`の`exclude`で`**/*.test.tsx`が型チェック対象外のため、Phase 6の完了条件（`bunx tsc --noEmit`エラーゼロ）には抵触しない。実行時のテストも全てグリーンのままだが、型定義との整合性向上のため、Phase 7/9などの後続作業でのフィクスチャ更新を推奨事項として記録する
+- **conventions指摘（見送り）**: `as unknown as`によるモックキャストの使用、Provider内でのprops分割代入、What寄りのコメント、について指摘があったが、いずれも今回新規に導入したパターンではなく、コピー元とした既存ファイル（`CreateTaskUseCase.test.ts`, `TaskServicesContext.tsx`, `useTasks.ts`等）に元から存在する広範な既存パターンであるため、本フェーズの差分としては見送った。プロジェクト規約とこれら既存実装の間に矛盾があることは事実であり、規約側の見直しも含めて別途検討が望ましい
+
+### 所要時間
+
+- 開始: 2026-08-02 09:30 JST
+- 終了: 2026-08-02 10:09 JST
+- 合計: 約39分（typecheck/test/lint/semgrep/buildの実行時間含む。品質ゲート実行はサブエージェントに一部委譲）
