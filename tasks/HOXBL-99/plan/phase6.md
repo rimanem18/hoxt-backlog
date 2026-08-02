@@ -114,7 +114,7 @@
 
 Codex MCPで8観点（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）のレビューを実施。妥当性の高い指摘は反映した:
 
-- **line-by-line指摘（採用）**: `TaskCreateForm.tsx`の`onSuccess`で`projectId`stateがリセットされておらず、連続作成時に前回選択したprojectが意図せず残る不具合を修正（`setProjectId('')`を追加）
+- **line-by-line指摘（採用、のちに方針転換）**: `TaskCreateForm.tsx`の`onSuccess`で`projectId`stateがリセットされておらず、連続作成時に前回選択したprojectが意図せず残る不具合を修正（`setProjectId('')`を追加）。※Phase 7完了後、ユーザーから「同じprojectへの連続追加が多いため選択を保持してほしい」というフィードバックを受け、この修正は撤回した（`tasks/HOXBL-99/plan/phase10-ex.md`参照）
 - **conventions指摘（採用）**: `taskRoutes.schema.ts`の新規`projectId`クエリパラメータ定義が`z.string().uuid()`を使っており、バックエンド規約（禁止: `z.string().uuid()`）に違反していたため`z.uuid()`に修正。同ファイル内の既存`id`パラメータ定義は同じ違反が複数箇所に既存していたが、本フェーズのスコープ外のため今回は変更していない
 - **simplification指摘（採用）**: `useProjects.ts`のエラーハンドリングが`useTasks.ts`のパターンを踏襲した結果、既存の未使用共通関数`handleApiError`（`features/todo/hooks/apiErrorHandler.ts`）と重複する実装になっていたため、`handleApiError`を利用する形に簡潔化した
 - **conventions指摘（一部採用）**: `useProjects.test.tsx`に`cleanup()`が呼ばれていなかったため追加（フロントエンド規約で必須）。ただしコピー元の`useTasks.test.tsx`も同様に`cleanup()`を呼んでいない既存の逸脱があり、そちらは本フェーズのスコープ外のため変更していない
