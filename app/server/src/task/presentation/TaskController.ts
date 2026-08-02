@@ -13,6 +13,7 @@ import type { TaskEntity } from '@/task/domain/TaskEntity';
 interface TaskDTO {
   id: string;
   userId: string;
+  projectId: string | null;
   title: string;
   description: string | null;
   priority: string;
@@ -78,6 +79,7 @@ export class TaskController {
 
     const task = await this.createTaskUseCase.execute({
       userId,
+      projectId: input.projectId,
       title: input.title,
       ...(input.description !== undefined && {
         description: input.description,
@@ -115,6 +117,7 @@ export class TaskController {
     const tasks = await this.getTasksUseCase.execute({
       userId,
       filters: {
+        ...(query.projectId && { projectId: query.projectId }),
         ...(query.priority && { priority: query.priority }),
         ...(query.status && {
           status: query.status.split(',').map((s) => s.trim()),
@@ -169,6 +172,7 @@ export class TaskController {
     const input = await c.req.json();
 
     const data = {
+      ...(input.projectId !== undefined && { projectId: input.projectId }),
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && {
         description: input.description,
@@ -246,6 +250,7 @@ export class TaskController {
     return {
       id: task.getId(),
       userId: task.getUserId(),
+      projectId: task.getProjectId(),
       title: task.getTitle(),
       description: task.getDescription(),
       priority: task.getPriority(),

@@ -1020,6 +1020,15 @@ paths:
           description: タスクのソート順
           name: sort
           in: query
+        - schema:
+            type: string
+            format: uuid
+            description: プロジェクトIDによる絞り込み
+            example: 550e8400-e29b-41d4-a716-446655440000
+          required: false
+          description: プロジェクトIDによる絞り込み
+          name: projectId
+          in: query
       responses:
         '200':
           description: タスク一覧を取得しました
@@ -1069,6 +1078,10 @@ paths:
                         updatedAt:
                           type: string
                           format: date-time
+                        projectId:
+                          type: string
+                          nullable: true
+                          format: uuid
                       required:
                         - id
                         - userId
@@ -1078,6 +1091,7 @@ paths:
                         - status
                         - createdAt
                         - updatedAt
+                        - projectId
                 required:
                   - success
                   - data
@@ -1113,6 +1127,36 @@ paths:
                   - error
         '401':
           description: JWT認証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: 指定されたprojectIdのプロジェクトが見つかりません
           content:
             application/json:
               schema:
@@ -1198,8 +1242,12 @@ paths:
                     - medium
                     - low
                   default: medium
+                projectId:
+                  type: string
+                  format: uuid
               required:
                 - title
+                - projectId
       responses:
         '201':
           description: タスクを作成しました
@@ -1247,6 +1295,10 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      projectId:
+                        type: string
+                        nullable: true
+                        format: uuid
                     required:
                       - id
                       - userId
@@ -1256,6 +1308,7 @@ paths:
                       - status
                       - createdAt
                       - updatedAt
+                      - projectId
                 required:
                   - success
                   - data
@@ -1291,6 +1344,36 @@ paths:
                   - error
         '401':
           description: JWT認証失敗
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: 指定されたprojectIdのプロジェクトが見つかりません
           content:
             application/json:
               schema:
@@ -1412,6 +1495,10 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      projectId:
+                        type: string
+                        nullable: true
+                        format: uuid
                     required:
                       - id
                       - userId
@@ -1421,6 +1508,7 @@ paths:
                       - status
                       - createdAt
                       - updatedAt
+                      - projectId
                 required:
                   - success
                   - data
@@ -1578,6 +1666,9 @@ paths:
                     - high
                     - medium
                     - low
+                projectId:
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: タスクを更新しました
@@ -1625,6 +1716,10 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      projectId:
+                        type: string
+                        nullable: true
+                        format: uuid
                     required:
                       - id
                       - userId
@@ -1634,6 +1729,7 @@ paths:
                       - status
                       - createdAt
                       - updatedAt
+                      - projectId
                 required:
                   - success
                   - data
@@ -1973,6 +2069,10 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      projectId:
+                        type: string
+                        nullable: true
+                        format: uuid
                     required:
                       - id
                       - userId
@@ -1982,6 +2082,7 @@ paths:
                       - status
                       - createdAt
                       - updatedAt
+                      - projectId
                 required:
                   - success
                   - data

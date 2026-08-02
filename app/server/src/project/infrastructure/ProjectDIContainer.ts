@@ -83,9 +83,10 @@ export class ProjectDIContainer {
   /**
    * PostgreSQLProjectRepositoryの共有インスタンスを返す
    *
-   * データベース接続プールを効率的に活用
+   * データベース接続プールを効率的に活用。
+   * taskドメイン（CreateTaskUseCase等のproject所有権検証）からも共有利用するため公開する。
    */
-  private static getProjectRepository(): IProjectRepository {
+  static getProjectRepository(): IProjectRepository {
     if (!ProjectDIContainer.projectRepositoryInstance) {
       ProjectDIContainer.projectRepositoryInstance =
         new PostgreSQLProjectRepository(db);

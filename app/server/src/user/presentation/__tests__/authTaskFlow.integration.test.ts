@@ -119,6 +119,7 @@ describe('認証→タスク作成フロー統合テスト', () => {
         description:
           'This task should be created without FK constraint violation',
         priority: 'high',
+        projectId: '770e8400-e29b-41d4-a716-446655440002',
       }),
     });
 
@@ -330,6 +331,7 @@ describe('認証→タスク作成フロー統合テスト', () => {
       body: JSON.stringify({
         title: 'Context Test Task',
         priority: 'medium',
+        projectId: '770e8400-e29b-41d4-a716-446655440002',
       }),
     });
 

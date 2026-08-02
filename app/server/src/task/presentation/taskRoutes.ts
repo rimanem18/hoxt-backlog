@@ -1,5 +1,7 @@
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
+import { ProjectNotFoundError } from '@/project/domain/errors';
 import { AuthError } from '@/shared/middleware/errors/AuthError';
+import { formatZodError } from '@/shared/utils/zodErrorFormatter';
 import type { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
 import type { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
 import type { DeleteTaskUseCase } from '@/task/application/DeleteTaskUseCase';
@@ -23,6 +25,31 @@ import {
 } from './taskRoutes.schema';
 
 /**
+ * リクエストボディのZodバリデーション失敗をハンドリングするフック
+ *
+ * createTaskBodySchemaのprojectId必須検証など、UseCase実行前のスキーマレベルの
+ * 検証エラーも既存のprojectRoutesと同一形式（apiErrorResponseSchema）に揃える。
+ */
+// biome-ignore lint/suspicious/noExplicitAny: @hono/zod-openapiのHook型引数の制限
+const validationHook: Hook<any, any, any, any> = (result, c) => {
+  if (result.success) {
+    return;
+  }
+
+  return c.json(
+    {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'バリデーションエラー',
+        details: formatZodError(result.error.issues),
+      },
+    },
+    400,
+  );
+};
+
+/**
  * タスク管理APIのOpenAPIルート定義
  *
  * @hono/zod-openapiを使用したOpenAPI 3.1準拠の実装
@@ -34,7 +61,7 @@ import {
  * app.route('/api', task);
  * ```
  */
-const tasks = new OpenAPIHono();
+const tasks = new OpenAPIHono({ defaultHook: validationHook });
 
 /**
  * TaskControllerのインスタンス化
@@ -90,6 +117,19 @@ tasks.onError((err, c) => {
   }
 
   if (err instanceof TaskNotFoundError) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: err.message,
+        },
+      },
+      404,
+    );
+  }
+
+  if (err instanceof ProjectNotFoundError) {
     return c.json(
       {
         success: false,
@@ -172,7 +212,7 @@ export function createTaskRoutes(
     dependencies.changeTaskStatusUseCase,
   );
 
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono({ defaultHook: validationHook });
 
   // authMiddlewareでJWT認証を実施
   app.use('*', authMiddleware(dependencies.authMiddlewareOptions));
@@ -210,6 +250,19 @@ export function createTaskRoutes(
     }
 
     if (err instanceof TaskNotFoundError) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: err.message,
+          },
+        },
+        404,
+      );
+    }
+
+    if (err instanceof ProjectNotFoundError) {
       return c.json(
         {
           success: false,

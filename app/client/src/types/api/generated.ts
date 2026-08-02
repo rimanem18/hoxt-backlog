@@ -665,6 +665,8 @@ export interface paths {
                     status?: string;
                     /** @description タスクのソート順 */
                     sort?: "created_at_desc" | "created_at_asc" | "priority_desc";
+                    /** @description プロジェクトIDによる絞り込み */
+                    projectId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -696,6 +698,8 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                /** Format: uuid */
+                                projectId: string | null;
                             }[];
                         };
                     };
@@ -721,6 +725,25 @@ export interface paths {
                 };
                 /** @description JWT認証失敗 */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: string;
+                                } | string;
+                            };
+                        };
+                    };
+                };
+                /** @description 指定されたprojectIdのプロジェクトが見つかりません */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -781,6 +804,8 @@ export interface paths {
                          * @enum {string}
                          */
                         priority?: "high" | "medium" | "low";
+                        /** Format: uuid */
+                        projectId: string;
                     };
                 };
             };
@@ -809,6 +834,8 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                /** Format: uuid */
+                                projectId: string | null;
                             };
                         };
                     };
@@ -834,6 +861,25 @@ export interface paths {
                 };
                 /** @description JWT認証失敗 */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: string;
+                                } | string;
+                            };
+                        };
+                    };
+                };
+                /** @description 指定されたprojectIdのプロジェクトが見つかりません */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -924,6 +970,8 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                /** Format: uuid */
+                                projectId: string | null;
                             };
                         };
                     };
@@ -1026,6 +1074,8 @@ export interface paths {
                         description?: string | null;
                         /** @enum {string} */
                         priority?: "high" | "medium" | "low";
+                        /** Format: uuid */
+                        projectId?: string;
                     };
                 };
             };
@@ -1054,6 +1104,8 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                /** Format: uuid */
+                                projectId: string | null;
                             };
                         };
                     };
@@ -1301,6 +1353,8 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                /** Format: uuid */
+                                projectId: string | null;
                             };
                         };
                     };

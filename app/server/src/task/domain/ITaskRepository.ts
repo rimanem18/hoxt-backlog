@@ -27,6 +27,7 @@ export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
   priority?: string;
+  projectId?: string;
 }
 
 /**

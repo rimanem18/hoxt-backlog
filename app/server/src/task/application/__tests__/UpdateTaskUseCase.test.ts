@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { ProjectNotFoundError } from '@/project/domain/errors';
+import type { IProjectRepository } from '@/project/domain/IProjectRepository';
+import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
@@ -15,8 +18,19 @@ describe('UpdateTaskUseCase', () => {
     updateStatus: ReturnType<typeof mock>;
   };
 
+  type MockProjectRepository = {
+    save: ReturnType<typeof mock>;
+    findById: ReturnType<typeof mock>;
+    findByUserId: ReturnType<typeof mock>;
+    update: ReturnType<typeof mock>;
+  };
+
   let mockRepository: MockTaskRepository;
+  let mockProjectRepository: MockProjectRepository;
   let useCase: UpdateTaskUseCase;
+
+  const mockProjectId = '770e8400-e29b-41d4-a716-446655440002';
+  const mockProject = { getId: () => mockProjectId } as ProjectEntity;
 
   // テスト用のモックタスクエンティティを作成するヘルパー
   const createMockTask = (overrides: Partial<TaskEntity> = {}): TaskEntity => {
@@ -29,6 +43,7 @@ describe('UpdateTaskUseCase', () => {
       getStatus: () => overrides.getStatus?.() ?? 'not_started',
       getCreatedAt: () => overrides.getCreatedAt?.() ?? new Date(),
       getUpdatedAt: () => overrides.getUpdatedAt?.() ?? new Date(),
+      getProjectId: () => overrides.getProjectId?.() ?? null,
     } as TaskEntity;
   };
 
@@ -42,8 +57,15 @@ describe('UpdateTaskUseCase', () => {
       delete: mock(),
       updateStatus: mock(),
     };
+    mockProjectRepository = {
+      save: mock(),
+      findById: mock(() => Promise.resolve(mockProject)),
+      findByUserId: mock(),
+      update: mock(),
+    };
     useCase = new UpdateTaskUseCase(
       mockRepository as unknown as ITaskRepository,
+      mockProjectRepository as unknown as IProjectRepository,
     );
   });
 
@@ -58,6 +80,7 @@ describe('UpdateTaskUseCase', () => {
       mockRepository.update = mock(() => Promise.resolve(mockTask));
       useCase = new UpdateTaskUseCase(
         mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
       );
 
       const input = {
@@ -78,30 +101,60 @@ describe('UpdateTaskUseCase', () => {
       );
     });
 
-    test('リポジトリの戻り値がそのまま返される（結果透過性）', async () => {
-      // Given: リポジトリが更新されたタスクを返す設定
-      const mockTask = createMockTask({
-        getId: () => '660e8400-e29b-41d4-a716-446655440001',
-        getTitle: () => '更新後のタイトル',
-      });
+    test('projectId未指定時は所有権検証をスキップする', async () => {
+      // Given: projectIdを含まない更新データ
+      const mockTask = createMockTask();
       mockRepository.update = mock(() => Promise.resolve(mockTask));
       useCase = new UpdateTaskUseCase(
         mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
       );
 
       const input = {
         userId: '550e8400-e29b-41d4-a716-446655440000',
         taskId: '660e8400-e29b-41d4-a716-446655440001',
-        data: { title: '更新後のタイトル' },
+        data: { title: '更新されたタイトル' },
+      };
+
+      // When: ユースケースを実行
+      await useCase.execute(input);
+
+      // Then: IProjectRepositoryは呼び出されない
+      expect(mockProjectRepository.findById).not.toHaveBeenCalled();
+    });
+
+    test('projectIdを指定すると所属projectを変更できる（所有権検証込み）', async () => {
+      // Given: 別projectへの変更データ
+      const mockTask = createMockTask({
+        getProjectId: () => mockProjectId,
+      });
+      mockRepository.update = mock(() => Promise.resolve(mockTask));
+      useCase = new UpdateTaskUseCase(
+        mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
+      );
+
+      const input = {
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        taskId: '660e8400-e29b-41d4-a716-446655440001',
+        data: { projectId: mockProjectId },
       };
 
       // When: ユースケースを実行
       const result = await useCase.execute(input);
 
-      // Then: リポジトリの戻り値がそのまま返される
-      expect(result).toBe(mockTask);
-      expect(result.getId()).toBe('660e8400-e29b-41d4-a716-446655440001');
-      expect(result.getTitle()).toBe('更新後のタイトル');
+      // Then: 所有権検証が1回実施され、taskRepository.updateに反映される
+      expect(mockProjectRepository.findById).toHaveBeenCalledTimes(1);
+      expect(mockProjectRepository.findById).toHaveBeenCalledWith(
+        input.userId,
+        mockProjectId,
+      );
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        '550e8400-e29b-41d4-a716-446655440000',
+        '660e8400-e29b-41d4-a716-446655440001',
+        { projectId: mockProjectId },
+      );
+      expect(result.getProjectId()).toBe(mockProjectId);
     });
 
     test('descriptionにnullを渡した場合も正しく転送される', async () => {
@@ -113,6 +166,7 @@ describe('UpdateTaskUseCase', () => {
       mockRepository.update = mock(() => Promise.resolve(mockTask));
       useCase = new UpdateTaskUseCase(
         mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
       );
 
       const input = {
@@ -139,6 +193,7 @@ describe('UpdateTaskUseCase', () => {
       mockRepository.update = mock(() => Promise.resolve(null));
       useCase = new UpdateTaskUseCase(
         mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
       );
 
       const input = {
@@ -159,12 +214,34 @@ describe('UpdateTaskUseCase', () => {
       }
     });
 
+    test('他ユーザーのprojectIdを指定するとProjectNotFoundErrorが発生する', async () => {
+      // Given: 所有権のないprojectId（リポジトリがnullを返す）
+      mockProjectRepository.findById = mock(() => Promise.resolve(null));
+      useCase = new UpdateTaskUseCase(
+        mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
+      );
+
+      const input = {
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        taskId: '660e8400-e29b-41d4-a716-446655440001',
+        data: { projectId: mockProjectId },
+      };
+
+      // When & Then: ProjectNotFoundErrorがスローされ、taskは更新されない
+      await expect(useCase.execute(input)).rejects.toThrow(
+        ProjectNotFoundError,
+      );
+      expect(mockRepository.update).not.toHaveBeenCalled();
+    });
+
     test('リポジトリエラーが正しく伝播する', async () => {
       // Given: リポジトリがエラーをスローする設定
       const repositoryError = new Error('Database connection failed');
       mockRepository.update = mock(() => Promise.reject(repositoryError));
       useCase = new UpdateTaskUseCase(
         mockRepository as unknown as ITaskRepository,
+        mockProjectRepository as unknown as IProjectRepository,
       );
 
       const input = {
