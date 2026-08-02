@@ -11,6 +11,7 @@ export interface CreateTaskEntityInput {
   title: string;
   description?: string;
   priority?: string;
+  projectId: string | null;
 }
 
 /**
@@ -25,6 +26,7 @@ export interface TaskEntityProps {
   status: TaskStatus;
   createdAt: Date;
   updatedAt: Date;
+  projectId: string | null;
 }
 
 /**
@@ -42,6 +44,7 @@ export class TaskEntity {
   private status: TaskStatus;
   private readonly createdAt: Date;
   private updatedAt: Date;
+  private readonly projectId: string | null;
 
   /**
    * プライベートコンストラクタ
@@ -56,6 +59,7 @@ export class TaskEntity {
     this.status = props.status;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.projectId = props.projectId;
   }
 
   /**
@@ -77,6 +81,7 @@ export class TaskEntity {
       status: TaskStatus.create('not_started'),
       createdAt: now,
       updatedAt: now,
+      projectId: input.projectId,
     });
   }
 
@@ -125,6 +130,10 @@ export class TaskEntity {
 
   public getUpdatedAt(): Date {
     return this.updatedAt;
+  }
+
+  public getProjectId(): string | null {
+    return this.projectId;
   }
 
   // ==========================================================================

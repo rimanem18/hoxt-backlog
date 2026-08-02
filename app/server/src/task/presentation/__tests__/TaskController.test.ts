@@ -95,6 +95,7 @@ describe('TaskController', () => {
         title: requestBody.title,
         description: requestBody.description,
         priority: requestBody.priority,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -148,6 +149,7 @@ describe('TaskController', () => {
         userId,
         title: requestBody.title,
         priority: requestBody.priority,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -207,11 +209,13 @@ describe('TaskController', () => {
           userId,
           title: 'タスク1',
           priority: 'high',
+          projectId: null,
         }),
         TaskEntity.create({
           userId,
           title: 'タスク2',
           priority: 'high',
+          projectId: null,
         }),
       ];
 
@@ -373,6 +377,7 @@ describe('TaskController', () => {
         userId,
         title: 'タスク詳細',
         description: '詳細説明',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -448,6 +453,7 @@ describe('TaskController', () => {
         title: requestBody.title,
         description: requestBody.description,
         priority: requestBody.priority,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -507,6 +513,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: requestBody.title,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -545,6 +552,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: '既存タイトル',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -662,6 +670,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: 'タスク',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);

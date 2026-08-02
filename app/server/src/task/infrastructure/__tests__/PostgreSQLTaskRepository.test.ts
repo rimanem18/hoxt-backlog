@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/shared/database/DatabaseConnection';
-import { tasks, users } from '@/shared/database/schema';
+import { projects, tasks, users } from '@/shared/database/schema';
 import { TaskEntity } from '@/task/domain/TaskEntity';
 import { PostgreSQLTaskRepository } from '../PostgreSQLTaskRepository';
 
@@ -48,6 +48,7 @@ describe('PostgreSQLTaskRepository', () => {
         title: '新しいタスク',
         description: 'タスクの説明',
         priority: 'high',
+        projectId: null,
       });
 
       // When: タスクを保存
@@ -61,6 +62,7 @@ describe('PostgreSQLTaskRepository', () => {
       expect(savedTask.getDescription()).toBe('タスクの説明');
       expect(savedTask.getPriority()).toBe('high');
       expect(savedTask.getStatus()).toBe('not_started');
+      expect(savedTask.getProjectId()).toBeNull();
     });
   });
 
@@ -71,6 +73,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: '取得テスト',
         priority: 'medium',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -106,6 +109,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: 'ユーザー1のタスク',
         priority: 'low',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -128,6 +132,7 @@ describe('PostgreSQLTaskRepository', () => {
         title: '更新前タイトル',
         description: '更新前説明',
         priority: 'low',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -174,6 +179,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: '削除対象タスク',
         priority: 'medium',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -215,21 +221,25 @@ describe('PostgreSQLTaskRepository', () => {
           userId: testUserId1,
           title: 'タスク1（高優先度・未着手）',
           priority: 'high',
+          projectId: null,
         }),
         TaskEntity.create({
           userId: testUserId1,
           title: 'タスク2（中優先度・進行中）',
           priority: 'medium',
+          projectId: null,
         }),
         TaskEntity.create({
           userId: testUserId1,
           title: 'タスク3（低優先度・完了）',
           priority: 'low',
+          projectId: null,
         }),
         TaskEntity.create({
           userId: testUserId2,
           title: 'ユーザー2のタスク',
           priority: 'high',
+          projectId: null,
         }),
       ];
 
@@ -439,6 +449,67 @@ describe('PostgreSQLTaskRepository', () => {
     });
   });
 
+  describe('projectIdフィルタ', () => {
+    const testProjectId1 = '323e4567-e89b-12d3-a456-426614174002';
+    const testProjectId2 = '423e4567-e89b-12d3-a456-426614174003';
+
+    beforeEach(async () => {
+      await db.insert(projects).values([
+        { id: testProjectId1, userId: testUserId1, name: 'project1' },
+        { id: testProjectId2, userId: testUserId1, name: 'project2' },
+      ]);
+
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId1,
+          title: 'project1のタスク',
+          projectId: testProjectId1,
+        }),
+      );
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId1,
+          title: 'project2のタスク',
+          projectId: testProjectId2,
+        }),
+      );
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId1,
+          title: 'project未所属のタスク',
+          projectId: null,
+        }),
+      );
+    });
+
+    test('projectId指定時、そのprojectのtaskのみ返却される', async () => {
+      // When: projectId1でフィルタ
+      const result = await repository.findByUserId(
+        testUserId1,
+        { projectId: testProjectId1 },
+        'created_at_desc',
+      );
+
+      // Then: project1のtaskのみ返却される
+      expect(result).toHaveLength(1);
+      expect(result[0]?.getTitle()).toBe('project1のタスク');
+      expect(result[0]?.getProjectId()).toBe(testProjectId1);
+    });
+
+    test('projectId未指定時、project未所属taskを含む全taskが返却される', async () => {
+      // When: projectId未指定で取得
+      const result = await repository.findByUserId(
+        testUserId1,
+        {},
+        'created_at_desc',
+      );
+
+      // Then: project未所属taskを含む3件すべてが返却される
+      expect(result).toHaveLength(3);
+      expect(result.some((t) => t.getProjectId() === null)).toBe(true);
+    });
+  });
+
   describe('updateStatus', () => {
     test('タスクのステータスを更新できる', async () => {
       // Given: 保存済みのタスク（ステータス: not_started）
@@ -447,6 +518,7 @@ describe('PostgreSQLTaskRepository', () => {
         title: 'ステータス更新テスト',
         description: 'テスト説明',
         priority: 'medium',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -473,6 +545,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: 'updatedAtテスト',
         priority: 'low',
+        projectId: null,
       });
       await repository.save(taskEntity);
       const originalUpdatedAt = taskEntity.getUpdatedAt();
@@ -502,6 +575,7 @@ describe('PostgreSQLTaskRepository', () => {
           userId: testUserId1,
           title: `ステータス${status}テスト`,
           priority: 'high',
+          projectId: null,
         });
         await repository.save(taskEntity);
 
@@ -539,6 +613,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: 'ユーザー1のタスク',
         priority: 'high',
+        projectId: null,
       });
       await repository.save(taskEntity);
 
@@ -566,6 +641,7 @@ describe('PostgreSQLTaskRepository', () => {
         userId: testUserId1,
         title: '連続ステータス変更テスト',
         priority: 'medium',
+        projectId: null,
       });
       await repository.save(taskEntity);
 

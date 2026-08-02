@@ -104,6 +104,7 @@ describe('selectTaskSchema', () => {
     const validData = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       userId: '123e4567-e89b-12d3-a456-426614174001',
+      projectId: null,
       title: 'テストタスク',
       description: 'テスト説明',
       priority: 'high',
@@ -119,6 +120,7 @@ describe('selectTaskSchema', () => {
     const validData = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       userId: '123e4567-e89b-12d3-a456-426614174001',
+      projectId: null,
       title: 'テストタスク',
       description: null,
       priority: 'medium',
@@ -175,6 +177,7 @@ describe('型定義のエクスポート', () => {
     const selectTask: SelectTask = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       userId: '123e4567-e89b-12d3-a456-426614174001',
+      projectId: null,
       title: 'テストタスク',
       description: null,
       priority: 'medium',

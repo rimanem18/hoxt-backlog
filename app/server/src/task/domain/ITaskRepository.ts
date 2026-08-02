@@ -8,6 +8,8 @@ export interface TaskFilters {
   priority?: string;
   /** ステータスフィルタ（複数選択可能） */
   status?: string[];
+  /** プロジェクトIDフィルタ */
+  projectId?: string;
 }
 
 /**

@@ -38,6 +38,7 @@ export class CreateTaskUseCase {
         description: input.description,
       }),
       ...(input.priority !== undefined && { priority: input.priority }),
+      projectId: null,
     });
 
     // リポジトリで永続化
