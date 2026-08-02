@@ -22,6 +22,13 @@
       "when": 1785548030553,
       "tag": "0002_wonderful_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785629464423,
+      "tag": "0003_quick_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

@@ -190,6 +190,11 @@ export const tasks = schema.table(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
+    // 所属project（外部キー、任意。project未所属taskを許容する）
+    projectId: uuid('project_id').references(() => projects.id, {
+      onDelete: 'set null',
+    }),
+
     // タイトル（1-100文字、必須）
     title: varchar('title', { length: 100 }).notNull(),
 
@@ -214,6 +219,9 @@ export const tasks = schema.table(
     return {
       // ユーザーごとのタスク検索用インデックス（最頻クエリ）
       userIdIdx: index('idx_tasks_user_id').on(table.userId),
+
+      // project絞り込み用インデックス
+      projectIdIdx: index('idx_tasks_project_id').on(table.projectId),
 
       // 作成日時でのソート用インデックス（降順）
       createdAtIdx: index('idx_tasks_created_at').on(table.createdAt.desc()),
