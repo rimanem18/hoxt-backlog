@@ -42,7 +42,7 @@ export interface ConfirmPageServicesProviderProps {
 export function ConfirmPageServicesProvider(
   props: ConfirmPageServicesProviderProps,
 ): React.ReactNode {
-  const code = props.searchParams?.['code'];
+  const code = props.searchParams?.code;
 
   const value = useMemo(
     () => ({

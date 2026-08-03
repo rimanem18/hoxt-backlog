@@ -135,7 +135,7 @@ describe('useEmailSignin', () => {
         session: mockSession,
       }),
     );
-    mockAuthService.verifySession = mock(async (token: string) => ({
+    mockAuthService.verifySession = mock(async () => ({
       user: mockUser,
       isNewUser: false,
     }));
