@@ -84,13 +84,21 @@ function TaskCreateForm(props: TaskCreateFormProps = {}): React.ReactNode {
     }
 
     // API呼び出し（最新の入力値を使用）
-    mutateTask({ title: trimmedTitle, priority, projectId: effectiveProjectId });
+    mutateTask({
+      title: trimmedTitle,
+      priority,
+      projectId: effectiveProjectId,
+    });
   };
 
   // 再試行ハンドラ（常に最新の入力値を使用）
   const handleRetry = useCallback(() => {
     if (createTask.isPending || !effectiveProjectId) return;
-    mutateTask({ title: title.trim(), priority, projectId: effectiveProjectId });
+    mutateTask({
+      title: title.trim(),
+      priority,
+      projectId: effectiveProjectId,
+    });
   }, [title, priority, effectiveProjectId, createTask.isPending, mutateTask]);
 
   return (
