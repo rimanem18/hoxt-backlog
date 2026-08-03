@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { InvalidTaskDataError } from '../errors';
 import { TaskPriority } from '../valueobjects/TaskPriority';
 
 describe('TaskPriority', () => {
@@ -84,6 +85,15 @@ describe('TaskPriority', () => {
         expect(() => TaskPriority.create(input)).toThrow(
           '不正な優先度です: undefined (許容値: high, medium, low)',
         );
+      });
+
+      test('バリデーションエラーがInvalidTaskDataErrorとしてスローされる', () => {
+        // Given: 有効値以外の文字列（バリデーション違反）
+        const input = 'invalid';
+
+        // When & Then: InvalidTaskDataErrorがスローされる
+        // presentation層のinstanceof判定で400応答にマッピングされるようにするため
+        expect(() => TaskPriority.create(input)).toThrow(InvalidTaskDataError);
       });
     });
   });

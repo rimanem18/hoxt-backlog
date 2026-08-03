@@ -41,6 +41,12 @@ export class UpdateTaskUseCase {
    * @throws {ProjectNotFoundError} 指定projectIdの所有権が確認できない場合
    */
   async execute(input: UpdateTaskInput): Promise<TaskEntity> {
+    const task = await this.taskRepository.findById(input.userId, input.taskId);
+
+    if (!task) {
+      throw TaskNotFoundError.forTaskId(input.taskId);
+    }
+
     if (input.data.projectId !== undefined) {
       const project = await this.projectRepository.findById(
         input.userId,
@@ -52,16 +58,33 @@ export class UpdateTaskUseCase {
       }
     }
 
-    const task = await this.taskRepository.update(
+    if (input.data.title !== undefined) {
+      task.updateTitle(input.data.title);
+    }
+
+    if (input.data.description !== undefined) {
+      task.updateDescription(input.data.description);
+    }
+
+    if (input.data.priority !== undefined) {
+      task.changePriority(input.data.priority);
+    }
+
+    if (input.data.projectId !== undefined) {
+      task.updateProjectId(input.data.projectId);
+    }
+
+    const updatedTask = await this.taskRepository.update(
       input.userId,
       input.taskId,
-      input.data,
+      task,
     );
 
-    if (!task) {
+    // 万一の競合状態（更新直前に削除された等）に対するfail-closedのフォールバック
+    if (!updatedTask) {
       throw TaskNotFoundError.forTaskId(input.taskId);
     }
 
-    return task;
+    return updatedTask;
   }
 }

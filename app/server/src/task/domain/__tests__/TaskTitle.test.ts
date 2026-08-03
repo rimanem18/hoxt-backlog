@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { InvalidTaskDataError } from '../errors';
 import { TaskTitle } from '../valueobjects/TaskTitle';
 
 describe('TaskTitle', () => {
@@ -97,6 +98,15 @@ describe('TaskTitle', () => {
         expect(() => TaskTitle.create(input)).toThrow(
           'タイトルは100文字以内で入力してください',
         );
+      });
+
+      test('バリデーションエラーがInvalidTaskDataErrorとしてスローされる', () => {
+        // Given: 空文字列（バリデーション違反）
+        const input = '';
+
+        // When & Then: InvalidTaskDataErrorがスローされる
+        // presentation層のinstanceof判定で400応答にマッピングされるようにするため
+        expect(() => TaskTitle.create(input)).toThrow(InvalidTaskDataError);
       });
 
       test('nullでエラーがスローされる', () => {
