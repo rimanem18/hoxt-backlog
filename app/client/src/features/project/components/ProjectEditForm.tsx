@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { Project } from '@/packages/shared-schemas/src/projects';
+import {
+  createProjectSchema,
+  type Project,
+} from '@/packages/shared-schemas/src/projects';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
 /**
@@ -64,17 +67,13 @@ function ProjectEditForm(props: {
 
     setError('');
 
-    // クライアント側バリデーション：API側（trim後1〜100文字）と同一基準で検証
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError('プロジェクト名を入力してください');
+    // クライアント側バリデーション：API契約と同一のZodスキーマで検証
+    const result = createProjectSchema.shape.name.safeParse(name);
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? '');
       return;
     }
-
-    if (trimmedName.length > 100) {
-      setError('プロジェクト名は100文字以内で入力してください');
-      return;
-    }
+    const trimmedName = result.data;
 
     if (!props.project) return;
 

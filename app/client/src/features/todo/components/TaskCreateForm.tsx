@@ -2,6 +2,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
+import { createTaskBodySchema } from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 export interface TaskCreateFormProps {
@@ -68,17 +69,13 @@ function TaskCreateForm(props: TaskCreateFormProps = {}): React.ReactNode {
     // エラークリア
     setError('');
 
-    // クライアント側バリデーション：空文字チェック
-    if (!title.trim()) {
-      setError('タイトルを入力してください');
+    // クライアント側バリデーション：API契約と同一のZodスキーマで検証
+    const result = createTaskBodySchema.shape.title.safeParse(title.trim());
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? '');
       return;
     }
-
-    // クライアント側バリデーション：文字数チェック（maxLengthで防止済みだが念のため）
-    if (title.length > 100) {
-      setError('タイトルは100文字以内で入力してください');
-      return;
-    }
+    const trimmedTitle = result.data;
 
     // クライアント側バリデーション：project未選択チェック
     if (!effectiveProjectId) {
@@ -87,13 +84,13 @@ function TaskCreateForm(props: TaskCreateFormProps = {}): React.ReactNode {
     }
 
     // API呼び出し（最新の入力値を使用）
-    mutateTask({ title, priority, projectId: effectiveProjectId });
+    mutateTask({ title: trimmedTitle, priority, projectId: effectiveProjectId });
   };
 
   // 再試行ハンドラ（常に最新の入力値を使用）
   const handleRetry = useCallback(() => {
     if (createTask.isPending || !effectiveProjectId) return;
-    mutateTask({ title, priority, projectId: effectiveProjectId });
+    mutateTask({ title: title.trim(), priority, projectId: effectiveProjectId });
   }, [title, priority, effectiveProjectId, createTask.isPending, mutateTask]);
 
   return (

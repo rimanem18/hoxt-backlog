@@ -2,7 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
+import {
+  createTaskBodySchema,
+  type Task,
+} from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 /**
@@ -78,20 +81,6 @@ function TaskEditModal(props: {
     }
   }, [props.task]);
 
-  // タイトルのバリデーション結果を返すヘルパー関数
-  const validateTitle = useCallback(
-    (titleToValidate: string): string | null => {
-      if (!titleToValidate.trim()) {
-        return 'タイトルを入力してください';
-      }
-      if (titleToValidate.length > 100) {
-        return 'タイトルは100文字以内で入力してください';
-      }
-      return null;
-    },
-    [],
-  );
-
   // フォーム送信時のロジックを集約したヘルパー関数
   const mutateTask = useCallback(
     (input: {
@@ -128,18 +117,20 @@ function TaskEditModal(props: {
 
     setError('');
 
-    const validationError = validateTitle(title);
-    if (validationError) {
-      setError(validationError);
+    // クライアント側バリデーション：API契約と同一のZodスキーマで検証
+    const result = createTaskBodySchema.shape.title.safeParse(title.trim());
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? '');
       return;
     }
+    const trimmedTitle = result.data;
 
     // 未所属（空文字）はバックエンドのnull送信に非対応のため、変更時のみ送信する
     const initialProjectId = task.projectId ?? '';
     const hasProjectChanged = projectId !== initialProjectId;
 
     mutateTask({
-      title,
+      title: trimmedTitle,
       description,
       priority,
       ...(hasProjectChanged ? { projectId } : {}),
