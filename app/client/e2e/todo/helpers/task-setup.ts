@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { Project } from '@/packages/shared-schemas/src/projects';
 import type {
   ChangeTaskStatusBody,
   Task,
@@ -9,6 +10,44 @@ import { expectDashboard } from '../../shared/helpers/dashboard';
 
 const DEFAULT_USER_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID_PATH = /^\/api\/tasks\/([^/]+)(?:\/status)?$/;
+export const DEFAULT_PROJECT_ID = '33333333-3333-4333-8333-333333333333';
+
+/**
+ * テスト用プロジェクトオブジェクトを生成するファクトリ関数。
+ */
+export function buildMockProject(overrides?: Partial<Project>): Project {
+  return {
+    id: DEFAULT_PROJECT_ID,
+    userId: DEFAULT_USER_ID,
+    name: 'デフォルトプロジェクト',
+    description: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * `/api/projects` への一覧取得リクエストをインターセプトするモック。
+ * task作成・編集フォームのproject選択セレクトが選択肢を表示できるようにする。
+ */
+export async function setupProjectApiMocks(
+  page: Page,
+  projects: Project[] = [buildMockProject()],
+): Promise<void> {
+  await page.route('**/api/projects**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: projects }),
+    });
+  });
+}
 
 /**
  * テスト用タスクオブジェクトを生成するファクトリ関数。
@@ -34,6 +73,7 @@ export interface SetupTaskApiMocksOptions {
   initialTasks?: Task[];
   failCreate?: boolean;
   failUpdate?: boolean;
+  projects?: Project[];
 }
 
 function notFoundResponse() {
@@ -86,10 +126,12 @@ export async function setupTaskApiMocks(
       const requestBody = request.postDataJSON() as {
         title: string;
         priority: Task['priority'];
+        projectId: string;
       };
       const newTask = buildMockTask({
         title: requestBody.title,
         priority: requestBody.priority,
+        projectId: requestBody.projectId,
       });
       tasks.push(newTask);
 
@@ -191,6 +233,7 @@ export async function openDashboardWithTasks(
 ): Promise<void> {
   await setupAuthenticatedApiMocks(page);
   await setupTaskApiMocks(page, options);
+  await setupProjectApiMocks(page, options?.projects);
   await page.goto('/dashboard');
   await expectDashboard(page);
 }

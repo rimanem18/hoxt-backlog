@@ -1,6 +1,10 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
-import { buildMockTask, openDashboardWithTasks } from './helpers/task-setup';
+import {
+  buildMockTask,
+  DEFAULT_PROJECT_ID,
+  openDashboardWithTasks,
+} from './helpers/task-setup';
 
 test.describe('タスク作成・一覧 E2Eテスト', () => {
   test('新規タスクを作成すると、一覧に作成したタスクが表示される', async ({
@@ -10,9 +14,10 @@ test.describe('タスク作成・一覧 E2Eテスト', () => {
     const page = await createAuthenticatedPage();
     await openDashboardWithTasks(page, { initialTasks: [] });
 
-    // When: タイトルと優先度を入力してタスクを追加する
+    // When: タイトル・優先度・プロジェクトを入力してタスクを追加する
     await page.getByLabel('タスクのタイトル').fill('牛乳を買う');
     await page.getByLabel('優先度', { exact: true }).selectOption('high');
+    await page.getByLabel('プロジェクト').selectOption(DEFAULT_PROJECT_ID);
     await page.getByRole('button', { name: '追加' }).click();
 
     // Then: 作成したタスクが一覧に表示され、フォームがリセットされる
@@ -44,8 +49,9 @@ test.describe('タスク作成・一覧 E2Eテスト', () => {
     const page = await createAuthenticatedPage();
     await openDashboardWithTasks(page, { initialTasks: [], failCreate: true });
 
-    // When: タイトルを入力してタスクを追加する
+    // When: タイトル・プロジェクトを入力してタスクを追加する
     await page.getByLabel('タスクのタイトル').fill('失敗するタスク');
+    await page.getByLabel('プロジェクト').selectOption(DEFAULT_PROJECT_ID);
     await page.getByRole('button', { name: '追加' }).click();
 
     // Then: エラーメッセージと再試行ボタンが表示される
