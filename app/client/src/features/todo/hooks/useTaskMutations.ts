@@ -25,6 +25,7 @@ type UpdateTaskBody = {
   title?: string;
   description?: string | null;
   priority?: 'high' | 'medium' | 'low';
+  projectId?: string;
 };
 
 /**

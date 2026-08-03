@@ -79,6 +79,20 @@ describe('TaskItem', () => {
       expect(screen.queryByText(/これはサンプルタスクです/)).toBeNull();
     });
 
+    it('project未所属タスク（projectId: null）が問題なく表示される', () => {
+      const task = createMockTask({ title: '未所属タスク', projectId: null });
+      render(
+        <TaskItem
+          task={task}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+        />,
+      );
+
+      expect(screen.getByText('未所属タスク')).toBeDefined();
+    });
+
     it('説明が空文字列の場合は表示されない', () => {
       const task = createMockTask({ description: '' });
       const { container } = render(

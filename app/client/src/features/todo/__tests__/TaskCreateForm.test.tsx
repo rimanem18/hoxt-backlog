@@ -361,6 +361,58 @@ describe('TaskCreateForm', () => {
     expect(select.options.length).toBe(1);
   });
 
+  test('projectが0件の場合はプロジェクト作成画面への導線が表示される', () => {
+    // Given: projectが0件のモック
+    const mockUseTaskMutations = mock(() => ({
+      createTask: { mutate: mock(() => {}), isPending: false },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(
+      <TaskCreateForm />,
+      { useTasks: mockUseTasks, useTaskMutations: mockUseTaskMutations },
+      mockUseProjectsEmpty,
+    );
+
+    // Then: プロジェクト作成画面への案内リンクが表示される
+    const link = screen.getByRole('link', {
+      name: 'プロジェクトを作成する',
+    }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/dashboard/projects');
+  });
+
+  test('projectが1件以上ある場合はプロジェクト作成画面への導線が表示されない', () => {
+    // Given: projectが1件存在するデフォルトのモック
+    const mockUseTaskMutations = mock(() => ({
+      createTask: { mutate: mock(() => {}), isPending: false },
+      updateTask: { mutate: mock(() => {}), isPending: false },
+      deleteTask: { mutate: mock(() => {}), isPending: false },
+      changeStatus: { mutate: mock(() => {}), isPending: false },
+    }));
+    const mockUseTasks = mock(() => ({
+      data: [],
+      isLoading: false,
+      error: null,
+    }));
+
+    renderWithProviders(<TaskCreateForm />, {
+      useTasks: mockUseTasks,
+      useTaskMutations: mockUseTaskMutations,
+    });
+
+    // Then: 案内リンクは表示されない
+    expect(
+      screen.queryByRole('link', { name: 'プロジェクトを作成する' }),
+    ).toBeNull();
+  });
+
   // イベントテストケース
 
   test('タイトル入力ができる', async () => {
