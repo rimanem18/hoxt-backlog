@@ -1,14 +1,7 @@
 import { InvalidTaskDataError } from '@/task/domain/errors/InvalidTaskDataError';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
-
-/**
- * タスク削除ユースケースの入力データ
- */
-export interface DeleteTaskInput {
-  userId: string;
-  taskId: string;
-}
+import type { DeleteTaskInput, IDeleteTaskUseCase } from './IDeleteTaskUseCase';
 
 /**
  * タスク削除ユースケース
@@ -16,7 +9,7 @@ export interface DeleteTaskInput {
  * ログイン済みユーザーが自分のタスクを物理削除する。
  * ITaskRepositoryを通じて削除を実行し、削除失敗時はエラーをスローする。
  */
-export class DeleteTaskUseCase {
+export class DeleteTaskUseCase implements IDeleteTaskUseCase {
   constructor(private readonly taskRepository: ITaskRepository) {}
 
   /**

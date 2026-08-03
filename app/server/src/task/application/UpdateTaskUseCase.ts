@@ -1,23 +1,9 @@
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
-import type {
-  ITaskRepository,
-  UpdateTaskInput as RepositoryUpdateInput,
-} from '@/task/domain/ITaskRepository';
+import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
-
-/**
- * タスク更新ユースケースの入力データ
- */
-export interface UpdateTaskInput {
-  /** 認証済みユーザーID */
-  userId: string;
-  /** 更新対象のタスクID */
-  taskId: string;
-  /** 更新データ */
-  data: RepositoryUpdateInput;
-}
+import type { IUpdateTaskUseCase, UpdateTaskInput } from './IUpdateTaskUseCase';
 
 /**
  * タスク更新ユースケース
@@ -26,7 +12,7 @@ export interface UpdateTaskInput {
  * projectIdが指定された場合はIProjectRepositoryで所有権を検証する。
  * タスクが存在しない場合はTaskNotFoundErrorをスローする。
  */
-export class UpdateTaskUseCase {
+export class UpdateTaskUseCase implements IUpdateTaskUseCase {
   constructor(
     private readonly taskRepository: ITaskRepository,
     private readonly projectRepository: IProjectRepository,

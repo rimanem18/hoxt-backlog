@@ -1,11 +1,19 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  type Mock,
+  mock,
+  test,
+} from 'bun:test';
 import type { Context } from 'hono';
-import type { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
-import type { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
-import type { DeleteTaskUseCase } from '@/task/application/DeleteTaskUseCase';
-import type { GetTaskByIdUseCase } from '@/task/application/GetTaskByIdUseCase';
-import type { GetTasksUseCase } from '@/task/application/GetTasksUseCase';
-import type { UpdateTaskUseCase } from '@/task/application/UpdateTaskUseCase';
+import type { IChangeTaskStatusUseCase } from '@/task/application/IChangeTaskStatusUseCase';
+import type { ICreateTaskUseCase } from '@/task/application/ICreateTaskUseCase';
+import type { IDeleteTaskUseCase } from '@/task/application/IDeleteTaskUseCase';
+import type { IGetTaskByIdUseCase } from '@/task/application/IGetTaskByIdUseCase';
+import type { IGetTasksUseCase } from '@/task/application/IGetTasksUseCase';
+import type { IUpdateTaskUseCase } from '@/task/application/IUpdateTaskUseCase';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/task/domain/errors';
 import { TaskEntity } from '@/task/domain/TaskEntity';
 import { TaskController } from '../TaskController';
@@ -13,22 +21,22 @@ import { TaskController } from '../TaskController';
 describe('TaskController', () => {
   let controller: TaskController;
   let mockCreateTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<ICreateTaskUseCase['execute']>;
   };
   let mockGetTasksUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTasksUseCase['execute']>;
   };
   let mockGetTaskByIdUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTaskByIdUseCase['execute']>;
   };
   let mockUpdateTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IUpdateTaskUseCase['execute']>;
   };
   let mockDeleteTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IDeleteTaskUseCase['execute']>;
   };
   let mockChangeTaskStatusUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IChangeTaskStatusUseCase['execute']>;
   };
   let mockContext: Context;
 
@@ -57,12 +65,12 @@ describe('TaskController', () => {
 
     // コントローラのインスタンス化
     controller = new TaskController(
-      mockCreateTaskUseCase as unknown as CreateTaskUseCase,
-      mockGetTasksUseCase as unknown as GetTasksUseCase,
-      mockGetTaskByIdUseCase as unknown as GetTaskByIdUseCase,
-      mockUpdateTaskUseCase as unknown as UpdateTaskUseCase,
-      mockDeleteTaskUseCase as unknown as DeleteTaskUseCase,
-      mockChangeTaskStatusUseCase as unknown as ChangeTaskStatusUseCase,
+      mockCreateTaskUseCase,
+      mockGetTasksUseCase,
+      mockGetTaskByIdUseCase,
+      mockUpdateTaskUseCase,
+      mockDeleteTaskUseCase,
+      mockChangeTaskStatusUseCase,
     );
 
     // モックのHonoコンテキスト作成

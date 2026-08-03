@@ -1,4 +1,10 @@
-import { mock } from 'bun:test';
+import { type Mock, mock } from 'bun:test';
+import type { IChangeTaskStatusUseCase } from '@/task/application/IChangeTaskStatusUseCase';
+import type { ICreateTaskUseCase } from '@/task/application/ICreateTaskUseCase';
+import type { IDeleteTaskUseCase } from '@/task/application/IDeleteTaskUseCase';
+import type { IGetTaskByIdUseCase } from '@/task/application/IGetTaskByIdUseCase';
+import type { IGetTasksUseCase } from '@/task/application/IGetTasksUseCase';
+import type { IUpdateTaskUseCase } from '@/task/application/IUpdateTaskUseCase';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
 
 /**
@@ -6,22 +12,22 @@ import type { TaskEntity } from '@/task/domain/TaskEntity';
  */
 export interface MockUseCases {
   createTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<ICreateTaskUseCase['execute']>;
   };
   getTasksUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTasksUseCase['execute']>;
   };
   getTaskByIdUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTaskByIdUseCase['execute']>;
   };
   updateTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IUpdateTaskUseCase['execute']>;
   };
   deleteTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IDeleteTaskUseCase['execute']>;
   };
   changeTaskStatusUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IChangeTaskStatusUseCase['execute']>;
   };
 }
 

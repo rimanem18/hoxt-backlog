@@ -1,8 +1,8 @@
 import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
-import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
-import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
-import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
-import type { UpdateProjectUseCase } from '@/project/application/UpdateProjectUseCase';
+import type { ICreateProjectUseCase } from '@/project/application/ICreateProjectUseCase';
+import type { IGetProjectByIdUseCase } from '@/project/application/IGetProjectByIdUseCase';
+import type { IGetProjectsUseCase } from '@/project/application/IGetProjectsUseCase';
+import type { IUpdateProjectUseCase } from '@/project/application/IUpdateProjectUseCase';
 import {
   InvalidProjectDataError,
   ProjectNotFoundError,
@@ -164,13 +164,13 @@ projects.onError((err, c) => {
  */
 export interface ProjectRoutesDependencies {
   /** プロジェクト作成ユースケース */
-  createProjectUseCase: CreateProjectUseCase;
+  createProjectUseCase: ICreateProjectUseCase;
   /** プロジェクト一覧取得ユースケース */
-  getProjectsUseCase: GetProjectsUseCase;
+  getProjectsUseCase: IGetProjectsUseCase;
   /** プロジェクト詳細取得ユースケース */
-  getProjectByIdUseCase: GetProjectByIdUseCase;
+  getProjectByIdUseCase: IGetProjectByIdUseCase;
   /** プロジェクト編集ユースケース */
-  updateProjectUseCase: UpdateProjectUseCase;
+  updateProjectUseCase: IUpdateProjectUseCase;
   /** 認証ミドルウェアオプション（テスト用mockPayloadを含む） */
   authMiddlewareOptions?: AuthMiddlewareOptions;
 }

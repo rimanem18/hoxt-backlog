@@ -2,17 +2,7 @@ import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import { TaskEntity } from '@/task/domain/TaskEntity';
-
-/**
- * タスク作成ユースケースの入力データ
- */
-export interface CreateTaskInput {
-  userId: string;
-  title: string;
-  description?: string;
-  priority?: string;
-  projectId: string;
-}
+import type { CreateTaskInput, ICreateTaskUseCase } from './ICreateTaskUseCase';
 
 /**
  * タスク作成ユースケース
@@ -22,7 +12,7 @@ export interface CreateTaskInput {
  * TaskEntityのファクトリメソッドでバリデーションを行い、
  * ITaskRepositoryを通じて永続化する。
  */
-export class CreateTaskUseCase {
+export class CreateTaskUseCase implements ICreateTaskUseCase {
   constructor(
     private readonly taskRepository: ITaskRepository,
     private readonly projectRepository: IProjectRepository,

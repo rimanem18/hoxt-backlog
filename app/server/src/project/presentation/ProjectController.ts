@@ -1,8 +1,8 @@
 import type { Context } from 'hono';
-import type { CreateProjectUseCase } from '@/project/application/CreateProjectUseCase';
-import type { GetProjectByIdUseCase } from '@/project/application/GetProjectByIdUseCase';
-import type { GetProjectsUseCase } from '@/project/application/GetProjectsUseCase';
-import type { UpdateProjectUseCase } from '@/project/application/UpdateProjectUseCase';
+import type { ICreateProjectUseCase } from '@/project/application/ICreateProjectUseCase';
+import type { IGetProjectByIdUseCase } from '@/project/application/IGetProjectByIdUseCase';
+import type { IGetProjectsUseCase } from '@/project/application/IGetProjectsUseCase';
+import type { IUpdateProjectUseCase } from '@/project/application/IUpdateProjectUseCase';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 
 /**
@@ -53,10 +53,10 @@ interface SuccessResponseArray {
  */
 export class ProjectController {
   constructor(
-    private readonly createProjectUseCase: CreateProjectUseCase,
-    private readonly getProjectsUseCase: GetProjectsUseCase,
-    private readonly getProjectByIdUseCase: GetProjectByIdUseCase,
-    private readonly updateProjectUseCase: UpdateProjectUseCase,
+    private readonly createProjectUseCase: ICreateProjectUseCase,
+    private readonly getProjectsUseCase: IGetProjectsUseCase,
+    private readonly getProjectByIdUseCase: IGetProjectByIdUseCase,
+    private readonly updateProjectUseCase: IUpdateProjectUseCase,
   ) {}
 
   /**

@@ -1,14 +1,9 @@
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { ProjectEntity } from '@/project/domain/ProjectEntity';
-
-/**
- * プロジェクト作成ユースケースの入力データ
- */
-export interface CreateProjectInput {
-  userId: string;
-  name: string;
-  description?: string;
-}
+import type {
+  CreateProjectInput,
+  ICreateProjectUseCase,
+} from './ICreateProjectUseCase';
 
 /**
  * プロジェクト作成ユースケース
@@ -17,7 +12,7 @@ export interface CreateProjectInput {
  * ProjectEntityのファクトリメソッドでバリデーションを行い、
  * IProjectRepositoryを通じて永続化する。
  */
-export class CreateProjectUseCase {
+export class CreateProjectUseCase implements ICreateProjectUseCase {
   constructor(private readonly projectRepository: IProjectRepository) {}
 
   /**

@@ -1,16 +1,10 @@
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
-
-/**
- * タスク詳細取得ユースケースの入力データ
- */
-export interface GetTaskByIdInput {
-  /** 認証済みユーザーID */
-  userId: string;
-  /** 取得対象のタスクID */
-  taskId: string;
-}
+import type {
+  GetTaskByIdInput,
+  IGetTaskByIdUseCase,
+} from './IGetTaskByIdUseCase';
 
 /**
  * タスク詳細取得ユースケース
@@ -18,7 +12,7 @@ export interface GetTaskByIdInput {
  * 指定されたタスクIDに基づいて単一のタスク詳細情報を取得する。
  * タスクが存在しない場合はTaskNotFoundErrorをスローする。
  */
-export class GetTaskByIdUseCase {
+export class GetTaskByIdUseCase implements IGetTaskByIdUseCase {
   constructor(private readonly taskRepository: ITaskRepository) {}
 
   /**

@@ -1,19 +1,16 @@
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
-
-/**
- * プロジェクト一覧取得ユースケースの入力
- */
-export interface GetProjectsInput {
-  userId: string;
-}
+import type {
+  GetProjectsInput,
+  IGetProjectsUseCase,
+} from './IGetProjectsUseCase';
 
 /**
  * プロジェクト一覧取得ユースケース
  *
  * ユーザーが所有するプロジェクトを取得する。
  */
-export class GetProjectsUseCase {
+export class GetProjectsUseCase implements IGetProjectsUseCase {
   constructor(private readonly projectRepository: IProjectRepository) {}
 
   /**

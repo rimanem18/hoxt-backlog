@@ -1,20 +1,10 @@
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
-
-/**
- * プロジェクト更新ユースケースの入力データ
- */
-export interface UpdateProjectInput {
-  /** 認証済みユーザーID */
-  userId: string;
-  /** 更新対象のプロジェクトID */
-  projectId: string;
-  /** 更新後のプロジェクト名（未指定の場合は変更しない） */
-  name?: string;
-  /** 更新後のプロジェクト説明（未指定の場合は変更しない） */
-  description?: string;
-}
+import type {
+  IUpdateProjectUseCase,
+  UpdateProjectInput,
+} from './IUpdateProjectUseCase';
 
 /**
  * プロジェクト更新ユースケース
@@ -22,7 +12,7 @@ export interface UpdateProjectInput {
  * 指定されたプロジェクトの名前・説明を部分更新する。
  * プロジェクトが存在しない場合はProjectNotFoundErrorをスローする。
  */
-export class UpdateProjectUseCase {
+export class UpdateProjectUseCase implements IUpdateProjectUseCase {
   constructor(private readonly projectRepository: IProjectRepository) {}
 
   /**

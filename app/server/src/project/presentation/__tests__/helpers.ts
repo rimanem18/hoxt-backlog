@@ -1,4 +1,8 @@
-import { mock } from 'bun:test';
+import { type Mock, mock } from 'bun:test';
+import type { ICreateProjectUseCase } from '@/project/application/ICreateProjectUseCase';
+import type { IGetProjectByIdUseCase } from '@/project/application/IGetProjectByIdUseCase';
+import type { IGetProjectsUseCase } from '@/project/application/IGetProjectsUseCase';
+import type { IUpdateProjectUseCase } from '@/project/application/IUpdateProjectUseCase';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 
 /**
@@ -6,16 +10,16 @@ import type { ProjectEntity } from '@/project/domain/ProjectEntity';
  */
 export interface MockUseCases {
   createProjectUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<ICreateProjectUseCase['execute']>;
   };
   getProjectsUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetProjectsUseCase['execute']>;
   };
   getProjectByIdUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetProjectByIdUseCase['execute']>;
   };
   updateProjectUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IUpdateProjectUseCase['execute']>;
   };
 }
 

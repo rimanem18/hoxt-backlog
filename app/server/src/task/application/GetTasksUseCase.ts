@@ -1,20 +1,8 @@
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
-import type {
-  ITaskRepository,
-  TaskFilters,
-  TaskSortBy,
-} from '@/task/domain/ITaskRepository';
+import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
-
-/**
- * タスク一覧取得ユースケースの入力
- */
-export interface GetTasksInput {
-  userId: string;
-  filters: TaskFilters;
-  sort: TaskSortBy;
-}
+import type { GetTasksInput, IGetTasksUseCase } from './IGetTasksUseCase';
 
 /**
  * タスク一覧取得ユースケース
@@ -22,7 +10,7 @@ export interface GetTasksInput {
  * ユーザーが所有するタスクをフィルタ・ソート条件に従って取得する。
  * projectIdフィルタが指定された場合はIProjectRepositoryで所有権を検証する。
  */
-export class GetTasksUseCase {
+export class GetTasksUseCase implements IGetTasksUseCase {
   constructor(
     private readonly taskRepository: ITaskRepository,
     private readonly projectRepository: IProjectRepository,

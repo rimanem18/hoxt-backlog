@@ -43,14 +43,10 @@ describe('projectRoutes統合テスト', () => {
     const { createProjectRoutes } = await import('../projectRoutes');
 
     app = createProjectRoutes({
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
-      createProjectUseCase: useCases.createProjectUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
-      getProjectsUseCase: useCases.getProjectsUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
-      getProjectByIdUseCase: useCases.getProjectByIdUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとProjectRoutesDependenciesの型互換性のため
-      updateProjectUseCase: useCases.updateProjectUseCase as any,
+      createProjectUseCase: useCases.createProjectUseCase,
+      getProjectsUseCase: useCases.getProjectsUseCase,
+      getProjectByIdUseCase: useCases.getProjectByIdUseCase,
+      updateProjectUseCase: useCases.updateProjectUseCase,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
         mockPayload: {
