@@ -322,6 +322,28 @@ describe('TaskEntity', () => {
       );
     });
 
+    test('updateProjectId()で所属projectが変更され、updatedAtも更新される', async () => {
+      // Given: 所属projectなしでタスクを作成
+      const task = TaskEntity.create({
+        userId: 'user-uuid-123',
+        title: 'タスク',
+        projectId: null,
+      });
+      const originalUpdatedAt = task.getUpdatedAt();
+      const newProjectId = 'project-uuid-456';
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When: 所属projectを変更
+      task.updateProjectId(newProjectId);
+
+      // Then: projectIdとupdatedAtが更新される
+      expect(task.getProjectId()).toBe(newProjectId);
+      expect(task.getUpdatedAt().getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+    });
+
     test('equals()で同一IDの場合trueを返す', () => {
       // Given: 同じpropsで2つのタスクを復元
       const props = {

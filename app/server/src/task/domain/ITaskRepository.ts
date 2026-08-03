@@ -21,16 +21,6 @@ export type TaskSortBy =
   | 'priority_desc'; // 優先度（高→低）
 
 /**
- * タスク更新入力データ
- */
-export interface UpdateTaskInput {
-  title?: string;
-  description?: string | null;
-  priority?: string;
-  projectId?: string;
-}
-
-/**
  * タスクリポジトリインターフェース
  *
  * タスク集約の永続化契約を定義する。
@@ -69,13 +59,13 @@ export interface ITaskRepository {
    * タスクを更新する
    * @param userId - ユーザーID
    * @param taskId - タスクID
-   * @param input - 更新データ
+   * @param task - 更新済みのTaskEntity
    * @returns 更新されたタスクエンティティまたはnull
    */
   update(
     userId: string,
     taskId: string,
-    input: UpdateTaskInput,
+    task: TaskEntity,
   ): Promise<TaskEntity | null>;
 
   /**

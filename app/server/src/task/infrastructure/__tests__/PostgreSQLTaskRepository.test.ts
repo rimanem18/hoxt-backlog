@@ -126,7 +126,7 @@ describe('PostgreSQLTaskRepository', () => {
 
   describe('update', () => {
     test('タスクを更新できる', async () => {
-      // Given: 保存済みのタスク
+      // Given: 保存済みのタスクをドメインメソッドで変更
       const taskEntity = TaskEntity.create({
         userId: testUserId1,
         title: '更新前タイトル',
@@ -135,16 +135,15 @@ describe('PostgreSQLTaskRepository', () => {
         projectId: null,
       });
       await repository.save(taskEntity);
+      taskEntity.updateTitle('更新後タイトル');
+      taskEntity.updateDescription('更新後説明');
+      taskEntity.changePriority('high');
 
-      // When: タスクを更新
+      // When: 変更済みEntityでタスクを更新
       const updatedTask = await repository.update(
         testUserId1,
         taskEntity.getId(),
-        {
-          title: '更新後タイトル',
-          description: '更新後説明',
-          priority: 'high',
-        },
+        taskEntity,
       );
 
       // Then: 更新されたタスクが返される
@@ -155,16 +154,19 @@ describe('PostgreSQLTaskRepository', () => {
     });
 
     test('存在しないタスクIDの場合nullを返す', async () => {
-      // Given: 存在しないタスクID
+      // Given: 存在しないタスクIDに対応するEntity（未保存）
       const nonExistentTaskId = '888e4567-e89b-12d3-a456-426614174888';
+      const taskEntity = TaskEntity.create({
+        userId: testUserId1,
+        title: '更新タイトル',
+        projectId: null,
+      });
 
       // When: 存在しないタスクを更新
       const updatedTask = await repository.update(
         testUserId1,
         nonExistentTaskId,
-        {
-          title: '更新タイトル',
-        },
+        taskEntity,
       );
 
       // Then: nullが返される

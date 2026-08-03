@@ -5,7 +5,6 @@ import type {
   ITaskRepository,
   TaskFilters,
   TaskSortBy,
-  UpdateTaskInput,
 } from '@/task/domain/ITaskRepository';
 import { TaskEntity } from '@/task/domain/TaskEntity';
 import { TaskPriority } from '@/task/domain/valueobjects/TaskPriority';
@@ -57,13 +56,16 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
   async update(
     userId: string,
     taskId: string,
-    input: UpdateTaskInput,
+    task: TaskEntity,
   ): Promise<TaskEntity | null> {
     const result = await this.db
       .update(tasks)
       .set({
-        ...input,
-        updatedAt: new Date(),
+        title: task.getTitle(),
+        description: task.getDescription(),
+        priority: task.getPriority(),
+        projectId: task.getProjectId(),
+        updatedAt: task.getUpdatedAt(),
       })
       .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
       .returning();
