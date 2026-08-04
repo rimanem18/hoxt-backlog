@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "bun run scripts/sync-shared-schemas.ts",
     "dev": "next dev --port ${CLIENT_PORT:-3000}",
     "build": "next build",
     "build:static": "next build && next export",
