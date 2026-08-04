@@ -69,7 +69,7 @@ runs:
 
           COMPONENTS="$INPUT_COMPONENTS"
           if [ -z "$COMPONENTS" ]; then
-            COMPONENTS="✅ Infrastructure (Terraform)\\n✅ Database (drizzle-kit)\\n✅ Backend (AWS Lambda)\\n✅ Frontend (CloudFlare Pages)"
+            COMPONENTS="✅ Infrastructure (Terraform)\\n✅ Database (drizzle-kit)\\n✅ Backend (AWS Lambda)\\n✅ Frontend (Cloudflare Workers)"
           fi
 
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"

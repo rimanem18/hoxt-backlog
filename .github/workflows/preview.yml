@@ -256,7 +256,7 @@ jobs:
       next-public-api-base-url: ${{ needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
       next-public-site-url: ${{ needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
       next-public-trusted-domains: ${{ needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
-      cloudflare-project-name: ${{ vars.PROJECT_NAME }}
+      cloudflare-worker-name: ${{ vars.PROJECT_NAME }}
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 

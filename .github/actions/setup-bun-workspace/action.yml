@@ -28,9 +28,9 @@ runs:
         path: |
           ~/.bun
           ${{ inputs.working-directory }}/node_modules
-        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-${{ inputs.cache-key-suffix }}
+        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-${{ inputs.cache-key-suffix }}
         restore-keys: |
-          bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-
+          bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-
           bun-${{ runner.os }}-
 
     - name: Install shared-schemas dependencies

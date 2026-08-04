@@ -119,15 +119,12 @@ frontend-deploy-preview:
 	export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} && \
 	export NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} && \
 	export NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS} && \
-	bun run build'
+	bun run build:worker'
 	@echo "フロントエンドをCloudflareにデプロイします..."
 	@docker compose exec client ash -c ' \
 		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		npx --yes wrangler@4.61.0 pages deploy ./out \
-		--project-name ${PROJECT_NAME} \
-		--branch preview \
-		--commit-dirty=true'
+		bunx wrangler deploy --name ${PROJECT_NAME}-preview'
 db-migrate-preview:
 	@echo "プレビュー環境のデータベースマイグレーションを実行します..."
 	@docker compose exec server ash -c ' \
