@@ -16,10 +16,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
-    }
   }
 }
 
@@ -34,8 +30,4 @@ provider "aws" {
       Layer       = "Application"
     }
   }
-}
-
-provider "cloudflare" {
-  # API tokenは環境変数 CLOUDFLARE_API_TOKEN で設定
 }

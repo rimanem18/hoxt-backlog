@@ -41,7 +41,6 @@ locals {
   lambda_production_function_url  = data.terraform_remote_state.bootstrap.outputs.lambda_production_function_url
   lambda_preview_function_url     = data.terraform_remote_state.bootstrap.outputs.lambda_preview_function_url
   lambda_production_stable_alias  = data.terraform_remote_state.bootstrap.outputs.lambda_production_stable_alias
-  cloudflare_pages_project_name   = data.terraform_remote_state.bootstrap.outputs.cloudflare_pages_project_name
   github_actions_role_arn         = data.terraform_remote_state.bootstrap.outputs.github_actions_role_arn
 }
 

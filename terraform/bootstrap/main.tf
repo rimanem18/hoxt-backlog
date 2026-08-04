@@ -180,17 +180,6 @@ resource "aws_lambda_alias" "preview_stable" {
   }
 }
 
-# CloudFlare Pages
-module "cloudflare_pages" {
-  source = "../modules/cloudflare-pages"
-
-  account_id   = var.cloudflare_account_id
-  project_name = local.project_name
-  domain_name  = var.domain_name
-
-  depends_on = [aws_lambda_function_url.production, aws_lambda_function_url.preview]
-}
-
 # Terraform State Management Resources
 # KMS Key for State Encryption
 resource "aws_kms_key" "terraform_state" {
