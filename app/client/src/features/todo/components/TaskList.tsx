@@ -1,8 +1,8 @@
 'use client';
 
+import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
 import type React from 'react';
 import { useCallback } from 'react';
-import type { Task, TaskStatus } from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 import TaskItem from './TaskItem';
 

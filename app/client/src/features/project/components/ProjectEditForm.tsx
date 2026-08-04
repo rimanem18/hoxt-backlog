@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import {
   createProjectSchema,
   type Project,
-} from '@/packages/shared-schemas/src/projects';
+} from '@hoxt-backlog/shared-schemas/projects';
+import React, { useEffect, useState } from 'react';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
 /**

@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
 import type {
   TaskPriority,
   TaskStatus,
-} from '@/packages/shared-schemas/src/tasks';
+} from '@hoxt-backlog/shared-schemas/tasks';
+import React from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setPriorityFilter, setStatusFilter } from '../store/taskSlice';
 

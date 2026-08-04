@@ -4,9 +4,10 @@
  * React QueryのuseMutationを使用してタスクのCRUD操作を提供する
  * 操作成功時はキャッシュを無効化し、useTasks フックが自動的に再取得する
  */
+
+import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '@/lib/apiClientContext';
-import type { Task, TaskStatus } from '@/packages/shared-schemas/src/tasks';
 
 /**
  * CreateTaskBody型（OpenAPIスキーマから自動推論）

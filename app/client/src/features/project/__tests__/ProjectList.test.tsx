@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import type { Project } from '@hoxt-backlog/shared-schemas/projects';
 import { cleanup, render, screen } from '@testing-library/react';
-import type { Project } from '@/packages/shared-schemas/src/projects';
 import ProjectList from '../components/ProjectList';
 import { ProjectServicesProvider } from '../lib/ProjectServicesContext';
 

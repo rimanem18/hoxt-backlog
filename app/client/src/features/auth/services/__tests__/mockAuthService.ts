@@ -4,8 +4,8 @@
  */
 
 import { mock } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import type { AuthChangeEvent, Provider } from '@supabase/supabase-js';
-import type { User } from '@/packages/shared-schemas/src/auth';
 import type {
   AuthOptions,
   AuthResponse,

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import {
   createTaskBodySchema,
   type Task,
-} from '@/packages/shared-schemas/src/tasks';
+} from '@hoxt-backlog/shared-schemas/tasks';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 /**

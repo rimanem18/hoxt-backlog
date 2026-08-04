@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { Project } from '@hoxt-backlog/shared-schemas/projects';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Project } from '@/packages/shared-schemas/src/projects';
 import ProjectEditForm from '../components/ProjectEditForm';
 import { ProjectServicesProvider } from '../lib/ProjectServicesContext';
 

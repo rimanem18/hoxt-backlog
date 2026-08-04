@@ -1,4 +1,5 @@
 import { mock } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { configureStore } from '@reduxjs/toolkit';
 import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -18,7 +19,6 @@ import {
   type TaskServices,
   TaskServicesProvider,
 } from '@/features/todo/lib/TaskServicesContext';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 export function buildUser(overrides: Partial<User> = {}): User {
   return {

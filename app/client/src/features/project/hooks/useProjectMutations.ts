@@ -4,13 +4,14 @@
  * React QueryのuseMutationを使用してプロジェクトのCRUD操作を提供する
  * 操作成功時はキャッシュを無効化し、一覧取得フックが自動的に再取得する
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApiClient } from '@/lib/apiClientContext';
+
 import type {
   CreateProjectInput,
   Project,
   UpdateProjectInput,
-} from '@/packages/shared-schemas/src/projects';
+} from '@hoxt-backlog/shared-schemas/projects';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useApiClient } from '@/lib/apiClientContext';
 
 /**
  * useProjectMutationsの返り値型

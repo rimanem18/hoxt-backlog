@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectServicesProvider } from '@/features/project/lib/ProjectServicesContext';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import TaskEditModal from '../components/TaskEditModal';
 import { TaskServicesProvider } from '../lib/TaskServicesContext';
 

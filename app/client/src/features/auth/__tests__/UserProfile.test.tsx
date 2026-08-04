@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { configureStore } from '@reduxjs/toolkit';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { UserProfile } from '@/features/auth/components/UserProfile';
 import authReducer from '@/features/auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 // Supabaseクライアントをモック
 const mockSignOut = mock(() => Promise.resolve({ error: null }));

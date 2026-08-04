@@ -1,10 +1,10 @@
 import type { Page } from '@playwright/test';
-import type { Project } from '@/packages/shared-schemas/src/projects';
+import type { Project } from '@hoxt-backlog/shared-schemas/projects';
 import type {
   ChangeTaskStatusBody,
   Task,
   UpdateTaskBody,
-} from '@/packages/shared-schemas/src/tasks';
+} from '@hoxt-backlog/shared-schemas/tasks';
 import { setupAuthenticatedApiMocks } from '../../shared/helpers/auth-session';
 import { expectDashboard } from '../../shared/helpers/dashboard';
 

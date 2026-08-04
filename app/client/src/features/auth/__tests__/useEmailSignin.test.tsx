@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { configureStore } from '@reduxjs/toolkit';
 import type { Session } from '@supabase/supabase-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -9,7 +10,6 @@ import { AuthServicesProvider } from '@/features/auth/services/AuthServicesConte
 import type { AuthServiceInterface } from '@/features/auth/services/authService';
 import type { SignInResult } from '@/features/auth/services/providers/emailPasswordAuthProvider';
 import { authSlice } from '@/features/auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 const mockUser: User = {
   id: '550e8400-e29b-41d4-a716-446655440000',

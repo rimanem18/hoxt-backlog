@@ -4,8 +4,8 @@
  * DRY原則に基づく重複コード除去とメンテナンス性向上
  */
 
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { debugLog } from '@/lib/utils/logger';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 環境に応じたSupabaseストレージキーを動的に生成

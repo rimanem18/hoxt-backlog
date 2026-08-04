@@ -4,7 +4,7 @@ import type {
   Page,
 } from '@playwright/test';
 import { test as base } from '@playwright/test';
-import type { AuthProvider } from '@/packages/shared-schemas/src/auth';
+import type { AuthProvider } from '@hoxt-backlog/shared-schemas/auth';
 
 type StorageState = Exclude<
   BrowserContextOptions['storageState'],

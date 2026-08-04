@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import TaskItem from '../components/TaskItem';
 
 // テスト用のモックタスクデータ

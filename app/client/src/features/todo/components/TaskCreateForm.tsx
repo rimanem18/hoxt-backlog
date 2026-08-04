@@ -1,8 +1,8 @@
 'use client';
 
+import { createTaskBodySchema } from '@hoxt-backlog/shared-schemas/tasks';
 import React, { useCallback, useState } from 'react';
 import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
-import { createTaskBodySchema } from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 export interface TaskCreateFormProps {

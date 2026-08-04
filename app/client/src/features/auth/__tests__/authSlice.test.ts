@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { type AuthState, authSlice } from '@/features/auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 describe('authSlice', () => {
   beforeEach(() => {});

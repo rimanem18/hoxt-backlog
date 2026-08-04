@@ -7,13 +7,13 @@ import {
   mock,
   test,
 } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import taskReducer from '../../store/taskSlice';
 import { useTasks } from '../useTasks';
 

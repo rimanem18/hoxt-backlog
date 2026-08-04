@@ -1,5 +1,6 @@
 'use client';
 
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { UserProfile } from '@/features/auth/components/UserProfile';
@@ -8,7 +9,6 @@ import { showNetworkError } from '@/features/auth/store/errorSlice';
 import { useDashboardServices } from '@/features/dashboard/lib/DashboardServicesContext';
 import TaskEditModal from '@/features/todo/components/TaskEditModal';
 import TaskList from '@/features/todo/components/TaskList';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
