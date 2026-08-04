@@ -1,21 +1,18 @@
 import ProjectDetailClient from './ProjectDetailClient';
 
 /**
- * `output: 'export'`（静的書き出し）では動的セグメントごとに事前生成が必要だが、
- * projectIdはビルド時に確定しないため、プレースホルダー1件のみ静的生成する。
- * 実際のURLへのルーティングは`public/_redirects`のSPAフォールバックに委ねる。
- *
- * @returns 静的生成対象のプレースホルダーパラメータ一覧
- */
-export function generateStaticParams(): { id: string }[] {
-  return [{ id: 'placeholder' }];
-}
-
-/**
  * project詳細・編集画面（Server Component）
  *
+ * 動的ルートセグメント（`[id]`）から projectId を取得し、
+ * ProjectDetailClientに渡す。
+ *
+ * @param props - ルートパラメータを含むprops
+ * @param props.params - 動的セグメント値を含むPromise
  * @returns project詳細・編集・そのprojectのtask一覧を表示するページ
  */
-export default function ProjectDetailPage(): React.ReactNode {
-  return <ProjectDetailClient />;
+export default async function ProjectDetailPage(props: {
+  params: Promise<{ id: string }>;
+}): Promise<React.ReactNode> {
+  const params = await props.params;
+  return <ProjectDetailClient projectId={params.id} />;
 }
