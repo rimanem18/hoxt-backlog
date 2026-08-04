@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import greet from '@/greet/presentation/greetRoutes';
 import health from '@/health/presentation/healthRoutes';
+import project from '@/project/presentation/projectRoutes';
 import { validateEnv } from '@/shared/config/env';
 import docs from '@/shared/docs/docsRoutes';
 import corsMiddleware from '@/shared/middleware/corsMiddleware';
@@ -54,6 +55,7 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', emailSignup);
   app.route('/api', user);
   app.route('/api', task);
+  app.route('/api', project);
   app.route('/api', docs);
 
   return app;

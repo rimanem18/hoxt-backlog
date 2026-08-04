@@ -15,6 +15,20 @@
       "when": 1782916594679,
       "tag": "0001_melted_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785548030965,
+      "tag": "0002_sparkling_maelstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785629464802,
+      "tag": "0003_happy_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

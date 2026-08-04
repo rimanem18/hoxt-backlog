@@ -2,7 +2,7 @@
  * E2Eテスト用モック認証プロバイダー
  */
 
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import {
   type AuthCallbackResult,
   type AuthResult,

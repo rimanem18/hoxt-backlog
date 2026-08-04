@@ -39,6 +39,9 @@ services:
     volumes:
       - ./app/client:/home/bun/app/client
       - ./app/packages:/home/bun/app/packages
+      # Turbopackはシンボリックリンク経由でproject root外のファイルを解決できないため、
+      # shared-schemasをnode_modules配下へ実ディレクトリとしてbind mountする
+      - ./app/packages/shared-schemas:/home/bun/app/client/node_modules/@hoxt-backlog/shared-schemas
       - ./docs/api:/home/bun/docs/api:ro
     environment:
       - CLIENT_PORT=${CLIENT_PORT}

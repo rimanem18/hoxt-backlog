@@ -7,13 +7,13 @@ import {
   mock,
   test,
 } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import taskReducer from '../../store/taskSlice';
 import { useTasks } from '../useTasks';
 
@@ -421,5 +421,138 @@ describe('useTasks', () => {
 
     expect(result.current.error).toBeDefined();
     expect(result.current.error?.message).toContain('アクセス権限がありません');
+  });
+
+  test('正常系 - projectId指定時はクエリパラメータにprojectIdが含まれる', async () => {
+    // Given: 特定projectのタスクを返すモック
+    const mockTasks: Task[] = [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        userId: 'user-id',
+        title: 'projectAのタスク',
+        description: null,
+        priority: 'medium',
+        status: 'not_started',
+        createdAt: '2025-01-25T00:00:00Z',
+        updatedAt: '2025-01-25T00:00:00Z',
+      },
+    ];
+    const projectId = '770e8400-e29b-41d4-a716-446655440002';
+
+    let requestUrl = '';
+    mockFetch.mockImplementation(async (request: Request) => {
+      requestUrl = request.url;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: mockTasks,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    });
+
+    const mockClient = createApiClient('http://localhost:3001/api', undefined, {
+      fetch: mockFetch as unknown as typeof fetch,
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
+        </QueryClientProvider>
+      </Provider>
+    );
+
+    // When: projectIdを指定してuseTasksを呼び出し
+    const { result } = renderHook(() => useTasks(projectId), { wrapper });
+
+    // Then: APIクエリにprojectIdが含まれる
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(requestUrl).toContain(`projectId=${projectId}`);
+    expect(result.current.data?.[0].title).toBe('projectAのタスク');
+  });
+
+  test('境界値 - projectId未指定時はクエリパラメータにprojectIdが含まれない', async () => {
+    // Given: 全タスクを返すモック
+    let requestUrl = '';
+    mockFetch.mockImplementation(async (request: Request) => {
+      requestUrl = request.url;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    });
+
+    const mockClient = createApiClient('http://localhost:3001/api', undefined, {
+      fetch: mockFetch as unknown as typeof fetch,
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
+        </QueryClientProvider>
+      </Provider>
+    );
+
+    // When: projectIdを指定せずにuseTasksを呼び出し
+    const { result } = renderHook(() => useTasks(), { wrapper });
+
+    // Then: APIクエリにprojectIdが含まれない
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(requestUrl).not.toContain('projectId=');
+  });
+
+  test('異常系 - projectId指定時に404（他ユーザー・存在しないproject）はエラーにせず空配列になる', async () => {
+    // Given: モックAPIがPROJECT_NOT_FOUNDエラーを返す
+    const projectId = '770e8400-e29b-41d4-a716-446655440002';
+
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: 'PROJECT_NOT_FOUND',
+            message: `プロジェクトが見つかりません: ${projectId}`,
+          },
+        }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const mockClient = createApiClient('http://localhost:3001/api', undefined, {
+      fetch: mockFetch as unknown as typeof fetch,
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
+        </QueryClientProvider>
+      </Provider>
+    );
+
+    // When: projectIdを指定してuseTasksを呼び出し
+    const { result } = renderHook(() => useTasks(projectId), { wrapper });
+
+    // Then: エラー状態にはならず、空配列が返る（useProject側の404表示と重複させない）
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toEqual([]);
   });
 });

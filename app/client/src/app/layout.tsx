@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: '進捗管理アプリ',
-  description: '優先度やステータスを割り当て、絞り込みすることができる Todo リストです。',
+  description:
+    '優先度やステータスを割り当て、絞り込みすることができる Todo リストです。',
 };
 
 export default function RootLayout({

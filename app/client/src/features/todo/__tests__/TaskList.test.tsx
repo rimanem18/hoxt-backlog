@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { Provider } from 'react-redux';
 import taskReducer from '@/features/todo/store/taskSlice';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import TaskList from '../components/TaskList';
 import { TaskServicesProvider } from '../lib/TaskServicesContext';
 

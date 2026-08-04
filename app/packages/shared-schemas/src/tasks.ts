@@ -42,6 +42,7 @@ export const taskSchema = z.object({
   status: taskStatusSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  projectId: uuidSchema.nullable(),
 }).openapi('Task', {
   description: 'タスク情報',
 });
@@ -92,6 +93,14 @@ export const listTasksQuerySchema = z.object({
     },
     example: 'priority_desc',
   }),
+  projectId: uuidSchema.optional().openapi({
+    param: {
+      name: 'projectId',
+      in: 'query',
+    },
+    description: 'プロジェクトIDによる絞り込み',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  }),
 }).openapi('ListTasksQuery');
 
 // ===== リクエストボディスキーマ =====
@@ -102,6 +111,7 @@ export const createTaskBodySchema = z.object({
     .max(100, 'タイトルは100文字以内で入力してください'),
   description: z.string().nullable().optional(),
   priority: taskPrioritySchema.default('medium'),
+  projectId: uuidSchema,
 }).openapi('CreateTaskBody');
 
 export const updateTaskBodySchema = z.object({
@@ -111,6 +121,7 @@ export const updateTaskBodySchema = z.object({
     .optional(),
   description: z.string().nullable().optional(),
   priority: taskPrioritySchema.optional(),
+  projectId: uuidSchema.optional(),
 }).openapi('UpdateTaskBody');
 
 export const changeTaskStatusBodySchema = z.object({

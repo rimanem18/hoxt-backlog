@@ -25,3 +25,6 @@ export * from './src/users';
 
 // タスク管理API型定義
 export * from './src/tasks';
+
+// プロジェクト管理API型定義
+export * from './src/projects';

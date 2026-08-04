@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: ['client'],
   /**
+   * shared-schemas（app/packages配下）はnode_modules経由（@hoxt-backlog/shared-schemas）で
+   * シンボリックリンクされたソースをそのまま参照しているため、
+   * ビルド済みパッケージとしてではなく自前コードと同様にトランスパイル対象にする
+   */
+  transpilePackages: ['@hoxt-backlog/shared-schemas'],
+  /**
    * 外部画像ホストの安全な許可リスト設定
    */
   images: {

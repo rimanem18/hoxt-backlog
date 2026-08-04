@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import { ProjectNotFoundError } from '@/project/domain/errors';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/task/domain/errors';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { User } from '@/user/domain/UserEntity';
@@ -10,6 +11,7 @@ describe('taskRoutes統合テスト', () => {
   let app: OpenAPIHono;
   let useCases: MockUseCases;
   const mockUserId = '123e4567-e89b-12d3-a456-426614174000';
+  const mockProjectId = '770e8400-e29b-41d4-a716-446655440002';
 
   beforeEach(async () => {
     useCases = mockUseCases();
@@ -40,18 +42,12 @@ describe('taskRoutes統合テスト', () => {
     const { createTaskRoutes } = await import('../taskRoutes');
 
     app = createTaskRoutes({
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      createTaskUseCase: useCases.createTaskUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      getTasksUseCase: useCases.getTasksUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      updateTaskUseCase: useCases.updateTaskUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      deleteTaskUseCase: useCases.deleteTaskUseCase as any,
-      // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-      changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
+      createTaskUseCase: useCases.createTaskUseCase,
+      getTasksUseCase: useCases.getTasksUseCase,
+      getTaskByIdUseCase: useCases.getTaskByIdUseCase,
+      updateTaskUseCase: useCases.updateTaskUseCase,
+      deleteTaskUseCase: useCases.deleteTaskUseCase,
+      changeTaskStatusUseCase: useCases.changeTaskStatusUseCase,
       authMiddlewareOptions: {
         userRepository: mockUserRepository,
         mockPayload: {
@@ -95,6 +91,7 @@ describe('taskRoutes統合テスト', () => {
         body: JSON.stringify({
           title: '会議資料の作成',
           priority: 'high',
+          projectId: mockProjectId,
         }),
       });
 
@@ -103,6 +100,54 @@ describe('taskRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.data.title).toBe('会議資料の作成');
+    });
+
+    test('異常系: projectId未指定で400 VALIDATION_ERRORを返す（AC-03）', async () => {
+      // Given: projectIdを含まないリクエストボディ
+
+      // When: projectIdなしでPOST /tasksリクエストを送信
+      const res = await app.request('/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock-token',
+        },
+        body: JSON.stringify({
+          title: '会議資料の作成',
+        }),
+      });
+
+      // Then: 400 VALIDATION_ERRORレスポンスを返す
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('異常系: 他ユーザーのprojectId指定でProjectNotFoundErrorが404を返す', async () => {
+      // Given: 他ユーザーのprojectIdでProjectNotFoundErrorを発生させるUseCase
+      useCases.createTaskUseCase.execute.mockRejectedValue(
+        ProjectNotFoundError.forProjectId(mockProjectId),
+      );
+
+      // When: POST /tasksでタスク作成リクエストを送信
+      const res = await app.request('/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock-token',
+        },
+        body: JSON.stringify({
+          title: '会議資料の作成',
+          projectId: mockProjectId,
+        }),
+      });
+
+      // Then: 404 NOT_FOUNDレスポンスを返す
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('NOT_FOUND');
     });
   });
 
@@ -128,6 +173,90 @@ describe('taskRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.data.length).toBe(2);
+    });
+
+    test('正常系: project未所属taskがprojectId未指定時の一覧に引き続き含まれる（AC-04相当）', async () => {
+      // Given: project未所属task（projectId=null）を返すUseCase
+      const mockTasks = [
+        createMockTaskEntity({ title: '未所属タスク', projectId: null }),
+      ];
+      useCases.getTasksUseCase.execute.mockResolvedValue(mockTasks);
+
+      // When: projectId未指定でGET /tasksリクエストを送信
+      const res = await app.request('/tasks', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer mock-token',
+        },
+      });
+
+      // Then: project未所属taskが含まれる
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.data[0].projectId).toBeNull();
+    });
+
+    test('正常系: projectIdクエリでそのprojectのtaskのみ取得できる（AC-10相当）', async () => {
+      // Given: 指定projectに紐づくtaskを返すUseCase
+      const mockTasks = [
+        createMockTaskEntity({ title: 'プロジェクト所属タスク' }),
+      ];
+      useCases.getTasksUseCase.execute.mockResolvedValue(mockTasks);
+
+      // When: projectIdクエリ付きでGET /tasksリクエストを送信
+      const res = await app.request(`/tasks?projectId=${mockProjectId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer mock-token',
+        },
+      });
+
+      // Then: 200 OKレスポンスとfiltersにprojectIdが渡される
+      expect(res.status).toBe(200);
+      expect(useCases.getTasksUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: expect.objectContaining({ projectId: mockProjectId }),
+        }),
+      );
+    });
+
+    test('正常系: 対象projectにtaskが0件の場合は空配列を返す（AC-10相当）', async () => {
+      // Given: 対象projectにtaskが存在しない
+      useCases.getTasksUseCase.execute.mockResolvedValue([]);
+
+      // When: projectIdクエリ付きでGET /tasksリクエストを送信
+      const res = await app.request(`/tasks?projectId=${mockProjectId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer mock-token',
+        },
+      });
+
+      // Then: 空配列を返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.data).toEqual([]);
+    });
+
+    test('異常系: 他ユーザー・存在しないprojectId指定で404を返す', async () => {
+      // Given: ProjectNotFoundErrorを発生させるUseCase
+      useCases.getTasksUseCase.execute.mockRejectedValue(
+        ProjectNotFoundError.forProjectId(mockProjectId),
+      );
+
+      // When: projectIdクエリ付きでGET /tasksリクエストを送信
+      const res = await app.request(`/tasks?projectId=${mockProjectId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer mock-token',
+        },
+      });
+
+      // Then: 404 NOT_FOUNDレスポンスを返す
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('NOT_FOUND');
     });
   });
 
@@ -186,6 +315,60 @@ describe('taskRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.data.title).toBe('更新されたタイトル');
+    });
+
+    test('正常系: projectIdを指定して所属projectを変更できる（AC-05相当）', async () => {
+      // Given: 別projectへの変更後タスクを返すUseCase
+      const mockTask = createMockTaskEntity({ projectId: mockProjectId });
+      useCases.updateTaskUseCase.execute.mockResolvedValue(mockTask);
+
+      // When: PUT /tasks/:idでprojectId変更リクエストを送信
+      const res = await app.request(
+        '/tasks/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({
+            projectId: mockProjectId,
+          }),
+        },
+      );
+
+      // Then: 200 OKレスポンスと変更後のprojectIdを返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.data.projectId).toBe(mockProjectId);
+    });
+
+    test('異常系: 他ユーザーのprojectId指定でProjectNotFoundErrorが404を返す', async () => {
+      // Given: 他ユーザーのprojectIdでProjectNotFoundErrorを発生させるUseCase
+      useCases.updateTaskUseCase.execute.mockRejectedValue(
+        ProjectNotFoundError.forProjectId(mockProjectId),
+      );
+
+      // When: PUT /tasks/:idでprojectId変更リクエストを送信
+      const res = await app.request(
+        '/tasks/550e8400-e29b-41d4-a716-446655440000',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer mock-token',
+          },
+          body: JSON.stringify({
+            projectId: mockProjectId,
+          }),
+        },
+      );
+
+      // Then: 404 NOT_FOUNDレスポンスを返す
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe('NOT_FOUND');
     });
   });
 
@@ -281,6 +464,7 @@ describe('taskRoutes統合テスト', () => {
         },
         body: JSON.stringify({
           title: 'valid title',
+          projectId: mockProjectId,
         }),
       });
 
@@ -306,6 +490,7 @@ describe('taskRoutes統合テスト', () => {
         },
         body: JSON.stringify({
           title: 'テスト',
+          projectId: mockProjectId,
         }),
       });
 
@@ -320,18 +505,12 @@ describe('taskRoutes統合テスト', () => {
       // Given: authMiddlewareOptionsなし（JWTなし）でアプリを作成
       const { createTaskRoutes } = await import('../taskRoutes');
       const appWithoutAuth = createTaskRoutes({
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        createTaskUseCase: useCases.createTaskUseCase as any,
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        getTasksUseCase: useCases.getTasksUseCase as any,
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        getTaskByIdUseCase: useCases.getTaskByIdUseCase as any,
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        updateTaskUseCase: useCases.updateTaskUseCase as any,
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        deleteTaskUseCase: useCases.deleteTaskUseCase as any,
-        // biome-ignore lint/suspicious/noExplicitAny: MockUseCasesとTaskRoutesDependenciesの型互換性のため
-        changeTaskStatusUseCase: useCases.changeTaskStatusUseCase as any,
+        createTaskUseCase: useCases.createTaskUseCase,
+        getTasksUseCase: useCases.getTasksUseCase,
+        getTaskByIdUseCase: useCases.getTaskByIdUseCase,
+        updateTaskUseCase: useCases.updateTaskUseCase,
+        deleteTaskUseCase: useCases.deleteTaskUseCase,
+        changeTaskStatusUseCase: useCases.changeTaskStatusUseCase,
         // authMiddlewareOptions を渡さない（AuthError発生）
       });
 
@@ -363,6 +542,7 @@ describe('taskRoutes統合テスト', () => {
         },
         body: JSON.stringify({
           title: 'RLSテスト',
+          projectId: mockProjectId,
         }),
       });
 

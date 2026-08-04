@@ -1,10 +1,10 @@
 import type { Context } from 'hono';
-import type { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
-import type { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
-import type { DeleteTaskUseCase } from '@/task/application/DeleteTaskUseCase';
-import type { GetTaskByIdUseCase } from '@/task/application/GetTaskByIdUseCase';
-import type { GetTasksUseCase } from '@/task/application/GetTasksUseCase';
-import type { UpdateTaskUseCase } from '@/task/application/UpdateTaskUseCase';
+import type { IChangeTaskStatusUseCase } from '@/task/application/IChangeTaskStatusUseCase';
+import type { ICreateTaskUseCase } from '@/task/application/ICreateTaskUseCase';
+import type { IDeleteTaskUseCase } from '@/task/application/IDeleteTaskUseCase';
+import type { IGetTaskByIdUseCase } from '@/task/application/IGetTaskByIdUseCase';
+import type { IGetTasksUseCase } from '@/task/application/IGetTasksUseCase';
+import type { IUpdateTaskUseCase } from '@/task/application/IUpdateTaskUseCase';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
 
 /**
@@ -13,6 +13,7 @@ import type { TaskEntity } from '@/task/domain/TaskEntity';
 interface TaskDTO {
   id: string;
   userId: string;
+  projectId: string | null;
   title: string;
   description: string | null;
   priority: string;
@@ -56,12 +57,12 @@ interface SuccessResponseArray {
  */
 export class TaskController {
   constructor(
-    private readonly createTaskUseCase: CreateTaskUseCase,
-    private readonly getTasksUseCase: GetTasksUseCase,
-    private readonly getTaskByIdUseCase: GetTaskByIdUseCase,
-    private readonly updateTaskUseCase: UpdateTaskUseCase,
-    private readonly deleteTaskUseCase: DeleteTaskUseCase,
-    private readonly changeTaskStatusUseCase: ChangeTaskStatusUseCase,
+    private readonly createTaskUseCase: ICreateTaskUseCase,
+    private readonly getTasksUseCase: IGetTasksUseCase,
+    private readonly getTaskByIdUseCase: IGetTaskByIdUseCase,
+    private readonly updateTaskUseCase: IUpdateTaskUseCase,
+    private readonly deleteTaskUseCase: IDeleteTaskUseCase,
+    private readonly changeTaskStatusUseCase: IChangeTaskStatusUseCase,
   ) {}
 
   /**
@@ -78,6 +79,7 @@ export class TaskController {
 
     const task = await this.createTaskUseCase.execute({
       userId,
+      projectId: input.projectId,
       title: input.title,
       ...(input.description !== undefined && {
         description: input.description,
@@ -115,6 +117,7 @@ export class TaskController {
     const tasks = await this.getTasksUseCase.execute({
       userId,
       filters: {
+        ...(query.projectId && { projectId: query.projectId }),
         ...(query.priority && { priority: query.priority }),
         ...(query.status && {
           status: query.status.split(',').map((s) => s.trim()),
@@ -169,6 +172,7 @@ export class TaskController {
     const input = await c.req.json();
 
     const data = {
+      ...(input.projectId !== undefined && { projectId: input.projectId }),
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && {
         description: input.description,
@@ -246,6 +250,7 @@ export class TaskController {
     return {
       id: task.getId(),
       userId: task.getUserId(),
+      projectId: task.getProjectId(),
       title: task.getTitle(),
       description: task.getDescription(),
       priority: task.getPriority(),

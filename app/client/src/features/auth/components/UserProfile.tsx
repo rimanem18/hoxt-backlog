@@ -9,10 +9,10 @@
  * ```
  */
 
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import type React from 'react';
 import { LogoutButton } from '@/features/auth/components/LogoutButton';
 import { UserProfileView } from '@/features/auth/components/UserProfileView';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * UserProfileコンポーネントのProps型定義

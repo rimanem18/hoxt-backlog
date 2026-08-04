@@ -9,13 +9,13 @@ describe('TaskEntity', () => {
   // ファクトリメソッド: create（新規作成）
   // ==========================================================================
   describe('create', () => {
-    test('最小限のデータ（userId, title）で新規タスクが作成される', () => {
+    test('最小限のデータ（userId, title, projectId）で新規タスクが作成される', () => {
       // Given: 最小限のデータ
       const userId = 'user-uuid-123';
       const title = 'タスクのタイトル';
 
       // When: 新規タスクを作成
-      const task = TaskEntity.create({ userId, title });
+      const task = TaskEntity.create({ userId, title, projectId: null });
 
       // Then: タスクが正しく作成される
       expect(task.getUserId()).toBe(userId);
@@ -28,15 +28,35 @@ describe('TaskEntity', () => {
       const title = 'タスクのタイトル';
       const description = 'タスクの説明（Markdown形式）';
       const priority = 'high';
+      const projectId = 'project-uuid-789';
 
       // When: 新規タスクを作成
-      const task = TaskEntity.create({ userId, title, description, priority });
+      const task = TaskEntity.create({
+        userId,
+        title,
+        description,
+        priority,
+        projectId,
+      });
 
       // Then: すべてのデータが正しく設定される
       expect(task.getUserId()).toBe(userId);
       expect(task.getTitle()).toBe(title);
       expect(task.getDescription()).toBe(description);
       expect(task.getPriority()).toBe(priority);
+      expect(task.getProjectId()).toBe(projectId);
+    });
+
+    test('projectIdにnullを指定するとproject未所属タスクが作成される', () => {
+      // Given: projectIdがnullのデータ
+      const userId = 'user-uuid-123';
+      const title = 'project未所属タスク';
+
+      // When: 新規タスクを作成
+      const task = TaskEntity.create({ userId, title, projectId: null });
+
+      // Then: projectIdはnull
+      expect(task.getProjectId()).toBeNull();
     });
 
     test('デフォルト値が設定される（priority: medium, status: not_started, description: null）', () => {
@@ -45,7 +65,7 @@ describe('TaskEntity', () => {
       const title = 'タスクのタイトル';
 
       // When: 新規タスクを作成
-      const task = TaskEntity.create({ userId, title });
+      const task = TaskEntity.create({ userId, title, projectId: null });
 
       // Then: デフォルト値が設定される
       expect(task.getPriority()).toBe('medium');
@@ -59,7 +79,7 @@ describe('TaskEntity', () => {
       const title = 'タスクのタイトル';
 
       // When: 新規タスクを作成
-      const task = TaskEntity.create({ userId, title });
+      const task = TaskEntity.create({ userId, title, projectId: null });
 
       // Then: IDとタイムスタンプが自動生成される
       expect(task.getId()).toBeDefined();
@@ -74,9 +94,9 @@ describe('TaskEntity', () => {
       const title = '';
 
       // When & Then: エラーがスローされる
-      expect(() => TaskEntity.create({ userId, title })).toThrow(
-        'タイトルを入力してください',
-      );
+      expect(() =>
+        TaskEntity.create({ userId, title, projectId: null }),
+      ).toThrow('タイトルを入力してください');
     });
 
     test('101文字以上のタイトルでエラーがスローされる', () => {
@@ -85,9 +105,9 @@ describe('TaskEntity', () => {
       const title = 'a'.repeat(101);
 
       // When & Then: エラーがスローされる
-      expect(() => TaskEntity.create({ userId, title })).toThrow(
-        'タイトルは100文字以内で入力してください',
-      );
+      expect(() =>
+        TaskEntity.create({ userId, title, projectId: null }),
+      ).toThrow('タイトルは100文字以内で入力してください');
     });
 
     test('不正な優先度でエラーがスローされる', () => {
@@ -97,9 +117,9 @@ describe('TaskEntity', () => {
       const priority = 'invalid';
 
       // When & Then: エラーがスローされる
-      expect(() => TaskEntity.create({ userId, title, priority })).toThrow(
-        '不正な優先度です',
-      );
+      expect(() =>
+        TaskEntity.create({ userId, title, priority, projectId: null }),
+      ).toThrow('不正な優先度です');
     });
   });
 
@@ -116,6 +136,7 @@ describe('TaskEntity', () => {
         description: 'マークダウン説明',
         priority: TaskPriority.create('low'),
         status: TaskStatus.create('in_progress'),
+        projectId: 'project-uuid-789',
         createdAt: new Date('2025-01-01T00:00:00Z'),
         updatedAt: new Date('2025-01-02T00:00:00Z'),
       };
@@ -130,8 +151,30 @@ describe('TaskEntity', () => {
       expect(task.getDescription()).toBe(props.description);
       expect(task.getPriority()).toBe('low');
       expect(task.getStatus()).toBe('in_progress');
+      expect(task.getProjectId()).toBe(props.projectId);
       expect(task.getCreatedAt()).toEqual(props.createdAt);
       expect(task.getUpdatedAt()).toEqual(props.updatedAt);
+    });
+
+    test('project未所属task（projectId: null）が復元できる', () => {
+      // Given: project未所属の既存taskデータ（移行前互換）
+      const props = {
+        id: 'task-uuid-legacy',
+        userId: 'user-uuid-123',
+        title: TaskTitle.create('project未所属タスク'),
+        description: null,
+        priority: TaskPriority.create('medium'),
+        status: TaskStatus.create('not_started'),
+        projectId: null,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        updatedAt: new Date('2025-01-01T00:00:00Z'),
+      };
+
+      // When: DBから復元
+      const task = TaskEntity.reconstruct(props);
+
+      // Then: projectIdはnullのまま保持される
+      expect(task.getProjectId()).toBeNull();
     });
   });
 
@@ -146,6 +189,7 @@ describe('TaskEntity', () => {
         title: 'テストタスク',
         description: '説明文',
         priority: 'high',
+        projectId: null,
       });
 
       // Then: 各ゲッターが正しい値を返す
@@ -164,6 +208,7 @@ describe('TaskEntity', () => {
       const task = TaskEntity.create({
         userId: 'user-uuid-123',
         title: 'テストタスク',
+        projectId: null,
       });
 
       // Then: descriptionはnull
@@ -180,6 +225,7 @@ describe('TaskEntity', () => {
       const task = TaskEntity.create({
         userId: 'user-uuid-123',
         title: '元のタイトル',
+        projectId: null,
       });
       const originalUpdatedAt = task.getUpdatedAt();
 
@@ -201,6 +247,7 @@ describe('TaskEntity', () => {
       const task = TaskEntity.create({
         userId: 'user-uuid-123',
         title: 'タスク',
+        projectId: null,
       });
       const originalUpdatedAt = task.getUpdatedAt();
 
@@ -222,6 +269,7 @@ describe('TaskEntity', () => {
         userId: 'user-uuid-123',
         title: 'タスク',
         description: '元の説明',
+        projectId: null,
       });
 
       // When: 説明をnullに更新
@@ -237,6 +285,7 @@ describe('TaskEntity', () => {
         userId: 'user-uuid-123',
         title: 'タスク',
         priority: 'medium',
+        projectId: null,
       });
       const originalUpdatedAt = task.getUpdatedAt();
 
@@ -257,6 +306,7 @@ describe('TaskEntity', () => {
       const task = TaskEntity.create({
         userId: 'user-uuid-123',
         title: 'タスク',
+        projectId: null,
       });
       const originalUpdatedAt = task.getUpdatedAt();
 
@@ -272,6 +322,28 @@ describe('TaskEntity', () => {
       );
     });
 
+    test('updateProjectId()で所属projectが変更され、updatedAtも更新される', async () => {
+      // Given: 所属projectなしでタスクを作成
+      const task = TaskEntity.create({
+        userId: 'user-uuid-123',
+        title: 'タスク',
+        projectId: null,
+      });
+      const originalUpdatedAt = task.getUpdatedAt();
+      const newProjectId = 'project-uuid-456';
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When: 所属projectを変更
+      task.updateProjectId(newProjectId);
+
+      // Then: projectIdとupdatedAtが更新される
+      expect(task.getProjectId()).toBe(newProjectId);
+      expect(task.getUpdatedAt().getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+    });
+
     test('equals()で同一IDの場合trueを返す', () => {
       // Given: 同じpropsで2つのタスクを復元
       const props = {
@@ -281,6 +353,7 @@ describe('TaskEntity', () => {
         description: null,
         priority: TaskPriority.create('medium'),
         status: TaskStatus.create('not_started'),
+        projectId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -299,10 +372,12 @@ describe('TaskEntity', () => {
       const task1 = TaskEntity.create({
         userId: 'user-uuid-123',
         title: 'タスク1',
+        projectId: null,
       });
       const task2 = TaskEntity.create({
         userId: 'user-uuid-123',
         title: 'タスク2',
+        projectId: null,
       });
 
       // Then: 異なるIDなのでfalse

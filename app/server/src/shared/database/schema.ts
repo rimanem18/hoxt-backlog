@@ -190,6 +190,11 @@ export const tasks = schema.table(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
 
+    // 所属project（外部キー、任意。project未所属taskを許容する）
+    projectId: uuid('project_id').references(() => projects.id, {
+      onDelete: 'set null',
+    }),
+
     // タイトル（1-100文字、必須）
     title: varchar('title', { length: 100 }).notNull(),
 
@@ -214,6 +219,9 @@ export const tasks = schema.table(
     return {
       // ユーザーごとのタスク検索用インデックス（最頻クエリ）
       userIdIdx: index('idx_tasks_user_id').on(table.userId),
+
+      // project絞り込み用インデックス
+      projectIdIdx: index('idx_tasks_project_id').on(table.projectId),
 
       // 作成日時でのソート用インデックス（降順）
       createdAtIdx: index('idx_tasks_created_at').on(table.createdAt.desc()),
@@ -272,6 +280,65 @@ export const tasks = schema.table(
  */
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+
+/**
+ * プロジェクトテーブル
+ * taskを束ねるprojectエンティティを管理するメインテーブル
+ */
+export const projects = schema.table(
+  'projects',
+  {
+    // プライマリキー（UUID v4）
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // ユーザーID（外部キー）
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // 名前（1-100文字、必須）
+    name: varchar('name', { length: 100 }).notNull(),
+
+    // 説明（任意）
+    description: text('description'),
+
+    // タイムスタンプ
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => {
+    return {
+      // ユーザーごとのproject検索用インデックス
+      userIdIdx: index('idx_projects_user_id').on(table.userId),
+
+      // 複合インデックス: user_id + created_at（一覧のデフォルトソート用）
+      userCreatedIdx: index('idx_projects_user_created').on(
+        table.userId,
+        table.createdAt.desc(),
+      ),
+
+      // CHECK制約: 名前の空文字チェック
+      nonEmptyName: check(
+        'non_empty_name',
+        sql`length(trim(${table.name})) > 0`,
+      ),
+
+      // CHECK制約: 名前の文字数制限
+      nameLength: check('name_length', sql`length(${table.name}) <= 100`),
+    };
+  },
+);
+
+/**
+ * projectsテーブルの型定義
+ * Drizzleから自動推論される型
+ */
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
 
 /**
  * Row-Level Security (RLS) ポリシー定義

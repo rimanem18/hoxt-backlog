@@ -5,11 +5,11 @@
  * サーバー状態（タスクデータ）はTanStack Queryで管理し、UI状態のみをReduxで管理します。
  */
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type {
   TaskPriority,
   TaskStatus,
-} from '@/packages/shared-schemas/src/tasks';
+} from '@hoxt-backlog/shared-schemas/tasks';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /**
  * タスクフィルタの状態

@@ -1,8 +1,8 @@
+import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
-import type { Task, TaskStatus } from '@/packages/shared-schemas/src/tasks';
 
 /**
  * TaskItemコンポーネント

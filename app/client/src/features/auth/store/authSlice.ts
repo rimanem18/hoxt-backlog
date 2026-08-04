@@ -1,5 +1,5 @@
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * 認証状態を管理するRedux Toolkit slice。

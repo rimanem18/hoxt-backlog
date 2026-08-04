@@ -1,18 +1,10 @@
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
-
-/**
- * ステータス変更の入力パラメータ
- */
-export interface ChangeTaskStatusInput {
-  /** 認証済みユーザーID */
-  userId: string;
-  /** 変更対象のタスクID */
-  taskId: string;
-  /** 新しいステータス */
-  status: string;
-}
+import type {
+  ChangeTaskStatusInput,
+  IChangeTaskStatusUseCase,
+} from './IChangeTaskStatusUseCase';
 
 /**
  * タスクステータス変更ユースケース
@@ -20,7 +12,7 @@ export interface ChangeTaskStatusInput {
  * タスクのステータスを変更する。
  * タイトルや説明の更新とは独立して、ステータスのみを効率的に変更する。
  */
-export class ChangeTaskStatusUseCase {
+export class ChangeTaskStatusUseCase implements IChangeTaskStatusUseCase {
   constructor(private readonly taskRepository: ITaskRepository) {}
 
   /**

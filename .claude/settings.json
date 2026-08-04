@@ -42,5 +42,18 @@
     "CLAUDE_CODE_MCP_ALLOWLIST_ENV": "1",
     "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
     "CLAUDE_CODE_HIDE_CWD": "1"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-on-write.sh\""
+          }
+        ]
+      }
+    ]
   }
 }

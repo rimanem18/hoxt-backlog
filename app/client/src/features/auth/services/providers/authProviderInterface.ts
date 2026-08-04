@@ -3,7 +3,7 @@
  * 複数認証プロバイダー（Google、Apple等）を統一的に扱う。
  */
 
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 
 /**
  * 認証結果の型定義

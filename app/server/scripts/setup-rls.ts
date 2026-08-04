@@ -121,6 +121,25 @@ async function applyRlsPolicies(): Promise<void> {
         FOR ALL USING (auth.uid()::text = user_id::text)
     `);
 
+		// アプリケーション接続経由ではauth.uid()が伝播しないため、
+		// 実効的なアクセス制御はリポジトリ層のuserId条件が担う（一次防御）。
+		// RLSは直接SQLアクセス等に対する多層防御として追加する。
+		console.log("projectsテーブルのRLSを有効化中...");
+		await client.query(
+			`ALTER TABLE "${BASE_SCHEMA}".projects ENABLE ROW LEVEL SECURITY`,
+		);
+
+		console.log("既存プロジェクトポリシーを削除（冪等性確保）...");
+		await client.query(
+			`DROP POLICY IF EXISTS "users_own_projects_policy" ON "${BASE_SCHEMA}".projects`,
+		);
+
+		console.log("ユーザー自身のプロジェクトのみアクセス可能なポリシーを作成中...");
+		await client.query(`
+      CREATE POLICY "users_own_projects_policy" ON "${BASE_SCHEMA}".projects
+        FOR ALL USING (auth.uid()::text = user_id::text)
+    `);
+
 		console.log("RLSポリシー適用完了");
 	} catch (error) {
 		console.error(
