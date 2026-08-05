@@ -13,9 +13,9 @@ restart:
 	@make down
 	@make up
 server:
-	docker compose exec server ash
+	docker compose exec server bash
 client:
-	docker compose exec client ash
+	docker compose exec client bash
 e2e:
 	docker compose exec e2e bash
 db:
@@ -115,19 +115,19 @@ iac-apply:
 
 frontend-deploy-preview:
 	@echo "ビルドします..."
-	@docker compose exec client ash -c ' \
+	@docker compose exec client bash -c ' \
 	export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} && \
 	export NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} && \
 	export NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS} && \
 	bun run build:worker'
 	@echo "フロントエンドをCloudflareにデプロイします..."
-	@docker compose exec client ash -c ' \
+	@docker compose exec client bash -c ' \
 		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
 		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
 		bunx wrangler deploy --name ${PROJECT_NAME}-preview'
 db-migrate-preview:
 	@echo "プレビュー環境のデータベースマイグレーションを実行します..."
-	@docker compose exec server ash -c ' \
+	@docker compose exec server bash -c ' \
 		export ENVIRONMENT=preview && \
 		export BASE_SCHEMA=app_${PROJECT_NAME}_preview && \
 		export DATABASE_URL=${DATABASE_URL} && \
@@ -135,7 +135,7 @@ db-migrate-preview:
 	@echo "プレビュー環境のデータベースマイグレーションが完了しました。"
 db-migrate-production:
 	@echo "本番環境のデータベースマイグレーションを実行します..."
-	@docker compose exec server ash -c ' \
+	@docker compose exec server bash -c ' \
 		export ENVIRONMENT=production && \
 		export BASE_SCHEMA=app_${PROJECT_NAME} && \
 		export DATABASE_URL=${DATABASE_URL} && \
