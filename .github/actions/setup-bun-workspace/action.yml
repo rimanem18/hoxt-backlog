@@ -28,9 +28,9 @@ runs:
         path: |
           ~/.bun
           ${{ inputs.working-directory }}/node_modules
-        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-${{ inputs.cache-key-suffix }}
+        key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-${{ inputs.cache-key-suffix }}
         restore-keys: |
-          bun-${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}-
+          bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}-
           bun-${{ runner.os }}-
 
     - name: Install shared-schemas dependencies
@@ -52,3 +52,11 @@ runs:
         command: |
           cd "${{ inputs.working-directory }}"
           bun install --frozen-lockfile
+
+    # Docker Compose環境ではbind mountでnode_modules配下にshared-schemasを
+    # 直接解決できるが、CIにはその回避策がないため実体コピーが必要
+    - name: Sync shared-schemas into client node_modules
+      if: inputs.working-directory == './app/client'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun run sync-shared-schemas

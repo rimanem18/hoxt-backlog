@@ -40,3 +40,11 @@ runs:
       shell: bash
       working-directory: ./app/packages/shared-schemas
       run: bun install --frozen-lockfile
+
+    # Docker Compose環境ではbind mountでnode_modules配下にshared-schemasを
+    # 直接解決できるが、CIにはその回避策がないため実体コピーが必要
+    - name: Sync shared-schemas into client node_modules
+      if: inputs.working-directory == './app/client'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bun run sync-shared-schemas

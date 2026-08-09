@@ -41,20 +41,15 @@ output "project_name" {
   value       = local.project_name
 }
 
-# CloudFlare Pages出力
-output "cloudflare_pages_project_name" {
-  description = "CloudFlare Pages project name"
-  value       = local.cloudflare_pages_project_name
-}
-
-output "cloudflare_pages_production_url" {
-  description = "CloudFlare Pages production URL"
+# CloudFlare Workers出力
+output "cloudflare_worker_production_url" {
+  description = "CloudFlare Worker production URL"
   value       = "https://${var.domain_name}"
 }
 
-output "cloudflare_pages_preview_url" {
-  description = "CloudFlare Pages preview URL"
-  value       = "https://preview.${local.project_name}.pages.dev"
+output "cloudflare_worker_preview_url" {
+  description = "CloudFlare Worker preview URL"
+  value       = "https://preview.${var.domain_name}"
 }
 
 # CORS設定用出力（サーバービルド時に使用）

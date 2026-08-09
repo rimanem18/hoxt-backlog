@@ -1,6 +1,0 @@
-# Cloudflare Pages SPAフォールバック
-# 動的セグメント /dashboard/projects/[id] はoutput: 'export'の制約上
-# プレースホルダー1件のみ静的生成されるため、実際のprojectIdへのアクセスは
-# プレースホルダーページへ200で転送し、クライアント側のuseParams()で
-# 実URLから実projectIdを解決する
-/dashboard/projects/*  /dashboard/projects/placeholder/  200

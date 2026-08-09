@@ -32,7 +32,8 @@ module "github_oidc" {
 
 # Lambda Execution Role
 resource "aws_iam_role" "lambda_exec" {
-  name = "${local.project_name}-lambda-exec-role"
+  name                 = "${local.project_name}-lambda-exec-role"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.project_name}-MaxPermissionsBoundary"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -178,17 +179,6 @@ resource "aws_lambda_alias" "preview_stable" {
   lifecycle {
     ignore_changes = [function_version]
   }
-}
-
-# CloudFlare Pages
-module "cloudflare_pages" {
-  source = "../modules/cloudflare-pages"
-
-  account_id   = var.cloudflare_account_id
-  project_name = local.project_name
-  domain_name  = var.domain_name
-
-  depends_on = [aws_lambda_function_url.production, aws_lambda_function_url.preview]
 }
 
 # Terraform State Management Resources

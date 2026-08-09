@@ -6,6 +6,8 @@
  * ブランチ制限により mainブランチ・PR のみアクセス許可
  */
 
+data "aws_caller_identity" "current" {}
+
 # GitHub OIDC Provider設定
 resource "aws_iam_openid_connect_provider" "github_oidc" {
   url = "https://token.actions.githubusercontent.com"
@@ -31,7 +33,8 @@ resource "aws_iam_openid_connect_provider" "github_oidc" {
 
 # 統合IAMロール（Preview/Production両対応）
 resource "aws_iam_role" "github_actions" {
-  name = "${var.project_name}-github-actions"
+  name                 = "${var.project_name}-github-actions"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.project_name}-MaxPermissionsBoundary"
 
   # GitHub Actionsからの信頼関係設定
   assume_role_policy = jsonencode({

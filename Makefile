@@ -13,31 +13,32 @@ restart:
 	@make down
 	@make up
 server:
-	docker compose exec server ash
+	docker compose exec server bash
 client:
-	docker compose exec client ash
+	docker compose exec client bash
 e2e:
 	docker compose exec e2e bash
 db:
 	docker compose exec db ash
 iac:
 	@echo "Terraformロールを引き受けて、iacコンテナに入ります..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-			export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
-			export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-			export PROJECT_NAME=${PROJECT_NAME} && \
-			export REPOSITORY_NAME=${REPOSITORY_NAME} && \
-			exec bash'
+	@docker compose exec \
+			-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+			-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+			-e PROJECT_NAME=${PROJECT_NAME} \
+			-e REPOSITORY_NAME=${REPOSITORY_NAME} \
+			iac bash -c 'source ./scripts/create-session.sh && exec bash'
 iac-init:
 	@echo "Terraform初期化（Bootstrap/App両構成）..."
 	@echo ""
 	@echo "🔄 Step 1/2: Bootstrap構成の初期化..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
-		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		export PROJECT_NAME=${PROJECT_NAME} && \
-		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
-		export TF_VAR_database_url=${DATABASE_URL} && \
+	@docker compose exec \
+		-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+		-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+		-e PROJECT_NAME=${PROJECT_NAME} \
+		-e REPOSITORY_NAME=${REPOSITORY_NAME} \
+		-e TF_VAR_database_url=${DATABASE_URL} \
+		iac bash -c 'source ./scripts/create-session.sh && \
 		cd bootstrap && \
 		terraform init \
 			-backend-config="bucket=${PROJECT_NAME}-terraform-state" \
@@ -63,25 +64,27 @@ iac-plan-save:
 	@echo "index.jsをterraform/modules/lambdaにコピーしました。"
 	@echo ""
 	@echo "🔄 Step 1/2: Bootstrap構成の計画実行..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
-		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		export PROJECT_NAME=${PROJECT_NAME} && \
-		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
-		export TF_VAR_database_url=${DATABASE_URL} && \
-		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
-		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
-		export TF_VAR_next_public_supabase_url=${SUPABASE_URL} && \
-		export TF_VAR_supabase_publishable_key=${SUPABASE_PUBLISHABLE_KEY} && \
-		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
+	@docker compose exec \
+		-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+		-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+		-e PROJECT_NAME=${PROJECT_NAME} \
+		-e REPOSITORY_NAME=${REPOSITORY_NAME} \
+		-e TF_VAR_database_url=${DATABASE_URL} \
+		-e TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} \
+		-e TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} \
+		-e TF_VAR_next_public_supabase_url=${SUPABASE_URL} \
+		-e TF_VAR_supabase_publishable_key=${SUPABASE_PUBLISHABLE_KEY} \
+		-e TF_VAR_metrics_namespace=${METRICS_NAMESPACE} \
+		iac bash -c 'source ./scripts/create-session.sh && \
 		cd bootstrap && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
 		terraform show -no-color terraform.tfplan > plan-output.txt'
 	@echo ""
 	@echo "🔄 Step 2/2: App構成の計画実行..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		export TF_VAR_ops_email=${OPS_EMAIL} && \
+	@docker compose exec \
+		-e TF_VAR_ops_email=${OPS_EMAIL} \
+		iac bash -c 'source ./scripts/create-session.sh && \
 		cd app && \
 		rm -f plan-output.* && \
 		terraform plan -out=terraform.tfplan && \
@@ -92,15 +95,16 @@ iac-plan-save:
 	@echo "📁 App計画: terraform/app/plan-output.txt"
 iac-bootstrap-apply:
 	@echo "Bootstrap構成を適用（強力な権限・インフラ初期構築）..."
-	@docker compose exec iac bash -c 'source ./scripts/create-session.sh && \
-		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
-		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		export PROJECT_NAME=${PROJECT_NAME} && \
-		export REPOSITORY_NAME=${REPOSITORY_NAME} && \
-		export TF_VAR_database_url=${DATABASE_URL} && \
-		export TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} && \
-		export TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} && \
-		export TF_VAR_metrics_namespace=${METRICS_NAMESPACE} && \
+	@docker compose exec \
+		-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+		-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+		-e PROJECT_NAME=${PROJECT_NAME} \
+		-e REPOSITORY_NAME=${REPOSITORY_NAME} \
+		-e TF_VAR_database_url=${DATABASE_URL} \
+		-e TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} \
+		-e TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} \
+		-e TF_VAR_metrics_namespace=${METRICS_NAMESPACE} \
+		iac bash -c 'source ./scripts/create-session.sh && \
 		cd bootstrap && \
 		terraform apply terraform.tfplan'
 	@echo "✅ Bootstrap構成の適用が完了しました。"
@@ -115,34 +119,31 @@ iac-apply:
 
 frontend-deploy-preview:
 	@echo "ビルドします..."
-	@docker compose exec client ash -c ' \
-	export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} && \
-	export NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} && \
-	export NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS} && \
-	bun run build'
+	@docker compose exec \
+		-e NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
+		-e NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
+		-e NEXT_PUBLIC_TRUSTED_DOMAINS=${NEXT_PUBLIC_TRUSTED_DOMAINS} \
+		client bun run build:worker
 	@echo "フロントエンドをCloudflareにデプロイします..."
-	@docker compose exec client ash -c ' \
-		export CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} && \
-		export CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} && \
-		npx --yes wrangler@4.61.0 pages deploy ./out \
-		--project-name ${PROJECT_NAME} \
-		--branch preview \
-		--commit-dirty=true'
+	@docker compose exec \
+		-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+		-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+		client bunx wrangler deploy --name ${PROJECT_NAME}-preview
 db-migrate-preview:
 	@echo "プレビュー環境のデータベースマイグレーションを実行します..."
-	@docker compose exec server ash -c ' \
-		export ENVIRONMENT=preview && \
-		export BASE_SCHEMA=app_${PROJECT_NAME}_preview && \
-		export DATABASE_URL=${DATABASE_URL} && \
-		bun run db:setup'
+	@docker compose exec \
+		-e ENVIRONMENT=preview \
+		-e BASE_SCHEMA=app_${PROJECT_NAME}_preview \
+		-e DATABASE_URL=${DATABASE_URL} \
+		server bun run db:setup
 	@echo "プレビュー環境のデータベースマイグレーションが完了しました。"
 db-migrate-production:
 	@echo "本番環境のデータベースマイグレーションを実行します..."
-	@docker compose exec server ash -c ' \
-		export ENVIRONMENT=production && \
-		export BASE_SCHEMA=app_${PROJECT_NAME} && \
-		export DATABASE_URL=${DATABASE_URL} && \
-		bun run db:setup'
+	@docker compose exec \
+		-e ENVIRONMENT=production \
+		-e BASE_SCHEMA=app_${PROJECT_NAME} \
+		-e DATABASE_URL=${DATABASE_URL} \
+		server bun run db:setup
 	@echo "本番環境のデータベースマイグレーションが完了しました。"
 sql:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_USER} -h db -p 5432

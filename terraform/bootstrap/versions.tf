@@ -35,6 +35,7 @@ provider "aws" {
   }
 }
 
+# TODO: state に残ったCloudFlare Pagesリソースのdestroy完了後、このブロックとcloudflareプロバイダ定義を削除する
 provider "cloudflare" {
   # API tokenは環境変数 CLOUDFLARE_API_TOKEN で設定
 }
