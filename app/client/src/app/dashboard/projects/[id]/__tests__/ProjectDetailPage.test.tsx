@@ -6,12 +6,6 @@ import TaskList from '@/features/todo/components/TaskList';
 import ProjectDetailClient from '../ProjectDetailClient';
 import ProjectDetailPage from '../page';
 
-/**
- * React要素ツリーをchildrenおよびprops値の両方に潜って再帰探索し、
- * 指定した型に一致する最初の要素を返す。
- * taskCreateSection/taskListSectionはchildrenではなくprops経由で
- * 注入されるスロットのため、props値も走査対象に含める必要がある。
- */
 function findElementByType(
   node: unknown,
   targetType: unknown,
