@@ -8,6 +8,8 @@ export interface TaskFilters {
   priority?: string;
   /** ステータスフィルタ（複数選択可能） */
   status?: string[];
+  /** プロジェクトIDフィルタ */
+  projectId?: string;
 }
 
 /**
@@ -17,15 +19,6 @@ export type TaskSortBy =
   | 'created_at_desc' // 作成日時（新しい順）
   | 'created_at_asc' // 作成日時（古い順）
   | 'priority_desc'; // 優先度（高→低）
-
-/**
- * タスク更新入力データ
- */
-export interface UpdateTaskInput {
-  title?: string;
-  description?: string | null;
-  priority?: string;
-}
 
 /**
  * タスクリポジトリインターフェース
@@ -66,13 +59,13 @@ export interface ITaskRepository {
    * タスクを更新する
    * @param userId - ユーザーID
    * @param taskId - タスクID
-   * @param input - 更新データ
+   * @param task - 更新済みのTaskEntity
    * @returns 更新されたタスクエンティティまたはnull
    */
   update(
     userId: string,
     taskId: string,
-    input: UpdateTaskInput,
+    task: TaskEntity,
   ): Promise<TaskEntity | null>;
 
   /**

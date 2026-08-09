@@ -160,14 +160,14 @@ Overall: PASS / FAIL / PARTIAL / BLOCKED
 
 ```
 
-親エージェントが次に確認すべきことを1つだけ書く。
+親エージェントが次に確認すべきことを 1 つだけ書く。
 修正は行わない。
 
 ## Overall 判定
 
 - すべて PASS の場合: PASS
-- 1つでも FAIL がある場合: FAIL
-- 1つ以上 PASS し、1つ以上 SKIPPED / NOT_RUN / BLOCKED がある場合: PARTIAL
+- 1 つでも FAIL がある場合: FAIL
+- 1 つ以上 PASS し、1 つ以上 SKIPPED / NOT_RUN / BLOCKED がある場合: PARTIAL
 - すべて実行不能、または主要チェックが環境- 要因で実行不能な場合: BLOCKED
 
 ## 注意

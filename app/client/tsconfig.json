@@ -29,9 +29,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@/packages/*": [
-        "./../packages/*"
       ]
     }
   },
@@ -41,12 +38,13 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/test-types.d.ts",
-    "../packages/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    ".open-next",
+    ".wrangler"
   ]
 }

@@ -1,7 +1,7 @@
 'use client';
 
+import type { TaskSort as TaskSortType } from '@hoxt-backlog/shared-schemas/tasks';
 import React from 'react';
-import type { TaskSort as TaskSortType } from '@/packages/shared-schemas/src/tasks';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setSortBy } from '../store/taskSlice';
 

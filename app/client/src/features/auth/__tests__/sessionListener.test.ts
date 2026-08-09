@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { configureStore } from '@reduxjs/toolkit';
 import { authSlice } from '@/features/auth/store/authSlice';
 import { authListenerMiddleware } from '@/features/auth/store/sessionListener';
-import type { User } from '@/packages/shared-schemas/src/auth';
 import { VERIFIED_USER_DISPLAY_STORAGE_KEY } from '@/shared/utils/authValidation';
 
 describe('sessionListener', () => {

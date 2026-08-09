@@ -1,3 +1,5 @@
+import { InvalidTaskDataError } from '../errors';
+
 /**
  * 許容される優先度値の定数配列（Single Source of Truth）
  */
@@ -35,11 +37,11 @@ export class TaskPriority {
    *
    * @param value - 優先度の値（unknown型で受け取り、実行時にバリデーション）
    * @returns TaskPriorityインスタンス
-   * @throws {Error} 不正な優先度値の場合
+   * @throws {InvalidTaskDataError} 不正な優先度値の場合
    */
   public static create(value: unknown): TaskPriority {
     if (!TaskPriority.isValid(value)) {
-      throw new Error(
+      throw new InvalidTaskDataError(
         `不正な優先度です: ${value} (許容値: ${TASK_PRIORITY_VALUES.join(', ')})`,
       );
     }

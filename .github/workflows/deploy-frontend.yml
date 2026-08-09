@@ -20,8 +20,8 @@ on:
         description: 'Next.js trusted domains'
         required: true
         type: string
-      cloudflare-project-name:
-        description: 'CloudFlare Pages project name'
+      cloudflare-worker-name:
+        description: 'Cloudflare Worker base name (preview時は -preview が付与される)'
         required: false
         type: string
         default: ''
@@ -30,7 +30,7 @@ on:
         required: true
     outputs:
       deployment-url:
-        description: 'CloudFlare Pages deployment URL'
+        description: 'Cloudflare Workers deployment URL'
         value: ${{ jobs.deploy-frontend.outputs.deployment-url }}
 
 jobs:
@@ -86,18 +86,19 @@ jobs:
           echo "NEXT_PUBLIC_SITE_URL: $NEXT_PUBLIC_SITE_URL"
           echo "NEXT_PUBLIC_TRUSTED_DOMAINS: $NEXT_PUBLIC_TRUSTED_DOMAINS"
           echo ""
-          echo "🚀 Starting Next.js build..."
-          bun run build
+          echo "🚀 Starting Cloudflare Workers build..."
+          bun run build:worker
 
-      - name: Deploy to CloudFlare Pages
+      - name: Deploy to Cloudflare Workers
         id: deploy
         working-directory: ./app/client
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PROJECT_INPUT: ${{ inputs.cloudflare-project-name }}
+          WORKER_NAME_INPUT: ${{ inputs.cloudflare-worker-name }}
           DEFAULT_PROJECT_NAME: ${{ vars.PROJECT_NAME }}
-          DEPLOY_BRANCH: ${{ github.ref_name == 'main' && 'main' || 'preview' }}
+          ENVIRONMENT_TYPE: ${{ inputs.environment-type }}
+          FALLBACK_SITE_URL: ${{ inputs.next-public-site-url }}
           # UTF-8ロケール設定でwranglerが日本語コミットメッセージを正しく処理
           LANG: C.UTF-8
         run: |
@@ -105,32 +106,43 @@ jobs:
           echo "=== 環境変数チェック ==="
           [ -n "$CLOUDFLARE_API_TOKEN" ] && echo "✅ CLOUDFLARE_API_TOKEN: 設定済み" || echo "❌ CLOUDFLARE_API_TOKEN: 未設定"
           [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && echo "✅ CLOUDFLARE_ACCOUNT_ID: 設定済み" || echo "❌ CLOUDFLARE_ACCOUNT_ID: 未設定"
-          [ -n "$CLOUDFLARE_PROJECT_INPUT" ] && echo "✅ CLOUDFLARE_PROJECT_INPUT: 設定済み" || echo "⚠️ CLOUDFLARE_PROJECT_INPUT: 未設定（デフォルト使用）"
+          [ -n "$WORKER_NAME_INPUT" ] && echo "✅ WORKER_NAME_INPUT: 設定済み" || echo "⚠️ WORKER_NAME_INPUT: 未設定（デフォルト使用）"
           [ -n "$DEFAULT_PROJECT_NAME" ] && echo "✅ DEFAULT_PROJECT_NAME: 設定済み" || echo "❌ DEFAULT_PROJECT_NAME: 未設定"
 
-          # プロジェクト名を決定（入力がない場合はvarsから取得）
-          PROJECT_NAME="${CLOUDFLARE_PROJECT_INPUT:-$DEFAULT_PROJECT_NAME}"
-          [ -n "$PROJECT_NAME" ] && echo "✅ 最終PROJECT_NAME: 設定済み" || { echo "❌ PROJECT_NAME: 未設定"; exit 1; }
+          # Worker名のベースを決定（入力がない場合はvarsから取得）
+          BASE_NAME="${WORKER_NAME_INPUT:-$DEFAULT_PROJECT_NAME}"
+          [ -n "$BASE_NAME" ] && echo "✅ 最終BASE_NAME: 設定済み" || { echo "❌ BASE_NAME: 未設定"; exit 1; }
 
-          # outディレクトリの確認
+          # environment-typeの想定外の値でproduction環境へ誤デプロイしないようfail-closed
+          case "$ENVIRONMENT_TYPE" in
+            production)
+              WORKER_NAME="$BASE_NAME"
+              ;;
+            preview)
+              WORKER_NAME="${BASE_NAME}-preview"
+              ;;
+            *)
+              echo "❌ 未知のenvironment-type: $ENVIRONMENT_TYPE"
+              exit 1
+              ;;
+          esac
+          echo "✅ WORKER_NAME: $WORKER_NAME"
+
+          # ビルド成果物の確認
           echo ""
-          echo "=== out ディレクトリチェック ==="
-          if [ -d "out" ]; then
-            echo "✅ out/ ディレクトリ存在"
-            ls -la out/ | head -5
+          echo "=== .open-next ビルド成果物チェック ==="
+          if [ -f ".open-next/worker.js" ] && [ -d ".open-next/assets" ]; then
+            echo "✅ .open-next/worker.js および .open-next/assets が存在します"
           else
-            echo "❌ out/ ディレクトリが存在しません"
-            ls -la
+            echo "❌ .open-next/worker.js または .open-next/assets が存在しません"
+            ls -la .open-next/ 2>/dev/null || echo "(.open-next ディレクトリが存在しません)"
             exit 1
           fi
 
           # デプロイ実行
           echo ""
-          echo "=== CloudFlare Pagesにデプロイ中... ==="
-          if ! DEPLOYMENT_OUTPUT=$(npx --yes wrangler@4.61.0 pages deploy out \
-            --project-name "$PROJECT_NAME" \
-            --branch "$DEPLOY_BRANCH" \
-            --commit-dirty=true 2>&1); then
+          echo "=== Cloudflare Workersにデプロイ中... ==="
+          if ! DEPLOYMENT_OUTPUT=$(bunx wrangler deploy --name "$WORKER_NAME" 2>&1); then
             echo "❌ デプロイ失敗"
             echo "Output:"
             echo "$DEPLOYMENT_OUTPUT"
@@ -139,13 +151,14 @@ jobs:
 
           echo "$DEPLOYMENT_OUTPUT"
 
-          # デプロイメントURLを抽出（wrangler出力から .pages.dev で終わるURLのみ取得）
-          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^[:space:]]*\.pages\.dev' | head -1)
+          # デプロイメントURLを抽出（wrangler出力から workers.dev で終わるURLのみ取得）
+          DEPLOYMENT_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -oE 'https://[^[:space:]]+\.workers\.dev' | head -1)
 
           if [ -n "$DEPLOYMENT_URL" ]; then
             echo "✅ デプロイメントURL: $DEPLOYMENT_URL"
-            echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           else
-            echo "⚠️ デプロイメントURLを取得できませんでした"
-            echo "deployment_url=" >> "$GITHUB_OUTPUT"
+            echo "⚠️ workers.dev URLを取得できなかったため、フォールバックURLを使用します"
+            DEPLOYMENT_URL="$FALLBACK_SITE_URL"
           fi
+
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"

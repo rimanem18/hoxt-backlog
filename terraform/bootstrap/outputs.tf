@@ -66,12 +66,6 @@ output "terraform_state_kms_key_id" {
   value       = aws_kms_key.terraform_state.key_id
 }
 
-# CloudFlare Pages情報
-output "cloudflare_pages_project_name" {
-  description = "CloudFlare Pages project name"
-  value       = module.cloudflare_pages.pages_project_name
-}
-
 # 環境変数用出力（Next.js用）
 output "next_public_api_base_url_production" {
   description = "Next.js API Base URL for Production"
@@ -95,12 +89,12 @@ output "next_public_api_base_url_preview" {
 
 output "next_public_site_url_preview" {
   description = "Next.js Site URL for Preview"
-  value       = "https://preview.${var.project_name}.pages.dev"
+  value       = "https://preview.${var.domain_name}"
 }
 
 output "next_public_trusted_domains_preview" {
   description = "Next.js Trusted Domains for Preview"
-  value       = "https://preview.${var.project_name}.pages.dev,${aws_lambda_function_url.preview.function_url}"
+  value       = "https://preview.${var.domain_name},${aws_lambda_function_url.preview.function_url}"
 }
 
 # CORS設定用

@@ -34,6 +34,9 @@ import { authCallbackRoute } from "../src/user/presentation/authRoutes.schema";
 import {
 	taskRoutes,
 } from "../src/task/presentation/taskRoutes.schema";
+import {
+	projectRoutes,
+} from "../src/project/presentation/projectRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -67,6 +70,9 @@ async function generateOpenAPISpec(): Promise<void> {
 
 	// タスク管理ルート
 	taskRoutes.forEach((route) => app.openapi(route, noopHandler as any));
+
+	// プロジェクト管理ルート
+	projectRoutes.forEach((route) => app.openapi(route, noopHandler as any));
 
 	// OpenAPI仕様を取得
 	const openAPISpec = app.getOpenAPIDocument({

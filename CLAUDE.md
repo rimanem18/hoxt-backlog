@@ -32,7 +32,7 @@
 
 ## アーキテクチャ概要
 
-- **SSG + API 構成**: フロントエンド（Next.js）とバックエンド（Hono API）の完全分離
+- **Cloudflare Workers + API 構成**: フロントエンド（Next.js、`@opennextjs/cloudflare`でCloudflare Workers上に配信）とバックエンド（Hono API）の完全分離
 - **コンテナベース**: Docker Compose によるコンテナ環境での開発
 - **DDD + クリーンアーキテクチャ（ドメインファースト）**: ビジネスドメイン（user, task, health, greet）を頂点に、各ドメイン内で domain/application/infrastructure/presentation を階層化
 

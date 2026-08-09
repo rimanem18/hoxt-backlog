@@ -12,7 +12,7 @@ paths:
   - **テスト**: Bun 標準
   - **フォーマット**: Biome + TypeScript
   - **型チェック**: TypeScript + Zod 実行時検証（server 側とスキーマシェア）
-  - **レンダリング**: SSG ビルド前提
+  - **レンダリング**: `@opennextjs/cloudflare`によりCloudflare Workers上で動作。静的ページと動的ルート（サーバーサイドレンダリング）が混在
   - **TypeScript**: 全面採用による型安全性確保
   - **スタイリング**: Tailwind CSS（ユーティリティファースト）
   - **状態管理**: Redux

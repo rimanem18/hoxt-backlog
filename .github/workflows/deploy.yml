@@ -278,7 +278,7 @@ jobs:
       next-public-api-base-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-api-base-url-production || needs.deploy-infrastructure.outputs.next-public-api-base-url-preview }}
       next-public-site-url: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-site-url-production || needs.deploy-infrastructure.outputs.next-public-site-url-preview }}
       next-public-trusted-domains: ${{ needs.setup-environment.outputs.is-production == 'true' && needs.deploy-infrastructure.outputs.next-public-trusted-domains-production || needs.deploy-infrastructure.outputs.next-public-trusted-domains-preview }}
-      cloudflare-project-name: ${{ vars.PROJECT_NAME }}
+      cloudflare-worker-name: ${{ vars.PROJECT_NAME }}
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
@@ -319,7 +319,7 @@ jobs:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           status: 'success'
           title: '🚀 Production Deployment Completed Successfully!'
-          components: '✅ Infrastructure (Terraform)\n✅ Database (drizzle-kit)\n✅ Backend (AWS Lambda)\n✅ Frontend (CloudFlare Pages)'
+          components: '✅ Infrastructure (Terraform)\n✅ Database (drizzle-kit)\n✅ Backend (AWS Lambda)\n✅ Frontend (Cloudflare Workers)'
           commit-sha: ${{ github.sha }}
           branch-name: ${{ github.ref_name }}
           actor: ${{ github.actor }}

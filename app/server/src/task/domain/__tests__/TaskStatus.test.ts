@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { InvalidTaskDataError } from '../errors';
 import { TaskStatus } from '../valueobjects/TaskStatus';
 
 describe('TaskStatus', () => {
@@ -38,6 +39,15 @@ describe('TaskStatus', () => {
         // When: TaskStatus.create()を呼び出す
         // Then: エラーがスローされ、エラーメッセージに「不正なステータスです」が含まれる
         expect(() => TaskStatus.create(input)).toThrow(/不正なステータスです:/);
+      });
+
+      test('バリデーションエラーがInvalidTaskDataErrorとしてスローされる', () => {
+        // Given: 有効値以外の文字列（バリデーション違反）
+        const input = 'invalid';
+
+        // When & Then: InvalidTaskDataErrorがスローされる
+        // presentation層のinstanceof判定で400応答にマッピングされるようにするため
+        expect(() => TaskStatus.create(input)).toThrow(InvalidTaskDataError);
       });
     });
   });

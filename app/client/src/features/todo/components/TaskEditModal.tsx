@@ -1,7 +1,11 @@
 'use client';
 
+import {
+  createTaskBodySchema,
+  type Task,
+} from '@hoxt-backlog/shared-schemas/tasks';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
+import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import { useTaskServices } from '../lib/TaskServicesContext';
 
 /**
@@ -26,6 +30,11 @@ function TaskEditModal(props: {
 }): React.ReactNode {
   const services = useTaskServices();
   const { updateTask } = services.useTaskMutations();
+  const { useProjects } = useProjectServices();
+  // モーダル非表示中（task === null）は不要なため取得しない
+  const { data: projects, isLoading: isProjectsLoading } = useProjects({
+    enabled: props.task !== null,
+  });
 
   const [title, setTitle] = useState(props.task?.title || '');
   const [description, setDescription] = useState<string | null>(
@@ -34,6 +43,7 @@ function TaskEditModal(props: {
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(
     props.task?.priority || 'medium',
   );
+  const [projectId, setProjectId] = useState(props.task?.projectId ?? '');
   const [error, setError] = useState('');
 
   // props.taskの変化に応じてstateをリセット
@@ -42,6 +52,7 @@ function TaskEditModal(props: {
       setTitle(props.task.title);
       setDescription(props.task.description ?? null);
       setPriority(props.task.priority);
+      setProjectId(props.task.projectId ?? '');
       setError('');
     }
   }, [props.task]);
@@ -70,26 +81,13 @@ function TaskEditModal(props: {
     }
   }, [props.task]);
 
-  // タイトルのバリデーション結果を返すヘルパー関数
-  const validateTitle = useCallback(
-    (titleToValidate: string): string | null => {
-      if (!titleToValidate.trim()) {
-        return 'タイトルを入力してください';
-      }
-      if (titleToValidate.length > 100) {
-        return 'タイトルは100文字以内で入力してください';
-      }
-      return null;
-    },
-    [],
-  );
-
   // フォーム送信時のロジックを集約したヘルパー関数
   const mutateTask = useCallback(
     (input: {
       title: string;
       description: string | null;
       priority: 'high' | 'medium' | 'low';
+      projectId?: string;
     }) => {
       if (!props.task) return;
 
@@ -112,19 +110,31 @@ function TaskEditModal(props: {
   );
 
   if (!props.task) return null;
+  const task = props.task;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     setError('');
 
-    const validationError = validateTitle(title);
-    if (validationError) {
-      setError(validationError);
+    // クライアント側バリデーション：API契約と同一のZodスキーマで検証
+    const result = createTaskBodySchema.shape.title.safeParse(title.trim());
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? '');
       return;
     }
+    const trimmedTitle = result.data;
 
-    mutateTask({ title, description, priority });
+    // 未所属（空文字）はバックエンドのnull送信に非対応のため、変更時のみ送信する
+    const initialProjectId = task.projectId ?? '';
+    const hasProjectChanged = projectId !== initialProjectId;
+
+    mutateTask({
+      title: trimmedTitle,
+      description,
+      priority,
+      ...(hasProjectChanged ? { projectId } : {}),
+    });
   };
 
   return (
@@ -201,6 +211,33 @@ function TaskEditModal(props: {
                 <option value="medium">中</option>
                 <option value="low">低</option>
               </select>
+            </div>
+            <div>
+              <label
+                htmlFor="edit-project"
+                className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2"
+              >
+                プロジェクト
+              </label>
+              {isProjectsLoading ? (
+                <p aria-live="polite">プロジェクトを読み込み中...</p>
+              ) : (
+                <select
+                  id="edit-project"
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                  aria-label="プロジェクト"
+                >
+                  {/* 所属済みtaskでは未所属に戻す操作を不可にする（バックエンドがprojectIdのnull送信に非対応のため） */}
+                  {!task.projectId && <option value="">未所属</option>}
+                  {projects?.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import TaskItem from '../components/TaskItem';
 
 // テスト用のモックタスクデータ
@@ -77,6 +77,20 @@ describe('TaskItem', () => {
       // タイトルは存在するが、説明テキストは存在しない
       expect(screen.getByText(task.title)).toBeDefined();
       expect(screen.queryByText(/これはサンプルタスクです/)).toBeNull();
+    });
+
+    it('project未所属タスク（projectId: null）が問題なく表示される', () => {
+      const task = createMockTask({ title: '未所属タスク', projectId: null });
+      render(
+        <TaskItem
+          task={task}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onStatusChange={onStatusChange}
+        />,
+      );
+
+      expect(screen.getByText('未所属タスク')).toBeDefined();
     });
 
     it('説明が空文字列の場合は表示されない', () => {

@@ -2,9 +2,9 @@ import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { configureStore } from '@reduxjs/toolkit';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { Provider as ReduxProvider } from 'react-redux';
 import authReducer, { type AuthState } from '@/features/auth/store/authSlice';
-import type { User } from '@/packages/shared-schemas/src/auth';
 import { HomeAuthDebugInfo } from '../components/HomeAuthDebugInfo';
 
 const DUMMY_USER: User = {

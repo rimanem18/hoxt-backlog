@@ -1,7 +1,14 @@
 'use client';
 
+import { createTaskBodySchema } from '@hoxt-backlog/shared-schemas/tasks';
 import React, { useCallback, useState } from 'react';
+import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import { useTaskServices } from '../lib/TaskServicesContext';
+
+export interface TaskCreateFormProps {
+  /** 指定時はプロジェクト選択を省略し、このprojectIdでタスクを作成する */
+  fixedProjectId?: string;
+}
 
 /**
  * タスク作成フォームコンポーネント
@@ -16,20 +23,32 @@ import { useTaskServices } from '../lib/TaskServicesContext';
  * </TaskServicesProvider>
  * ```
  */
-function TaskCreateForm(): React.ReactNode {
+function TaskCreateForm(props: TaskCreateFormProps = {}): React.ReactNode {
   const services = useTaskServices();
   const { createTask } = services.useTaskMutations();
+  const { useProjects } = useProjectServices();
+  // fixedProjectId指定時はproject選択セレクトを表示しないため、一覧取得は不要
+  const { data: projects } = useProjects({ enabled: !props.fixedProjectId });
 
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [projectId, setProjectId] = useState('');
   const [error, setError] = useState('');
   const [hasRetry, setHasRetry] = useState(false);
 
+  // fixedProjectId指定時はプロジェクト選択を省略するため、送信対象のprojectIdを一本化する
+  const effectiveProjectId = props.fixedProjectId ?? projectId;
+
   // タスク作成のロジックを集約したヘルパー関数
   const mutateTask = useCallback(
-    (input: { title: string; priority: 'high' | 'medium' | 'low' }) => {
+    (input: {
+      title: string;
+      priority: 'high' | 'medium' | 'low';
+      projectId: string;
+    }) => {
       createTask.mutate(input, {
         onSuccess: () => {
+          // 同じprojectへの連続追加が多いため、projectIdは維持する
           setTitle('');
           setPriority('medium');
           setHasRetry(false);
@@ -50,27 +69,37 @@ function TaskCreateForm(): React.ReactNode {
     // エラークリア
     setError('');
 
-    // クライアント側バリデーション：空文字チェック
-    if (!title.trim()) {
-      setError('タイトルを入力してください');
+    // クライアント側バリデーション：API契約と同一のZodスキーマで検証
+    const result = createTaskBodySchema.shape.title.safeParse(title.trim());
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? '');
       return;
     }
+    const trimmedTitle = result.data;
 
-    // クライアント側バリデーション：文字数チェック（maxLengthで防止済みだが念のため）
-    if (title.length > 100) {
-      setError('タイトルは100文字以内で入力してください');
+    // クライアント側バリデーション：project未選択チェック
+    if (!effectiveProjectId) {
+      setError('プロジェクトを選択してください');
       return;
     }
 
     // API呼び出し（最新の入力値を使用）
-    mutateTask({ title, priority });
+    mutateTask({
+      title: trimmedTitle,
+      priority,
+      projectId: effectiveProjectId,
+    });
   };
 
   // 再試行ハンドラ（常に最新の入力値を使用）
   const handleRetry = useCallback(() => {
-    if (createTask.isPending) return;
-    mutateTask({ title, priority });
-  }, [title, priority, createTask.isPending, mutateTask]);
+    if (createTask.isPending || !effectiveProjectId) return;
+    mutateTask({
+      title: title.trim(),
+      priority,
+      projectId: effectiveProjectId,
+    });
+  }, [title, priority, effectiveProjectId, createTask.isPending, mutateTask]);
 
   return (
     <div className="mb-4 sm:mb-6">
@@ -87,6 +116,21 @@ function TaskCreateForm(): React.ReactNode {
           maxLength={100}
           aria-label="タスクのタイトル"
         />
+        {!props.fixedProjectId && (
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+            aria-label="プロジェクト"
+          >
+            <option value="">プロジェクトを選択</option>
+            {projects?.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={priority}
           onChange={(e) => {
@@ -133,6 +177,16 @@ function TaskCreateForm(): React.ReactNode {
             </button>
           )}
         </div>
+      )}
+
+      {/* プロジェクト作成画面への導線（projectが0件の場合） */}
+      {!props.fixedProjectId && projects?.length === 0 && (
+        <a
+          href="/dashboard/projects"
+          className="mt-2 sm:mt-3 p-3 text-sm text-center bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors block"
+        >
+          プロジェクトを作成する
+        </a>
       )}
     </div>
   );

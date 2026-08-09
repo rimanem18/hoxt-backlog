@@ -3,10 +3,10 @@
  * DIパターンによりテスト分離を実現し、supabaseへの直接依存を排除
  */
 
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import type { AuthChangeEvent, Provider } from '@supabase/supabase-js';
 import { getApiBaseUrl } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
-import type { User } from '@/packages/shared-schemas/src/auth';
 import { OAuthErrorHandler } from './oauthErrorHandler';
 import {
   EmailPasswordAuthProvider,

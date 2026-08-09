@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { cleanup, render, screen } from '@testing-library/react';
 import { UserProfileView } from '@/features/auth/components/UserProfileView';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 describe('UserProfileView', () => {
   afterEach(() => {

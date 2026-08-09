@@ -11,6 +11,7 @@ export interface CreateTaskEntityInput {
   title: string;
   description?: string;
   priority?: string;
+  projectId: string | null;
 }
 
 /**
@@ -25,6 +26,7 @@ export interface TaskEntityProps {
   status: TaskStatus;
   createdAt: Date;
   updatedAt: Date;
+  projectId: string | null;
 }
 
 /**
@@ -42,6 +44,7 @@ export class TaskEntity {
   private status: TaskStatus;
   private readonly createdAt: Date;
   private updatedAt: Date;
+  private projectId: string | null;
 
   /**
    * プライベートコンストラクタ
@@ -56,6 +59,7 @@ export class TaskEntity {
     this.status = props.status;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.projectId = props.projectId;
   }
 
   /**
@@ -63,7 +67,7 @@ export class TaskEntity {
    *
    * @param input - 作成に必要な入力データ
    * @returns 新しいTaskEntityインスタンス
-   * @throws {Error} バリデーションエラー時
+   * @throws {InvalidTaskDataError} バリデーションエラー時
    */
   public static create(input: CreateTaskEntityInput): TaskEntity {
     const now = new Date();
@@ -77,6 +81,7 @@ export class TaskEntity {
       status: TaskStatus.create('not_started'),
       createdAt: now,
       updatedAt: now,
+      projectId: input.projectId,
     });
   }
 
@@ -127,6 +132,10 @@ export class TaskEntity {
     return this.updatedAt;
   }
 
+  public getProjectId(): string | null {
+    return this.projectId;
+  }
+
   // ==========================================================================
   // ビジネスロジック
   // ==========================================================================
@@ -135,7 +144,7 @@ export class TaskEntity {
    * タイトルを更新する
    *
    * @param title - 新しいタイトル
-   * @throws {Error} バリデーションエラー時
+   * @throws {InvalidTaskDataError} バリデーションエラー時
    */
   public updateTitle(title: string): void {
     this.title = TaskTitle.create(title);
@@ -156,7 +165,7 @@ export class TaskEntity {
    * 優先度を変更する
    *
    * @param priority - 新しい優先度
-   * @throws {Error} バリデーションエラー時
+   * @throws {InvalidTaskDataError} バリデーションエラー時
    */
   public changePriority(priority: string): void {
     this.priority = TaskPriority.create(priority);
@@ -167,10 +176,20 @@ export class TaskEntity {
    * ステータスを変更する
    *
    * @param status - 新しいステータス
-   * @throws {Error} バリデーションエラー時
+   * @throws {InvalidTaskDataError} バリデーションエラー時
    */
   public changeStatus(status: string): void {
     this.status = TaskStatus.create(status);
+    this.touch();
+  }
+
+  /**
+   * 所属プロジェクトを変更する
+   *
+   * @param projectId - 新しいプロジェクトID
+   */
+  public updateProjectId(projectId: string): void {
+    this.projectId = projectId;
     this.touch();
   }
 

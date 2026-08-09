@@ -1,3 +1,4 @@
+import { ProjectDIContainer } from '@/project/infrastructure/ProjectDIContainer';
 import { db } from '@/shared/database/DatabaseConnection';
 import { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
 import { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
@@ -34,6 +35,7 @@ export class TaskDIContainer {
       const taskRepository = TaskDIContainer.getTaskRepository();
       TaskDIContainer.createTaskUseCaseInstance = new CreateTaskUseCase(
         taskRepository,
+        ProjectDIContainer.getProjectRepository(),
       );
     }
     return TaskDIContainer.createTaskUseCaseInstance;
@@ -49,6 +51,7 @@ export class TaskDIContainer {
       const taskRepository = TaskDIContainer.getTaskRepository();
       TaskDIContainer.getTasksUseCaseInstance = new GetTasksUseCase(
         taskRepository,
+        ProjectDIContainer.getProjectRepository(),
       );
     }
     return TaskDIContainer.getTasksUseCaseInstance;
@@ -79,6 +82,7 @@ export class TaskDIContainer {
       const taskRepository = TaskDIContainer.getTaskRepository();
       TaskDIContainer.updateTaskUseCaseInstance = new UpdateTaskUseCase(
         taskRepository,
+        ProjectDIContainer.getProjectRepository(),
       );
     }
     return TaskDIContainer.updateTaskUseCaseInstance;

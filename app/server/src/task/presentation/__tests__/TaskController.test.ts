@@ -1,11 +1,19 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  type Mock,
+  mock,
+  test,
+} from 'bun:test';
 import type { Context } from 'hono';
-import type { ChangeTaskStatusUseCase } from '@/task/application/ChangeTaskStatusUseCase';
-import type { CreateTaskUseCase } from '@/task/application/CreateTaskUseCase';
-import type { DeleteTaskUseCase } from '@/task/application/DeleteTaskUseCase';
-import type { GetTaskByIdUseCase } from '@/task/application/GetTaskByIdUseCase';
-import type { GetTasksUseCase } from '@/task/application/GetTasksUseCase';
-import type { UpdateTaskUseCase } from '@/task/application/UpdateTaskUseCase';
+import type { IChangeTaskStatusUseCase } from '@/task/application/IChangeTaskStatusUseCase';
+import type { ICreateTaskUseCase } from '@/task/application/ICreateTaskUseCase';
+import type { IDeleteTaskUseCase } from '@/task/application/IDeleteTaskUseCase';
+import type { IGetTaskByIdUseCase } from '@/task/application/IGetTaskByIdUseCase';
+import type { IGetTasksUseCase } from '@/task/application/IGetTasksUseCase';
+import type { IUpdateTaskUseCase } from '@/task/application/IUpdateTaskUseCase';
 import { InvalidTaskDataError, TaskNotFoundError } from '@/task/domain/errors';
 import { TaskEntity } from '@/task/domain/TaskEntity';
 import { TaskController } from '../TaskController';
@@ -13,24 +21,26 @@ import { TaskController } from '../TaskController';
 describe('TaskController', () => {
   let controller: TaskController;
   let mockCreateTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<ICreateTaskUseCase['execute']>;
   };
   let mockGetTasksUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTasksUseCase['execute']>;
   };
   let mockGetTaskByIdUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IGetTaskByIdUseCase['execute']>;
   };
   let mockUpdateTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IUpdateTaskUseCase['execute']>;
   };
   let mockDeleteTaskUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IDeleteTaskUseCase['execute']>;
   };
   let mockChangeTaskStatusUseCase: {
-    execute: ReturnType<typeof mock>;
+    execute: Mock<IChangeTaskStatusUseCase['execute']>;
   };
   let mockContext: Context;
+
+  const mockProjectId = '770e8400-e29b-41d4-a716-446655440002';
 
   beforeEach(() => {
     // モックのユースケース作成
@@ -55,12 +65,12 @@ describe('TaskController', () => {
 
     // コントローラのインスタンス化
     controller = new TaskController(
-      mockCreateTaskUseCase as unknown as CreateTaskUseCase,
-      mockGetTasksUseCase as unknown as GetTasksUseCase,
-      mockGetTaskByIdUseCase as unknown as GetTaskByIdUseCase,
-      mockUpdateTaskUseCase as unknown as UpdateTaskUseCase,
-      mockDeleteTaskUseCase as unknown as DeleteTaskUseCase,
-      mockChangeTaskStatusUseCase as unknown as ChangeTaskStatusUseCase,
+      mockCreateTaskUseCase,
+      mockGetTasksUseCase,
+      mockGetTaskByIdUseCase,
+      mockUpdateTaskUseCase,
+      mockDeleteTaskUseCase,
+      mockChangeTaskStatusUseCase,
     );
 
     // モックのHonoコンテキスト作成
@@ -87,6 +97,7 @@ describe('TaskController', () => {
         title: 'テストタスク',
         description: 'テストの説明',
         priority: 'high',
+        projectId: mockProjectId,
       };
 
       // TaskEntity のモック作成
@@ -95,6 +106,7 @@ describe('TaskController', () => {
         title: requestBody.title,
         description: requestBody.description,
         priority: requestBody.priority,
+        projectId: requestBody.projectId,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -117,6 +129,7 @@ describe('TaskController', () => {
         title: requestBody.title,
         description: requestBody.description,
         priority: requestBody.priority,
+        projectId: requestBody.projectId,
       });
       expect(mockContext.json).toHaveBeenCalledWith(
         {
@@ -130,6 +143,7 @@ describe('TaskController', () => {
             status: mockTaskEntity.getStatus(),
             createdAt: mockTaskEntity.getCreatedAt().toISOString(),
             updatedAt: mockTaskEntity.getUpdatedAt().toISOString(),
+            projectId: mockTaskEntity.getProjectId(),
           },
         },
         201,
@@ -142,12 +156,14 @@ describe('TaskController', () => {
       const requestBody = {
         title: 'シンプルタスク',
         priority: 'medium',
+        projectId: mockProjectId,
       };
 
       const mockTaskEntity = TaskEntity.create({
         userId,
         title: requestBody.title,
         priority: requestBody.priority,
+        projectId: requestBody.projectId,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -167,6 +183,7 @@ describe('TaskController', () => {
         userId,
         title: requestBody.title,
         priority: requestBody.priority,
+        projectId: requestBody.projectId,
       });
     });
 
@@ -175,6 +192,7 @@ describe('TaskController', () => {
       const userId = 'user-123';
       const requestBody = {
         title: '', // 空文字列（無効）
+        projectId: mockProjectId,
       };
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -207,11 +225,13 @@ describe('TaskController', () => {
           userId,
           title: 'タスク1',
           priority: 'high',
+          projectId: null,
         }),
         TaskEntity.create({
           userId,
           title: 'タスク2',
           priority: 'high',
+          projectId: null,
         }),
       ];
 
@@ -250,6 +270,7 @@ describe('TaskController', () => {
             status: task.getStatus(),
             createdAt: task.getCreatedAt().toISOString(),
             updatedAt: task.getUpdatedAt().toISOString(),
+            projectId: task.getProjectId(),
           })),
         },
         200,
@@ -277,6 +298,31 @@ describe('TaskController', () => {
       expect(mockGetTasksUseCase.execute).toHaveBeenCalledWith({
         userId,
         filters: {},
+        sort: 'created_at_desc',
+      });
+    });
+
+    test('タスク一覧取得の正常系: projectIdクエリがfiltersに渡される', async () => {
+      // Given: projectIdクエリパラメータ
+      const userId = 'user-123';
+      const queryParams = { projectId: mockProjectId };
+
+      (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
+      (mockContext.req.query as ReturnType<typeof mock>).mockReturnValue(
+        queryParams,
+      );
+      mockGetTasksUseCase.execute.mockResolvedValue([]);
+      (mockContext.json as ReturnType<typeof mock>).mockReturnValue({
+        status: 200,
+      } as Response);
+
+      // When: getAllメソッドを呼び出す
+      await controller.getAll(mockContext);
+
+      // Then: filters.projectIdとしてユースケースに渡される
+      expect(mockGetTasksUseCase.execute).toHaveBeenCalledWith({
+        userId,
+        filters: { projectId: mockProjectId },
         sort: 'created_at_desc',
       });
     });
@@ -373,6 +419,7 @@ describe('TaskController', () => {
         userId,
         title: 'タスク詳細',
         description: '詳細説明',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -406,6 +453,7 @@ describe('TaskController', () => {
             status: mockTask.getStatus(),
             createdAt: mockTask.getCreatedAt().toISOString(),
             updatedAt: mockTask.getUpdatedAt().toISOString(),
+            projectId: mockTask.getProjectId(),
           },
         },
         200,
@@ -448,6 +496,7 @@ describe('TaskController', () => {
         title: requestBody.title,
         description: requestBody.description,
         priority: requestBody.priority,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -490,6 +539,7 @@ describe('TaskController', () => {
             status: mockUpdatedTask.getStatus(),
             createdAt: mockUpdatedTask.getCreatedAt().toISOString(),
             updatedAt: mockUpdatedTask.getUpdatedAt().toISOString(),
+            projectId: mockUpdatedTask.getProjectId(),
           },
         },
         200,
@@ -507,6 +557,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: requestBody.title,
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -534,6 +585,45 @@ describe('TaskController', () => {
       });
     });
 
+    test('タスク更新の正常系: projectIdを指定すると更新データに含まれる', async () => {
+      // Given: projectIdを含む更新リクエスト
+      const userId = 'user-123';
+      const taskId = 'task-456';
+      const requestBody = {
+        projectId: mockProjectId,
+      };
+
+      const mockUpdatedTask = TaskEntity.create({
+        userId,
+        title: '既存タイトル',
+        projectId: mockProjectId,
+      });
+
+      (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
+      (mockContext.req.param as ReturnType<typeof mock>).mockReturnValue(
+        taskId,
+      );
+      (mockContext.req.json as ReturnType<typeof mock>).mockResolvedValue(
+        requestBody,
+      );
+      mockUpdateTaskUseCase.execute.mockResolvedValue(mockUpdatedTask);
+      (mockContext.json as ReturnType<typeof mock>).mockReturnValue({
+        status: 200,
+      } as Response);
+
+      // When: updateメソッドを呼び出す
+      await controller.update(mockContext);
+
+      // Then: projectIdが更新データに含まれてユースケースが呼ばれる
+      expect(mockUpdateTaskUseCase.execute).toHaveBeenCalledWith({
+        userId,
+        taskId,
+        data: {
+          projectId: mockProjectId,
+        },
+      });
+    });
+
     test('タスク更新の正常系: descriptionをnullでクリアして200を返す', async () => {
       // Given: descriptionをnullに設定するリクエスト
       const userId = 'user-123';
@@ -545,6 +635,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: '既存タイトル',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -662,6 +753,7 @@ describe('TaskController', () => {
       const mockUpdatedTask = TaskEntity.create({
         userId,
         title: 'タスク',
+        projectId: null,
       });
 
       (mockContext.get as ReturnType<typeof mock>).mockReturnValue(userId);
@@ -700,6 +792,7 @@ describe('TaskController', () => {
             status: mockUpdatedTask.getStatus(),
             createdAt: mockUpdatedTask.getCreatedAt().toISOString(),
             updatedAt: mockUpdatedTask.getUpdatedAt().toISOString(),
+            projectId: mockUpdatedTask.getProjectId(),
           },
         },
         200,

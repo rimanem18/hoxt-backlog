@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { cleanup, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import type { Task } from '@hoxt-backlog/shared-schemas/tasks';
 import userEvent from '@testing-library/user-event';
-import type { Task } from '@/packages/shared-schemas/src/tasks';
 import {
   buildTaskServices,
   renderDashboardShell,

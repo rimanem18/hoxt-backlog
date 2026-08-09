@@ -1,3 +1,5 @@
+import { InvalidTaskDataError } from '../errors';
+
 /**
  * 許容されるステータス値の定数配列（Single Source of Truth）
  */
@@ -40,11 +42,11 @@ export class TaskStatus {
    *
    * @param value - ステータスの値（unknown型で受け取り、実行時にバリデーション）
    * @returns TaskStatusインスタンス
-   * @throws {Error} 不正なステータス値の場合
+   * @throws {InvalidTaskDataError} 不正なステータス値の場合
    */
   public static create(value: unknown): TaskStatus {
     if (!TaskStatus.isValid(value)) {
-      throw new Error(
+      throw new InvalidTaskDataError(
         `不正なステータスです: ${value} (許容値: ${TASK_STATUS_VALUES.join(', ')})`,
       );
     }

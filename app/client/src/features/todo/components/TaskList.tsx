@@ -1,8 +1,8 @@
 'use client';
 
+import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
 import type React from 'react';
 import { useCallback } from 'react';
-import type { Task, TaskStatus } from '@/packages/shared-schemas/src/tasks';
 import { useTaskServices } from '../lib/TaskServicesContext';
 import TaskItem from './TaskItem';
 
@@ -16,13 +16,15 @@ import TaskItem from './TaskItem';
 interface TaskListProps {
   /** タスク編集時のコールバック（オプション） */
   onEdit?: (task: Task) => void;
+  /** 指定時はそのprojectに紐づくtaskのみに絞り込む（オプション） */
+  projectId?: string;
 }
 
 function TaskList(props: TaskListProps = {}): React.ReactNode {
   // Context経由でhooksを取得（テスト時にモック注入可能）
   const { useTasks, useTaskMutations } = useTaskServices();
 
-  const { data: tasks, isLoading, error } = useTasks();
+  const { data: tasks, isLoading, error } = useTasks(props.projectId);
   const { deleteTask, changeStatus } = useTaskMutations();
 
   // タスク削除ハンドラをメモ化（TaskItemの再レンダリング回避）

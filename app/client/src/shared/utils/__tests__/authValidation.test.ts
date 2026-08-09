@@ -4,7 +4,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import {
   clearStoredAuth,
   getSupabaseStorageKey,

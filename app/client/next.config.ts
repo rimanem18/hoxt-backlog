@@ -6,13 +6,6 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   /**
-   * 静的サイト生成設定 (SSG)
-   * 継続的デプロイメント対応: CloudFlare Pages 用の静的出力
-   */
-  output: 'export',
-  trailingSlash: true,
-  skipTrailingSlashRedirect: true,
-  /**
    * Docker Compose環境ではブラウザが `client` サービス名でdevサーバーへ
    * アクセスするため、Next.jsのDNSリバインディング対策（Origin検証）が
    * localhost以外を許可せずHMR WebSocketハンドシェイクを破棄してしまう。
@@ -20,10 +13,16 @@ const nextConfig: NextConfig = {
    */
   allowedDevOrigins: ['client'],
   /**
+   * shared-schemas（app/packages配下）はnode_modules経由（@hoxt-backlog/shared-schemas）で
+   * シンボリックリンクされたソースをそのまま参照しているため、
+   * ビルド済みパッケージとしてではなく自前コードと同様にトランスパイル対象にする
+   */
+  transpilePackages: ['@hoxt-backlog/shared-schemas'],
+  /**
    * 外部画像ホストの安全な許可リスト設定
    */
   images: {
-    // SSG出力モード用: 画像最適化APIを無効化
+    // Cloudflare Workersランタイムには画像最適化APIが存在しないため無効化
     unoptimized: true,
     // 認証プロバイダーの公式画像ホストのみを厳選
     remotePatterns: [
@@ -48,7 +47,7 @@ const nextConfig: NextConfig = {
       //   hostname: 'appleid.cdn-apple.com',
       //   pathname: '/profilepicture/**',
       // },
-      
+
       // 将来拡張用: Microsoft認証対応時の画像ホスト
       // {
       //   protocol: 'https',
@@ -56,7 +55,7 @@ const nextConfig: NextConfig = {
       //   pathname: '/v1.0/me/photo/**',
       // },
     ],
-    
+
     // 画像最適化設定: パフォーマンス向上のための設定
     formats: ['image/webp', 'image/avif'], // モダンフォーマット優先
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7日間キャッシュ（プロフィール画像は変更頻度が低い）

@@ -5,7 +5,6 @@ import type {
   ITaskRepository,
   TaskFilters,
   TaskSortBy,
-  UpdateTaskInput,
 } from '@/task/domain/ITaskRepository';
 import { TaskEntity } from '@/task/domain/TaskEntity';
 import { TaskPriority } from '@/task/domain/valueobjects/TaskPriority';
@@ -33,6 +32,7 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
         status: task.getStatus(),
         createdAt: task.getCreatedAt(),
         updatedAt: task.getUpdatedAt(),
+        projectId: task.getProjectId(),
       })
       .returning();
 
@@ -56,13 +56,16 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
   async update(
     userId: string,
     taskId: string,
-    input: UpdateTaskInput,
+    task: TaskEntity,
   ): Promise<TaskEntity | null> {
     const result = await this.db
       .update(tasks)
       .set({
-        ...input,
-        updatedAt: new Date(),
+        title: task.getTitle(),
+        description: task.getDescription(),
+        priority: task.getPriority(),
+        projectId: task.getProjectId(),
+        updatedAt: task.getUpdatedAt(),
       })
       .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
       .returning();
@@ -95,6 +98,7 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
       status: TaskStatus.create(row.status),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      projectId: row.projectId,
     });
   }
 
@@ -113,6 +117,11 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
     // ステータスフィルタ適用（複数選択、空配列の場合は無視）
     if (filters.status && filters.status.length > 0) {
       conditions.push(inArray(tasks.status, filters.status));
+    }
+
+    // プロジェクトIDフィルタ適用
+    if (filters.projectId) {
+      conditions.push(eq(tasks.projectId, filters.projectId));
     }
 
     // biome-ignore lint/suspicious/noExplicitAny: Drizzle ORMのクエリビルダーの複雑な型を扱うため

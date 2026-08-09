@@ -1,4 +1,5 @@
 import { mock } from 'bun:test';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import { configureStore } from '@reduxjs/toolkit';
 import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -11,10 +12,13 @@ import {
   DashboardServicesProvider,
 } from '@/features/dashboard/lib/DashboardServicesContext';
 import {
+  type ProjectServices,
+  ProjectServicesProvider,
+} from '@/features/project/lib/ProjectServicesContext';
+import {
   type TaskServices,
   TaskServicesProvider,
 } from '@/features/todo/lib/TaskServicesContext';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 export function buildUser(overrides: Partial<User> = {}): User {
   return {
@@ -69,10 +73,22 @@ export function buildTaskServices(
   } as TaskServices;
 }
 
+export function buildProjectServices(
+  overrides: Partial<ProjectServices> = {},
+): ProjectServices {
+  return {
+    useProjects: mock(() => ({ data: [], isLoading: false, error: null })),
+    useProjectMutations: mock(),
+    useProject: mock(),
+    ...overrides,
+  } as ProjectServices;
+}
+
 interface RenderDashboardShellOptions {
   authState?: AuthState;
   dashboardServices?: DashboardServices;
   taskServices?: TaskServices;
+  projectServices?: ProjectServices;
   createTaskSection?: ReactNode;
   filterSortSection?: ReactNode;
   taskListHeading?: ReactNode;
@@ -94,23 +110,26 @@ export function renderDashboardShell(
   const dashboardServices =
     options.dashboardServices ?? buildDashboardServices();
   const taskServices = options.taskServices ?? buildTaskServices();
+  const projectServices = options.projectServices ?? buildProjectServices();
 
   const utils = render(
     <ReduxProvider store={store}>
       <DashboardServicesProvider services={dashboardServices}>
         <TaskServicesProvider services={taskServices}>
-          <DashboardShell
-            createTaskSection={
-              options.createTaskSection ?? <div>CREATE_TASK_SLOT</div>
-            }
-            filterSortSection={
-              options.filterSortSection ?? <div>FILTER_SORT_SLOT</div>
-            }
-            taskListHeading={
-              options.taskListHeading ?? <div>TASK_LIST_HEADING_SLOT</div>
-            }
-            devDebugSlot={options.devDebugSlot ?? <div>DEV_DEBUG_SLOT</div>}
-          />
+          <ProjectServicesProvider services={projectServices}>
+            <DashboardShell
+              createTaskSection={
+                options.createTaskSection ?? <div>CREATE_TASK_SLOT</div>
+              }
+              filterSortSection={
+                options.filterSortSection ?? <div>FILTER_SORT_SLOT</div>
+              }
+              taskListHeading={
+                options.taskListHeading ?? <div>TASK_LIST_HEADING_SLOT</div>
+              }
+              devDebugSlot={options.devDebugSlot ?? <div>DEV_DEBUG_SLOT</div>}
+            />
+          </ProjectServicesProvider>
         </TaskServicesProvider>
       </DashboardServicesProvider>
     </ReduxProvider>,

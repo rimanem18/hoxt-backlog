@@ -68,6 +68,14 @@ export const listTasksRoute = createRoute({
           description: 'タスクのソート順',
           example: 'priority_desc',
         }),
+      projectId: z
+        .uuid()
+        .optional()
+        .openapi({
+          param: { name: 'projectId', in: 'query' },
+          description: 'プロジェクトIDによる絞り込み',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        }),
     }),
   },
   responses: {
@@ -94,6 +102,14 @@ export const listTasksRoute = createRoute({
         },
       },
       description: 'JWT認証失敗',
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: '指定されたprojectIdのプロジェクトが見つかりません',
     },
     500: {
       content: {
@@ -148,6 +164,14 @@ export const createTaskRoute = createRoute({
         },
       },
       description: 'JWT認証失敗',
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: apiErrorResponseSchema,
+        },
+      },
+      description: '指定されたprojectIdのプロジェクトが見つかりません',
     },
     500: {
       content: {

@@ -1,3 +1,5 @@
+import { InvalidTaskDataError } from '../errors';
+
 /**
  * タイトルの長さ制約定数
  */
@@ -33,17 +35,17 @@ export class TaskTitle {
    *
    * @param value - タイトルの値（unknown型で受け取り、実行時にバリデーション）
    * @returns TaskTitleインスタンス
-   * @throws {Error} 不正なタイトル値の場合
+   * @throws {InvalidTaskDataError} 不正なタイトル値の場合
    */
   public static create(value: unknown): TaskTitle {
     const trimmed = typeof value === 'string' ? value.trim() : '';
 
     if (trimmed.length < TASK_TITLE_CONSTRAINTS.MIN_LENGTH) {
-      throw new Error('タイトルを入力してください');
+      throw new InvalidTaskDataError('タイトルを入力してください');
     }
 
     if (trimmed.length > TASK_TITLE_CONSTRAINTS.MAX_LENGTH) {
-      throw new Error(
+      throw new InvalidTaskDataError(
         `タイトルは${TASK_TITLE_CONSTRAINTS.MAX_LENGTH}文字以内で入力してください`,
       );
     }

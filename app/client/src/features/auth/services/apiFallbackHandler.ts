@@ -3,7 +3,7 @@
  * キャッシュデータの利用と自動接続回復を提供する。
  */
 
-import type { User } from '@/packages/shared-schemas/src/auth';
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 
 /**
  * API接続エラーの型定義

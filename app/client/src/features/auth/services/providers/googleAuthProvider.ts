@@ -3,8 +3,8 @@
  * Supabase AuthとGoogle OAuthを使用したセキュアなJWT認証を提供する。
  */
 
+import type { AuthProvider, User } from '@hoxt-backlog/shared-schemas/auth';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { AuthProvider, User } from '@/packages/shared-schemas/src/auth';
 import {
   getTrustedDomains,
   normalizeDomain,
@@ -349,7 +349,7 @@ export class GoogleAuthProvider extends BaseAuthProvider {
     const verifyData = await verifyResponse.json();
 
     // DB の user.id を使用（Supabase の外部IDではない）
-    const user: import('@/packages/shared-schemas/src/auth').User = {
+    const user: import('@hoxt-backlog/shared-schemas/auth').User = {
       id: verifyData.data.user.id, // DB の UUID
       externalId: verifyData.data.user.externalId,
       provider: verifyData.data.user.provider,

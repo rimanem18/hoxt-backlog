@@ -1,7 +1,7 @@
+import type { User } from '@hoxt-backlog/shared-schemas/auth';
 import Image from 'next/image';
 import type React from 'react';
 import { InitialAvatar } from '@/features/auth/components/InitialAvatar';
-import type { User } from '@/packages/shared-schemas/src/auth';
 
 /**
  * UserProfileViewコンポーネントのProps型定義
