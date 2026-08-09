@@ -32,7 +32,8 @@ module "github_oidc" {
 
 # Lambda Execution Role
 resource "aws_iam_role" "lambda_exec" {
-  name = "${local.project_name}-lambda-exec-role"
+  name                 = "${local.project_name}-lambda-exec-role"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${local.project_name}-MaxPermissionsBoundary"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
