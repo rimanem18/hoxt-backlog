@@ -17,6 +17,8 @@
     "check": "bun run typecheck && biome check src ../packages/shared-schemas",
     "fix": "biome check src ../packages/shared-schemas --write",
     "typecheck": "tsc --noEmit",
+    "knip": "knip",
+    "cpd": "jscpd -c .jscpd.json src ../packages/shared-schemas",
     "generate:types": "bunx openapi-typescript ../../docs/api/openapi.yaml -o src/types/api/generated.ts"
   },
   "dependencies": {
@@ -48,7 +50,9 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "jose": "^6.2.3",
+    "jscpd": "^5.0.14",
     "jsdom": "^29.1.1",
+    "knip": "^6.32.1",
     "openapi-typescript": "^7.13.0",
     "playwright": "^1.61.1",
     "tailwindcss": "^4.3.1",

@@ -53,6 +53,8 @@ docker compose exec e2e npx playwright test <args...>
 docker compose exec client bun run dev
 docker compose exec client bunx tsc --noEmit
 docker compose exec client bun test
+docker compose exec client bun run knip   # 未使用ファイル・exports・依存関係の検出
+docker compose exec client bun run cpd    # コード重複検出
 ```
 
 バックエンド
@@ -60,6 +62,8 @@ docker compose exec client bun test
 # example
 docker compose exec server bun run dev
 docker compose exec server bunx tsc --noEmit
+docker compose exec server bun run knip   # 未使用ファイル・exports・依存関係の検出
+docker compose exec server bun run cpd    # コード重複検出
 ```
 
 静的セキュリティチェック
@@ -97,6 +101,8 @@ docker compose exec iac -c 'source ../scripts/create-session.sh && aws ...'
   - `docker compose exec {コンテナサービス名} bun run fix`
   - `docker compose exec {コンテナサービス名} test`
   - `docker compose run --rm semgrep semgrep <args...>`
+  - `docker compose exec {コンテナサービス名} bun run knip`（未使用ファイル・exports・依存関係の検出）
+  - `docker compose exec {コンテナサービス名} bun run cpd`（コード重複検出、設定は `.jscpd.json`）
 
 - test / lint / typecheck / semgrep / build は、 @quality-gate-runner サブエージェントに依頼してください。
 
