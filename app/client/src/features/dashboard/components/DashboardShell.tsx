@@ -7,6 +7,7 @@ import { UserProfile } from '@/features/auth/components/UserProfile';
 import { handleExpiredToken } from '@/features/auth/store/authSlice';
 import { showNetworkError } from '@/features/auth/store/errorSlice';
 import { useDashboardServices } from '@/features/dashboard/lib/DashboardServicesContext';
+import RecentProjects from '@/features/project/components/RecentProjects';
 import TaskEditModal from '@/features/todo/components/TaskEditModal';
 import TaskList from '@/features/todo/components/TaskList';
 import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
@@ -94,8 +95,9 @@ export function DashboardShell(props: DashboardShellProps): React.ReactNode {
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* ユーザープロフィール（左サイドバー） */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           {user && <UserProfile user={user} />}
+          <RecentProjects />
         </div>
 
         {/* タスク管理セクション（メインエリア） */}
