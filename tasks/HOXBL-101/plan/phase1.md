@@ -24,7 +24,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-1-01: `project_viewers`/`viewer_access_tokens`テーブルのDBスキーマ定義とマイグレーション生成**
+- [x] **TASK-1-01: `project_viewers`/`viewer_access_tokens`テーブルのDBスキーマ定義とマイグレーション生成**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-004, REQ-101, REQ-105, REQ-106, REQ-503
@@ -37,7 +37,7 @@
   - **完了条件**: `schema.ts`に両テーブル定義が追加され、`app/server/src/shared/database/migrations/`に新規マイグレーションファイルが生成されていること
   - **注意点**: 自動生成されたマイグレーションファイルは手動編集しない（`.claude/rules/schema-db.md`）
 
-- [ ] **TASK-1-02: `generate-schemas.ts`への`project_viewers`/`viewer_access_tokens`テーブル設定追加**
+- [x] **TASK-1-02: `generate-schemas.ts`への`project_viewers`/`viewer_access_tokens`テーブル設定追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: REQ-304
@@ -45,7 +45,7 @@
   - **実装詳細**: `app/server/scripts/generate-schemas.ts`の`tableConfigs`配列に`project_viewers`・`viewer_access_tokens`エントリを追加する。`project_viewers.email`のバリデーションは既存`users`テーブル設定のメール形式チェックと同一パターンを踏襲する
   - **完了条件**: `tableConfigs`に両テーブル設定が追加されていること（生成実行はTASK-1-06で行う）
 
-- [ ] **TASK-1-03: `scripts/setup-rls.ts`への`project_viewers`/`viewer_access_tokens`テーブルRLSポリシー追加**
+- [x] **TASK-1-03: `scripts/setup-rls.ts`への`project_viewers`/`viewer_access_tokens`テーブルRLSポリシー追加**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01
   - **関連要件**: NFR-101, NFR-102
@@ -56,7 +56,7 @@
   - **完了条件**: `setup-rls.ts`に両テーブル向けのRLS有効化・ポリシー作成処理が追加されていること。実際の適用（`db:setup`実行）はローカル確認のみとし、Preview/Production適用は本フェーズの対象外とする
   - **注意点**: リポジトリ層の所有権検証・トークン検証が一次防御であり、RLSは多層防御である点を実装コメント等で誤解を招かないようにする
 
-- [ ] **TASK-1-04: `EmailAddress`の共有VO化（`shared/domain/valueobjects`への移設）**
+- [x] **TASK-1-04: `EmailAddress`の共有VO化（`shared/domain/valueobjects`への移設）**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-304
@@ -68,7 +68,7 @@
   - **完了条件**: `bunx tsc --noEmit`がエラーゼロであること。移設前と同一内容のテストが移設後も全てグリーンであること
   - **注意点**: RISK-03（overview.md 5章）。`grep -r "user/domain/valueobjects/EmailAddress"`で参照漏れが残っていないことを確認する
 
-- [ ] **TASK-1-05: ローカルDBへのマイグレーション適用確認**
+- [x] **TASK-1-05: ローカルDBへのマイグレーション適用確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01, TASK-1-03
   - **関連要件**: なし（インフラ）
@@ -76,7 +76,7 @@
   - **実装詳細**: ローカル環境（`app_test`）にマイグレーションと`db:setup`（RLS適用）を適用し、`project_viewers`/`viewer_access_tokens`テーブルが期待通り作成されることを確認する
   - **完了条件**: ローカルDBに両テーブルが作成され、RLSが有効化されていること
 
-- [ ] **TASK-1-06: スキーマ生成実行と型チェック**
+- [x] **TASK-1-06: スキーマ生成実行と型チェック**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-1-01, TASK-1-02, TASK-1-04, TASK-1-05
   - **関連要件**: なし（インフラ）
@@ -96,3 +96,25 @@
 - `EmailAddress`が`shared/domain/valueobjects`に移設され、`user`ドメイン側のimportが更新されていること
 - サーバー側の型チェックがエラーゼロであること
 - 既存テストがすべてグリーンであること
+
+## 7. 実施記録
+
+- 開始時刻: 2026-08-15 10:06 JST
+- 終了時刻: 2026-08-15 10:19 JST
+- 合計時間: 約13分（typecheck/test/lint/buildの実行時間を含む）
+
+### 差異の記録
+
+- TASK-1-05の完了条件は「ローカルDBに両テーブルが作成され、RLSが有効化されていること」だが、`scripts/setup-rls.ts`は既存実装として`app_test`（`TEST_SCHEMAS`）を対象からスキップする仕様になっており、`users`/`tasks`/`projects`と同様に`project_viewers`/`viewer_access_tokens`もローカル環境ではRLSポリシーが実際には適用されない。これは本フェーズ固有の問題ではなく既存の全テーブル共通の挙動であるため、設計判断はそのまま踏襲し、`setup-rls.ts`へのポリシー追加のみを完了条件として扱った
+- コードレビューの指摘を受け、design.mdやタスク詳細には明記されていなかった`project_viewers`/`viewer_access_tokens`のemail一意制約を、既存`users`テーブルの`users_email_lower_unique`と同じ「大文字小文字を区別しない（`lower(email)`）」パターンに合わせて実装した（当初は生の`email`列への単純な一意制約だった）。マイグレーションを一度削除・再生成して反映済み
+- `generate-schemas.ts`の既存ロジックが、スネークケースかつ複数単語のテーブル名（`project_viewers`, `viewer_access_tokens`）を正しくPascalCase/camelCaseに変換できず、生成コードが壊れる不具合を発見したため、`toPascalCase`/`toCamelCase`ヘルパーを追加して修正した（既存の`users`/`tasks`/`projects`の生成結果に変化がないことを確認済み）
+
+- `bun run knip`は新規生成した`src/schemas/project-viewers.ts`/`viewer-access-tokens.ts`を「未使用ファイル」として検出するが、既存の`src/schemas/users.ts`/`projects.ts`も同様にAPI層から未参照のため同じ扱いを受けている（Phase 3以降でAPI層が参照するようになれば解消される想定であり、本フェーズ固有の問題ではない）
+
+### 所要時間
+
+- `bunx tsc --noEmit`: エラーゼロ（数秒程度）
+- `bun test`: 817 pass / 0 fail（約20〜21秒）
+- `bun run fix`（Biome lint & format）: 237ファイルを100ms程度でチェック
+- `docker compose build server`: キャッシュ利用によりほぼ即時完了
+- `semgrep --config auto`: 213ルール・257ファイルスキャンで0 findings

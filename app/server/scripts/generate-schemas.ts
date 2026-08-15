@@ -30,6 +30,9 @@ import {
   users,
   tasks,
   projects,
+  viewerStatus,
+  projectViewers,
+  viewerAccessTokens,
 } from '../src/shared/database/schema';
 
 /**
@@ -147,6 +150,24 @@ const tableConfigs: TableConfig[] = [
       },
     },
   },
+  {
+    tableName: 'project_viewers',
+    tableObject: projectViewers,
+    outputFile: 'project-viewers.ts',
+    enums: [
+      {
+        name: 'viewerStatus',
+        exportName: 'viewerStatusSchema',
+        values: viewerStatus.enumValues,
+        description: 'viewer招待の状態',
+      },
+    ],
+  },
+  {
+    tableName: 'viewer_access_tokens',
+    tableObject: viewerAccessTokens,
+    outputFile: 'viewer-access-tokens.ts',
+  },
 ];
 
 /**
@@ -158,6 +179,27 @@ const tableConfigs: TableConfig[] = [
 function capitalize(str: string): string {
   if (!str) return str;
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * スネークケース文字列をパスカルケースに変換する
+ *
+ * @param str 対象の文字列（例: 'project_viewer'）
+ * @returns パスカルケース文字列（例: 'ProjectViewer'）
+ */
+function toPascalCase(str: string): string {
+  return str.split('_').map(capitalize).join('');
+}
+
+/**
+ * スネークケース文字列をキャメルケースに変換する
+ *
+ * @param str 対象の文字列（例: 'project_viewers'）
+ * @returns キャメルケース文字列（例: 'projectViewers'）
+ */
+function toCamelCase(str: string): string {
+  const pascal = toPascalCase(str);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
 }
 
 /**
@@ -271,7 +313,8 @@ function generateSchemaFile(config: TableConfig): string {
   // キャピタライズされたテーブル名（User, Post等）
   // 注意: 単数形を維持（users → User）
   const singularName = tableName.endsWith('s') ? tableName.slice(0, -1) : tableName;
-  const capitalizedName = capitalize(singularName);
+  const capitalizedName = toPascalCase(singularName);
+  const tableVarName = toCamelCase(tableName);
 
   // enum部分のコード生成
   const enumsCode = enums.map((enumConfig) => generateEnumCode(enumConfig)).join('\n\n');
@@ -298,7 +341,7 @@ function generateSchemaFile(config: TableConfig): string {
 
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { ${tableName} } from '@/shared/database/schema';
+import { ${tableVarName} } from '@/shared/database/schema';
 
 /**
  * ${capitalizedName}テーブルのSelectスキーマ（DB読み取り型）
@@ -306,7 +349,7 @@ import { ${tableName} } from '@/shared/database/schema';
  * Drizzle ORMの${tableName}テーブルから自動生成された型安全なスキーマ。
  * データベースから取得したデータの検証に使用する。
  */
-export const select${capitalizedName}Schema = createSelectSchema(${tableName});
+export const select${capitalizedName}Schema = createSelectSchema(${tableVarName});
 
 /**
  * ${capitalizedName}テーブルのInsertスキーマ（DB書き込み型）
@@ -314,7 +357,7 @@ export const select${capitalizedName}Schema = createSelectSchema(${tableName});
  * Drizzle ORMの${tableName}テーブルから自動生成された型安全なスキーマ。
  * データベースへの挿入データの検証に使用する。
  */
-export const insert${capitalizedName}Schema = createInsertSchema(${tableName});
+export const insert${capitalizedName}Schema = createInsertSchema(${tableVarName});
 
 /**
  * 型定義のエクスポート
