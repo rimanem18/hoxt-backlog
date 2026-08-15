@@ -1,8 +1,8 @@
+import { EmailAddress } from '@/shared/domain/valueobjects/EmailAddress';
 import type { IUserRepository } from '@/user/domain';
 import { EmailAlreadyRegisteredError } from '@/user/domain/errors/EmailAlreadyRegisteredError';
 import { EmailAlreadyRegisteredGoogleError } from '@/user/domain/errors/EmailAlreadyRegisteredGoogleError';
 import { SignupFailedError } from '@/user/domain/errors/SignupFailedError';
-import { EmailAddress } from '@/user/domain/valueobjects/EmailAddress';
 import type { IEmailSignupGateway } from './IEmailSignupGateway';
 
 /**

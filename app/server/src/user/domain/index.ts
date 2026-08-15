@@ -5,6 +5,7 @@
  * 他のモジュールからの簡潔なインポートを可能にする。
  */
 
+export { EmailAddress } from '@/shared/domain/valueobjects/EmailAddress';
 // 値オブジェクト・型定義
 export type { AuthProvider } from './AuthProvider';
 export {
@@ -30,7 +31,6 @@ export {
   isValidEmail,
   validateCreateUserInput,
 } from './valueobjects/CreateUserInput';
-export { EmailAddress } from './valueobjects/EmailAddress';
 export type { UpdateUserInput } from './valueobjects/UpdateUserInput';
 export {
   UpdateUserInputValidation,

@@ -5,6 +5,7 @@
 
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
+import { EmailAddress } from '@/shared/domain/valueobjects/EmailAddress';
 import { AuthError } from '@/shared/middleware/errors/AuthError';
 import {
   type AuthProvider,
@@ -12,7 +13,6 @@ import {
 } from '@/user/domain/AuthProvider';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { IAuthProvider } from '@/user/domain/services/IAuthProvider';
-import { EmailAddress } from '@/user/domain/valueobjects/EmailAddress';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
 import { verifyJWT } from './jwks';
 
