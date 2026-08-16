@@ -23,7 +23,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-2-01: viewerドメインの共通エラークラス実装（Red→Green）**
+- [x] **TASK-2-01: viewerドメインの共通エラークラス実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: Phase 1
   - **関連要件**: REQ-301, REQ-302, REQ-303, REQ-304, REQ-306
@@ -38,7 +38,7 @@
   - **完了条件**: 各エラークラスが`ViewerDomainError`を継承し、`status`・`code`プロパティを持つこと
   - **単体テスト要件**: `app/server/src/viewer/domain/__tests__/errors.test.ts`に、`task`/`project`ドメインの`errors.test.ts`と同等の観点でエラークラスの型・プロパティを検証する
 
-- [ ] **TASK-2-02: `ProjectViewerEntity`の実装（Red→Green）**
+- [x] **TASK-2-02: `ProjectViewerEntity`の実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-2-01
   - **関連要件**: REQ-105, REQ-106, REQ-503
@@ -49,7 +49,7 @@
   - **完了条件**: `create`で`active`状態のインスタンスが生成できる。`revoke()`後は`status`が`revoked`かつ`revokedAt`が設定される。`restore()`後は`status`が`active`かつ`revokedAt`が`null`になる
   - **単体テスト要件**: 正常系（新規生成）、`revoke()`による状態遷移、`restore()`による状態遷移とrevokedAtのクリア
 
-- [ ] **TASK-2-03: `ViewerAccessTokenEntity`の実装（Red→Green）**
+- [x] **TASK-2-03: `ViewerAccessTokenEntity`の実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-2-01
   - **関連要件**: REQ-004, REQ-102, REQ-103, REQ-501, REQ-502, NFR-101
@@ -61,7 +61,7 @@
   - **完了条件**: `isExpired(now)`が、`now <= expiresAt`（30日ちょうどを含む）で`false`、`now > expiresAt`（30日超過）で`true`を返すこと
   - **単体テスト要件**: 境界値（発行から30日ちょうど＝有効、30日を1ミリ秒でも超過＝無効）をAC-10相当の単体テストとして明示的に検証する
 
-- [ ] **TASK-2-04: `TokenHasher`の実装（Red→Green）**
+- [x] **TASK-2-04: `TokenHasher`の実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: NFR-101
@@ -76,3 +76,24 @@
 - `ViewerAccessTokenEntity.isExpired`がrequirements.md AC-10の境界値を満たすこと
 - サーバー側の型チェックがエラーゼロであること
 - 新規テスト・既存テストがすべてグリーンであること
+
+## 7. 実施記録
+
+- 開始時刻: 2026-08-16 16:45 JST
+- 終了時刻: 2026-08-16 16:53 JST
+- 合計時間: 約8分（typecheck/test/lint/build/semgrepの実行時間を含む）
+
+### 差異の記録
+
+- TASK-2-01の完了条件には「各エラークラスが`status`・`code`プロパティを持つこと」と記載されていたが、既存`task`/`project`ドメインのエラークラス（`TaskDomainError`/`ProjectDomainError`系）はいずれも`code`プロパティのみを持ち、HTTPステータスコードへのマッピングは`errorMiddleware`の`ERROR_MAPPINGS`側で個別に管理する設計になっていた。既存の一貫した慣習を優先し、`status`プロパティは追加せず`code`のみを実装した。HTTPステータスへの対応付けはPhase 3で`errorMiddleware`の`ERROR_MAPPINGS`に登録する際に行う
+- `ViewerAccessTokenEntity.isExpired`は、overview.md 2章・design.md RISK-07の記載通りrequirements.md AC-10を正本とし、`now > expiresAt`のときのみ無効と判定する実装を採用した（design.md §13の`now >= expiresAt`は不採用）
+- コードレビューで、`ProjectViewerEntity`/`ViewerAccessTokenEntity`のプライベートコンストラクタ引数型が`create`/`reconstruct`間でやや重複しているとの指摘があったが、既存`TaskEntity`にも同型の前例がなく提案レベルの指摘であったため、対応は見送った
+- `bun run knip`は新規追加した`ProjectViewerEntity`/`ViewerAccessTokenEntity`/viewerドメインエラー/`TokenHasher`を「未使用ファイル」として検出するが、Phase 3以降でapplication/presentation層から参照されるようになれば解消される想定であり、Phase 1と同様に本フェーズ固有の問題ではない
+
+### 所要時間
+
+- `bunx tsc --noEmit`: エラーゼロ（250ファイル、約99ms）
+- `bun test`: 854 pass / 0 fail（2458 expect calls、約20.9秒）
+- `bun run check`（Biome lint & format）: 250ファイルを99ms程度でチェック、修正なし
+- `docker compose build server`: 正常にビルド完了
+- `semgrep --config auto`（src/viewer対象）: 210ルール・13ファイルスキャンで0 findings
