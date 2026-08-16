@@ -110,7 +110,10 @@ resource "aws_lambda_function" "preview" {
 
   environment {
     variables = {
-      NODE_ENV                 = "development"
+      # previewではE2Eを実行しないため、ENABLE_TEST_ENDPOINTSが誤って
+      # trueに設定された場合でもテスト専用エンドポイントを有効化させないよう
+      # NODE_ENVをproductionと同じ値にする（isTestEndpointsEnabled()参照）
+      NODE_ENV                 = "production"
       BASE_SCHEMA              = "app_${local.project_name}_preview"
       DATABASE_URL             = var.database_url
       SUPABASE_URL             = var.next_public_supabase_url

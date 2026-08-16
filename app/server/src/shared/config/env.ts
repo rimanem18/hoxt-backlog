@@ -127,11 +127,11 @@ export function getViewerAccessBaseUrl(): string {
 /**
  * テスト専用エンドポイントの有効化を許可する環境の許可リスト
  *
- * Why: NODE_ENVはLambda実行時環境変数として設定されず（Terraformの
- * `aws_lambda_function.environment.variables`はENVIRONMENTのみを保証する）、
- * 本番でも常にundefinedになり「'production'以外は許可」という除外方式では
- * 事実上ノーガードになる。Lambdaで必ず設定されるENVIRONMENTを用いた
- * 許可リスト方式に置き換え、未設定・タイプミス・未知の値はすべて拒否する。
+ * Why: 除外方式（'production'以外は許可）は、ENVIRONMENTが未設定・タイプミス・
+ * 未知の値になった場合に誤って許可側へ倒れるfail-openのリスクがあるため、
+ * 許可リスト方式で明示的に許可する環境のみを列挙する。
+ * previewはE2Eを実行しない運用のため、ここに含めていてもterraform/bootstrap/main.tf側の
+ * NODE_ENV=productionが下段のチェックでブロックする（多層防御）。
  */
 const TEST_ENDPOINTS_ALLOWED_ENVIRONMENTS = new Set(['development', 'preview']);
 
@@ -140,12 +140,15 @@ const TEST_ENDPOINTS_ALLOWED_ENVIRONMENTS = new Set(['development', 'preview']);
  *
  * 生アクセストークンを含む送信内容をE2Eから取得するための経路は、
  * 本番環境では絶対に有効化されないようfail-closedで判定する。
+ * ENVIRONMENT（許可リスト）とNODE_ENV（'production'除外）の2つの
+ * 独立したTerraform設定値の両方が許可側でなければ有効化されない。
  *
- * @returns ENVIRONMENTが許可リストに含まれ、かつENABLE_TEST_ENDPOINTSが'true'の場合true
+ * @returns 上記2条件と、ENABLE_TEST_ENDPOINTSが'true'であることをすべて満たす場合true
  */
 export function isTestEndpointsEnabled(): boolean {
   return (
     TEST_ENDPOINTS_ALLOWED_ENVIRONMENTS.has(process.env.ENVIRONMENT ?? '') &&
+    process.env.NODE_ENV !== 'production' &&
     process.env.ENABLE_TEST_ENDPOINTS === 'true'
   );
 }

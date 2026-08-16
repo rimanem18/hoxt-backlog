@@ -23,10 +23,12 @@ function createInMemoryTokenRepository(): IViewerAccessTokenRepository & {
 
 describe('TestOnlyViewerAccessTokenIssuer', () => {
   const originalEnvironment = process.env.ENVIRONMENT;
+  const originalNodeEnv = process.env.NODE_ENV;
   const originalEnableFlag = process.env.ENABLE_TEST_ENDPOINTS;
 
   beforeEach(() => {
     process.env.ENVIRONMENT = 'development';
+    process.env.NODE_ENV = 'test';
     process.env.ENABLE_TEST_ENDPOINTS = 'true';
   });
 
@@ -35,6 +37,11 @@ describe('TestOnlyViewerAccessTokenIssuer', () => {
       delete process.env.ENVIRONMENT;
     } else {
       process.env.ENVIRONMENT = originalEnvironment;
+    }
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
     }
     if (originalEnableFlag === undefined) {
       delete process.env.ENABLE_TEST_ENDPOINTS;
@@ -106,5 +113,22 @@ describe('TestOnlyViewerAccessTokenIssuer', () => {
     await expect(
       issuer.issue('viewer@example.com', new Date()),
     ).rejects.toThrow();
+  });
+
+  test('ENVIRONMENTが許可リストに含まれていてもNODE_ENVがproductionの場合は例外になる（preview相当の多層防御）', async () => {
+    // Given: ENVIRONMENT=previewだがNODE_ENVがproductionに揃えられた状態
+    process.env.ENVIRONMENT = 'preview';
+    process.env.NODE_ENV = 'production';
+    const repository = createInMemoryTokenRepository();
+    const issuer = new TestOnlyViewerAccessTokenIssuer(
+      repository,
+      new TokenHasher(),
+    );
+
+    // When & Then: 発行が例外になる
+    await expect(
+      issuer.issue('viewer@example.com', new Date()),
+    ).rejects.toThrow();
+    expect(repository.saved).toHaveLength(0);
   });
 });
