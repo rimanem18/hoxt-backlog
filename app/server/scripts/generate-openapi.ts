@@ -37,6 +37,9 @@ import {
 import {
 	projectRoutes,
 } from "../src/project/presentation/projectRoutes.schema";
+import {
+	viewerManagementRoutes,
+} from "../src/viewer/presentation/viewerManagementRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -73,6 +76,11 @@ async function generateOpenAPISpec(): Promise<void> {
 
 	// プロジェクト管理ルート
 	projectRoutes.forEach((route) => app.openapi(route, noopHandler as any));
+
+	// viewer管理ルート
+	viewerManagementRoutes.forEach((route) =>
+		app.openapi(route, noopHandler as any),
+	);
 
 	// OpenAPI仕様を取得
 	const openAPISpec = app.getOpenAPIDocument({

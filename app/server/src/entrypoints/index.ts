@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import greet from '@/greet/presentation/greetRoutes';
 import health from '@/health/presentation/healthRoutes';
 import project from '@/project/presentation/projectRoutes';
-import { validateEnv } from '@/shared/config/env';
+import { isTestEndpointsEnabled, validateEnv } from '@/shared/config/env';
 import docs from '@/shared/docs/docsRoutes';
 import corsMiddleware from '@/shared/middleware/corsMiddleware';
 import { createErrorHandler } from '@/shared/middleware/errors/ErrorHandlerMiddleware';
@@ -12,6 +12,8 @@ import task from '@/task/presentation/taskRoutes';
 import auth from '@/user/presentation/authRoutes';
 import emailSignup from '@/user/presentation/emailSignupRoutes';
 import user from '@/user/presentation/userRoutes';
+import viewerManagement from '@/viewer/presentation/viewerManagementRoutes';
+import viewerTest from '@/viewer/presentation/viewerTestRoutes';
 
 /**
  * OpenAPIHono アプリケーションサーバーを作成する
@@ -56,7 +58,14 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', user);
   app.route('/api', task);
   app.route('/api', project);
+  app.route('/api', viewerManagement);
   app.route('/api', docs);
+
+  // テスト専用エンドポイント（E2E用の送信内容キャプチャ・トークン発行）
+  // Why: 本番では絶対に有効化しないためisTestEndpointsEnabled()でガードする
+  if (isTestEndpointsEnabled()) {
+    app.route('/api', viewerTest);
+  }
 
   return app;
 };
