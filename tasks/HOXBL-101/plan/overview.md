@@ -112,12 +112,21 @@
   - **関連設計**: design.md §4.1, §5.1, §5.3, §6, §7.1, §7.2
   - **依存**: Phase 2
 
+- **Phase 4-before: Unit of Work基盤の導入（viewerドメイン向け準備）**
+  - **目的**: `InviteViewerUseCase`の「招待保存＋トークン保存」を、Phase 3の手動補償削除方式からDBトランザクション（Unit of Work）による原子的な実行へ置き換える。Phase 3・Phase 4のコードレビューで指摘された、design.md 5.1節が要求するトランザクション化の未実装（phase3.md 7章の差異記録）への対応
+  - **確認可能なこと**: 統合テストで、招待保存・トークン保存が単一のDBトランザクションとして扱われ、片方が失敗した場合に両方がロールバックされることが確認できる。Phase 3で確認済みの振る舞い（AC-01, AC-04, AC-05, AC-06）が変化しないことも確認できる
+  - **関連要件**: REQ-101, REQ-102, REQ-303
+  - **関連設計**: design.md §5.1手順7〜9, §6
+  - **依存**: Phase 3
+  - **注意**: **必ずPhase 4より先に実施すること**。Phase 4は本フェーズが整備するUnit of Work基盤の上に実装される前提であり、順序を入れ替えて着手しない
+  - **参照**: `tasks/HOXBL-101/plan/phase4-before.md`
+
 - **Phase 4: viewer招待API - 別project追加招待・no-op・期限切れ再発行**
   - **目的**: 別projectへの追加招待（UC-03）、既存active招待への重複招待no-op（UC-04）、期限切れトークンの再発行（UC-05）という3分岐を`InviteViewerUseCase`に組み込み成立させる
   - **確認可能なこと**: 統合テストで、AC-02（別project追加招待でトークン維持）、AC-03（期限切れ再発行、送信失敗時の補償含む）が確認できる。REQ-502のno-op分岐も確認できる
   - **関連要件**: REQ-103, REQ-501, REQ-502
   - **関連設計**: design.md §5.1手順7, §6, §13
-  - **依存**: Phase 3
+  - **依存**: Phase 4-before（**Phase 3の直後ではなく、必ずPhase 4-before完了後に着手する**）
 
 - **Phase 5: 招待済みviewer一覧・取り消し・復元**
   - **目的**: `GET/DELETE /api/projects/{projectId}/viewers(/{viewerId})`により、招待状況の確認とproject単位の取り消しをHTTP応答まで一貫して成立させる。取り消し（`revoke`）と復元（`restore`）は対の操作であるため、取り消し済み招待への再招待による復元（UC-06、REQ-503）もあわせて本フェーズで`InviteViewerUseCase`に組み込む

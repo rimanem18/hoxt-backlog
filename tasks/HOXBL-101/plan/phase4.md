@@ -24,7 +24,7 @@
 
 ## 5. 依存関係
 
-- **前提フェーズ**: Phase 3
+- **前提フェーズ**: Phase 4-before（`tasks/HOXBL-101/plan/phase4-before.md`）。**必ずPhase 4-beforeを先に完了させてから本フェーズに着手すること**。Phase 4-beforeが整備するUnit of Work基盤（`IViewerInvitationUnitOfWork`）を前提に、本フェーズの各分岐を実装する
 - **ブロッカー**: なし
 
 ## 6. タスク一覧
