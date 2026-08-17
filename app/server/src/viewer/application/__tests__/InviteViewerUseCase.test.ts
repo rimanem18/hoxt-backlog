@@ -13,6 +13,7 @@ import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccess
 import { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
 import type { IInvitationMailGateway } from '../IInvitationMailGateway';
 import { InviteViewerUseCase } from '../InviteViewerUseCase';
+import type { IViewerInvitationUnitOfWork } from '../IViewerInvitationUnitOfWork';
 
 const testUserId = '123e4567-e89b-12d3-a456-426614174000';
 const testProjectId = '223e4567-e89b-12d3-a456-426614174001';
@@ -67,6 +68,11 @@ function createDeps() {
   const mailGateway: IInvitationMailGateway = {
     send: mock(() => Promise.resolve()),
   };
+  const unitOfWork: IViewerInvitationUnitOfWork = {
+    execute: mock((fn) =>
+      fn({ projectViewerRepository, viewerAccessTokenRepository }),
+    ),
+  };
 
   return {
     projectViewerRepository,
@@ -74,13 +80,13 @@ function createDeps() {
     projectRepository,
     userRepository,
     mailGateway,
+    unitOfWork,
   };
 }
 
 function createUseCase(deps: ReturnType<typeof createDeps>) {
   return new InviteViewerUseCase(
-    deps.projectViewerRepository,
-    deps.viewerAccessTokenRepository,
+    deps.unitOfWork,
     deps.projectRepository,
     deps.userRepository,
     deps.mailGateway,
@@ -172,7 +178,7 @@ describe('InviteViewerUseCase', () => {
     expect(deps.projectViewerRepository.save).not.toHaveBeenCalled();
   });
 
-  test('トークン保存が失敗した場合、保存済みの招待が補償削除され元のエラーがスローされる', async () => {
+  test('トークン保存が失敗した場合、招待の補償削除は呼ばれずエラーがそのままスローされる', async () => {
     // Given: トークン保存が失敗するモック
     const deps = createDeps();
     const tokenSaveError = new Error('DB接続エラー');
@@ -190,8 +196,8 @@ describe('InviteViewerUseCase', () => {
       }),
     ).rejects.toBe(tokenSaveError);
 
-    // Then: 保存済みの招待が補償削除され、メールは送信されない
-    expect(deps.projectViewerRepository.deleteById).toHaveBeenCalledTimes(1);
+    // Then: DBロールバックに委ねるため招待の補償削除は呼ばれず、メールも送信されない
+    expect(deps.projectViewerRepository.deleteById).not.toHaveBeenCalled();
     expect(deps.mailGateway.send).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
-import type { Database } from '@/shared/database/DatabaseConnection';
+import type { DatabaseOrTransaction } from '@/shared/database/DatabaseConnection';
 import { viewerAccessTokens } from '@/shared/database/schema';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { ViewerAccessTokenEntity } from '@/viewer/domain/ViewerAccessTokenEntity';
@@ -9,11 +9,13 @@ import { ViewerAccessTokenEntity } from '@/viewer/domain/ViewerAccessTokenEntity
  *
  * Drizzle ORMを使用して閲覧者アクセストークンの永続化を実現する。
  * IViewerAccessTokenRepositoryインターフェースの実装。
+ * Unit of Work経由のトランザクションスコープでも利用できるよう、
+ * 通常のDBインスタンスとトランザクションの両方を受け付ける。
  */
 export class PostgreSQLViewerAccessTokenRepository
   implements IViewerAccessTokenRepository
 {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: DatabaseOrTransaction) {}
 
   async save(
     entity: ViewerAccessTokenEntity,

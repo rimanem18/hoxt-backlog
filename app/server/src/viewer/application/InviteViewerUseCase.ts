@@ -7,8 +7,6 @@ import {
   InvalidViewerDataError,
   InvitationMailDeliveryError,
 } from '@/viewer/domain/errors';
-import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
-import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
 import { ViewerAccessTokenEntity } from '@/viewer/domain/ViewerAccessTokenEntity';
 import type { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
@@ -17,19 +15,20 @@ import type {
   IInviteViewerUseCase,
   InviteViewerInput,
 } from './IInviteViewerUseCase';
+import type { IViewerInvitationUnitOfWork } from './IViewerInvitationUnitOfWork';
 
 const VIEWER_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * プロジェクト閲覧者招待ユースケース
  *
- * 招待の保存・アクセストークン発行・招待メール送信を1トランザクション的に扱い、
+ * 招待保存・アクセストークン発行はUnit of Work経由で単一のDBトランザクション
+ * として実行し、招待メール送信はコミット後（トランザクション外）に行う。
  * メール送信失敗時は保存済みデータを補償操作で削除する。
  */
 export class InviteViewerUseCase implements IInviteViewerUseCase {
   constructor(
-    private readonly projectViewerRepository: IProjectViewerRepository,
-    private readonly viewerAccessTokenRepository: IViewerAccessTokenRepository,
+    private readonly unitOfWork: IViewerInvitationUnitOfWork,
     private readonly projectRepository: IProjectRepository,
     private readonly userRepository: IUserRepository,
     private readonly mailGateway: IInvitationMailGateway,
@@ -62,7 +61,6 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
       projectId: input.projectId,
       email: normalizedEmail,
     });
-    const savedViewer = await this.projectViewerRepository.save(viewer);
 
     const rawToken = this.tokenHasher.generate();
     const tokenHash = this.tokenHasher.hash(rawToken);
@@ -74,15 +72,16 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
       expiresAt,
     });
 
-    let savedAccessToken: ViewerAccessTokenEntity;
-    try {
-      savedAccessToken =
-        await this.viewerAccessTokenRepository.save(accessToken);
-    } catch (error) {
-      // トークン保存が失敗した場合、既に保存済みの招待だけが残らないようにする
-      await this.deleteViewerSafely(savedViewer.getId());
-      throw error;
-    }
+    // 招待保存とトークン保存を単一のDBトランザクションとして実行する。
+    // 片方が失敗した場合、DBレベルで両方ロールバックされる。
+    const { savedViewer, savedAccessToken } = await this.unitOfWork.execute(
+      async (repos) => {
+        const savedViewer = await repos.projectViewerRepository.save(viewer);
+        const savedAccessToken =
+          await repos.viewerAccessTokenRepository.save(accessToken);
+        return { savedViewer, savedAccessToken };
+      },
+    );
 
     const accessUrl = `${this.viewerAccessBaseUrl}/viewer/${rawToken}`;
 
@@ -104,18 +103,9 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
   }
 
   /**
-   * トークン保存失敗時に、既に保存済みの招待のみを削除する補償操作。
-   */
-  private async deleteViewerSafely(viewerId: string): Promise<void> {
-    try {
-      await this.projectViewerRepository.deleteById(viewerId);
-    } catch (error) {
-      console.error('招待の補償削除に失敗しました', error);
-    }
-  }
-
-  /**
    * メール送信失敗時に保存済みの招待・トークンを削除する補償操作。
+   * 削除ごとに独立したトランザクションとして実行し、
+   * 一方の失敗が他方の削除試行を妨げないようにする。
    * 補償操作自体の失敗は握りつぶし、呼び出し元でInvitationMailDeliveryErrorを
    * 一貫してスローできるようにする。
    */
@@ -124,13 +114,17 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
     accessTokenId: string,
   ): Promise<void> {
     try {
-      await this.projectViewerRepository.deleteById(viewerId);
+      await this.unitOfWork.execute((repos) =>
+        repos.projectViewerRepository.deleteById(viewerId),
+      );
     } catch (error) {
       console.error('招待の補償削除に失敗しました', error);
     }
 
     try {
-      await this.viewerAccessTokenRepository.deleteById(accessTokenId);
+      await this.unitOfWork.execute((repos) =>
+        repos.viewerAccessTokenRepository.deleteById(accessTokenId),
+      );
     } catch (error) {
       console.error('アクセストークンの補償削除に失敗しました', error);
     }

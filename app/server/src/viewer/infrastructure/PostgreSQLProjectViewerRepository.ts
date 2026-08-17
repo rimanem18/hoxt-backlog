@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import type { Database } from '@/shared/database/DatabaseConnection';
+import type { DatabaseOrTransaction } from '@/shared/database/DatabaseConnection';
 import { projectViewers } from '@/shared/database/schema';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
 import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
@@ -9,11 +9,13 @@ import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
  *
  * Drizzle ORMを使用してプロジェクト閲覧者招待の永続化を実現する。
  * IProjectViewerRepositoryインターフェースの実装。
+ * Unit of Work経由のトランザクションスコープでも利用できるよう、
+ * 通常のDBインスタンスとトランザクションの両方を受け付ける。
  */
 export class PostgreSQLProjectViewerRepository
   implements IProjectViewerRepository
 {
-  constructor(private readonly db: Database) {}
+  constructor(private readonly db: DatabaseOrTransaction) {}
 
   async save(entity: ProjectViewerEntity): Promise<ProjectViewerEntity> {
     const updateResult = await this.db

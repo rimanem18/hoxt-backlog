@@ -8,11 +8,13 @@ import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
 import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMailGateway';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
+import type { IViewerInvitationUnitOfWork } from '@/viewer/application/IViewerInvitationUnitOfWork';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { FakeInvitationMailGateway } from './FakeInvitationMailGateway';
 import { PostgreSQLProjectViewerRepository } from './PostgreSQLProjectViewerRepository';
 import { PostgreSQLViewerAccessTokenRepository } from './PostgreSQLViewerAccessTokenRepository';
+import { PostgreSQLViewerInvitationUnitOfWork } from './PostgreSQLViewerInvitationUnitOfWork';
 import { SesInvitationMailGateway } from './SesInvitationMailGateway';
 import { TokenHasher } from './TokenHasher';
 
@@ -31,6 +33,8 @@ export class ViewerDIContainer {
     null;
   private static mailGatewayInstance: IInvitationMailGateway | null = null;
   private static tokenHasherInstance: TokenHasher | null = null;
+  private static viewerInvitationUnitOfWorkInstance: PostgreSQLViewerInvitationUnitOfWork | null =
+    null;
 
   /**
    * InviteViewerUseCaseのインスタンスを返す
@@ -38,8 +42,7 @@ export class ViewerDIContainer {
   static getInviteViewerUseCase(): IInviteViewerUseCase {
     if (!ViewerDIContainer.inviteViewerUseCaseInstance) {
       ViewerDIContainer.inviteViewerUseCaseInstance = new InviteViewerUseCase(
-        ViewerDIContainer.getProjectViewerRepository(),
-        ViewerDIContainer.getViewerAccessTokenRepository(),
+        ViewerDIContainer.getViewerInvitationUnitOfWork(),
         ProjectDIContainer.getProjectRepository(),
         AuthDIContainer.getUserRepository(),
         ViewerDIContainer.getMailGateway(),
@@ -48,6 +51,17 @@ export class ViewerDIContainer {
       );
     }
     return ViewerDIContainer.inviteViewerUseCaseInstance;
+  }
+
+  /**
+   * PostgreSQLViewerInvitationUnitOfWorkの共有インスタンスを返す
+   */
+  static getViewerInvitationUnitOfWork(): IViewerInvitationUnitOfWork {
+    if (!ViewerDIContainer.viewerInvitationUnitOfWorkInstance) {
+      ViewerDIContainer.viewerInvitationUnitOfWorkInstance =
+        new PostgreSQLViewerInvitationUnitOfWork();
+    }
+    return ViewerDIContainer.viewerInvitationUnitOfWorkInstance;
   }
 
   /**
@@ -114,5 +128,6 @@ export class ViewerDIContainer {
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;
     ViewerDIContainer.tokenHasherInstance = null;
+    ViewerDIContainer.viewerInvitationUnitOfWorkInstance = null;
   }
 }

@@ -36,6 +36,11 @@ const queryClient = postgres(dbConfig.url, {
  */
 export const db = drizzle(queryClient, { schema });
 
+/** トランザクション内で処理を実行する際のスコープの型 */
+export type DatabaseTransaction = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
+
 /**
  * トランザクション内で処理を実行
  *
@@ -46,9 +51,9 @@ export const db = drizzle(queryClient, { schema });
  * @returns コールバック関数の実行結果
  */
 export async function executeTransaction<T>(
-  fn: Parameters<typeof db.transaction>[0],
+  fn: (tx: DatabaseTransaction) => Promise<T>,
 ): Promise<T> {
-  return (await db.transaction(fn)) as T;
+  return db.transaction(fn);
 }
 
 /**
@@ -62,3 +67,5 @@ export const closeConnection = async () => {
 // 型定義のエクスポート
 export { schema };
 export type Database = typeof db;
+/** 通常のDBインスタンスとトランザクションの両方を受け付けるRepository用の型 */
+export type DatabaseOrTransaction = Database | DatabaseTransaction;
