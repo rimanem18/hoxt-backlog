@@ -1,3 +1,7 @@
+---
+description: Supabaseのidentity linkingをON にした環境で、AuthMiddlewareやAuthenticationDomainServiceなど`findByExternalId(externalId, provider)`でユーザーを検索する処理を実装・変更するときに参照する。同一人物が複数プロバイダー（Google+emailなど）でサインインし`provider`が変化しても`sub`は同一になるため、providerが切り替わった合流ユーザーが後続API呼び出しで401になる場合や、`AuthProvider`型に新しいプロバイダーを追加する場合に該当する。
+---
+
 # Supabase identity linking ON 環境での provider 不一致問題
 
 ## 背景
