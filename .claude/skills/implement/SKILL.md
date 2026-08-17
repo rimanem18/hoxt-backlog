@@ -38,7 +38,36 @@ effort: medium
 
 ## ナレッジの確認
 
-作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。knowledge にはフロントマターがあるものもあるため、まずは必要かどうかそこで見極めて読みます。
+作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。knowledge の frontmatter には description が必ず設定されている前提とし、まず description を見て関連性を見極めてから本文を読むかどうか判断します。
+
+- **禁止**: `ls knowledge/ | grep <keyword>` のようなファイル名ベースの検索
+  - `knowledge/` 直下はカテゴリ別サブディレクトリ（`auth/` `backend/` `e2e/` `frontend/`）であり、`ls` は非再帰のためファイルが一切列挙されない
+  - 仮に再帰化しても、関連する知見はファイル名ではなく description 本文にしか現れないことが多く（例: `project_viewers` というテーブル名はファイル名になく description 内にのみ記載）、ファイル名一致では見逃す
+- **必須**: description 本文に対してキーワード検索し、ヒットが無ければ全件一覧にフォールバックする。以下の `search_knowledge` 関数を使う（ファイル数に依らず `grep` 1回 + `awk` 1回の固定コストで、ループでファイルごとに `grep` を起動しない）
+
+```sh
+search_knowledge() {
+  local keyword="$1"
+  local base="knowledge"
+  local hits
+  hits=$(grep -rH '^description: ' "$base" --include='*.md' | grep -i "$keyword")
+  if [ -z "$hits" ]; then
+    echo "[キーワード「$keyword」に一致なし。全件を表示します]"
+    echo
+    hits=$(grep -rH '^description: ' "$base" --include='*.md')
+  fi
+  echo "$hits" | awk '{
+    idx = index($0, ":description: ");
+    path = substr($0, 1, idx-1);
+    desc = substr($0, idx+1);
+    n = split(path, parts, "/");
+    print parts[n];
+    print desc;
+    print "";
+  }'
+}
+search_knowledge "<今回のフェーズに関連するドメイン語・技術キーワード>"
+```
 
 ## 実行内容
 
