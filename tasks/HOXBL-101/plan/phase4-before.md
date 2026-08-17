@@ -32,7 +32,7 @@ Phase 4・5は`InviteViewerUseCase`に新しい分岐（別project追加招待�
 
 ## 6. タスク一覧
 
-- [ ] **TASK-4B-01: `IViewerInvitationUnitOfWork`ポート定義とPostgreSQL実装（Red→Green）**
+- [x] **TASK-4B-01: `IViewerInvitationUnitOfWork`ポート定義とPostgreSQL実装（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: Phase 3
   - **関連要件**: REQ-101, REQ-102, REQ-303
@@ -44,7 +44,7 @@ Phase 4・5は`InviteViewerUseCase`に新しい分岐（別project追加招待�
   - **完了条件**: コールバック内の複数Repository呼び出しが単一のDBトランザクションとして扱われる。コールバック内で例外が発生した場合、それまでに行われた書き込みがすべてロールバックされること
   - **統合テスト要件**: `app/server/src/viewer/infrastructure/__tests__/PostgreSQLViewerInvitationUnitOfWork.test.ts`に配置。招待保存後にトークン保存が例外を投げるコールバックを渡し、招待側もDBに残らないことをDB直接確認で検証する。正常系（両方成功しコミットされる）も確認する
 
-- [ ] **TASK-4B-02: `InviteViewerUseCase`をUnit of Work経由に書き換え（Red→Green）**
+- [x] **TASK-4B-02: `InviteViewerUseCase`をUnit of Work経由に書き換え（Red→Green）**
   - **タイプ**: TDD
   - **依存タスク**: TASK-4B-01
   - **関連要件**: REQ-101, REQ-102, REQ-303
@@ -57,14 +57,14 @@ Phase 4・5は`InviteViewerUseCase`に新しい分岐（別project追加招待�
   - **完了条件**: 既存の統合テスト・単体テストがすべてグリーンのまま、内部実装がUnit of Work経由になっていること
   - **単体テスト要件**: `InviteViewerUseCase.test.ts`をUnit of Workのモック注入に合わせて更新する。「トークン保存が失敗した場合、招待の`deleteById`は呼ばれない（DBロールバックにより不要）」という観点のテストに置き換える。メール送信失敗時の補償削除テストはそのまま維持する
 
-- [ ] **TASK-4B-03: `ViewerDIContainer`の更新（DIRECT）**
+- [x] **TASK-4B-03: `ViewerDIContainer`の更新（DIRECT）**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-4B-01, TASK-4B-02
   - **関連要件**: なし（インフラ）
   - **実装詳細**: `ViewerDIContainer`に`getViewerInvitationUnitOfWork()`を追加し、`getInviteViewerUseCase()`の依存解決を更新する。個別Repositoryの公開メソッド（`getProjectViewerRepository()`/`getViewerAccessTokenRepository()`）は、他の用途（Phase 4以降の一覧・取り消し等）で引き続き必要なため残す
   - **完了条件**: `InviteViewerUseCase`が`ViewerDIContainer`経由で正しく構築できること
 
-- [ ] **TASK-4B-04: 回帰確認（DIRECT）**
+- [x] **TASK-4B-04: 回帰確認（DIRECT）**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-4B-01〜03
   - **実装詳細**: `bunx tsc --noEmit`（server/client）、`bun test`、`bun run check`、`docker compose run --rm semgrep semgrep`、`docker compose build server`を実行し、Phase 3で実装済みの統合テスト（`viewerManagementRoutes.integration.test.ts`）が既存の振る舞い（201/400/404/502）を維持することを確認する
@@ -79,4 +79,23 @@ Phase 4・5は`InviteViewerUseCase`に新しい分岐（別project追加招待�
 
 ## 8. 実施記録
 
-（実施時に記入する）
+- 開始時刻: 2026-08-17 17:34 JST
+- 終了時刻: 2026-08-17 17:56 JST
+- 合計時間: 約22分（typecheck/test/lint/build/semgrepの実行時間を含む）
+
+### 差異の記録
+
+- **TASK-4B-01のRed-Green実施順序**: メインエージェントが`PostgreSQLViewerInvitationUnitOfWork.test.ts`と`InviteViewerUseCase.test.ts`（既存テストの改修）をRedとして先に書き、`green-minimal-implementer`サブエージェントに実装を委譲した。1回目の依頼で`PostgreSQLViewerInvitationUnitOfWork`本体は完成したが、`InviteViewerUseCase`本体・`ViewerDIContainer`の更新（TASK-4B-02/03相当）が未完のまま応答が終了したため、同一サブエージェントに`SendMessage`で続行を依頼して完了させた
+- **型調整（TASK-4B-01完了条件）**: 想定通り、`PostgreSQLProjectViewerRepository`/`PostgreSQLViewerAccessTokenRepository`のコンストラクタ引数型`Database`が、トランザクションコールバックの`tx`型を受け付けられなかったため、`DatabaseConnection.ts`に`DatabaseOrTransaction`型（`Database | DatabaseTransaction`のユニオン）を追加し、両Repositoryのコンストラクタ引数型をこれに変更した
+- **Refactorフェーズでの設計修正**: Green実装の1回目では、`InviteViewerUseCase`のコンストラクタに`unitOfWork`を追加する一方で`IProjectViewerRepository`/`IViewerAccessTokenRepository`の直接注入も残す実装になっていた（メール送信失敗時の`compensate`がトランザクション外で直接Repositoryを呼ぶため）。しかしTASK-4B-02の実装詳細は「コンストラクタから`IProjectViewerRepository`/`IViewerAccessTokenRepository`の直接注入を外す」ことを明記しており、これはRed（テスト）を書いたメインエージェント側の見落としだった。Codex MCPによるコードレビュー（efficiency/altitude観点）で「unitOfWorkと同じRepositoryの直接注入が二重化しており抽象度が不明瞭」との指摘を受け、Refactorフェーズで計画通りに修正した。`compensate`は招待・トークンそれぞれについて`unitOfWork.execute()`を個別に（1件ずつ独立したトランザクションとして）呼ぶ形に変更し、直接Repository注入を完全に排除した
+- **`executeTransaction`の型整理**: Codexレビュー（reuse/simplification観点）の指摘を受け、`DatabaseTransaction`型を`executeTransaction`のコールバック引数型として直接利用する形に変更し、`as T`キャストと型定義の二重管理を解消した。あわせて`knip`が指摘していた「未使用exported型`DatabaseTransaction`」も解消された
+- **Codexレビューで見送った指摘**: 「補償削除2件を`Promise.allSettled`で並列化できる」という低優先度の提案は、メール送信失敗時のみ通る例外経路であり通常時の性能に影響しないため見送った。「design.md 5.1節が要求する既存招待・既存トークンの状態別分岐が未実装」という指摘は、Phase 4-before自体の非スコープ（Phase 4で対応予定）であるため対応不要と判断した
+
+### 所要時間
+
+- `bunx tsc --noEmit`（server/client）: エラーゼロ
+- `bun test`（server）: 908 pass / 0 fail（2566 expect calls、約20〜25秒）
+- `bun run fix`（Biome lint & format、server/client）: 修正なし
+- `docker compose build server`: 正常にビルド完了
+- `semgrep --config auto`（viewer関連パス対象）: 213ルール・83ファイルスキャンで0 findings
+- `bun run knip`: 今回の変更ファイル起因の新規指摘なし（既存の技術的負債はPhase1から継続。`DatabaseTransaction`の未使用export指摘はリファクタリングにより解消）
