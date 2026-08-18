@@ -7,8 +7,12 @@ import { db } from '@/shared/database/DatabaseConnection';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
 import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMailGateway';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
+import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
+import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import type { IViewerInvitationUnitOfWork } from '@/viewer/application/IViewerInvitationUnitOfWork';
+import { ListProjectViewersUseCase } from '@/viewer/application/ListProjectViewersUseCase';
+import { RevokeViewerUseCase } from '@/viewer/application/RevokeViewerUseCase';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { FakeInvitationMailGateway } from './FakeInvitationMailGateway';
@@ -27,6 +31,9 @@ import { TokenHasher } from './TokenHasher';
  */
 export class ViewerDIContainer {
   private static inviteViewerUseCaseInstance: InviteViewerUseCase | null = null;
+  private static listProjectViewersUseCaseInstance: ListProjectViewersUseCase | null =
+    null;
+  private static revokeViewerUseCaseInstance: RevokeViewerUseCase | null = null;
   private static projectViewerRepositoryInstance: PostgreSQLProjectViewerRepository | null =
     null;
   private static viewerAccessTokenRepositoryInstance: PostgreSQLViewerAccessTokenRepository | null =
@@ -51,6 +58,33 @@ export class ViewerDIContainer {
       );
     }
     return ViewerDIContainer.inviteViewerUseCaseInstance;
+  }
+
+  /**
+   * ListProjectViewersUseCaseのインスタンスを返す
+   */
+  static getListProjectViewersUseCase(): IListProjectViewersUseCase {
+    if (!ViewerDIContainer.listProjectViewersUseCaseInstance) {
+      ViewerDIContainer.listProjectViewersUseCaseInstance =
+        new ListProjectViewersUseCase(
+          ProjectDIContainer.getProjectRepository(),
+          ViewerDIContainer.getProjectViewerRepository(),
+        );
+    }
+    return ViewerDIContainer.listProjectViewersUseCaseInstance;
+  }
+
+  /**
+   * RevokeViewerUseCaseのインスタンスを返す
+   */
+  static getRevokeViewerUseCase(): IRevokeViewerUseCase {
+    if (!ViewerDIContainer.revokeViewerUseCaseInstance) {
+      ViewerDIContainer.revokeViewerUseCaseInstance = new RevokeViewerUseCase(
+        ProjectDIContainer.getProjectRepository(),
+        ViewerDIContainer.getProjectViewerRepository(),
+      );
+    }
+    return ViewerDIContainer.revokeViewerUseCaseInstance;
   }
 
   /**
@@ -124,6 +158,8 @@ export class ViewerDIContainer {
     }
 
     ViewerDIContainer.inviteViewerUseCaseInstance = null;
+    ViewerDIContainer.listProjectViewersUseCaseInstance = null;
+    ViewerDIContainer.revokeViewerUseCaseInstance = null;
     ViewerDIContainer.projectViewerRepositoryInstance = null;
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;

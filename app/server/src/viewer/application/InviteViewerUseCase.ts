@@ -31,11 +31,17 @@ type TokenCompensation =
       oldExpiresAt: Date;
     };
 
+// トークンと同様に、招待に対して行った操作（新規作成 / 取り消し復元）を
+// メール送信失敗時に取り消せるよう型で保持しておく。
+type ViewerCompensation =
+  | { type: 'none' }
+  | { type: 'deleteViewer'; viewerId: string }
+  | { type: 'revokeViewer'; viewerId: string };
+
 interface TransactionResult {
   savedViewer: ProjectViewerEntity;
-  mailNeeded: boolean;
   rawToken: string | null;
-  createdViewerId: string | null;
+  viewerCompensation: ViewerCompensation;
   tokenCompensation: TokenCompensation;
 }
 
@@ -44,8 +50,8 @@ interface TransactionResult {
  *
  * 招待保存・アクセストークン発行はUnit of Work経由で単一のDBトランザクション
  * として実行し、招待メール送信はコミット後（トランザクション外）に行う。
- * 既存の招待・トークンの状態（no-op / 追加招待 / 期限切れ再発行）に応じて
- * トランザクション内での保存内容を分岐する。
+ * 既存の招待・トークンの状態（no-op / 追加招待 / 期限切れ再発行 / 取り消し済み
+ * 招待の復元）に応じてトランザクション内での保存内容を分岐する。
  * メール送信失敗時は保存済みデータを補償操作で削除・復元する。
  */
 export class InviteViewerUseCase implements IInviteViewerUseCase {
@@ -79,101 +85,104 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
       throw new InvalidViewerDataError('自分自身を招待できません');
     }
 
-    const {
-      savedViewer,
-      mailNeeded,
-      rawToken,
-      createdViewerId,
-      tokenCompensation,
-    } = await this.unitOfWork.execute<TransactionResult>(async (repos) => {
-      const now = new Date();
-      const existingViewer =
-        await repos.projectViewerRepository.findByProjectAndEmail(
-          input.projectId,
-          normalizedEmail,
-        );
-      const existingToken =
-        await repos.viewerAccessTokenRepository.findByEmail(normalizedEmail);
-
-      if (
-        existingViewer !== null &&
-        existingToken !== null &&
-        !existingToken.isExpired(now)
-      ) {
-        return {
-          savedViewer: existingViewer,
-          mailNeeded: false,
-          rawToken: null,
-          createdViewerId: null,
-          tokenCompensation: { type: 'none' },
-        };
-      }
-
-      let savedViewer: ProjectViewerEntity;
-      let createdViewerId: string | null = null;
-      if (existingViewer === null) {
-        const viewer = ProjectViewerEntity.create({
-          projectId: input.projectId,
-          email: normalizedEmail,
-        });
-        savedViewer = await repos.projectViewerRepository.save(viewer);
-        createdViewerId = savedViewer.getId();
-      } else {
-        savedViewer = existingViewer;
-      }
-
-      let mailNeeded = false;
-      let rawToken: string | null = null;
-      let tokenCompensation: TokenCompensation = { type: 'none' };
-
-      const needsTokenIssuance =
-        existingToken === null || existingToken.isExpired(now);
-      if (needsTokenIssuance) {
-        const newRawToken = this.tokenHasher.generate();
-        const tokenHash = this.tokenHasher.hash(newRawToken);
-        const expiresAt = new Date(now.getTime() + VIEWER_TOKEN_TTL_MS);
-
-        if (existingToken === null) {
-          const accessToken = ViewerAccessTokenEntity.create({
-            email: normalizedEmail,
-            rawToken: newRawToken,
-            tokenHash,
-            expiresAt,
-          });
-          const savedAccessToken =
-            await repos.viewerAccessTokenRepository.save(accessToken);
-          tokenCompensation = {
-            type: 'deleteToken',
-            tokenId: savedAccessToken.getId(),
-          };
-        } else {
-          await repos.viewerAccessTokenRepository.replace(
-            existingToken.getId(),
-            tokenHash,
-            expiresAt,
+    const { savedViewer, rawToken, viewerCompensation, tokenCompensation } =
+      await this.unitOfWork.execute<TransactionResult>(async (repos) => {
+        const now = new Date();
+        const existingViewer =
+          await repos.projectViewerRepository.findByProjectAndEmail(
+            input.projectId,
+            normalizedEmail,
           );
-          tokenCompensation = {
-            type: 'restoreToken',
-            tokenId: existingToken.getId(),
-            oldTokenHash: existingToken.getTokenHash(),
-            oldExpiresAt: existingToken.getExpiresAt(),
+        const existingToken =
+          await repos.viewerAccessTokenRepository.findByEmail(normalizedEmail);
+
+        if (
+          existingViewer !== null &&
+          existingViewer.getStatus() === 'active' &&
+          existingToken !== null &&
+          !existingToken.isExpired(now)
+        ) {
+          return {
+            savedViewer: existingViewer,
+            rawToken: null,
+            viewerCompensation: { type: 'none' },
+            tokenCompensation: { type: 'none' },
           };
         }
 
-        rawToken = newRawToken;
-        mailNeeded = true;
-      }
+        let savedViewer: ProjectViewerEntity;
+        let viewerCompensation: ViewerCompensation = { type: 'none' };
+        if (existingViewer === null) {
+          const viewer = ProjectViewerEntity.create({
+            projectId: input.projectId,
+            email: normalizedEmail,
+          });
+          savedViewer = await repos.projectViewerRepository.save(viewer);
+          viewerCompensation = {
+            type: 'deleteViewer',
+            viewerId: savedViewer.getId(),
+          };
+        } else if (existingViewer.getStatus() === 'revoked') {
+          existingViewer.restore();
+          savedViewer =
+            await repos.projectViewerRepository.save(existingViewer);
+          viewerCompensation = {
+            type: 'revokeViewer',
+            viewerId: existingViewer.getId(),
+          };
+        } else {
+          savedViewer = existingViewer;
+        }
 
-      return {
-        savedViewer,
-        mailNeeded,
-        rawToken,
-        createdViewerId,
-        tokenCompensation,
-      };
-    });
+        let rawToken: string | null = null;
+        let tokenCompensation: TokenCompensation = { type: 'none' };
 
-    if (!mailNeeded) {
+        const needsTokenIssuance =
+          existingToken === null || existingToken.isExpired(now);
+        if (needsTokenIssuance) {
+          const newRawToken = this.tokenHasher.generate();
+          const tokenHash = this.tokenHasher.hash(newRawToken);
+          const expiresAt = new Date(now.getTime() + VIEWER_TOKEN_TTL_MS);
+
+          if (existingToken === null) {
+            const accessToken = ViewerAccessTokenEntity.create({
+              email: normalizedEmail,
+              rawToken: newRawToken,
+              tokenHash,
+              expiresAt,
+            });
+            const savedAccessToken =
+              await repos.viewerAccessTokenRepository.save(accessToken);
+            tokenCompensation = {
+              type: 'deleteToken',
+              tokenId: savedAccessToken.getId(),
+            };
+          } else {
+            await repos.viewerAccessTokenRepository.replace(
+              existingToken.getId(),
+              tokenHash,
+              expiresAt,
+            );
+            tokenCompensation = {
+              type: 'restoreToken',
+              tokenId: existingToken.getId(),
+              oldTokenHash: existingToken.getTokenHash(),
+              oldExpiresAt: existingToken.getExpiresAt(),
+            };
+          }
+
+          rawToken = newRawToken;
+        }
+
+        return {
+          savedViewer,
+          rawToken,
+          viewerCompensation,
+          tokenCompensation,
+        };
+      });
+
+    if (rawToken === null) {
       return savedViewer;
     }
 
@@ -186,7 +195,7 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
         accessUrl,
       );
     } catch (error) {
-      await this.compensate(createdViewerId, tokenCompensation);
+      await this.compensate(viewerCompensation, tokenCompensation);
       const reason = error instanceof Error ? error.message : String(error);
       throw new InvitationMailDeliveryError(
         `招待メールの送信に失敗しました: ${reason}`,
@@ -204,16 +213,24 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
    * 一貫してスローできるようにする。
    */
   private async compensate(
-    createdViewerId: string | null,
+    viewerCompensation: ViewerCompensation,
     tokenCompensation: TokenCompensation,
   ): Promise<void> {
-    if (createdViewerId !== null) {
+    if (viewerCompensation.type === 'deleteViewer') {
       try {
         await this.unitOfWork.execute((repos) =>
-          repos.projectViewerRepository.deleteById(createdViewerId),
+          repos.projectViewerRepository.deleteById(viewerCompensation.viewerId),
         );
       } catch (error) {
         console.error('招待の補償削除に失敗しました', error);
+      }
+    } else if (viewerCompensation.type === 'revokeViewer') {
+      try {
+        await this.unitOfWork.execute((repos) =>
+          repos.projectViewerRepository.revoke(viewerCompensation.viewerId),
+        );
+      } catch (error) {
+        console.error('招待の補償取り消しに失敗しました', error);
       }
     }
 

@@ -182,4 +182,165 @@ describe('PostgreSQLProjectViewerRepository', () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe('revoke', () => {
+    test('招待をrevoked状態に更新できる', async () => {
+      // Given: active状態の招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'revoke-target@example.com',
+      });
+      await repository.save(entity);
+
+      // When: revokeを実行
+      await repository.revoke(entity.getId());
+
+      // Then: statusがrevokedになりrevokedAtが設定される
+      const found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'revoke-target@example.com',
+      );
+      expect(found?.getStatus()).toBe('revoked');
+      expect(found?.getRevokedAt()).not.toBeNull();
+    });
+  });
+
+  describe('restore', () => {
+    test('取り消し済みの招待をactive状態に復元できる', async () => {
+      // Given: revoked状態の招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'restore-target@example.com',
+      });
+      await repository.save(entity);
+      await repository.revoke(entity.getId());
+
+      // When: restoreを実行
+      await repository.restore(entity.getId());
+
+      // Then: statusがactiveになりrevokedAtがクリアされる
+      const found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'restore-target@example.com',
+      );
+      expect(found?.getStatus()).toBe('active');
+      expect(found?.getRevokedAt()).toBeNull();
+    });
+
+    test('active→revoke→restore→revokeと操作すると各段階で状態が正しい', async () => {
+      // Given: active状態の招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'cycle-target@example.com',
+      });
+      await repository.save(entity);
+
+      // When & Then: revoke→restore→revokeの各段階で状態が正しい
+      await repository.revoke(entity.getId());
+      let found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'cycle-target@example.com',
+      );
+      expect(found?.getStatus()).toBe('revoked');
+      expect(found?.getRevokedAt()).not.toBeNull();
+
+      await repository.restore(entity.getId());
+      found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'cycle-target@example.com',
+      );
+      expect(found?.getStatus()).toBe('active');
+      expect(found?.getRevokedAt()).toBeNull();
+
+      await repository.revoke(entity.getId());
+      found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'cycle-target@example.com',
+      );
+      expect(found?.getStatus()).toBe('revoked');
+      expect(found?.getRevokedAt()).not.toBeNull();
+    });
+  });
+
+  describe('findActiveByProject', () => {
+    test('activeな招待のみをemail昇順で取得できる', async () => {
+      // Given: active2件・revoked1件の招待（emailは非昇順で保存）
+      const viewerB = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'b-viewer@example.com',
+      });
+      const viewerA = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'a-viewer@example.com',
+      });
+      const revoked = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'c-revoked@example.com',
+      });
+      revoked.revoke();
+      await repository.save(viewerB);
+      await repository.save(viewerA);
+      await repository.save(revoked);
+
+      // When: プロジェクトのactive招待一覧を取得
+      const result = await repository.findActiveByProject(testProjectId);
+
+      // Then: revoked分を除外し、email昇順で返す
+      expect(result.map((v) => v.getEmail())).toEqual([
+        'a-viewer@example.com',
+        'b-viewer@example.com',
+      ]);
+    });
+
+    test('該当する招待が0件の場合は空配列を返す（境界値）', async () => {
+      // When: 招待が1件もないプロジェクトで取得
+      const result = await repository.findActiveByProject(testProjectId);
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+
+    test('別プロジェクトの招待は含まれない', async () => {
+      // Given: 別プロジェクトへの招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId2,
+        email: 'other-project@example.com',
+      });
+      await repository.save(entity);
+
+      // When: testProjectIdで取得
+      const result = await repository.findActiveByProject(testProjectId);
+
+      // Then: 別プロジェクトの招待は含まれない
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findById', () => {
+    test('IDで招待を取得できる', async () => {
+      // Given: 保存済みの招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'findbyid-target@example.com',
+      });
+      await repository.save(entity);
+
+      // When: IDで検索
+      const found = await repository.findById(entity.getId());
+
+      // Then: 招待が取得できる
+      expect(found).not.toBeNull();
+      expect(found?.getId()).toBe(entity.getId());
+    });
+
+    test('存在しないIDの場合nullを返す', async () => {
+      // When: 存在しないIDで検索
+      const found = await repository.findById(
+        '999e4567-e89b-12d3-a456-426614174999',
+      );
+
+      // Then: nullが返る
+      expect(found).toBeNull();
+    });
+  });
 });

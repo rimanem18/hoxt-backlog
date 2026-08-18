@@ -1,5 +1,7 @@
 import { type Mock, mock } from 'bun:test';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
+import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
+import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
 
 /**
@@ -9,6 +11,12 @@ export interface MockUseCases {
   inviteViewerUseCase: {
     execute: Mock<IInviteViewerUseCase['execute']>;
   };
+  listProjectViewersUseCase: {
+    execute: Mock<IListProjectViewersUseCase['execute']>;
+  };
+  revokeViewerUseCase: {
+    execute: Mock<IRevokeViewerUseCase['execute']>;
+  };
 }
 
 /**
@@ -17,6 +25,12 @@ export interface MockUseCases {
 export function mockUseCases(): MockUseCases {
   return {
     inviteViewerUseCase: {
+      execute: mock(),
+    },
+    listProjectViewersUseCase: {
+      execute: mock(),
+    },
+    revokeViewerUseCase: {
       execute: mock(),
     },
   };

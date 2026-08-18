@@ -34,8 +34,15 @@ export const inviteViewerResponseSchema = apiResponseSchema(
   projectViewerSchema,
 ).openapi('InviteViewerResponse');
 
+export const listProjectViewersResponseSchema = apiResponseSchema(
+  z.array(projectViewerSchema),
+).openapi('ListProjectViewersResponse');
+
 // ===== 型エクスポート =====
 
 export type ProjectViewer = z.infer<typeof projectViewerSchema>;
 export type InviteViewerInput = z.infer<typeof inviteViewerSchema>;
 export type InviteViewerResponse = z.infer<typeof inviteViewerResponseSchema>;
+export type ListProjectViewersResponse = z.infer<
+  typeof listProjectViewersResponseSchema
+>;

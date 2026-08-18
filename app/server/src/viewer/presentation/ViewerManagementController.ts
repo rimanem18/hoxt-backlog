@@ -1,5 +1,7 @@
 import type { Context } from 'hono';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
+import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
+import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import type { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
 
 /**
@@ -25,6 +27,14 @@ interface SuccessResponseSingle {
 }
 
 /**
+ * 成功レスポンス型（配列）
+ */
+interface SuccessResponseArray {
+  success: true;
+  data: ProjectViewerDTO[];
+}
+
+/**
  * ViewerManagementControllerクラス
  *
  * Presentation層のコントローラ。HTTPリクエストを受け取り、
@@ -32,7 +42,11 @@ interface SuccessResponseSingle {
  * エラーハンドリングはerrorMiddlewareに委譲する。
  */
 export class ViewerManagementController {
-  constructor(private readonly inviteViewerUseCase: IInviteViewerUseCase) {}
+  constructor(
+    private readonly inviteViewerUseCase: IInviteViewerUseCase,
+    private readonly listProjectViewersUseCase: IListProjectViewersUseCase,
+    private readonly revokeViewerUseCase: IRevokeViewerUseCase,
+  ) {}
 
   /**
    * viewer招待エンドポイント
@@ -60,6 +74,47 @@ export class ViewerManagementController {
       },
       201,
     );
+  }
+
+  /**
+   * viewer一覧取得エンドポイント
+   *
+   * GET /api/projects/:projectId/viewers
+   *
+   * @param c - Honoコンテキスト
+   * @returns 200レスポンス（招待済みviewer一覧）
+   */
+  async list(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const projectId = c.req.param('projectId') as string;
+
+    const viewers = await this.listProjectViewersUseCase.execute({
+      userId,
+      projectId,
+    });
+
+    return c.json<SuccessResponseArray>(
+      { success: true, data: viewers.map((viewer) => this.toDTO(viewer)) },
+      200,
+    );
+  }
+
+  /**
+   * viewer招待取り消しエンドポイント
+   *
+   * DELETE /api/projects/:projectId/viewers/:viewerId
+   *
+   * @param c - Honoコンテキスト
+   * @returns 204レスポンス
+   */
+  async revoke(c: Context): Promise<Response> {
+    const userId = c.get('userId') as string;
+    const projectId = c.req.param('projectId') as string;
+    const viewerId = c.req.param('viewerId') as string;
+
+    await this.revokeViewerUseCase.execute({ userId, projectId, viewerId });
+
+    return c.body(null, 204);
   }
 
   /**

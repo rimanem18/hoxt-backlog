@@ -30,4 +30,30 @@ export interface IProjectViewerRepository {
    * @param id - 削除対象の招待ID
    */
   deleteById(id: string): Promise<void>;
+
+  /**
+   * 招待を取り消す（statusをrevokedにしrevokedAtを設定する）
+   * @param id - 取り消し対象の招待ID
+   */
+  revoke(id: string): Promise<void>;
+
+  /**
+   * 取り消し済みの招待を復元する（statusをactiveに戻しrevokedAtをクリアする）
+   * @param id - 復元対象の招待ID
+   */
+  restore(id: string): Promise<void>;
+
+  /**
+   * projectIdに紐づくactive状態の招待をemail昇順で取得する
+   * @param projectId - プロジェクトID
+   * @returns active状態のProjectViewerEntity配列
+   */
+  findActiveByProject(projectId: string): Promise<ProjectViewerEntity[]>;
+
+  /**
+   * IDで招待を取得する
+   * @param id - 招待ID
+   * @returns 見つかったProjectViewerEntity、存在しない場合はnull
+   */
+  findById(id: string): Promise<ProjectViewerEntity | null>;
 }

@@ -47,6 +47,10 @@ function createDeps() {
     findByProjectAndEmail: mock(() => Promise.resolve(null)),
     save: mock((entity) => Promise.resolve(entity)),
     deleteById: mock(() => Promise.resolve()),
+    revoke: mock(() => Promise.resolve()),
+    restore: mock(() => Promise.resolve()),
+    findActiveByProject: mock(() => Promise.resolve([])),
+    findById: mock(() => Promise.resolve(null)),
   };
   const viewerAccessTokenRepository: IViewerAccessTokenRepository = {
     findByEmail: mock(() => Promise.resolve(null)),
@@ -266,7 +270,7 @@ describe('InviteViewerUseCase', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  test('別projectへの追加招待では有効トークンを持つメールアドレスに新しい招待のみ作成される（AC-02, REQ-103）', async () => {
+  test('別projectへの追加招待では有効トークンを持つメールアドレスに新しい招待のみ作成される', async () => {
     // Given: 招待は存在せず、既に有効なトークンを持つメールアドレス
     const deps = createDeps();
     const validToken = ViewerAccessTokenEntity.create({
@@ -295,7 +299,7 @@ describe('InviteViewerUseCase', () => {
     expect(deps.mailGateway.send).not.toHaveBeenCalled();
   });
 
-  test('既にactive招待+有効トークンの組み合わせへの再招待は完全にno-opになる（REQ-502）', async () => {
+  test('既にactive招待+有効トークンの組み合わせへの再招待は完全にno-opになる', async () => {
     // Given: 既にactive状態の招待と有効なトークンが存在する
     const deps = createDeps();
     const existingViewer = ProjectViewerEntity.create({
@@ -333,7 +337,7 @@ describe('InviteViewerUseCase', () => {
     expect(deps.mailGateway.send).not.toHaveBeenCalled();
   });
 
-  test('招待済み(active)だがトークンが期限切れの場合、同一projectへの再招待で新トークンが発行されメールが再送信される（AC-03, REQ-501）', async () => {
+  test('招待済み(active)だがトークンが期限切れの場合、同一projectへの再招待で新トークンが発行されメールが再送信される', async () => {
     // Given: active状態の招待と期限切れトークンが存在する
     const deps = createDeps();
     const existingViewer = ProjectViewerEntity.create({
@@ -376,7 +380,7 @@ describe('InviteViewerUseCase', () => {
     expect(deps.mailGateway.send).toHaveBeenCalledTimes(1);
   });
 
-  test('期限切れトークン再発行時にメール送信が失敗すると旧トークンの値へ復元される（AC-03補償）', async () => {
+  test('期限切れトークン再発行時にメール送信が失敗すると旧トークンの値へ復元される（補償）', async () => {
     // Given: active状態の招待と期限切れトークンが存在し、メール送信が失敗する
     const deps = createDeps();
     const existingViewer = ProjectViewerEntity.create({
@@ -415,6 +419,137 @@ describe('InviteViewerUseCase', () => {
     expect(deps.projectViewerRepository.deleteById).not.toHaveBeenCalled();
     expect(deps.viewerAccessTokenRepository.deleteById).not.toHaveBeenCalled();
     expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledTimes(2);
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenLastCalledWith(
+      expiredToken.getId(),
+      expiredToken.getTokenHash(),
+      expiredToken.getExpiresAt(),
+    );
+  });
+
+  test('取り消し済み招待+有効トークンへの再招待で招待が復元されメールは送信されない', async () => {
+    // Given: revoked状態の招待と有効なトークンが存在する
+    const deps = createDeps();
+    const revokedViewer = ProjectViewerEntity.create({
+      projectId: testProjectId,
+      email: 'viewer@example.com',
+    });
+    revokedViewer.revoke();
+    const validToken = ViewerAccessTokenEntity.create({
+      email: 'viewer@example.com',
+      rawToken: 'existing-raw-token',
+      tokenHash: 'existing-hash',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+    (
+      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
+        typeof mock
+      >
+    ).mockResolvedValue(revokedViewer);
+    (
+      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
+    ).mockResolvedValue(validToken);
+    const useCase = createUseCase(deps);
+
+    // When: 同じproject×emailへ再招待
+    const result = await useCase.execute({
+      userId: testUserId,
+      projectId: testProjectId,
+      email: 'viewer@example.com',
+    });
+
+    // Then: 招待がactiveに復元され保存される。トークン・メールは変化しない
+    expect(result.getStatus()).toBe('active');
+    expect(deps.projectViewerRepository.save).toHaveBeenCalledTimes(1);
+    const savedEntity = (
+      deps.projectViewerRepository.save as ReturnType<typeof mock>
+    ).mock.calls[0]?.[0] as ProjectViewerEntity;
+    expect(savedEntity.getId()).toBe(revokedViewer.getId());
+    expect(savedEntity.getStatus()).toBe('active');
+    expect(deps.projectViewerRepository.restore).not.toHaveBeenCalled();
+    expect(deps.viewerAccessTokenRepository.save).not.toHaveBeenCalled();
+    expect(deps.viewerAccessTokenRepository.replace).not.toHaveBeenCalled();
+    expect(deps.mailGateway.send).not.toHaveBeenCalled();
+  });
+
+  test('取り消し済み招待+期限切れトークンへの再招待で招待復元とトークン再発行の両方が行われメールが送信される（複合）', async () => {
+    // Given: revoked状態の招待と期限切れトークンが存在する
+    const deps = createDeps();
+    const revokedViewer = ProjectViewerEntity.create({
+      projectId: testProjectId,
+      email: 'viewer@example.com',
+    });
+    revokedViewer.revoke();
+    const expiredToken = ViewerAccessTokenEntity.create({
+      email: 'viewer@example.com',
+      rawToken: 'expired-raw-token',
+      tokenHash: 'expired-hash',
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    (
+      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
+        typeof mock
+      >
+    ).mockResolvedValue(revokedViewer);
+    (
+      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
+    ).mockResolvedValue(expiredToken);
+    const useCase = createUseCase(deps);
+
+    // When: 同じproject×emailへ再招待
+    const result = await useCase.execute({
+      userId: testUserId,
+      projectId: testProjectId,
+      email: 'viewer@example.com',
+    });
+
+    // Then: 招待が復元され、トークンも再発行されメールが送信される
+    expect(result.getStatus()).toBe('active');
+    expect(deps.projectViewerRepository.save).toHaveBeenCalledTimes(1);
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledTimes(1);
+    expect(deps.mailGateway.send).toHaveBeenCalledTimes(1);
+  });
+
+  test('取り消し済み招待の復元時にメール送信が失敗すると招待は再度revokedに戻りトークンも復元される（補償）', async () => {
+    // Given: revoked状態の招待と期限切れトークンが存在し、メール送信が失敗する
+    const deps = createDeps();
+    const revokedViewer = ProjectViewerEntity.create({
+      projectId: testProjectId,
+      email: 'viewer@example.com',
+    });
+    revokedViewer.revoke();
+    const expiredToken = ViewerAccessTokenEntity.create({
+      email: 'viewer@example.com',
+      rawToken: 'expired-raw-token',
+      tokenHash: 'expired-hash-value',
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    (
+      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
+        typeof mock
+      >
+    ).mockResolvedValue(revokedViewer);
+    (
+      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
+    ).mockResolvedValue(expiredToken);
+    (deps.mailGateway.send as ReturnType<typeof mock>).mockRejectedValue(
+      new Error('SES送信エラー'),
+    );
+    const useCase = createUseCase(deps);
+
+    // When & Then: 招待がInvitationMailDeliveryErrorになる
+    await expect(
+      useCase.execute({
+        userId: testUserId,
+        projectId: testProjectId,
+        email: 'viewer@example.com',
+      }),
+    ).rejects.toBeInstanceOf(InvitationMailDeliveryError);
+
+    // Then: 招待は再度revokedに戻され、削除はされない。トークンも旧値へ復元される
+    expect(deps.projectViewerRepository.revoke).toHaveBeenCalledWith(
+      revokedViewer.getId(),
+    );
+    expect(deps.projectViewerRepository.deleteById).not.toHaveBeenCalled();
     expect(deps.viewerAccessTokenRepository.replace).toHaveBeenLastCalledWith(
       expiredToken.getId(),
       expiredToken.getTokenHash(),

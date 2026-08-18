@@ -7,13 +7,20 @@ import {
   authMiddleware,
 } from '@/user/presentation/middleware/auth/AuthMiddleware';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
+import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
+import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import {
   InvalidViewerDataError,
   InvitationMailDeliveryError,
+  ViewerNotFoundError,
 } from '@/viewer/domain/errors';
 import { ViewerDIContainer } from '@/viewer/infrastructure/ViewerDIContainer';
 import { ViewerManagementController } from './ViewerManagementController';
-import { inviteViewerRoute } from './viewerManagementRoutes.schema';
+import {
+  inviteViewerRoute,
+  listProjectViewersRoute,
+  revokeViewerRoute,
+} from './viewerManagementRoutes.schema';
 
 /**
  * リクエストボディのZodバリデーション失敗をハンドリングするフック
@@ -49,6 +56,10 @@ const validationHook: Hook<any, any, any, any> = (result, c) => {
 export interface ViewerManagementRoutesDependencies {
   /** viewer招待ユースケース */
   inviteViewerUseCase: IInviteViewerUseCase;
+  /** viewer一覧取得ユースケース */
+  listProjectViewersUseCase: IListProjectViewersUseCase;
+  /** viewer取り消しユースケース */
+  revokeViewerUseCase: IRevokeViewerUseCase;
   /** 認証ミドルウェアオプション（テスト用mockPayloadを含む） */
   authMiddlewareOptions?: AuthMiddlewareOptions;
 }
@@ -67,6 +78,8 @@ export function createViewerManagementRoutes(
 ): OpenAPIHono {
   const controller = new ViewerManagementController(
     dependencies.inviteViewerUseCase,
+    dependencies.listProjectViewersUseCase,
+    dependencies.revokeViewerUseCase,
   );
 
   const app = new OpenAPIHono({ defaultHook: validationHook });
@@ -77,6 +90,10 @@ export function createViewerManagementRoutes(
   // エンドポイントを登録
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
   app.openapi(inviteViewerRoute, (c) => controller.invite(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  app.openapi(listProjectViewersRoute, (c) => controller.list(c) as any);
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+  app.openapi(revokeViewerRoute, (c) => controller.revoke(c) as any);
 
   // グローバルエラーハンドラー
   app.onError((err, c) => {
@@ -102,6 +119,19 @@ export function createViewerManagementRoutes(
           success: false,
           error: {
             code: 'NOT_FOUND',
+            message: err.message,
+          },
+        },
+        404,
+      );
+    }
+
+    if (err instanceof ViewerNotFoundError) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: err.code,
             message: err.message,
           },
         },
@@ -164,6 +194,21 @@ const lazyInviteViewerUseCase: IInviteViewerUseCase = {
 };
 
 /**
+ * 同上の遅延プロキシパターン（viewer一覧取得ユースケース）
+ */
+const lazyListProjectViewersUseCase: IListProjectViewersUseCase = {
+  execute: (input) =>
+    ViewerDIContainer.getListProjectViewersUseCase().execute(input),
+};
+
+/**
+ * 同上の遅延プロキシパターン（viewer取り消しユースケース）
+ */
+const lazyRevokeViewerUseCase: IRevokeViewerUseCase = {
+  execute: (input) => ViewerDIContainer.getRevokeViewerUseCase().execute(input),
+};
+
+/**
  * viewer管理APIのOpenAPIルート定義
  *
  * @hono/zod-openapiを使用したOpenAPI 3.1準拠の実装
@@ -177,6 +222,8 @@ const lazyInviteViewerUseCase: IInviteViewerUseCase = {
  */
 const viewers = createViewerManagementRoutes({
   inviteViewerUseCase: lazyInviteViewerUseCase,
+  listProjectViewersUseCase: lazyListProjectViewersUseCase,
+  revokeViewerUseCase: lazyRevokeViewerUseCase,
 });
 
 export default viewers;

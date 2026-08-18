@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '@/shared/database/DatabaseConnection';
 import { projectViewers } from '@/shared/database/schema';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
@@ -73,6 +73,45 @@ export class PostgreSQLProjectViewerRepository
 
   async deleteById(id: string): Promise<void> {
     await this.db.delete(projectViewers).where(eq(projectViewers.id, id));
+  }
+
+  async revoke(id: string): Promise<void> {
+    await this.db
+      .update(projectViewers)
+      .set({ status: 'revoked', revokedAt: new Date(), updatedAt: new Date() })
+      .where(eq(projectViewers.id, id));
+  }
+
+  async restore(id: string): Promise<void> {
+    await this.db
+      .update(projectViewers)
+      .set({ status: 'active', revokedAt: null, updatedAt: new Date() })
+      .where(eq(projectViewers.id, id));
+  }
+
+  async findActiveByProject(projectId: string): Promise<ProjectViewerEntity[]> {
+    const result = await this.db
+      .select()
+      .from(projectViewers)
+      .where(
+        and(
+          eq(projectViewers.projectId, projectId),
+          eq(projectViewers.status, 'active'),
+        ),
+      )
+      .orderBy(asc(projectViewers.email));
+
+    return result.map((row) => this.toDomain(row));
+  }
+
+  async findById(id: string): Promise<ProjectViewerEntity | null> {
+    const result = await this.db
+      .select()
+      .from(projectViewers)
+      .where(eq(projectViewers.id, id))
+      .limit(1);
+
+    return result[0] ? this.toDomain(result[0]) : null;
   }
 
   /**
