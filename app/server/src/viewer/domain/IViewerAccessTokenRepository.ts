@@ -26,4 +26,17 @@ export interface IViewerAccessTokenRepository {
    * @param id - 削除対象のトークンID
    */
   deleteById(id: string): Promise<void>;
+
+  /**
+   * 既存トークン行を新しいハッシュ・有効期限で置き換える（再発行・補償復元の両方に使用）
+   * @param existingId - 置き換え対象のトークンID
+   * @param newTokenHash - 新しいトークンハッシュ
+   * @param newExpiresAt - 新しい有効期限
+   * @returns 置き換え後のViewerAccessTokenEntity
+   */
+  replace(
+    existingId: string,
+    newTokenHash: string,
+    newExpiresAt: Date,
+  ): Promise<ViewerAccessTokenEntity>;
 }

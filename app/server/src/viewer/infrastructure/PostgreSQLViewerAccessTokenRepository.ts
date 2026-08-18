@@ -71,6 +71,28 @@ export class PostgreSQLViewerAccessTokenRepository
       .where(eq(viewerAccessTokens.id, id));
   }
 
+  async replace(
+    existingId: string,
+    newTokenHash: string,
+    newExpiresAt: Date,
+  ): Promise<ViewerAccessTokenEntity> {
+    const updateResult = await this.db
+      .update(viewerAccessTokens)
+      .set({
+        tokenHash: newTokenHash,
+        expiresAt: newExpiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(viewerAccessTokens.id, existingId))
+      .returning();
+
+    if (!updateResult[0]) {
+      throw new Error('Failed to save viewer access token');
+    }
+
+    return this.toDomain(updateResult[0]);
+  }
+
   /**
    * データベース行からViewerAccessTokenEntityドメインオブジェクトに変換する
    *

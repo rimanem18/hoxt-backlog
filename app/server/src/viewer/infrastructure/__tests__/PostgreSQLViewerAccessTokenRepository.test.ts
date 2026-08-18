@@ -121,4 +121,79 @@ describe('PostgreSQLViewerAccessTokenRepository', () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe('replace', () => {
+    test('既存トークンを新しいハッシュ・有効期限で置き換えられる', async () => {
+      // Given: 保存済みの既存トークン
+      const original = ViewerAccessTokenEntity.create({
+        email: testEmail,
+        rawToken: 'raw-token-original',
+        tokenHash: 'e'.repeat(64),
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      const saved = await repository.save(original);
+
+      // When: 新しいハッシュ・有効期限で置き換える
+      const replaced = await repository.replace(
+        saved.getId(),
+        'f'.repeat(64),
+        new Date('2031-01-01T00:00:00.000Z'),
+      );
+
+      // Then: 新しいハッシュ・有効期限に更新される
+      expect(replaced.getId()).toBe(saved.getId());
+      expect(replaced.getTokenHash()).toBe('f'.repeat(64));
+      expect(replaced.getExpiresAt()).toEqual(
+        new Date('2031-01-01T00:00:00.000Z'),
+      );
+
+      // Then: 旧ハッシュでは検索できず、email単位で行は1件のまま
+      const rows = await db
+        .select()
+        .from(viewerAccessTokens)
+        .where(sql`lower(${viewerAccessTokens.email}) = lower(${testEmail})`);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.tokenHash).toBe('f'.repeat(64));
+    });
+
+    test('旧値へ再度replaceすることで完全に復元できる（補償操作）', async () => {
+      // Given: 保存済みの既存トークン
+      const original = ViewerAccessTokenEntity.create({
+        email: testEmail,
+        rawToken: 'raw-token-original',
+        tokenHash: 'g'.repeat(64),
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      const saved = await repository.save(original);
+      const originalHash = saved.getTokenHash();
+      const originalExpiresAt = saved.getExpiresAt();
+
+      // When: 新しい値へ置き換えた後、旧値へ再度置き換える（補償操作の再現）
+      await repository.replace(
+        saved.getId(),
+        'h'.repeat(64),
+        new Date('2031-01-01T00:00:00.000Z'),
+      );
+      const restored = await repository.replace(
+        saved.getId(),
+        originalHash,
+        originalExpiresAt,
+      );
+
+      // Then: 元のハッシュ・有効期限に完全に復元される
+      expect(restored.getTokenHash()).toBe(originalHash);
+      expect(restored.getExpiresAt()).toEqual(originalExpiresAt);
+    });
+
+    test('存在しないIDを置き換えようとするとエラーになる', async () => {
+      // When & Then: 存在しないIDの置き換えはエラーになる
+      await expect(
+        repository.replace(
+          '999e4567-e89b-12d3-a456-426614174999',
+          'i'.repeat(64),
+          new Date('2030-01-01T00:00:00.000Z'),
+        ),
+      ).rejects.toThrow();
+    });
+  });
 });

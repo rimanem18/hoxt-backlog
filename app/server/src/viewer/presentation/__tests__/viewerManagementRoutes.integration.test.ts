@@ -200,5 +200,80 @@ describe('viewerManagementRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.error.code).toBe('VALIDATION_ERROR');
     });
+
+    test('正常系: 別projectへの追加招待で既存トークンを維持したまま201を返す（AC-02）', async () => {
+      // Given: 別projectへの追加招待が成功するモック（既存トークン維持、新規招待のみ）
+      const mockViewer = createMockProjectViewerEntity({
+        projectId: mockProjectId,
+        email: 'viewer@example.com',
+      });
+      useCases.inviteViewerUseCase.execute.mockResolvedValue(mockViewer);
+
+      // When: POST /projects/{projectId}/viewersで追加招待を送信
+      const res = await app.request(`/projects/${mockProjectId}/viewers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock-token',
+        },
+        body: JSON.stringify({ email: 'viewer@example.com' }),
+      });
+
+      // Then: 201 Createdレスポンスと招待データを返す
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.status).toBe('active');
+    });
+
+    test('正常系: 期限切れトークンへの再招待で新トークン発行を伴い201を返す（AC-03）', async () => {
+      // Given: 期限切れトークンの再発行を伴う再招待が成功するモック
+      const mockViewer = createMockProjectViewerEntity({
+        projectId: mockProjectId,
+        email: 'viewer@example.com',
+      });
+      useCases.inviteViewerUseCase.execute.mockResolvedValue(mockViewer);
+
+      // When: POST /projects/{projectId}/viewersで再招待を送信
+      const res = await app.request(`/projects/${mockProjectId}/viewers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock-token',
+        },
+        body: JSON.stringify({ email: 'viewer@example.com' }),
+      });
+
+      // Then: 201 Createdレスポンスと招待データを返す
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.status).toBe('active');
+    });
+
+    test('正常系: 既にactive招待+有効トークンへの再招待はno-opとして201を返す（REQ-502）', async () => {
+      // Given: no-opとして既存の招待をそのまま返すモック
+      const mockViewer = createMockProjectViewerEntity({
+        projectId: mockProjectId,
+        email: 'viewer@example.com',
+      });
+      useCases.inviteViewerUseCase.execute.mockResolvedValue(mockViewer);
+
+      // When: POST /projects/{projectId}/viewersで重複招待を送信
+      const res = await app.request(`/projects/${mockProjectId}/viewers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock-token',
+        },
+        body: JSON.stringify({ email: 'viewer@example.com' }),
+      });
+
+      // Then: エラーにならず201 Createdレスポンスを返す
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.status).toBe('active');
+    });
   });
 });

@@ -18,6 +18,9 @@ function createInMemoryTokenRepository(): IViewerAccessTokenRepository & {
       return entity;
     },
     async deleteById() {},
+    async replace(_existingId, _newTokenHash, _newExpiresAt) {
+      throw new Error('replace is not supported in this fake');
+    },
   };
 }
 
