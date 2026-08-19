@@ -38,6 +38,32 @@ export const listProjectViewersResponseSchema = apiResponseSchema(
   z.array(projectViewerSchema),
 ).openapi('ListProjectViewersResponse');
 
+// ===== viewer横断閲覧スキーマ =====
+
+export const viewerAccessibleTaskSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.string(),
+  priority: z.string(),
+}).openapi('ViewerAccessibleTask', {
+  description: 'viewerが閲覧できるtask情報',
+});
+
+export const viewerAccessibleProjectSchema = z.object({
+  projectId: z.uuid(),
+  projectName: z.string(),
+  tasks: z.array(viewerAccessibleTaskSchema),
+}).openapi('ViewerAccessibleProject', {
+  description: 'viewerが閲覧できるprojectとそのtask一覧',
+});
+
+export const getViewerTasksResponseSchema = apiResponseSchema(
+  z.object({
+    projects: z.array(viewerAccessibleProjectSchema),
+  }),
+).openapi('GetViewerTasksResponse');
+
 // ===== 型エクスポート =====
 
 export type ProjectViewer = z.infer<typeof projectViewerSchema>;
@@ -45,4 +71,11 @@ export type InviteViewerInput = z.infer<typeof inviteViewerSchema>;
 export type InviteViewerResponse = z.infer<typeof inviteViewerResponseSchema>;
 export type ListProjectViewersResponse = z.infer<
   typeof listProjectViewersResponseSchema
+>;
+export type ViewerAccessibleTask = z.infer<typeof viewerAccessibleTaskSchema>;
+export type ViewerAccessibleProject = z.infer<
+  typeof viewerAccessibleProjectSchema
+>;
+export type GetViewerTasksResponse = z.infer<
+  typeof getViewerTasksResponseSchema
 >;

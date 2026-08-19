@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { ProjectEntity } from '@/project/domain/ProjectEntity';
 import { ProjectName } from '@/project/domain/valueobjects/ProjectName';
@@ -45,6 +45,19 @@ export class PostgreSQLProjectRepository implements IProjectRepository {
       .limit(1);
 
     return result[0] ? this.toDomain(result[0]) : null;
+  }
+
+  async findByIds(projectIds: string[]): Promise<ProjectEntity[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    const results = await this.db
+      .select()
+      .from(projects)
+      .where(inArray(projects.id, projectIds));
+
+    return results.map((row) => this.toDomain(row));
   }
 
   async update(

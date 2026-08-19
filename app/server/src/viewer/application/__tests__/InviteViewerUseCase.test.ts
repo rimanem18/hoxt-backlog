@@ -51,9 +51,11 @@ function createDeps() {
     restore: mock(() => Promise.resolve()),
     findActiveByProject: mock(() => Promise.resolve([])),
     findById: mock(() => Promise.resolve(null)),
+    findActiveByEmail: mock(() => Promise.resolve([])),
   };
   const viewerAccessTokenRepository: IViewerAccessTokenRepository = {
     findByEmail: mock(() => Promise.resolve(null)),
+    findByTokenHash: mock(() => Promise.resolve(null)),
     save: mock((entity) => Promise.resolve(entity)),
     deleteById: mock(() => Promise.resolve()),
     replace: mock((_existingId, newTokenHash, newExpiresAt) =>
@@ -74,6 +76,7 @@ function createDeps() {
     findById: mock(() => Promise.resolve(createMockProject())),
     findByUserId: mock(() => Promise.resolve([])),
     update: mock(() => Promise.resolve(null)),
+    findByIds: mock(() => Promise.resolve([])),
   };
   const userRepository: IUserRepository = {
     findByExternalId: mock(() => Promise.resolve(null)),

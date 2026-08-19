@@ -316,6 +316,84 @@ describe('PostgreSQLProjectViewerRepository', () => {
     });
   });
 
+  describe('findActiveByEmail', () => {
+    test('activeな招待のprojectId一覧を取得できる', async () => {
+      // Given: 同一emailで複数projectへのactive招待
+      await repository.save(
+        ProjectViewerEntity.create({
+          projectId: testProjectId,
+          email: 'multi-project@example.com',
+        }),
+      );
+      await repository.save(
+        ProjectViewerEntity.create({
+          projectId: testProjectId2,
+          email: 'multi-project@example.com',
+        }),
+      );
+
+      // When: emailでactive招待のprojectId一覧を取得
+      const result = await repository.findActiveByEmail(
+        'multi-project@example.com',
+      );
+
+      // Then: 両方のprojectIdが取得できる
+      expect(result.sort()).toEqual([testProjectId, testProjectId2].sort());
+    });
+
+    test('revoked状態の招待は含まれない', async () => {
+      // Given: active1件・revoked1件の招待
+      await repository.save(
+        ProjectViewerEntity.create({
+          projectId: testProjectId,
+          email: 'mixed-status@example.com',
+        }),
+      );
+      const revoked = ProjectViewerEntity.create({
+        projectId: testProjectId2,
+        email: 'mixed-status@example.com',
+      });
+      revoked.revoke();
+      await repository.save(revoked);
+
+      // When: emailでactive招待のprojectId一覧を取得
+      const result = await repository.findActiveByEmail(
+        'mixed-status@example.com',
+      );
+
+      // Then: activeなprojectIdのみ返る
+      expect(result).toEqual([testProjectId]);
+    });
+
+    test('招待が0件のemailでは空配列を返す（境界値）', async () => {
+      // When: 招待のないemailで取得
+      const result = await repository.findActiveByEmail(
+        'no-invitation@example.com',
+      );
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+
+    test('全ての招待が取り消し済みの場合は空配列を返す（境界値）', async () => {
+      // Given: 全てrevoked状態の招待
+      const revoked = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'all-revoked@example.com',
+      });
+      revoked.revoke();
+      await repository.save(revoked);
+
+      // When: emailでactive招待のprojectId一覧を取得
+      const result = await repository.findActiveByEmail(
+        'all-revoked@example.com',
+      );
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('findById', () => {
     test('IDで招待を取得できる', async () => {
       // Given: 保存済みの招待

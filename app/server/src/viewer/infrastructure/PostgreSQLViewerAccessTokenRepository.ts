@@ -65,6 +65,18 @@ export class PostgreSQLViewerAccessTokenRepository
     return result[0] ? this.toDomain(result[0]) : null;
   }
 
+  async findByTokenHash(
+    tokenHash: string,
+  ): Promise<ViewerAccessTokenEntity | null> {
+    const result = await this.db
+      .select()
+      .from(viewerAccessTokens)
+      .where(eq(viewerAccessTokens.tokenHash, tokenHash))
+      .limit(1);
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
   async deleteById(id: string): Promise<void> {
     await this.db
       .delete(viewerAccessTokens)

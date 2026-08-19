@@ -28,3 +28,6 @@ export * from './src/tasks';
 
 // プロジェクト管理API型定義
 export * from './src/projects';
+
+// viewer招待・閲覧API型定義
+export * from './src/viewers';

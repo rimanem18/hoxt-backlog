@@ -13,6 +13,9 @@ function createInMemoryTokenRepository(): IViewerAccessTokenRepository & {
     async findByEmail() {
       return null;
     },
+    async findByTokenHash() {
+      return null;
+    },
     async save(entity: ViewerAccessTokenEntity) {
       saved.push(entity);
       return entity;

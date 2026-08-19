@@ -26,6 +26,11 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT認証トークン
+    ViewerAccessTokenAuth:
+      type: apiKey
+      in: header
+      name: Viewer-Access-Token
+      description: viewerアクセストークン
 paths:
   /auth/callback:
     post:
@@ -3291,6 +3296,131 @@ paths:
                   - error
         '404':
           description: 招待が見つかりません
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /viewer/tasks:
+    get:
+      tags:
+        - viewer閲覧
+      summary: viewer横断閲覧
+      description: viewerアクセストークンで、招待されている全プロジェクトのタスク一覧をプロジェクトごとにグルーピングして取得します。
+      security:
+        - ViewerAccessTokenAuth: []
+      responses:
+        '200':
+          description: プロジェクトごとにグルーピングされたtask一覧を返しました
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      projects:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            projectId:
+                              type: string
+                              format: uuid
+                            projectName:
+                              type: string
+                            tasks:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    format: uuid
+                                  title:
+                                    type: string
+                                  description:
+                                    type: string
+                                    nullable: true
+                                  status:
+                                    type: string
+                                  priority:
+                                    type: string
+                                required:
+                                  - id
+                                  - title
+                                  - description
+                                  - status
+                                  - priority
+                          required:
+                            - projectId
+                            - projectName
+                            - tasks
+                    required:
+                      - projects
+                required:
+                  - success
+                  - data
+        '401':
+          description: アクセストークンが不正・失効・期限切れです
           content:
             application/json:
               schema:

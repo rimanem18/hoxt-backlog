@@ -85,7 +85,15 @@ export function createViewerManagementRoutes(
   const app = new OpenAPIHono({ defaultHook: validationHook });
 
   // authMiddlewareでJWT認証を実施
-  app.use('*', authMiddleware(dependencies.authMiddlewareOptions));
+  // Why: '*'ではなくviewer管理ドメイン自身のパスに限定する。app.route()で
+  // このルーターが'/api'配下にマウントされる際、'*'指定だと合成後の
+  // 親ルーターで'/api/*'という広いパターンとして登録され、他ドメイン
+  // （viewerの横断閲覧など、Supabase JWT認証を要さないルート）の
+  // リクエストまでこのミドルウェアが横取りしてしまうため
+  app.use(
+    '/projects/:projectId/viewers/*',
+    authMiddleware(dependencies.authMiddlewareOptions),
+  );
 
   // エンドポイントを登録
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限

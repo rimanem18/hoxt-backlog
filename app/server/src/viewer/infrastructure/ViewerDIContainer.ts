@@ -4,7 +4,10 @@ import {
   isTestEndpointsEnabled,
 } from '@/shared/config/env';
 import { db } from '@/shared/database/DatabaseConnection';
+import { TaskDIContainer } from '@/task/infrastructure/TaskDIContainer';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
+import { GetViewerAccessibleProjectsUseCase } from '@/viewer/application/GetViewerAccessibleProjectsUseCase';
+import type { IGetViewerAccessibleProjectsUseCase } from '@/viewer/application/IGetViewerAccessibleProjectsUseCase';
 import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMailGateway';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
 import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
@@ -34,6 +37,8 @@ export class ViewerDIContainer {
   private static listProjectViewersUseCaseInstance: ListProjectViewersUseCase | null =
     null;
   private static revokeViewerUseCaseInstance: RevokeViewerUseCase | null = null;
+  private static getViewerAccessibleProjectsUseCaseInstance: GetViewerAccessibleProjectsUseCase | null =
+    null;
   private static projectViewerRepositoryInstance: PostgreSQLProjectViewerRepository | null =
     null;
   private static viewerAccessTokenRepositoryInstance: PostgreSQLViewerAccessTokenRepository | null =
@@ -85,6 +90,21 @@ export class ViewerDIContainer {
       );
     }
     return ViewerDIContainer.revokeViewerUseCaseInstance;
+  }
+
+  /**
+   * GetViewerAccessibleProjectsUseCaseのインスタンスを返す
+   */
+  static getGetViewerAccessibleProjectsUseCase(): IGetViewerAccessibleProjectsUseCase {
+    if (!ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance) {
+      ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance =
+        new GetViewerAccessibleProjectsUseCase(
+          ViewerDIContainer.getProjectViewerRepository(),
+          ProjectDIContainer.getProjectRepository(),
+          TaskDIContainer.getTaskRepository(),
+        );
+    }
+    return ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance;
   }
 
   /**
@@ -160,6 +180,7 @@ export class ViewerDIContainer {
     ViewerDIContainer.inviteViewerUseCaseInstance = null;
     ViewerDIContainer.listProjectViewersUseCaseInstance = null;
     ViewerDIContainer.revokeViewerUseCaseInstance = null;
+    ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance = null;
     ViewerDIContainer.projectViewerRepositoryInstance = null;
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;

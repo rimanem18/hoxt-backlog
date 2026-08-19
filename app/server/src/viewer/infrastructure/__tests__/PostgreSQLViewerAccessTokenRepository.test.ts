@@ -95,6 +95,56 @@ describe('PostgreSQLViewerAccessTokenRepository', () => {
     });
   });
 
+  describe('findByTokenHash', () => {
+    test('tokenHashでトークンを取得できる', async () => {
+      // Given: 保存済みのトークン
+      const entity = ViewerAccessTokenEntity.create({
+        email: testEmail,
+        rawToken: 'raw-token-value',
+        tokenHash: 'j'.repeat(64),
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      await repository.save(entity);
+
+      // When: tokenHashで検索
+      const found = await repository.findByTokenHash('j'.repeat(64));
+
+      // Then: トークンが取得できる
+      expect(found).not.toBeNull();
+      expect(found?.getEmail()).toBe(testEmail);
+    });
+
+    test('該当するトークンが存在しない場合nullを返す', async () => {
+      // When: 存在しないtokenHashで検索
+      const found = await repository.findByTokenHash('k'.repeat(64));
+
+      // Then: nullが返される
+      expect(found).toBeNull();
+    });
+
+    test('replaceで置き換えられた旧tokenHashでは検索できない', async () => {
+      // Given: 保存後にreplaceで置き換えられたトークン
+      const entity = ViewerAccessTokenEntity.create({
+        email: testEmail,
+        rawToken: 'raw-token-value',
+        tokenHash: 'l'.repeat(64),
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      const saved = await repository.save(entity);
+      await repository.replace(
+        saved.getId(),
+        'm'.repeat(64),
+        new Date('2031-01-01T00:00:00.000Z'),
+      );
+
+      // When: 旧tokenHashで検索
+      const found = await repository.findByTokenHash('l'.repeat(64));
+
+      // Then: 見つからない（失効済み扱い）
+      expect(found).toBeNull();
+    });
+  });
+
   describe('deleteById', () => {
     test('トークンを削除できる', async () => {
       // Given: 保存済みのトークン

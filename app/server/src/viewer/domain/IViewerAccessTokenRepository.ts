@@ -15,6 +15,13 @@ export interface IViewerAccessTokenRepository {
   findByEmail(email: string): Promise<ViewerAccessTokenEntity | null>;
 
   /**
+   * tokenHashでトークンを取得する
+   * @param tokenHash - トークンハッシュ値
+   * @returns 見つかったViewerAccessTokenEntity、存在しない場合はnull
+   */
+  findByTokenHash(tokenHash: string): Promise<ViewerAccessTokenEntity | null>;
+
+  /**
    * トークンを保存する（新規発行・再発行時の上書きの両方に使用）
    * @param entity - 保存するViewerAccessTokenEntity
    * @returns 保存されたViewerAccessTokenEntity

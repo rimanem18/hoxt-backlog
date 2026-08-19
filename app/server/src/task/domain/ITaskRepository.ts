@@ -77,6 +77,16 @@ export interface ITaskRepository {
   delete(userId: string, taskId: string): Promise<boolean>;
 
   /**
+   * 複数のプロジェクトIDでタスクを一括取得する（userIdスコープなし）
+   *
+   * 所有者スコープなしの強い権限を持つため、呼び出し元は
+   * GetViewerAccessibleProjectsUseCaseに限定すること。
+   * @param projectIds - プロジェクトIDの配列
+   * @returns タスクエンティティの配列
+   */
+  findByProjectIds(projectIds: string[]): Promise<TaskEntity[]>;
+
+  /**
    * タスクステータスを変更する
    * @param userId - ユーザーID
    * @param taskId - タスクID

@@ -22,6 +22,7 @@ function createDeps() {
     findById: mock(() => Promise.resolve(createMockProject())),
     findByUserId: mock(() => Promise.resolve([])),
     update: mock(() => Promise.resolve(null)),
+    findByIds: mock(() => Promise.resolve([])),
   };
   const projectViewerRepository: IProjectViewerRepository = {
     findByProjectAndEmail: mock(() => Promise.resolve(null)),
@@ -31,6 +32,7 @@ function createDeps() {
     restore: mock(() => Promise.resolve()),
     findActiveByProject: mock(() => Promise.resolve([])),
     findById: mock(() => Promise.resolve(null)),
+    findActiveByEmail: mock(() => Promise.resolve([])),
   };
 
   return { projectRepository, projectViewerRepository };

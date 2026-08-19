@@ -104,6 +104,20 @@ export class PostgreSQLProjectViewerRepository
     return result.map((row) => this.toDomain(row));
   }
 
+  async findActiveByEmail(email: string): Promise<string[]> {
+    const result = await this.db
+      .select({ projectId: projectViewers.projectId })
+      .from(projectViewers)
+      .where(
+        and(
+          sql`lower(${projectViewers.email}) = lower(${email})`,
+          eq(projectViewers.status, 'active'),
+        ),
+      );
+
+    return result.map((row) => row.projectId);
+  }
+
   async findById(id: string): Promise<ProjectViewerEntity | null> {
     const result = await this.db
       .select()

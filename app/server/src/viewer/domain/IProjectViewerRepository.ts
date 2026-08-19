@@ -51,6 +51,13 @@ export interface IProjectViewerRepository {
   findActiveByProject(projectId: string): Promise<ProjectViewerEntity[]>;
 
   /**
+   * emailに紐づくactive状態の招待のprojectId一覧を取得する
+   * @param email - 正規化済みメールアドレス
+   * @returns active状態の招待のprojectId配列
+   */
+  findActiveByEmail(email: string): Promise<string[]>;
+
+  /**
    * IDで招待を取得する
    * @param id - 招待ID
    * @returns 見つかったProjectViewerEntity、存在しない場合はnull
