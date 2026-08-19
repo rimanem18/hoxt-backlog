@@ -349,7 +349,7 @@ test('時刻依存のテスト', () => {
 });
 ```
 
----
+
 
 ## Context-based DIパターン（推奨）
 
@@ -615,7 +615,7 @@ export function ApiClientProvider({ client, children }: ApiClientProviderProps) 
 
 新しいContext（`TaskServicesProvider`など）も同じパターンに従うことで、一貫性を保ちます。
 
----
+
 
 ## 実装パターン例
 
@@ -658,3 +658,414 @@ beforeEach(() => {
 
 **運用バランス**:
 外部性のみDI（またはContext経由）+ ロジックを純関数化 = テスタビリティと設計負債のバランスが取りやすい
+
+# React Server Components / Client Components の実務的な使い分け方
+
+React Server Components を使う場合は、**「まず Server Component で実装できないかを考える」**ことを基本方針にしてください。
+
+Client Component は、ブラウザ上で動作する必要がある部分に限定して使用します。ページや機能全体を最初から Client Component にするのではなく、**Client でなければ成立しない部分だけを切り出す**ようにしてください。
+
+## 基本方針
+
+実装時は、次の優先順位で考えてください。
+
+1. まず Server Component として実装できないか考える
+2. データ取得は Server Component で行えないか考える
+3. Client でなければ実現できない処理を特定する
+4. 必要な部分だけ Client Component に切り出す
+5. 'use client' の境界を可能な限り下げる
+
+迷った場合は、次を基本にしてください。
+
+Server Component
+  = データ取得・データ加工・ページ構造・静的な表示
+
+Client Component
+  = ユーザー操作・ブラウザ状態・インタラクション
+
+重要なのは、
+
+**「この Component を Client Component にできるか」ではなく、「この Component を Client Component にする必要があるか」**
+
+という視点です。
+
+原則として、以下のルールで実装してください。
+
+- Component はまず Server Component として作る
+- データ取得のためだけに Client Component にしない
+- 初期表示に必要なデータは、可能な限り Server Component で取得する
+- `useState`、`useReducer`、`useEffect` が必要な場合は Client Component にする
+- `onClick`、`onChange` などのイベントハンドラが必要な場合は Client Component にする
+- `window`、`document`、`localStorage` などの Browser API を使う場合は Client Component にする
+- Client Component にする場合は、`'use client'` をできるだけ末端に置く
+- ページ全体・レイアウト全体を安易に Client Component にしない
+- DB やサーバー専用 API にアクセスする処理は Server 側に置く
+- Server Component から Client Component に渡す props は必要最小限にする
+- DB のモデルや API レスポンスをそのまま Client に渡さない
+- 複数の UI が同じ state を共有する場合は、そのまとまりを1つの Client Component として扱う
+- `useProducts` のようなデータ取得 Hook を、初期表示のためだけに使用しない
+- Server / Client 用のデータ取得処理を無条件で二重実装しない
+
+## 実務上の判断フロー
+
+Component を作るときは、次の順番で判断してください。
+
+```text
+まず Server Component として考える
+        │
+        ▼
+ブラウザ上で実行する必要がある処理があるか？
+        │
+        ├─ No
+        │   └─ Server Component のまま実装
+        │
+        └─ Yes
+            │
+            ▼
+      以下のどれかが必要か？
+            │
+            ├─ useState / useReducer
+            ├─ useEffect
+            ├─ onClick / onChange などのイベント
+            ├─ window / document
+            ├─ localStorage / sessionStorage
+            └─ ブラウザ専用ライブラリ
+                    │
+                    ▼
+             Client Component にする
+                    │
+                    ▼
+       Client にする範囲を最小化できないか確認
+```
+
+## データ取得は Server Component を優先する
+
+初期表示に必要なデータは、基本的に Server Component で取得してください。
+
+例えば、Client Component で次のように取得する前に、
+
+```tsx
+'use client'
+
+export function Products() {
+  const { data: products } = useProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+Server Component から直接取得できないかを検討します。
+
+```tsx
+export default async function ProductsPage() {
+  const products = await getProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+特に、単純な初期表示のためだけに、
+
+Client Component
+    ↓
+useProducts()
+    ↓
+API
+    ↓
+Server
+    ↓
+Database
+
+という経路を作る必要がなければ、
+
+Server Component
+    ↓
+getProducts()
+    ↓
+Database
+
+という構成を優先してください。
+
+## `useProducts` のようなデータ取得 Hook の扱い
+
+`useProducts` のような Hook が存在する場合でも、**Server Component 内でその Hook を使うことを前提にしないでください。**
+
+例えば、次のような Hook があるとします。
+
+```tsx
+export function useProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  })
+}
+```
+
+このような Hook は `useQuery`、SWR、`useEffect` など Client 側の仕組みに依存しているため、Client Component 用です。
+
+Server Component では、Hook を経由せず普通の async 関数を呼びます。
+
+```tsx
+export default async function ProductsPage() {
+  const products = await getProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+つまり、
+
+RSC
+  → await getProducts()
+
+Client Component
+  → useProducts()
+
+という使い分けにしてください。
+
+## Server 用と Client 用を必ず2つ作るわけではない
+
+Server Component と Client Component があるからといって、**同じデータ取得処理を Server 用・Client 用に毎回2つ作る必要はありません。**
+
+まず、Client / Server の双方から利用可能なデータ取得関数を作れる場合は、その処理を共有します。
+
+```ts
+export async function fetchProducts() {
+  const response = await fetch('/api/products')
+
+  return response.json()
+}
+```
+
+Server Component では直接呼びます。
+
+```tsx
+export default async function ProductsPage() {
+  const products = await fetchProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+Client 側で再取得やキャッシュが必要になった場合だけ、同じ関数を Hook から利用します。
+
+```tsx
+'use client'
+
+export function useProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  })
+}
+```
+
+構造としては次のイメージです。
+
+```text
+fetchProducts()
+    │
+    ├── Server Component
+    │      └── await fetchProducts()
+    │
+    └── Client Component
+           └── useProducts()
+                  └── useQuery(fetchProducts)
+```
+
+つまり、
+
+**データ取得関数は共有し、Client 側で状態管理・キャッシュ・再取得が必要な場合だけ Hook を追加する**
+
+という形を基本にしてください。
+
+## Server と Client で取得経路が異なる場合
+
+一方で、Server Component が DB に直接アクセスする場合は、Server と Client で入口が分かれることがあります。
+
+```ts
+// server/products.ts
+export async function getProducts() {
+  return db.product.findMany()
+}
+```
+
+Server Component はそのまま呼びます。
+
+```tsx
+export default async function ProductsPage() {
+  const products = await getProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+Client Component から DB に直接アクセスすることはできないため、Client 側では API を経由します。
+
+```ts
+// client/fetchProducts.ts
+export async function fetchProducts() {
+  const response = await fetch('/api/products')
+
+  return response.json()
+}
+```
+
+```tsx
+'use client'
+
+export function useProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  })
+}
+```
+
+この場合は、
+
+Server Component
+    ↓
+getProducts()
+    ↓
+Database
+
+と、
+
+Client Component
+    ↓
+useProducts()
+    ↓
+HTTP API
+    ↓
+Server
+    ↓
+Database
+
+で経路が異なります。
+
+これは同じ処理を二重実装しているのではなく、**Server と Client ではデータソースへのアクセス方法そのものが異なる**ためです。
+
+したがって、
+
+**すべての `getProducts` に対応する `useProducts` を作る必要はありません。**
+
+Client から取得するユースケースが発生したときだけ、Client 用の Hook や API を追加してください。
+
+## Client 側でデータ取得してよいケース
+
+Client 側のデータ取得を禁止するわけではありません。
+
+以下のような場合は、`useProducts` のような Hook を使用して構いません。
+
+- ユーザー操作後にデータを再取得する
+- 検索条件の変更に応じて取得する
+- ページネーションを行う
+- 無限スクロールを行う
+- ポーリングする
+- window focus 時に再取得する
+- リアルタイム性が必要
+- Client 側の状態とサーバーデータを同期する必要がある
+- TanStack Query / SWR などによる Client 側キャッシュが必要
+
+つまり、
+
+```text
+初期表示
+    ↓
+Server Component
+
+ユーザー操作後の再取得・同期
+    ↓
+Client Component
+```
+
+を基本形としてください。
+
+## Client Component の境界はできるだけ下げる
+
+例えば、次のようにページ全体を Client Component にしないでください。
+
+```tsx
+'use client'
+
+export default function ProductPage() {
+  return (
+    <>
+      <Header />
+      <ProductInfo />
+      <FavoriteButton />
+      <Footer />
+    </>
+  )
+}
+```
+
+`FavoriteButton` だけにインタラクションが必要なのであれば、
+
+```text
+ProductPage        Server
+├── Header         Server
+├── ProductInfo    Server
+├── FavoriteButton Client
+└── Footer         Server
+```
+
+という構成にしてください。
+
+```tsx
+export default async function ProductPage() {
+  const product = await getProduct()
+
+  return (
+    <>
+      <Header />
+      <ProductInfo product={product} />
+      <FavoriteButton productId={product.id} />
+      <Footer />
+    </>
+  )
+}
+```
+
+```tsx
+'use client'
+
+export function FavoriteButton({
+  productId,
+}: {
+  productId: string
+}) {
+  // Client 側の state / event
+}
+```
+
+Client Component が必要だからといって、親 Component まで Client にする必要はありません。
+
+## Client Component を細かく分けすぎない
+
+一方で、Client Component を最小化することだけを目的に、細かく分割しすぎる必要もありません。
+
+例えば、
+
+SearchForm
+├── KeywordInput
+├── CategorySelect
+├── SortSelect
+└── ClearButton
+
+が同じ state を共有しているのであれば、`SearchForm` 全体を Client Component にして構いません。
+
+```tsx
+'use client'
+
+export function SearchForm() {
+  // 検索フォーム全体の state を管理する
+}
+```
+
+基準は、
+
+**インタラクションを成立させるために必要な最小のまとまり**
+
+です。
