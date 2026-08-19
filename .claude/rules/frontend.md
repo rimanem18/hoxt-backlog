@@ -659,102 +659,209 @@ beforeEach(() => {
 **運用バランス**:
 外部性のみDI（またはContext経由）+ ロジックを純関数化 = テスタビリティと設計負債のバランスが取りやすい
 
-# React Server Components / Client Components の実務的な使い分け方
-
-React Server Components を使う場合は、**「まず Server Component で実装できないかを考える」**ことを基本方針にしてください。
-
-Client Component は、ブラウザ上で動作する必要がある部分に限定して使用します。ページや機能全体を最初から Client Component にするのではなく、**Client でなければ成立しない部分だけを切り出す**ようにしてください。
+# React Server Components / Client Components 実装規約
 
 ## 基本方針
 
-実装時は、次の優先順位で考えてください。
+以下の順番で実装してください。
 
-1. まず Server Component として実装できないか考える
-2. データ取得は Server Component で行えないか考える
-3. Client でなければ実現できない処理を特定する
-4. 必要な部分だけ Client Component に切り出す
-5. 'use client' の境界を可能な限り下げる
+1. まず Server Component で考える
+2. 初期データは Server で取得する
+3. Client でなければ成立しない部分だけ Client Component にする
+4. 'use client' は可能な限り末端に置く
+5. import graph を確認し、Client 境界を必要以上に広げない
+6. 非同期処理は Suspense / Streaming の単位まで含めて設計する
 
-迷った場合は、次を基本にしてください。
+基本的な責務は以下とします。
 
 Server Component
-  = データ取得・データ加工・ページ構造・静的な表示
+  ├─ データ取得
+  ├─ DBアクセス
+  ├─ データ加工
+  ├─ ページ構造
+  ├─ 静的な表示
+  └─ async Server Component
 
 Client Component
-  = ユーザー操作・ブラウザ状態・インタラクション
+  ├─ useState / useReducer
+  ├─ useEffect
+  ├─ onClick / onChange
+  ├─ Browser API
+  ├─ Client 側での再取得
+  ├─ Client 側でのキャッシュ
+  └─ Client 側での状態同期
 
-重要なのは、
+# Component の実装ルール
 
-**「この Component を Client Component にできるか」ではなく、「この Component を Client Component にする必要があるか」**
+## Server Component をデフォルトにする
 
-という視点です。
+Component は、まず Server Component として実装してください。
 
-原則として、以下のルールで実装してください。
+以下が必要になった場合のみ Client Component にしてください。
 
-- Component はまず Server Component として作る
-- データ取得のためだけに Client Component にしない
-- 初期表示に必要なデータは、可能な限り Server Component で取得する
-- `useState`、`useReducer`、`useEffect` が必要な場合は Client Component にする
-- `onClick`、`onChange` などのイベントハンドラが必要な場合は Client Component にする
-- `window`、`document`、`localStorage` などの Browser API を使う場合は Client Component にする
-- Client Component にする場合は、`'use client'` をできるだけ末端に置く
-- ページ全体・レイアウト全体を安易に Client Component にしない
-- DB やサーバー専用 API にアクセスする処理は Server 側に置く
-- Server Component から Client Component に渡す props は必要最小限にする
-- DB のモデルや API レスポンスをそのまま Client に渡さない
-- 複数の UI が同じ state を共有する場合は、そのまとまりを1つの Client Component として扱う
-- `useProducts` のようなデータ取得 Hook を、初期表示のためだけに使用しない
-- Server / Client 用のデータ取得処理を無条件で二重実装しない
+- `useState`
+- `useReducer`
+- `useEffect`
+- `onClick`
+- `onChange`
+- `onSubmit`
+- `window`
+- `document`
+- `localStorage`
+- `sessionStorage`
+- Browser 専用ライブラリ
+- Client 側で継続的に管理する状態
+- Client 側でのデータ再取得・同期
 
-## 実務上の判断フロー
+## `'use client'` は可能な限り末端に置く
 
-Component を作るときは、次の順番で判断してください。
+ページやレイアウト全体に安易に `'use client'` を付けないでください。
 
-```text
-まず Server Component として考える
-        │
-        ▼
-ブラウザ上で実行する必要がある処理があるか？
-        │
-        ├─ No
-        │   └─ Server Component のまま実装
-        │
-        └─ Yes
-            │
-            ▼
-      以下のどれかが必要か？
-            │
-            ├─ useState / useReducer
-            ├─ useEffect
-            ├─ onClick / onChange などのイベント
-            ├─ window / document
-            ├─ localStorage / sessionStorage
-            └─ ブラウザ専用ライブラリ
-                    │
-                    ▼
-             Client Component にする
-                    │
-                    ▼
-       Client にする範囲を最小化できないか確認
-```
+Page                Server
+├── Header           Server
+├── ProductInfo      Server
+├── FavoriteButton   Client
+└── Footer           Server
 
-## データ取得は Server Component を優先する
-
-初期表示に必要なデータは、基本的に Server Component で取得してください。
-
-例えば、Client Component で次のように取得する前に、
+Client の処理が `FavoriteButton` にしか必要ない場合は、`FavoriteButton` にだけ `'use client'` を付けてください。
 
 ```tsx
+// FavoriteButton.tsx
 'use client'
 
-export function Products() {
-  const { data: products } = useProducts()
-
-  return <ProductList products={products} />
+export function FavoriteButton() {
+  // Client 処理
 }
 ```
 
-Server Component から直接取得できないかを検討します。
+## Client Component は意味のある単位でまとめる
+
+同じ state や interaction を共有する UI は、1つの Client Component としてまとめて構いません。
+
+SearchForm          Client
+├── KeywordInput
+├── CategorySelect
+├── SortSelect
+└── ClearButton
+
+Client Component を最小ファイル単位まで分割する必要はありません。
+
+**interaction を成立させる最小のまとまり**を Client 境界にしてください。
+
+# import graph のルール
+
+## Client Component から Server として維持したい Component を import しない
+
+以下の依存方向は作らないでください。
+
+Client Component
+      ↓ import
+Server として維持したい Component
+
+例えば、以下の構成にしないでください。
+
+```tsx
+// ProductPanel.tsx
+'use client'
+
+import { ProductInfo } from './ProductInfo'
+
+export function ProductPanel() {
+  return <ProductInfo />
+}
+```
+
+`'use client'` のあるモジュールから import される依存関係は、Client 側のモジュールグラフとして扱う前提で設計してください。
+
+## Server → Client の依存方向を基本にする
+
+以下の方向で Component Tree を組み立ててください。
+
+Server Component
+├── Server Component
+└── Client Component
+
+```tsx
+// page.tsx
+import { ProductInfo } from './ProductInfo'
+import { FavoriteButton } from './FavoriteButton'
+
+export default async function Page() {
+  const product = await getProduct()
+
+  return (
+    <>
+      <ProductInfo product={product} />
+      <FavoriteButton productId={product.id} />
+    </>
+  )
+}
+```
+## Client の中に Server Component を表示する場合は composition を使う
+
+Client Component から Server Component を import せず、Server Component 側で組み立てて `children` や props として渡してください。
+
+```tsx
+// Modal.tsx
+'use client'
+
+export function Modal({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <div>{children}</div>
+}
+```
+
+```tsx
+// page.tsx
+import { Modal } from './Modal'
+import { ProductDetail } from './ProductDetail'
+
+export default function Page() {
+  return (
+    <Modal>
+      <ProductDetail />
+    </Modal>
+  )
+}
+```
+
+import graph は以下にしてください。
+
+Page                  Server
+├── import Modal      Client
+└── import ProductDetail
+                      Server
+
+以下にはしないでください。
+
+Modal                 Client
+└── import ProductDetail
+                      Server
+
+## Component Tree と import graph の両方を確認する
+
+以下の Component Tree がある場合、
+
+Page
+└── Modal
+      └── ProductDetail
+
+import graph は以下のようにしてください。
+
+Page
+├── Modal
+└── ProductDetail
+
+Client / Server の境界を判断するときは、JSX 上の親子関係だけでなく import graph も確認してください。
+
+# データ取得のルール
+
+## 初期表示データは Server で取得する
+
+ページ初期表示に必要なデータは、まず Server Component で取得してください。
 
 ```tsx
 export default async function ProductsPage() {
@@ -764,35 +871,77 @@ export default async function ProductsPage() {
 }
 ```
 
-特に、単純な初期表示のためだけに、
-
-Client Component
-    ↓
-useProducts()
-    ↓
-API
-    ↓
-Server
-    ↓
-Database
-
-という経路を作る必要がなければ、
-
-Server Component
-    ↓
-getProducts()
-    ↓
-Database
-
-という構成を優先してください。
-
-## `useProducts` のようなデータ取得 Hook の扱い
-
-`useProducts` のような Hook が存在する場合でも、**Server Component 内でその Hook を使うことを前提にしないでください。**
-
-例えば、次のような Hook があるとします。
+初期表示のためだけに Client Component で fetch しないでください。
 
 ```tsx
+// 原則として避ける
+'use client'
+
+export function ProductsPage() {
+  const { data } = useProducts()
+
+  return <ProductList products={data} />
+}
+```
+
+## データ取得のためだけに Client Component にしない
+
+以下の構成を最初の選択肢にしないでください。
+
+Client Component
+      ↓
+useProducts()
+      ↓
+HTTP API
+      ↓
+Server
+      ↓
+Database
+
+Server から直接取得できる場合は以下にしてください。
+
+Server Component
+      ↓
+getProducts()
+      ↓
+Database / API
+
+# データ取得関数と Hook のルール
+
+## Server Component では async 関数を使用する
+
+Server Component では、`useProducts` のような Client 用データ取得 Hook を使用せず、通常の async 関数を使用してください。
+
+```tsx
+export default async function ProductsPage() {
+  const products = await getProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+基本形は以下です。
+
+Server Component
+      ↓
+await getProducts()
+
+## Client 側で必要な場合のみデータ取得 Hook を作る
+
+Client 側で以下が必要な場合のみ `useProducts` などを追加してください。
+
+- ユーザー操作による再取得
+- 検索条件変更による取得
+- ページネーション
+- 無限スクロール
+- ポーリング
+- focus 時の再取得
+- Client cache
+- Client 側でのサーバーデータ同期
+
+```tsx
+'use client'
+
 export function useProducts() {
   return useQuery({
     queryKey: ['products'],
@@ -801,57 +950,42 @@ export function useProducts() {
 }
 ```
 
-このような Hook は `useQuery`、SWR、`useEffect` など Client 側の仕組みに依存しているため、Client Component 用です。
+基本形は以下です。
 
-Server Component では、Hook を経由せず普通の async 関数を呼びます。
-
-```tsx
-export default async function ProductsPage() {
-  const products = await getProducts()
-
-  return <ProductList products={products} />
-}
-```
-
-つまり、
-
-RSC
-  → await getProducts()
+Server Component
+      └── await getProducts()
 
 Client Component
-  → useProducts()
+      └── useProducts()
 
-という使い分けにしてください。
+## `getProducts` と `useProducts` を常にセットで作らない
 
-## Server 用と Client 用を必ず2つ作るわけではない
+すべての Server 側データ取得関数に対応する Client Hook を作らないでください。
 
-Server Component と Client Component があるからといって、**同じデータ取得処理を Server 用・Client 用に毎回2つ作る必要はありません。**
+getProducts()
+useProducts()
 
-まず、Client / Server の双方から利用可能なデータ取得関数を作れる場合は、その処理を共有します。
+Client から取得するユースケースがある場合のみ `useProducts` を追加してください。
+
+## 共有可能なデータ取得処理は共有する
+
+Server / Client の両方から利用できる取得関数であれば共有してください。
 
 ```ts
 export async function fetchProducts() {
-  const response = await fetch('/api/products')
-
-  return response.json()
+  // fetch
 }
 ```
 
-Server Component では直接呼びます。
+Server:
 
 ```tsx
-export default async function ProductsPage() {
-  const products = await fetchProducts()
-
-  return <ProductList products={products} />
-}
+const products = await fetchProducts()
 ```
 
-Client 側で再取得やキャッシュが必要になった場合だけ、同じ関数を Hook から利用します。
+Client:
 
 ```tsx
-'use client'
-
 export function useProducts() {
   return useQuery({
     queryKey: ['products'],
@@ -860,28 +994,17 @@ export function useProducts() {
 }
 ```
 
-構造としては次のイメージです。
-
-```text
 fetchProducts()
-    │
-    ├── Server Component
-    │      └── await fetchProducts()
-    │
-    └── Client Component
-           └── useProducts()
-                  └── useQuery(fetchProducts)
-```
+      │
+      ├── Server
+      │     └── await fetchProducts()
+      │
+      └── Client
+            └── useProducts()
 
-つまり、
+## Server 専用処理は Client と共有しない
 
-**データ取得関数は共有し、Client 側で状態管理・キャッシュ・再取得が必要な場合だけ Hook を追加する**
-
-という形を基本にしてください。
-
-## Server と Client で取得経路が異なる場合
-
-一方で、Server Component が DB に直接アクセスする場合は、Server と Client で入口が分かれることがあります。
+DB、secret、Server-only API などに依存する処理は Server 専用として分離してください。
 
 ```ts
 // server/products.ts
@@ -890,182 +1013,314 @@ export async function getProducts() {
 }
 ```
 
-Server Component はそのまま呼びます。
+Client から同じデータが必要な場合は、HTTP API や Server Function など Client から利用可能な境界を用意してください。
+
+Server Component
+      ↓
+getProducts()
+      ↓
+Database
+
+Client Component
+      ↓
+useProducts()
+      ↓
+HTTP API
+      ↓
+Server
+      ↓
+Database
+
+Server 専用モジュールを Client Component から import しないでください。
+
+# Server → Client のデータ受け渡し
+
+Server Component から Client Component に渡すデータは必要最小限にしてください。
 
 ```tsx
-export default async function ProductsPage() {
+<FavoriteButton productId={product.id} />
+```
+
+必要なフィールドだけを渡してください。
+
+```tsx
+<UserCard
+  user={{
+    id: user.id,
+    displayName: user.displayName,
+  }}
+/>
+```
+
+DB Model や不要なフィールドを含むオブジェクトをそのまま Client Component に渡さないでください。
+
+# Suspense / Streaming のルール
+
+## 非同期 Server Component は Suspense 境界を検討する
+
+ページ内に独立した非同期処理がある場合は、async Server Component として分離し、`Suspense` で囲む構成を検討してください。
+
+```tsx
+import { Suspense } from 'react'
+
+export default function Page() {
+  return (
+    <>
+      <Header />
+
+      <Suspense fallback={<ProductsSkeleton />}>
+        <Products />
+      </Suspense>
+
+      <Suspense fallback={<RecommendationsSkeleton />}>
+        <Recommendations />
+      </Suspense>
+    </>
+  )
+}
+```
+
+```tsx
+async function Products() {
   const products = await getProducts()
 
   return <ProductList products={products} />
 }
 ```
 
-Client Component から DB に直接アクセスすることはできないため、Client 側では API を経由します。
+```tsx
+async function Recommendations() {
+  const recommendations = await getRecommendations()
 
-```ts
-// client/fetchProducts.ts
-export async function fetchProducts() {
-  const response = await fetch('/api/products')
-
-  return response.json()
+  return <RecommendationList items={recommendations} />
 }
 ```
 
-```tsx
-'use client'
+## Streaming したい処理は Suspense 境界の内側で await する
 
-export function useProducts() {
-  return useQuery({
-    queryKey: ['products'],
-    queryFn: fetchProducts,
-  })
+以下のように、親 Component で先に `await` してから Suspense で囲まないでください。
+
+```tsx
+// 避ける
+export default async function Page() {
+  const products = await getProducts()
+
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <ProductList products={products} />
+    </Suspense>
+  )
 }
 ```
 
-この場合は、
-
-Server Component
-    ↓
-getProducts()
-    ↓
-Database
-
-と、
-
-Client Component
-    ↓
-useProducts()
-    ↓
-HTTP API
-    ↓
-Server
-    ↓
-Database
-
-で経路が異なります。
-
-これは同じ処理を二重実装しているのではなく、**Server と Client ではデータソースへのアクセス方法そのものが異なる**ためです。
-
-したがって、
-
-**すべての `getProducts` に対応する `useProducts` を作る必要はありません。**
-
-Client から取得するユースケースが発生したときだけ、Client 用の Hook や API を追加してください。
-
-## Client 側でデータ取得してよいケース
-
-Client 側のデータ取得を禁止するわけではありません。
-
-以下のような場合は、`useProducts` のような Hook を使用して構いません。
-
-- ユーザー操作後にデータを再取得する
-- 検索条件の変更に応じて取得する
-- ページネーションを行う
-- 無限スクロールを行う
-- ポーリングする
-- window focus 時に再取得する
-- リアルタイム性が必要
-- Client 側の状態とサーバーデータを同期する必要がある
-- TanStack Query / SWR などによる Client 側キャッシュが必要
-
-つまり、
-
-```text
-初期表示
-    ↓
-Server Component
-
-ユーザー操作後の再取得・同期
-    ↓
-Client Component
-```
-
-を基本形としてください。
-
-## Client Component の境界はできるだけ下げる
-
-例えば、次のようにページ全体を Client Component にしないでください。
+Streaming の対象にする場合は、非同期処理を Suspense 配下の Server Component に移してください。
 
 ```tsx
-'use client'
+export default function Page() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <Products />
+    </Suspense>
+  )
+}
 
-export default function ProductPage() {
+async function Products() {
+  const products = await getProducts()
+
+  return <ProductList products={products} />
+}
+```
+
+基本形は以下です。
+
+Suspense
+   ↓
+async Server Component
+   ↓
+await
+
+## 独立したデータ取得を親で直列 await しない
+
+以下のように独立したデータ取得を親で順番に待たないでください。
+
+```tsx
+export default async function Page() {
+  const products = await getProducts()
+  const recommendations = await getRecommendations()
+
+  // ...
+}
+```
+
+それぞれ独立して表示できる場合は Component を分離してください。
+
+```tsx
+export default function Page() {
   return (
     <>
-      <Header />
-      <ProductInfo />
-      <FavoriteButton />
-      <Footer />
+      <Suspense fallback={<ProductsSkeleton />}>
+        <Products />
+      </Suspense>
+
+      <Suspense fallback={<RecommendationsSkeleton />}>
+        <Recommendations />
+      </Suspense>
     </>
   )
 }
 ```
 
-`FavoriteButton` だけにインタラクションが必要なのであれば、
-
-```text
-ProductPage        Server
-├── Header         Server
-├── ProductInfo    Server
-├── FavoriteButton Client
-└── Footer         Server
-```
-
-という構成にしてください。
+同時に必要なデータで、Component 分割する必要がない場合は並列取得してください。
 
 ```tsx
-export default async function ProductPage() {
-  const product = await getProduct()
-
-  return (
-    <>
-      <Header />
-      <ProductInfo product={product} />
-      <FavoriteButton productId={product.id} />
-      <Footer />
-    </>
-  )
-}
+const [products, recommendations] = await Promise.all([
+  getProducts(),
+  getRecommendations(),
+])
 ```
+
+## Suspense は表示単位で分ける
+
+ページ全体を1つの Suspense で囲むことを基本にしないでください。
+
+Page
+├── Header
+├── Suspense
+│     └── Products
+├── Suspense
+│     └── Recommendations
+└── Footer
+
+ユーザーにまとめて表示したい単位ごとに Suspense 境界を作ってください。
+
+## `loading.tsx` と局所的な Suspense を使い分ける
+
+Route Segment 全体の loading UI は `loading.tsx` を使用してください。
+
+app/
+└── products/
+    ├── loading.tsx
+    └── page.tsx
+
+ページ内の特定部分のみ Streaming する場合は、Component 単位で `<Suspense>` を使用してください。
 
 ```tsx
-'use client'
-
-export function FavoriteButton({
-  productId,
-}: {
-  productId: string
-}) {
-  // Client 側の state / event
-}
+<Suspense fallback={<ProductsSkeleton />}>
+  <Products />
+</Suspense>
 ```
 
-Client Component が必要だからといって、親 Component まで Client にする必要はありません。
+# 実務上の判断フロー
 
-## Client Component を細かく分けすぎない
+Component を実装する
+        │
+        ▼
+まず Server Component として考える
+        │
+        ▼
+初期データが必要か？
+        │
+        ├─ Yes
+        │    ↓
+        │ Server で取得する
+        │
+        ▼
+データ取得は他の UI と独立しているか？
+        │
+        ├─ Yes
+        │    ↓
+        │ async Server Component に分離
+        │    ↓
+        │ Suspense 境界を検討
+        │
+        ▼
+ブラウザ上で実行する必要があるか？
+        │
+        ├─ No
+        │    ↓
+        │ Server Component のまま
+        │
+        └─ Yes
+             │
+             ├─ state
+             ├─ effect
+             ├─ event handler
+             ├─ Browser API
+             ├─ Client 再取得
+             └─ Client cache / sync
+                    │
+                    ▼
+             Client Component
+                    │
+                    ▼
+        'use client' をもっと下げられないか？
+                    │
+                    ▼
+        Client Component の import を確認
+                    │
+                    ▼
+        Server として維持したい Component を
+        import していないか？
+                    │
+                    ▼
+        Server から children / props として
+        composition できないか？
 
-一方で、Client Component を最小化することだけを目的に、細かく分割しすぎる必要もありません。
 
-例えば、
+# データ取得の判断フロー
 
-SearchForm
-├── KeywordInput
-├── CategorySelect
-├── SortSelect
-└── ClearButton
+データが必要
+    │
+    ▼
+初期表示に必要か？
+    │
+    ├─ Yes
+    │    ↓
+    │ Server で取得
+    │
+    └─ No / Client で再取得が必要
+         │
+         ▼
+    Client 側で取得する必要があるか？
+         │
+         ├─ No
+         │    ↓
+         │ Server で取得
+         │
+         └─ Yes
+              ↓
+         useProducts などを使用
 
-が同じ state を共有しているのであれば、`SearchForm` 全体を Client Component にして構いません。
+# Suspense の判断フロー
 
-```tsx
-'use client'
+Server で非同期処理がある
+        │
+        ▼
+ページ全体がその処理を待つ必要があるか？
+        │
+        ├─ Yes
+        │    ↓
+        │ そのまま await
+        │
+        └─ No
+             ↓
+        async Server Component に分離
+             ↓
+        Suspense で囲む
+             ↓
+        fallback を用意する
 
-export function SearchForm() {
-  // 検索フォーム全体の state を管理する
-}
-```
+複数の非同期処理がある場合は、
 
-基準は、
+相互依存している？
+    │
+    ├─ Yes
+    │    ↓
+    │ 必要な順序で取得
+    │
+    └─ No
+         ↓
+    Component 分割 + Suspense
+    または Promise.all
 
-**インタラクションを成立させるために必要な最小のまとまり**
-
-です。
+と判断してください。
