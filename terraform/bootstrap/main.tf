@@ -79,7 +79,7 @@ resource "aws_lambda_function" "production" {
       SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
       ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_production
       ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Viewer-Access-Token"
       USE_JWKS_VERIFIER        = "true"
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "production"
@@ -120,7 +120,7 @@ resource "aws_lambda_function" "preview" {
       SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
       ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_preview
       ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Viewer-Access-Token"
       USE_JWKS_VERIFIER        = "true"
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "preview"
