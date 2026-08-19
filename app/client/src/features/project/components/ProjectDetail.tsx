@@ -10,6 +10,8 @@ interface ProjectDetailProps {
   taskListSection: React.ReactNode;
   /** そのprojectへのtask追加フォーム（features/todoへの依存を避けるため、page側から注入する） */
   taskCreateSection?: React.ReactNode;
+  /** viewer招待・一覧・取り消しUI（features/viewer-managementへの依存を避けるため、page側から注入する） */
+  viewerManagementSection?: React.ReactNode;
 }
 
 /**
@@ -85,6 +87,8 @@ function ProjectDetail(props: ProjectDetailProps): React.ReactNode {
       {props.taskCreateSection}
 
       {props.taskListSection}
+
+      {props.viewerManagementSection}
 
       <ProjectEditForm
         project={isEditing ? project : null}

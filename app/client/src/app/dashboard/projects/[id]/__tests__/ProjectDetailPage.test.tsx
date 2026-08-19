@@ -3,6 +3,8 @@ import type React from 'react';
 import ProjectDetail from '@/features/project/components/ProjectDetail';
 import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
 import TaskList from '@/features/todo/components/TaskList';
+import ViewerInviteForm from '@/features/viewer-management/components/ViewerInviteForm';
+import ViewerList from '@/features/viewer-management/components/ViewerList';
 import ProjectDetailClient from '../ProjectDetailClient';
 import ProjectDetailPage from '../page';
 
@@ -88,6 +90,18 @@ describe('ProjectDetailClient', () => {
     expect(
       (taskCreateFormElement?.props as { fixedProjectId: string } | undefined)
         ?.fixedProjectId,
+    ).toBe(projectId);
+
+    const viewerInviteFormElement = findElementByType(tree, ViewerInviteForm);
+    expect(
+      (viewerInviteFormElement?.props as { projectId: string } | undefined)
+        ?.projectId,
+    ).toBe(projectId);
+
+    const viewerListElement = findElementByType(tree, ViewerList);
+    expect(
+      (viewerListElement?.props as { projectId: string } | undefined)
+        ?.projectId,
     ).toBe(projectId);
   });
 });
