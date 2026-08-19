@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { FormAlert } from '@/shared/components/FormAlert';
 import { useViewerManagementServices } from '../lib/ViewerManagementServicesContext';
 
 /**
@@ -121,16 +122,7 @@ function ViewerList(props: ViewerListProps): React.ReactNode {
         </div>
       ))}
 
-      {/* 取り消しエラーメッセージ表示 */}
-      {revokeError && (
-        <div
-          className="p-3 bg-red-100 text-red-700 rounded-lg"
-          role="alert"
-          aria-live="polite"
-        >
-          <span className="text-sm">{revokeError}</span>
-        </div>
-      )}
+      {revokeError && <FormAlert variant="error" message={revokeError} />}
     </div>
   );
 }

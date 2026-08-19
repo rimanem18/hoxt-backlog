@@ -2,6 +2,7 @@
 
 import { createProjectSchema } from '@hoxt-backlog/shared-schemas/projects';
 import React, { useState } from 'react';
+import { FormAlert } from '@/shared/components/FormAlert';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
 /**
@@ -101,15 +102,8 @@ function ProjectCreateForm(): React.ReactNode {
         </button>
       </form>
 
-      {/* エラーメッセージ表示 */}
       {error && (
-        <div
-          className="mt-2 sm:mt-3 p-3 bg-red-100 text-red-700 rounded-lg"
-          role="alert"
-          aria-live="polite"
-        >
-          <span className="text-sm">{error}</span>
-        </div>
+        <FormAlert variant="error" message={error} className="mt-2 sm:mt-3" />
       )}
     </div>
   );

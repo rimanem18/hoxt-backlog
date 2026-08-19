@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '@/lib/apiClientContext';
 import { handleApiError } from '@/lib/apiErrorHandler';
+import { invalidateProjectViewers } from '../lib/viewerQueryCache';
 
 /**
  * useRevokeViewerのmutate引数
@@ -48,11 +49,7 @@ export function useRevokeViewer() {
       }
     },
     onSuccess: (_, variables) => {
-      // viewer一覧のキャッシュを無効化（exact: false で全フィルタ・ソート組み合わせを対象）
-      queryClient.invalidateQueries({
-        queryKey: ['project-viewers', variables.projectId],
-        exact: false,
-      });
+      invalidateProjectViewers(queryClient, variables.projectId);
     },
   });
 }

@@ -7,6 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/lib/apiClientContext';
 import { handleApiError } from '@/lib/apiErrorHandler';
+import { projectViewersQueryKey } from '../lib/viewerQueryCache';
 
 /**
  * useProjectViewersのオプション
@@ -30,7 +31,7 @@ export function useProjectViewers(
   const apiClient = useApiClient();
 
   return useQuery({
-    queryKey: ['project-viewers', projectId],
+    queryKey: projectViewersQueryKey(projectId),
     enabled: options?.enabled ?? true,
     queryFn: async () => {
       try {

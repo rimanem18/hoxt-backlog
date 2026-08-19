@@ -9,6 +9,7 @@ import type { ProjectViewer } from '@hoxt-backlog/shared-schemas/viewers';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '@/lib/apiClientContext';
 import { handleApiError } from '@/lib/apiErrorHandler';
+import { invalidateProjectViewers } from '../lib/viewerQueryCache';
 
 /**
  * useInviteViewerのmutate引数
@@ -54,11 +55,7 @@ export function useInviteViewer() {
       }
     },
     onSuccess: (_, variables) => {
-      // viewer一覧のキャッシュを無効化（exact: false で全フィルタ・ソート組み合わせを対象）
-      queryClient.invalidateQueries({
-        queryKey: ['project-viewers', variables.projectId],
-        exact: false,
-      });
+      invalidateProjectViewers(queryClient, variables.projectId);
     },
   });
 }

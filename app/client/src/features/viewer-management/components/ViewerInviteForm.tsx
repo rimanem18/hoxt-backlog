@@ -2,6 +2,7 @@
 
 import { inviteViewerSchema } from '@hoxt-backlog/shared-schemas/viewers';
 import React, { useState } from 'react';
+import { FormAlert } from '@/shared/components/FormAlert';
 import { useViewerManagementServices } from '../lib/ViewerManagementServicesContext';
 
 /**
@@ -91,26 +92,16 @@ function ViewerInviteForm(props: ViewerInviteFormProps): React.ReactNode {
         </button>
       </form>
 
-      {/* エラーメッセージ表示 */}
       {error && (
-        <div
-          className="mt-2 sm:mt-3 p-3 bg-red-100 text-red-700 rounded-lg"
-          role="alert"
-          aria-live="polite"
-        >
-          <span className="text-sm">{error}</span>
-        </div>
+        <FormAlert variant="error" message={error} className="mt-2 sm:mt-3" />
       )}
 
-      {/* 成功メッセージ表示 */}
       {success && (
-        <div
-          className="mt-2 sm:mt-3 p-3 bg-green-100 text-green-700 rounded-lg"
-          role="status"
-          aria-live="polite"
-        >
-          <span className="text-sm">招待メールを送信しました</span>
-        </div>
+        <FormAlert
+          variant="success"
+          message="招待メールを送信しました"
+          className="mt-2 sm:mt-3"
+        />
       )}
     </div>
   );
