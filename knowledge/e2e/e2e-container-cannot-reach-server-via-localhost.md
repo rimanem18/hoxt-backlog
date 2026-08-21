@@ -71,8 +71,6 @@ console.log(await res.text());
 
 ## 学び
 
-- Docker Composeの`ports:`によるホスト公開は、他コンテナからの`localhost`到達性を意味しない。
-  コンテナ間通信は常にサービス名（DNS）で行う必要がある
 - この既存プロジェクトのE2Eテストが`localhost`問題に触れてこなかったのは、設計上
   「バックエンドへの実到達」を避けて`page.route()`モックに倒しているため。Phase 9（E2E）で
   もし「招待メールのFakeゲートウェイが記録した実トークンでviewerアクセスAPIを実際に叩く」

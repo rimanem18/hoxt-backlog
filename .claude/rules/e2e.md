@@ -7,6 +7,9 @@ paths:
 
 ## 実行環境
 
+- **必須**: コンテナ間通信はサービス名（DNS）で行う。`compose.yaml`の`ports:`によるホスト公開は他コンテナからの`localhost`到達性を意味しない
+  - 実際のバックエンドへ結合確認する場合は、`page.route()`で`localhost`宛リクエストをサービス名（例: `http://server:3001`）へ書き換えて中継する
+
 ## ディレクトリ構造
 
 E2Eテストは `app/client/e2e/{feature}/` 配下に配置します。
