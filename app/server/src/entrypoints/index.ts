@@ -10,6 +10,7 @@ import { metricsMiddleware } from '@/shared/middleware/metricsMiddleware';
 import { CloudWatchMonitoringService } from '@/shared/monitoring/CloudWatchMonitoringService';
 import task from '@/task/presentation/taskRoutes';
 import auth from '@/user/presentation/authRoutes';
+import authTest from '@/user/presentation/authTestRoutes';
 import emailSignup from '@/user/presentation/emailSignupRoutes';
 import user from '@/user/presentation/userRoutes';
 import viewerAccess from '@/viewer/presentation/viewerAccessRoutes';
@@ -67,6 +68,7 @@ const createServer = (): OpenAPIHono => {
   // Why: 本番では絶対に有効化しないためisTestEndpointsEnabled()でガードする
   if (isTestEndpointsEnabled()) {
     app.route('/api', viewerTest);
+    app.route('/api', authTest);
   }
 
   return app;

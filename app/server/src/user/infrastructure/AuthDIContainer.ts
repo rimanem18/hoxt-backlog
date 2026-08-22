@@ -9,6 +9,7 @@ import type { IAuthProvider } from '@/user/domain/services/IAuthProvider';
 import { PostgreSQLUserRepository } from '@/user/infrastructure/PostgreSQLUserRepository';
 import { SupabaseEmailSignupGateway } from '@/user/infrastructure/SupabaseEmailSignupGateway';
 import { SupabaseJwtVerifier } from '@/user/infrastructure/SupabaseJwtVerifier';
+import { TestBypassAuthProvider } from '@/user/infrastructure/TestBypassAuthProvider';
 
 /**
  * 認証・ユーザー関連の依存性注入コンテナ
@@ -112,7 +113,9 @@ export class AuthDIContainer {
       );
     }
 
-    AuthDIContainer.authProviderInstance = new SupabaseJwtVerifier();
+    AuthDIContainer.authProviderInstance = new TestBypassAuthProvider(
+      new SupabaseJwtVerifier(),
+    );
 
     return AuthDIContainer.authProviderInstance;
   }
