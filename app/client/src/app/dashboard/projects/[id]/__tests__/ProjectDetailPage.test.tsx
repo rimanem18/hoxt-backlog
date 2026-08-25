@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type React from 'react';
 import ProjectDetail from '@/features/project/components/ProjectDetail';
+import EditableTaskList from '@/features/todo/components/EditableTaskList';
 import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
-import TaskList from '@/features/todo/components/TaskList';
 import ViewerInviteForm from '@/features/viewer-management/components/ViewerInviteForm';
 import ViewerList from '@/features/viewer-management/components/ViewerList';
 import ProjectDetailPage from '../page';
@@ -58,16 +58,17 @@ describe('ProjectDetailPage', () => {
     // When: ProjectDetailPageをparams付きで呼び出す
     const tree = (await ProjectDetailPage({ params })) as React.ReactElement;
 
-    // Then: ProjectDetail/TaskList/TaskCreateForm/viewer管理UIにprojectIdが伝播する
+    // Then: ProjectDetail/EditableTaskList/TaskCreateForm/viewer管理UIにprojectIdが伝播する
     const projectDetailElement = findElementByType(tree, ProjectDetail);
     expect(
       (projectDetailElement?.props as { projectId: string } | undefined)
         ?.projectId,
     ).toBe(projectId);
 
-    const taskListElement = findElementByType(tree, TaskList);
+    const editableTaskListElement = findElementByType(tree, EditableTaskList);
     expect(
-      (taskListElement?.props as { projectId: string } | undefined)?.projectId,
+      (editableTaskListElement?.props as { projectId: string } | undefined)
+        ?.projectId,
     ).toBe(projectId);
 
     const taskCreateFormElement = findElementByType(tree, TaskCreateForm);
