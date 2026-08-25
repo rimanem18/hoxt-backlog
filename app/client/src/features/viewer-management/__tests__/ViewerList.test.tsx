@@ -109,7 +109,7 @@ describe('ViewerList', () => {
     }));
 
     // When & Then: 空状態メッセージが表示される
-    expect(screen.getByText('招待済みのviewerはいません')).toBeDefined();
+    expect(screen.getByText('招待済みの閲覧者はいません')).toBeDefined();
   });
 
   test('取り消しボタンをクリックすると確認導線が表示される', async () => {

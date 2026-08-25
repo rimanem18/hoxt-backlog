@@ -31,7 +31,7 @@ test.describe('viewer招待〜メール送信〜一覧確認 E2Eテスト', () =
     await page.getByLabel('招待するメールアドレス').fill(viewerEmail);
     await page.getByRole('button', { name: '招待する' }).click();
 
-    // Then: 招待済みviewer一覧に反映される（AC-01, AC-07）
+    // Then: 招待済み閲覧者一覧に反映される（AC-01, AC-07）
     await expect(page.getByText(viewerEmail)).toBeVisible({
       timeout: 15000,
     });

@@ -56,7 +56,7 @@ function ViewerList(props: ViewerListProps): React.ReactNode {
     return (
       <div aria-live="polite">
         <span className="text-sm text-gray-500">
-          招待済みのviewerはいません
+          招待済みの閲覧者はいません
         </span>
       </div>
     );

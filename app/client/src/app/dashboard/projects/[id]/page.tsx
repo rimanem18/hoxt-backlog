@@ -46,12 +46,12 @@ export default async function ProjectDetailPage(props: {
           <ViewerManagementServicesProvider>
             <div className="space-y-4">
               <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                <h2 className="text-xl font-semibold mb-4">viewerを招待</h2>
+                <h2 className="text-xl font-semibold mb-4">閲覧者を招待</h2>
                 <ViewerInviteForm projectId={projectId} />
               </div>
 
               <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                <h2 className="text-xl font-semibold mb-4">招待済みviewer</h2>
+                <h2 className="text-xl font-semibold mb-4">招待済み閲覧者</h2>
                 <ViewerList projectId={projectId} />
               </div>
             </div>
