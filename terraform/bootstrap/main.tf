@@ -30,6 +30,17 @@ module "github_oidc" {
   tags = local.common_tags
 }
 
+# SES招待メール送信基盤（ドメインID・DKIM・Lambda送信ポリシー）
+module "ses" {
+  source = "../modules/ses"
+
+  project_name = local.project_name
+  domain_name  = var.domain_name
+  aws_region   = var.aws_region
+
+  tags = local.common_tags
+}
+
 # Lambda Execution Role
 resource "aws_iam_role" "lambda_exec" {
   name                 = "${local.project_name}-lambda-exec-role"
@@ -55,6 +66,12 @@ resource "aws_iam_role" "lambda_exec" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# 招待メール送信（SES）権限
+resource "aws_iam_role_policy_attachment" "lambda_ses_send" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = module.ses.lambda_ses_send_policy_arn
 }
 
 # Production Lambda Function (placeholder for CI/CD updates)
@@ -84,6 +101,8 @@ resource "aws_lambda_function" "production" {
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "production"
       METRICS_NAMESPACE        = var.metrics_namespace
+      SES_FROM_ADDRESS         = module.ses.from_address_production
+      VIEWER_ACCESS_BASE_URL   = "https://${var.domain_name}"
     }
   }
 
@@ -125,6 +144,8 @@ resource "aws_lambda_function" "preview" {
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "preview"
       METRICS_NAMESPACE        = var.metrics_namespace
+      SES_FROM_ADDRESS         = module.ses.from_address_preview
+      VIEWER_ACCESS_BASE_URL   = "https://preview.${var.domain_name}"
     }
   }
 

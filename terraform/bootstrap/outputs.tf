@@ -117,3 +117,14 @@ output "access_allow_headers" {
   description = "CORS Allow Headers"
   value       = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
 }
+
+# SES招待メール送信用
+output "ses_dkim_dns_records" {
+  description = "SES DKIM検証のためDNSへ手動登録が必要なCNAMEレコード一覧"
+  value       = module.ses.dkim_dns_records
+}
+
+output "ses_identity_arn" {
+  description = "SESドメインID ARN（permissions boundaryのResourceに使用）"
+  value       = module.ses.identity_arn
+}
