@@ -124,6 +124,22 @@ iac-apply:
 		cd app && terraform apply terraform.tfplan'
 	@echo "✅ App構成の適用が完了しました。"
 
+# 手動作成済みリソースをterraform stateへ取り込む（Terraform実行ロールに新規作成権限を
+# 与えたくないリソース向け。 例: make iac-import ADDR=module.ses.aws_iam_policy.foo ID=arn:...）
+iac-import:
+	@docker compose exec \
+		-e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN} \
+		-e CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID} \
+		-e PROJECT_NAME=${PROJECT_NAME} \
+		-e REPOSITORY_NAME=${REPOSITORY_NAME} \
+		-e TF_VAR_database_url=${DATABASE_URL} \
+		-e TF_VAR_access_allow_origin_production=${ACCESS_ALLOW_ORIGIN_PRODUCTION} \
+		-e TF_VAR_access_allow_origin_preview=${ACCESS_ALLOW_ORIGIN_PREVIEW} \
+		-e TF_VAR_next_public_supabase_url=${SUPABASE_URL} \
+		-e TF_VAR_supabase_publishable_key=${SUPABASE_PUBLISHABLE_KEY} \
+		-e TF_VAR_metrics_namespace=${METRICS_NAMESPACE} \
+		iac bash -c 'source ./scripts/create-session.sh && cd bootstrap && terraform import $(ADDR) $(ID)'
+
 
 frontend-deploy-preview:
 	@echo "ビルドします..."
