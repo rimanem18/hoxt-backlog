@@ -18,7 +18,6 @@
     "db:generate:production": "BASE_SCHEMA=app_${PROJECT_NAME} drizzle-kit generate",
     "db:generate": "bun run db:generate:test && bun run db:generate:preview && bun run db:generate:production",
     "db:migrate:preview": "BASE_SCHEMA=app_${PROJECT_NAME}_preview drizzle-kit migrate",
-    "db:migrate:preview:debug": "BASE_SCHEMA=app_${PROJECT_NAME}_preview bun scripts/migrate-debug.ts",
     "db:migrate:production": "BASE_SCHEMA=app_${PROJECT_NAME} drizzle-kit migrate",
     "db:migrate:test": "BASE_SCHEMA=app_test drizzle-kit migrate",
     "db:migrate": "bun run db:migrate:test && bun run db:migrate:preview && bun run db:migrate:production",
