@@ -22,6 +22,7 @@
     "generate:types": "bunx openapi-typescript ../../docs/api/openapi.yaml -o src/types/api/generated.ts"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^1.1.3",
     "@reduxjs/toolkit": "^2.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-query": "^5.101.1",
