@@ -1,0 +1,11 @@
+{
+  "threshold": 8,
+  "reporters": ["console"],
+  "format": ["typescript"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/__tests__/**",
+    "src/schemas/**"
+  ]
+}

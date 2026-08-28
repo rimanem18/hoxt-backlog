@@ -38,7 +38,27 @@ effort: medium
 
 ## ナレッジの確認
 
-作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。knowledge にはフロントマターがあるものもあるため、まずは必要かどうかそこで見極めて読みます。
+作業に着手する前に、今回担当するフェーズに関連しそうなナレッジを `@knowledge/` から確認します。別のセッションで作成された知見が蓄積されている可能性があります。knowledge の frontmatter には description が必ず設定されている前提とし、まず description を見て関連性を見極めてから本文を読むかどうか判断します。
+
+- **禁止**: `ls knowledge/ | grep <keyword>` のようなファイル名ベースの検索
+  - `knowledge/` 直下はカテゴリ別サブディレクトリ（`auth/` `backend/` `e2e/` `frontend/`）であり、`ls` は非再帰のためファイルが一切列挙されない
+  - 仮に再帰化しても、関連する知見はファイル名ではなく description 本文にしか現れないことが多く（例: `project_viewers` というテーブル名はファイル名になく description 内にのみ記載）、ファイル名一致では見逃す
+- **必須**: キーワードで絞り込まず、全ナレッジの title（本文冒頭の `# `見出し）と description を一覧表示する。以下の `search_knowledge` 関数を使い、出力を見て今回のフェーズに関連するものを自分で判断する
+
+```sh
+search_knowledge() {
+  local base="knowledge"
+  find "$base" -name '*.md' | sort | while IFS= read -r f; do
+    echo "$(basename "$f")"
+    grep -m1 '^# ' "$f" | sed 's/^# /title: /'
+    grep -m1 '^description: ' "$f"
+    echo
+  done
+}
+search_knowledge
+```
+
+ただし、ナレッジそのものが陳腐化していたり、バッドノウハウである可能性も考慮する必要があります。絶対的な基準とせずに、あくまで参考資料に留めてください。
 
 ## 実行内容
 

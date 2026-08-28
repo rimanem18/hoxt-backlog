@@ -30,6 +30,16 @@ export interface IProjectRepository {
   findByUserId(userId: string): Promise<ProjectEntity[]>;
 
   /**
+   * 複数のプロジェクトIDで一括取得する（所有者検証なし）
+   *
+   * 所有者スコープなしの強い権限を持つため、呼び出し元は
+   * GetViewerAccessibleProjectsUseCaseに限定すること。
+   * @param projectIds - 取得するプロジェクトIDの配列
+   * @returns 見つかったProjectEntityの配列
+   */
+  findByIds(projectIds: string[]): Promise<ProjectEntity[]>;
+
+  /**
    * プロジェクトを更新する（検証済みEntityを永続化）
    * @param userId - プロジェクト所有者のユーザーID
    * @param projectId - 更新対象のプロジェクトID

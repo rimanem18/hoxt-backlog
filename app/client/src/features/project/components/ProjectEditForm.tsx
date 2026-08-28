@@ -5,6 +5,7 @@ import {
   type Project,
 } from '@hoxt-backlog/shared-schemas/projects';
 import React, { useEffect, useState } from 'react';
+import { FormAlert } from '@/shared/components/FormAlert';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
 /**
@@ -147,16 +148,7 @@ function ProjectEditForm(props: {
             />
           </div>
 
-          {/* エラーメッセージ表示 */}
-          {error && (
-            <div
-              className="p-3 bg-red-100 text-red-700 rounded-lg"
-              role="alert"
-              aria-live="polite"
-            >
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
+          {error && <FormAlert variant="error" message={error} />}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <button

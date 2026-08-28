@@ -512,6 +512,72 @@ describe('PostgreSQLTaskRepository', () => {
     });
   });
 
+  describe('findByProjectIds', () => {
+    const findByProjectIdsProjectId1 = 'aa1e4567-e89b-12d3-a456-426614174030';
+    const findByProjectIdsProjectId2 = 'bb1e4567-e89b-12d3-a456-426614174031';
+
+    beforeEach(async () => {
+      await db.insert(projects).values([
+        { id: findByProjectIdsProjectId1, userId: testUserId1, name: 'p1' },
+        { id: findByProjectIdsProjectId2, userId: testUserId2, name: 'p2' },
+      ]);
+
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId1,
+          title: 'project1のタスク',
+          projectId: findByProjectIdsProjectId1,
+        }),
+      );
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId2,
+          title: 'project2のタスク',
+          projectId: findByProjectIdsProjectId2,
+        }),
+      );
+      await repository.save(
+        TaskEntity.create({
+          userId: testUserId1,
+          title: 'project未所属のタスク',
+          projectId: null,
+        }),
+      );
+    });
+
+    test('複数projectIdを指定すると所有者に関わらず該当taskを一括取得できる', async () => {
+      // When: 異なるユーザーが所有する2つのprojectIdで取得
+      const result = await repository.findByProjectIds([
+        findByProjectIdsProjectId1,
+        findByProjectIdsProjectId2,
+      ]);
+
+      // Then: userIdスコープなしで両方のtaskが取得できる
+      expect(result).toHaveLength(2);
+      expect(result.map((t) => t.getTitle()).sort()).toEqual(
+        ['project1のタスク', 'project2のタスク'].sort(),
+      );
+    });
+
+    test('project未所属のtaskは含まれない', async () => {
+      // When: project1のみ指定して取得
+      const result = await repository.findByProjectIds([
+        findByProjectIdsProjectId1,
+      ]);
+
+      // Then: project未所属のtaskは含まれない
+      expect(result.every((t) => t.getProjectId() !== null)).toBe(true);
+    });
+
+    test('空配列を渡すと空配列を返す（境界値）', async () => {
+      // When: 空配列で取得
+      const result = await repository.findByProjectIds([]);
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('updateStatus', () => {
     test('タスクのステータスを更新できる', async () => {
       // Given: 保存済みのタスク（ステータス: not_started）

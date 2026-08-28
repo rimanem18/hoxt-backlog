@@ -1,3 +1,7 @@
+---
+description: Supabaseのidentity linkingをON にした環境で、AuthMiddlewareやAuthenticationDomainServiceなど`findByExternalId(externalId, provider)`でユーザーを検索する処理を実装・変更するときに参照する。同一人物が複数プロバイダー（Google+emailなど）でサインインし`provider`が変化しても`sub`は同一になるため、providerが切り替わった合流ユーザーが後続API呼び出しで401になる場合や、`AuthProvider`型に新しいプロバイダーを追加する場合に該当する。
+---
+
 # Supabase identity linking ON 環境での provider 不一致問題
 
 ## 背景
@@ -41,7 +45,7 @@ const userData = await this.userRepository.findByExternalId(
 if (!userData) {
   // provider をまたいだ同一人物の二重登録を防ぐため（REQ-002）
   const emailUser = await this.userRepository.findByEmail(
-    externalInfo.email.trim().toLowerCase(),
+    EmailAddress.of(externalInfo.email).value,
   );
 
   if (emailUser) {
@@ -61,10 +65,14 @@ if (!userData) {
 let user = await userRepository.findByExternalId(externalId, provider);
 
 // identity linking ON 環境で provider が切り替わった合流ユーザー向けフォールバック
+// externalId が一致しない場合は別ユーザーの可能性があるため認証失敗として扱う
 if (!user && payload.email) {
-  user = await userRepository.findByEmail(
-    (payload.email as string).trim().toLowerCase(),
+  const userByEmail = await userRepository.findByEmail(
+    EmailAddress.of(payload.email as string).value,
   );
+  if (userByEmail && userByEmail.externalId === externalId) {
+    user = userByEmail;
+  }
 }
 
 if (!user) {
@@ -72,18 +80,18 @@ if (!user) {
 }
 ```
 
-Supabase の JWT ペイロードには `payload.email` が含まれるため、このフォールバックが機能する。
+Supabase の JWT ペイロードには `payload.email` が含まれるため、このフォールバックが機能する。`findByEmail` がヒットしても JWT の `externalId` と DB 上の `externalId` が一致しない場合は別人の可能性があるため、ユーザーとして採用しない。
 
 ## email 正規化の注意点
 
-`findByEmail` に渡す前に必ず `trim().toLowerCase()` を適用する：
+`findByEmail` に渡す前に必ず `EmailAddress` 値オブジェクトで正規化する：
 
 ```typescript
-// NG: toLowerCase() のみ（前後空白が残る可能性）
-email.toLowerCase()
+// NG: 素の文字列のまま渡す（前後空白・大文字小文字が残る可能性）
+userRepository.findByEmail(rawEmail)
 
-// OK: trim() + toLowerCase()
-email.trim().toLowerCase()
+// OK: EmailAddress.of() で trim + 小文字化してから渡す
+userRepository.findByEmail(EmailAddress.of(rawEmail).value)
 ```
 
 DB の UNIQUE インデックスも `lower(email)` 関数インデックスを使用しているため、正規化の一貫性が重要。

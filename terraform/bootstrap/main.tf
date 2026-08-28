@@ -30,6 +30,17 @@ module "github_oidc" {
   tags = local.common_tags
 }
 
+# SES招待メール送信基盤（ドメインID・DKIM・Lambda送信ポリシー）
+module "ses" {
+  source = "../modules/ses"
+
+  project_name = local.project_name
+  domain_name  = var.domain_name
+  aws_region   = var.aws_region
+
+  tags = local.common_tags
+}
+
 # Lambda Execution Role
 resource "aws_iam_role" "lambda_exec" {
   name                 = "${local.project_name}-lambda-exec-role"
@@ -57,6 +68,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# 招待メール送信（SES）権限
+resource "aws_iam_role_policy_attachment" "lambda_ses_send" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = module.ses.lambda_ses_send_policy_arn
+}
+
 # Production Lambda Function (placeholder for CI/CD updates)
 resource "aws_lambda_function" "production" {
   function_name = "${local.project_name}-api-production"
@@ -79,11 +96,13 @@ resource "aws_lambda_function" "production" {
       SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
       ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_production
       ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Viewer-Access-Token"
       USE_JWKS_VERIFIER        = "true"
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "production"
       METRICS_NAMESPACE        = var.metrics_namespace
+      SES_FROM_ADDRESS         = module.ses.from_address_production
+      VIEWER_ACCESS_BASE_URL   = "https://${var.domain_name}"
     }
   }
 
@@ -110,18 +129,23 @@ resource "aws_lambda_function" "preview" {
 
   environment {
     variables = {
-      NODE_ENV                 = "development"
+      # previewではE2Eを実行しないため、ENABLE_TEST_ENDPOINTSが誤って
+      # trueに設定された場合でもテスト専用エンドポイントを有効化させないよう
+      # NODE_ENVをproductionと同じ値にする（isTestEndpointsEnabled()参照）
+      NODE_ENV                 = "production"
       BASE_SCHEMA              = "app_${local.project_name}_preview"
       DATABASE_URL             = var.database_url
       SUPABASE_URL             = var.next_public_supabase_url
       SUPABASE_PUBLISHABLE_KEY = var.supabase_publishable_key
       ACCESS_ALLOW_ORIGIN      = var.access_allow_origin_preview
       ACCESS_ALLOW_METHODS     = "GET,POST,PUT,DELETE,OPTIONS,HEAD,PATCH"
-      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+      ACCESS_ALLOW_HEADERS     = "Content-Type,Authorization,X-Requested-With,Accept,Origin,Viewer-Access-Token"
       USE_JWKS_VERIFIER        = "true"
       ENABLE_JWKS_VERIFICATION = "true"
       ENVIRONMENT              = "preview"
       METRICS_NAMESPACE        = var.metrics_namespace
+      SES_FROM_ADDRESS         = module.ses.from_address_preview
+      VIEWER_ACCESS_BASE_URL   = "https://preview.${var.domain_name}"
     }
   }
 

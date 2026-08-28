@@ -140,6 +140,38 @@ async function applyRlsPolicies(): Promise<void> {
         FOR ALL USING (auth.uid()::text = user_id::text)
     `);
 
+		// アプリケーション接続経由ではauth.uid()が伝播しないため、
+		// 実効的なアクセス制御はリポジトリ層の所有者検証が担う（一次防御）。
+		// RLSは直接SQLアクセス等に対する多層防御として追加する。
+		console.log("project_viewersテーブルのRLSを有効化中...");
+		await client.query(
+			`ALTER TABLE "${BASE_SCHEMA}".project_viewers ENABLE ROW LEVEL SECURITY`,
+		);
+
+		console.log("既存project_viewersポリシーを削除（冪等性確保）...");
+		await client.query(
+			`DROP POLICY IF EXISTS "project_owners_viewers_policy" ON "${BASE_SCHEMA}".project_viewers`,
+		);
+
+		console.log("project所有者のみアクセス可能なポリシーを作成中...");
+		await client.query(`
+      CREATE POLICY "project_owners_viewers_policy" ON "${BASE_SCHEMA}".project_viewers
+        FOR ALL USING (
+          EXISTS (
+            SELECT 1 FROM "${BASE_SCHEMA}".projects
+            WHERE projects.id = project_viewers.project_id
+              AND projects.user_id::text = auth.uid()::text
+          )
+        )
+    `);
+
+		// viewerはSupabase Authを経由しないため、anon/authenticatedロールへの
+		// 許可ポリシーは追加しない（アプリの直接DB接続経由のみを許可するデフォルト拒否）。
+		console.log("viewer_access_tokensテーブルのRLSを有効化中...");
+		await client.query(
+			`ALTER TABLE "${BASE_SCHEMA}".viewer_access_tokens ENABLE ROW LEVEL SECURITY`,
+		);
+
 		console.log("RLSポリシー適用完了");
 	} catch (error) {
 		console.error(

@@ -122,7 +122,7 @@ export class TaskDIContainer {
    *
    * データベース接続プールを効率的に活用
    */
-  private static getTaskRepository(): ITaskRepository {
+  static getTaskRepository(): ITaskRepository {
     if (!TaskDIContainer.taskRepositoryInstance) {
       TaskDIContainer.taskRepositoryInstance = new PostgreSQLTaskRepository(db);
     }

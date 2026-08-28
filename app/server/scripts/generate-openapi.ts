@@ -37,6 +37,12 @@ import {
 import {
 	projectRoutes,
 } from "../src/project/presentation/projectRoutes.schema";
+import {
+	viewerManagementRoutes,
+} from "../src/viewer/presentation/viewerManagementRoutes.schema";
+import {
+	viewerAccessRoutes,
+} from "../src/viewer/presentation/viewerAccessRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -74,6 +80,16 @@ async function generateOpenAPISpec(): Promise<void> {
 	// プロジェクト管理ルート
 	projectRoutes.forEach((route) => app.openapi(route, noopHandler as any));
 
+	// viewer管理ルート
+	viewerManagementRoutes.forEach((route) =>
+		app.openapi(route, noopHandler as any),
+	);
+
+	// viewer横断閲覧ルート
+	viewerAccessRoutes.forEach((route) =>
+		app.openapi(route, noopHandler as any),
+	);
+
 	// OpenAPI仕様を取得
 	const openAPISpec = app.getOpenAPIDocument({
 		openapi: "3.1.0",
@@ -104,6 +120,12 @@ async function generateOpenAPISpec(): Promise<void> {
 			scheme: "bearer",
 			bearerFormat: "JWT",
 			description: "JWT認証トークン",
+		},
+		ViewerAccessTokenAuth: {
+			type: "apiKey",
+			in: "header",
+			name: "Viewer-Access-Token",
+			description: "viewerアクセストークン",
 		},
 	};
 

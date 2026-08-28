@@ -37,12 +37,26 @@ const tableConfigs: TableConfig[] = [
 
 3. スキーマ生成コマンドを実行
 
+- **注意**: テーブル名がアンダースコア区切りの複数単語（例: `project_viewers`）の場合、生成される型名・エクスポート名は`toPascalCase()`/`toCamelCase()`（`generate-schemas.ts`内のヘルパー）でDrizzleのキャメルケースexport名と対応させている。命名変換ロジックを変更する場合は、既存の単一単語テーブル（`users`等）の生成結果に差分が出ていないか確認する
+
 ## 自動生成ファイルの取り扱い
 
 - **必須**: 冒頭に手動編集禁止の警告コメントが残るように生成スクリプトを作成
 - **禁止**: 自動生成されたファイルの手動編集
   - ファイル冒頭の警告コメントを確認
   - スキーマ変更時は必ずスキーマ駆動開発のコマンドで再生成
+
+### 例外: drizzle-kit生成マイグレーションへのIF NOT EXISTS付与
+
+drizzle-kitは`CREATE TABLE`/`CREATE INDEX`に`IF NOT EXISTS`を付与しない。DBの実オブジェクトと`__drizzle_migrations__`の記録が食い違うと、再実行時に`already exists`エラーで失敗しうる。この対策として、**未適用のマイグレーションファイルに限り**、冪等化のための手動編集を許可する。
+
+- **対象**: `CREATE TABLE` → `IF NOT EXISTS` を付与
+- **対象**: `CREATE INDEX` / `CREATE UNIQUE INDEX` → `IF NOT EXISTS` を付与
+- **対象**: `CREATE TYPE`（PostgreSQLは`IF NOT EXISTS`非対応）→ `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN null; END $$;` でラップ
+- **対象**: `ALTER TABLE ... ADD CONSTRAINT`（PostgreSQLは`IF NOT EXISTS`非対応）→ 同様に`DO`ブロックでラップ
+- **禁止**: 既にいずれかの環境（production/preview）に適用済みのマイグレーションファイルを編集すること
+  - ファイル内容を変えるとdrizzle-kitが追跡するハッシュが変わり、適用済み環境で不要な再実行が走る
+- **必須**: `bun run db:generate` を再実行しても対象ファイルに差分が出ないこと（スキーマ未変更時は`No schema changes`となり上書きされないことを確認する）
 
 # データベース運用ガイドライン
 

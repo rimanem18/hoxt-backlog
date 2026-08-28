@@ -108,11 +108,49 @@ jobs:
           bun install --frozen-lockfile
           npm install
 
+      - name: Run database migrations
+        working-directory: ./app/server
+        env:
+          DB_HOST: db
+          DB_PORT: 5432
+          DB_NAME: postgres
+          DB_USER: postgres
+          DB_PASSWORD: test_password
+          BASE_SCHEMA: test_schema
+          DATABASE_URL: postgresql://postgres:test_password@db:5432/postgres
+        run: |
+          set -e
+
+          echo "--- Installing PostgreSQL client ---"
+          apt-get update && apt-get install -y postgresql-client
+
+          echo "--- Waiting for PostgreSQL to be ready ---"
+          for i in $(seq 1 30); do
+            if pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... (attempt $i/30)"
+            sleep 2
+          done
+
+          echo "=== Create schema ==="
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "CREATE SCHEMA IF NOT EXISTS $BASE_SCHEMA"
+
+          echo "=== Drizzle push ==="
+          bunx drizzle-kit push --config=drizzle.config.ts --force
+
+          echo "=== Database schema setup (RLS/triggers) ==="
+          bun run db:setup
+
       - name: Start services and run E2E tests
         env:
           CLIENT_PORT: 3000
           SERVER_PORT: 3001
           NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001"
+          # docker-composeを使わずserver/clientを直接起動するため、サービス名DNSの
+          # 代わりにlocalhostを指定する（app/client/e2e/viewer/helpers/constants.ts）
+          E2E_SERVER_BASE_URL: "http://localhost:3001"
           # Supabase test environment variables (mocked)
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: test_publishable_key
@@ -121,29 +159,18 @@ jobs:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
         run: |
           set -e
-          
-          echo "--- Installing PostgreSQL client ---"
-          apt-get update && apt-get install -y postgresql-client
-          
-          echo "--- Waiting for PostgreSQL to be ready ---"
-          # Wait for PostgreSQL to be accessible via service name
-          for i in $(seq 1 30); do
-            if pg_isready -h db -p 5432 -U postgres; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting for PostgreSQL... (attempt $i/30)"
-            sleep 2
-          done
-          
+
           echo "--- Starting server in background (Node.js runtime) ---"
           cd ./app/server
           SERVER_PORT=3001 \
+          ENVIRONMENT=development \
+          ENABLE_TEST_ENDPOINTS=true \
           ACCESS_ALLOW_ORIGIN=http://localhost:3000 \
           ACCESS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS \
-          ACCESS_ALLOW_HEADERS=Authorization,Content-Type \
+          ACCESS_ALLOW_HEADERS=Authorization,Content-Type,Viewer-Access-Token \
           SUPABASE_URL=http://localhost:54321 \
           SUPABASE_PUBLISHABLE_KEY=test_publishable_key \
+          VIEWER_ACCESS_BASE_URL=http://localhost:3000 \
           DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \

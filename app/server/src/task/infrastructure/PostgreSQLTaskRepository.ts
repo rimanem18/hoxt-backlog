@@ -150,6 +150,20 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
     return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
   }
 
+  async findByProjectIds(projectIds: string[]): Promise<TaskEntity[]> {
+    // 空配列の場合は空配列を返す（DB問い合わせしない）
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    const results = await this.db
+      .select()
+      .from(tasks)
+      .where(inArray(tasks.projectId, projectIds));
+
+    return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
+  }
+
   async updateStatus(
     userId: string,
     taskId: string,

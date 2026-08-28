@@ -7,6 +7,7 @@
 
 import { sql } from 'drizzle-orm';
 import {
+  char,
   check,
   index,
   pgSchema,
@@ -339,6 +340,123 @@ export const projects = schema.table(
  */
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
+
+/**
+ * viewer招待ステータスのenum定義
+ */
+export const viewerStatus = schema.enum('viewer_status', ['active', 'revoked']);
+
+/**
+ * project viewer招待テーブル
+ * project × emailの招待関係を管理するテーブル
+ */
+export const projectViewers = schema.table(
+  'project_viewers',
+  {
+    // プライマリキー（UUID v4）
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // 招待先project（外部キー）
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+
+    // 招待先メールアドレス
+    email: varchar('email', { length: 320 }).notNull(), // RFC 5321準拠の最大長
+
+    // 招待状態（active, revoked）
+    status: viewerStatus('status').notNull().default('active'),
+
+    // タイムスタンプ
+    invitedAt: timestamp('invited_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => {
+    return {
+      // project × emailの一意制約（同一組み合わせの重複招待を防止、大文字小文字を区別しない）
+      uniqueProjectEmail: uniqueIndex(
+        'unique_project_viewers_project_email',
+      ).on(table.projectId, sql`lower(${table.email})`),
+
+      // project作成者向け招待一覧クエリ用インデックス
+      projectStatusIdx: index('idx_project_viewers_project_status').on(
+        table.projectId,
+        table.status,
+      ),
+
+      // viewer横断閲覧時のprojectId解決用インデックス
+      emailStatusIdx: index('idx_project_viewers_email_status').on(
+        table.email,
+        table.status,
+      ),
+
+      // CHECK制約: メールアドレス形式チェック（usersテーブルと同一）
+      validViewerEmail: check(
+        'valid_viewer_email',
+        sql`${table.email} ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'`,
+      ),
+    };
+  },
+);
+
+/**
+ * project_viewersテーブルの型定義
+ * Drizzleから自動推論される型
+ */
+export type ProjectViewer = typeof projectViewers.$inferSelect;
+export type NewProjectViewer = typeof projectViewers.$inferInsert;
+
+/**
+ * viewerアクセストークンテーブル
+ * email単位のアクセストークン（ハッシュ化済み）を管理するテーブル
+ */
+export const viewerAccessTokens = schema.table(
+  'viewer_access_tokens',
+  {
+    // プライマリキー（UUID v4）
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // トークン発行先メールアドレス（1email = 1トークン）
+    email: varchar('email', { length: 320 }).notNull(), // RFC 5321準拠の最大長
+
+    // トークンのSHA-256ハッシュ値（hex文字列、平文は保存しない）
+    tokenHash: char('token_hash', { length: 64 }).notNull().unique(),
+
+    // 有効期限
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+
+    // タイムスタンプ
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => {
+    return {
+      // emailの一意制約（1email=1トークン、大文字小文字を区別しない）
+      emailLowerUniqueIndex: uniqueIndex(
+        'viewer_access_tokens_email_lower_unique',
+      ).on(sql`lower(${table.email})`),
+    };
+  },
+);
+
+/**
+ * viewer_access_tokensテーブルの型定義
+ * Drizzleから自動推論される型
+ */
+export type ViewerAccessToken = typeof viewerAccessTokens.$inferSelect;
+export type NewViewerAccessToken = typeof viewerAccessTokens.$inferInsert;
 
 /**
  * Row-Level Security (RLS) ポリシー定義

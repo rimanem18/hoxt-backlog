@@ -1,0 +1,13 @@
+{
+  "threshold": 2,
+  "reporters": ["console"],
+  "format": ["typescript", "tsx"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/.open-next/**",
+    "**/.wrangler/**",
+    "**/__tests__/**",
+    "src/types/api/generated.ts"
+  ]
+}

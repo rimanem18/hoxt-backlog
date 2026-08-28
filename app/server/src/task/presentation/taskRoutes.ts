@@ -79,7 +79,12 @@ const taskController = new TaskController(
 );
 
 // authMiddlewareでJWT認証を実施
-tasks.use('*', authMiddleware());
+// Why: '*'ではなくtaskドメイン自身のパスに限定する。app.route()で
+// このルーターが'/api'配下にマウントされる際、'*'指定だと合成後の
+// 親ルーターで'/api/*'という広いパターンとして登録され、他ドメイン
+// （viewerの横断閲覧など、Supabase JWT認証を要さないルート）の
+// リクエストまでこのミドルウェアが横取りしてしまうため
+tasks.use('/tasks/*', authMiddleware());
 
 // 6つのエンドポイントを登録
 // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
@@ -215,7 +220,12 @@ export function createTaskRoutes(
   const app = new OpenAPIHono({ defaultHook: validationHook });
 
   // authMiddlewareでJWT認証を実施
-  app.use('*', authMiddleware(dependencies.authMiddlewareOptions));
+  // Why: '*'ではなくtaskドメイン自身のパスに限定する。app.route()で
+  // このルーターが'/api'配下にマウントされる際、'*'指定だと合成後の
+  // 親ルーターで'/api/*'という広いパターンとして登録され、他ドメイン
+  // （viewerの横断閲覧など、Supabase JWT認証を要さないルート）の
+  // リクエストまでこのミドルウェアが横取りしてしまうため
+  app.use('/tasks/*', authMiddleware(dependencies.authMiddlewareOptions));
 
   // 6つのエンドポイントを登録
   // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限

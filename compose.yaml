@@ -18,6 +18,8 @@ services:
       - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
       - METRICS_NAMESPACE=${METRICS_NAMESPACE}
       - PROJECT_NAME=${PROJECT_NAME}
+      - VIEWER_ACCESS_BASE_URL=${VIEWER_ACCESS_BASE_URL}
+      - ENABLE_TEST_ENDPOINTS=${ENABLE_TEST_ENDPOINTS}
       # テスト用のローカルDB設定
       - ENVIRONMENT=preview
       - BASE_SCHEMA=app_test
@@ -41,6 +43,9 @@ services:
       - ./app/packages:/home/bun/app/packages
       # Turbopackはシンボリックリンク経由でproject root外のファイルを解決できないため、
       # shared-schemasをnode_modules配下へ実ディレクトリとしてbind mountする
+      # 注: このbind mount先とsource（app/packages/shared-schemas）は同一ホストディレクトリを指すため、
+      # client/package.jsonにfile:依存として宣言するとbun install/addのリンク処理でsource側の実ファイルごと
+      # 破壊される（過去に発生した事故）。そのためclient/package.jsonにはこの依存をあえて宣言していない。
       - ./app/packages/shared-schemas:/home/bun/app/client/node_modules/@hoxt-backlog/shared-schemas
       - ./docs/api:/home/bun/docs/api:ro
     environment:

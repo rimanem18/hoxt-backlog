@@ -102,3 +102,53 @@ export function validateEnv(): void {
     );
   }
 }
+
+/**
+ * viewerアクセスURLのベースURLを取得する
+ *
+ * 招待メールに記載する「{ベースURL}/viewer/{生トークン}」形式のURL生成に使用する。
+ *
+ * @throws VIEWER_ACCESS_BASE_URL環境変数が未設定の場合
+ */
+export function getViewerAccessBaseUrl(): string {
+  const baseUrl = process.env.VIEWER_ACCESS_BASE_URL;
+  if (baseUrl && baseUrl.trim() !== '') {
+    return baseUrl;
+  }
+
+  // bun testはNODE_ENVを自動的に'test'にするため、テスト実行時のみ既定値で補う
+  if (process.env.NODE_ENV === 'test') {
+    return 'http://localhost:3000';
+  }
+
+  throw new Error('VIEWER_ACCESS_BASE_URL環境変数が設定されていません');
+}
+
+/**
+ * テスト専用エンドポイントの有効化を許可する環境の許可リスト
+ *
+ * Why: 除外方式（'production'以外は許可）は、ENVIRONMENTが未設定・タイプミス・
+ * 未知の値になった場合に誤って許可側へ倒れるfail-openのリスクがあるため、
+ * 許可リスト方式で明示的に許可する環境のみを列挙する。
+ * previewはE2Eを実行しない運用のため、ここに含めていてもterraform/bootstrap/main.tf側の
+ * NODE_ENV=productionが下段のチェックでブロックする（多層防御）。
+ */
+const TEST_ENDPOINTS_ALLOWED_ENVIRONMENTS = new Set(['development', 'preview']);
+
+/**
+ * テスト専用エンドポイントの有効化判定
+ *
+ * 生アクセストークンを含む送信内容をE2Eから取得するための経路は、
+ * 本番環境では絶対に有効化されないようfail-closedで判定する。
+ * ENVIRONMENT（許可リスト）とNODE_ENV（'production'除外）の2つの
+ * 独立したTerraform設定値の両方が許可側でなければ有効化されない。
+ *
+ * @returns 上記2条件と、ENABLE_TEST_ENDPOINTSが'true'であることをすべて満たす場合true
+ */
+export function isTestEndpointsEnabled(): boolean {
+  return (
+    TEST_ENDPOINTS_ALLOWED_ENVIRONMENTS.has(process.env.ENVIRONMENT ?? '') &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.ENABLE_TEST_ENDPOINTS === 'true'
+  );
+}

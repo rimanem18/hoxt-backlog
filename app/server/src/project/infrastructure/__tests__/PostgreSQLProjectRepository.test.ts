@@ -235,6 +235,56 @@ describe('PostgreSQLProjectRepository', () => {
     });
   });
 
+  describe('findByIds', () => {
+    test('複数のプロジェクトIDを指定して一括取得できる（所有者検証なし）', async () => {
+      // Given: 異なるユーザーが所有する複数のプロジェクト
+      const project1 = await repository.save(
+        ProjectEntity.create({ userId: testUserId1, name: 'ユーザー1P1' }),
+      );
+      const project2 = await repository.save(
+        ProjectEntity.create({ userId: testUserId2, name: 'ユーザー2P1' }),
+      );
+
+      // When: 両方のプロジェクトIDを指定して取得
+      const result = await repository.findByIds([
+        project1.getId(),
+        project2.getId(),
+      ]);
+
+      // Then: 所有者に関わらず両方のプロジェクトが取得できる
+      expect(result).toHaveLength(2);
+      expect(result.map((p) => p.getId()).sort()).toEqual(
+        [project1.getId(), project2.getId()].sort(),
+      );
+    });
+
+    test('存在しないプロジェクトIDが混在していても存在する分のみ返す', async () => {
+      // Given: 保存済みのプロジェクト1件
+      const project1 = await repository.save(
+        ProjectEntity.create({ userId: testUserId1, name: 'ユーザー1P1' }),
+      );
+      const nonExistentProjectId = '999e4567-e89b-12d3-a456-426614174999';
+
+      // When: 存在するIDと存在しないIDを混在させて取得
+      const result = await repository.findByIds([
+        project1.getId(),
+        nonExistentProjectId,
+      ]);
+
+      // Then: 存在する分のみ返る
+      expect(result).toHaveLength(1);
+      expect(result[0]?.getId()).toBe(project1.getId());
+    });
+
+    test('空配列を渡すと空配列を返す（境界値）', async () => {
+      // When: 空配列で取得
+      const result = await repository.findByIds([]);
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('update', () => {
     test('所有者本人のプロジェクトが更新されDBに反映される', async () => {
       // Given: 保存済みのプロジェクトを名前・説明文とも変更
