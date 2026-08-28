@@ -46,6 +46,18 @@ const tableConfigs: TableConfig[] = [
   - ファイル冒頭の警告コメントを確認
   - スキーマ変更時は必ずスキーマ駆動開発のコマンドで再生成
 
+### 例外: drizzle-kit生成マイグレーションへのIF NOT EXISTS付与
+
+drizzle-kitは`CREATE TABLE`/`CREATE INDEX`に`IF NOT EXISTS`を付与しない。DBの実オブジェクトと`__drizzle_migrations__`の記録が食い違うと、再実行時に`already exists`エラーで失敗しうる。この対策として、**未適用のマイグレーションファイルに限り**、冪等化のための手動編集を許可する。
+
+- **対象**: `CREATE TABLE` → `IF NOT EXISTS` を付与
+- **対象**: `CREATE INDEX` / `CREATE UNIQUE INDEX` → `IF NOT EXISTS` を付与
+- **対象**: `CREATE TYPE`（PostgreSQLは`IF NOT EXISTS`非対応）→ `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN null; END $$;` でラップ
+- **対象**: `ALTER TABLE ... ADD CONSTRAINT`（PostgreSQLは`IF NOT EXISTS`非対応）→ 同様に`DO`ブロックでラップ
+- **禁止**: 既にいずれかの環境（production/preview）に適用済みのマイグレーションファイルを編集すること
+  - ファイル内容を変えるとdrizzle-kitが追跡するハッシュが変わり、適用済み環境で不要な再実行が走る
+- **必須**: `bun run db:generate` を再実行しても対象ファイルに差分が出ないこと（スキーマ未変更時は`No schema changes`となり上書きされないことを確認する）
+
 # データベース運用ガイドライン
 
 ## 環境別のマイグレーション戦略
