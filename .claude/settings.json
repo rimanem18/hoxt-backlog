@@ -24,11 +24,13 @@
       "Bash(git add *)",
       "Bash(find *)"
     ],
-    "ask":["Bash(git commit *)"],
+    "ask":[
+      "Bash(git commit *)",
+      "Bash(gh pr *)",
+      "Bash(rm *)"
+    ],
     "deny": [
       "Bash(git -C *)",
-      "Bash(rm -rf *)",
-      "Bash(rm -fr *)",
       "Write(//etc/**)",
       "Read(~/.bashrc)"
     ]
