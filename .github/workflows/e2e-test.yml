@@ -170,6 +170,7 @@ jobs:
           ACCESS_ALLOW_HEADERS=Authorization,Content-Type,Viewer-Access-Token \
           SUPABASE_URL=http://localhost:54321 \
           SUPABASE_PUBLISHABLE_KEY=test_publishable_key \
+          VIEWER_ACCESS_BASE_URL=http://localhost:3000 \
           DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \
