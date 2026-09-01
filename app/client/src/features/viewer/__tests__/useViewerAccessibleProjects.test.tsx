@@ -58,6 +58,7 @@ describe('useViewerAccessibleProjects', () => {
           success: true,
           data: {
             viewerEmail: 'viewer@example.com',
+            tokenExpiresAt: '2026-09-15T00:00:00.000Z',
             projects: [
               {
                 projectId: '770e8400-e29b-41d4-a716-446655440001',
@@ -104,7 +105,11 @@ describe('useViewerAccessibleProjects', () => {
       new Response(
         JSON.stringify({
           success: true,
-          data: { viewerEmail: 'viewer@example.com', projects: [] },
+          data: {
+            viewerEmail: 'viewer@example.com',
+            tokenExpiresAt: '2026-09-15T00:00:00.000Z',
+            projects: [],
+          },
         }),
         {
           status: 200,

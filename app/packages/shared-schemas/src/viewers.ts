@@ -62,6 +62,7 @@ export const viewerAccessibleProjectSchema = z.object({
 export const getViewerTasksResponseSchema = apiResponseSchema(
   z.object({
     viewerEmail: z.email(),
+    tokenExpiresAt: z.iso.datetime(),
     projects: z.array(viewerAccessibleProjectSchema),
   }),
 ).openapi('GetViewerTasksResponse');

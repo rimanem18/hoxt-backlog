@@ -3380,6 +3380,9 @@ paths:
                       viewerEmail:
                         type: string
                         format: email
+                      tokenExpiresAt:
+                        type: string
+                        format: date-time
                       projects:
                         type: array
                         items:
@@ -3423,6 +3426,7 @@ paths:
                             - tasks
                     required:
                       - viewerEmail
+                      - tokenExpiresAt
                       - projects
                 required:
                   - success

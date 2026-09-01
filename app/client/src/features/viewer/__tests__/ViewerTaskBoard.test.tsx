@@ -36,11 +36,16 @@ const mockProjects: ViewerAccessibleProject[] = [
 ];
 
 const viewerEmail = 'viewer@example.com';
+const tokenExpiresAt = '2026-09-15T00:00:00.000Z';
 
 function renderWithProviders(
   useViewerAccessibleProjects: () => {
     data:
-      | { viewerEmail: string; projects: ViewerAccessibleProject[] }
+      | {
+          viewerEmail: string;
+          tokenExpiresAt: string;
+          projects: ViewerAccessibleProject[];
+        }
       | undefined;
     isLoading: boolean;
     error: Error | null;
@@ -63,7 +68,7 @@ describe('ViewerTaskBoardContent', () => {
   test('複数projectのtaskがprojectごとにグルーピングされて表示される', () => {
     // Given: 2件のprojectとtaskを返すモック
     renderWithProviders(() => ({
-      data: { viewerEmail, projects: mockProjects },
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
       isLoading: false,
       error: null,
     }));
@@ -78,7 +83,7 @@ describe('ViewerTaskBoardContent', () => {
   test('閲覧者自身のメールアドレスが表示される', () => {
     // Given: viewerEmailを含むモック
     renderWithProviders(() => ({
-      data: { viewerEmail, projects: mockProjects },
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
       isLoading: false,
       error: null,
     }));
@@ -89,10 +94,24 @@ describe('ViewerTaskBoardContent', () => {
     ).toBeDefined();
   });
 
+  test('トークンの有効期限が絶対日付で表示される', () => {
+    // Given: tokenExpiresAtを含むモック
+    renderWithProviders(() => ({
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: 「このURLの有効期限は2026年9月15日までです。」が表示される
+    expect(
+      screen.getByText('このURLの有効期限は2026年9月15日までです。'),
+    ).toBeDefined();
+  });
+
   test('オーナー名があるprojectには「○○さんのタスク」が表示される', () => {
     // Given: ownerNameが設定されたprojectとnullのprojectを含むモック
     renderWithProviders(() => ({
-      data: { viewerEmail, projects: mockProjects },
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
       isLoading: false,
       error: null,
     }));
@@ -117,7 +136,7 @@ describe('ViewerTaskBoardContent', () => {
   test('招待0件時は空状態が表示される', () => {
     // Given: 空配列を返すモック
     renderWithProviders(() => ({
-      data: { viewerEmail, projects: [] },
+      data: { viewerEmail, tokenExpiresAt, projects: [] },
       isLoading: false,
       error: null,
     }));
@@ -129,7 +148,7 @@ describe('ViewerTaskBoardContent', () => {
   test('招待0件時でも閲覧者自身のメールアドレスは表示される', () => {
     // Given: 空配列を返すモック
     renderWithProviders(() => ({
-      data: { viewerEmail, projects: [] },
+      data: { viewerEmail, tokenExpiresAt, projects: [] },
       isLoading: false,
       error: null,
     }));

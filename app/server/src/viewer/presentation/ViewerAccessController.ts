@@ -11,6 +11,7 @@ interface SuccessResponse {
   success: true;
   data: {
     viewerEmail: string;
+    tokenExpiresAt: string;
     projects: ViewerAccessibleProjectDTO[];
   };
 }
@@ -36,13 +37,14 @@ export class ViewerAccessController {
    */
   async getTasks(c: Context): Promise<Response> {
     const viewerEmail = c.get('viewerEmail');
+    const tokenExpiresAt = c.get('viewerTokenExpiresAt').toISOString();
 
     const projects = await this.getViewerAccessibleProjectsUseCase.execute({
       viewerEmail,
     });
 
     return c.json<SuccessResponse>(
-      { success: true, data: { viewerEmail, projects } },
+      { success: true, data: { viewerEmail, tokenExpiresAt, projects } },
       200,
     );
   }

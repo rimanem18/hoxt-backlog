@@ -13,11 +13,12 @@ describe('viewerAccessRoutes統合テスト', () => {
   let viewerAccessTokenRepository: IViewerAccessTokenRepository;
   let tokenHasher: TokenHasher;
 
+  const tokenExpiresAt = new Date(Date.now() + 60_000);
   const validToken = ViewerAccessTokenEntity.reconstruct({
     id: 'token-id-1',
     email: 'viewer@example.com',
     tokenHash: 'hashed-valid-token',
-    expiresAt: new Date(Date.now() + 60_000),
+    expiresAt: tokenExpiresAt,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -80,6 +81,7 @@ describe('viewerAccessRoutes統合テスト', () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(data.data.viewerEmail).toBe('viewer@example.com');
+      expect(data.data.tokenExpiresAt).toBe(tokenExpiresAt.toISOString());
       expect(data.data.projects).toHaveLength(1);
       expect(data.data.projects[0].projectName).toBe('プロジェクト1');
       expect(data.data.projects[0].ownerName).toBe('プロジェクト太郎');

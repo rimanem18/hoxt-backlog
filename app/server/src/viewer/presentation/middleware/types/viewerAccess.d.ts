@@ -12,5 +12,11 @@ declare module 'hono' {
      * viewerTokenMiddleware経由で設定される
      */
     viewerEmail: string;
+
+    /**
+     * 検証済みViewerアクセストークンの有効期限
+     * viewerTokenMiddleware経由で設定される
+     */
+    viewerTokenExpiresAt: Date;
   }
 }

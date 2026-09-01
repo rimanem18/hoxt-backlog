@@ -2284,6 +2284,8 @@ export interface paths {
                             data: {
                                 /** Format: email */
                                 viewerEmail: string;
+                                /** Format: date-time */
+                                tokenExpiresAt: string;
                                 projects: {
                                     /** Format: uuid */
                                     projectId: string;

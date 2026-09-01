@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
 import { getApiBaseUrl } from '@/lib/env';
+import { formatJapaneseDate } from '../lib/formatJapaneseDate';
 import {
   useViewerServices,
   ViewerServicesProvider,
@@ -81,12 +82,16 @@ export function ViewerTaskBoardContent(): React.ReactNode {
     );
   }
 
-  const { viewerEmail, projects } = data;
+  const { viewerEmail, tokenExpiresAt, projects } = data;
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
       <span className="text-sm text-gray-500">
         {viewerEmail} として閲覧しています。
+      </span>
+
+      <span className="text-sm text-gray-500">
+        このURLの有効期限は{formatJapaneseDate(tokenExpiresAt)}までです。
       </span>
 
       {projects.length === 0 && (

@@ -53,7 +53,11 @@ describe('ViewerTaskBoard', () => {
       new Response(
         JSON.stringify({
           success: true,
-          data: { viewerEmail: 'viewer@example.com', projects: [] },
+          data: {
+            viewerEmail: 'viewer@example.com',
+            tokenExpiresAt: '2026-09-15T00:00:00.000Z',
+            projects: [],
+          },
         }),
         {
           status: 200,
