@@ -8,6 +8,7 @@ const mockProjects: ViewerAccessibleProject[] = [
   {
     projectId: '770e8400-e29b-41d4-a716-446655440001',
     projectName: 'project A',
+    ownerName: '山田太郎',
     tasks: [
       {
         id: '880e8400-e29b-41d4-a716-446655440001',
@@ -21,6 +22,7 @@ const mockProjects: ViewerAccessibleProject[] = [
   {
     projectId: '770e8400-e29b-41d4-a716-446655440002',
     projectName: 'project B',
+    ownerName: null,
     tasks: [
       {
         id: '880e8400-e29b-41d4-a716-446655440002',
@@ -33,9 +35,13 @@ const mockProjects: ViewerAccessibleProject[] = [
   },
 ];
 
+const viewerEmail = 'viewer@example.com';
+
 function renderWithProviders(
   useViewerAccessibleProjects: () => {
-    data: ViewerAccessibleProject[] | undefined;
+    data:
+      | { viewerEmail: string; projects: ViewerAccessibleProject[] }
+      | undefined;
     isLoading: boolean;
     error: Error | null;
   },
@@ -57,7 +63,7 @@ describe('ViewerTaskBoardContent', () => {
   test('複数projectのtaskがprojectごとにグルーピングされて表示される', () => {
     // Given: 2件のprojectとtaskを返すモック
     renderWithProviders(() => ({
-      data: mockProjects,
+      data: { viewerEmail, projects: mockProjects },
       isLoading: false,
       error: null,
     }));
@@ -67,6 +73,33 @@ describe('ViewerTaskBoardContent', () => {
     expect(screen.getByText('task A1')).toBeDefined();
     expect(screen.getByText('project B')).toBeDefined();
     expect(screen.getByText('task B1')).toBeDefined();
+  });
+
+  test('閲覧者自身のメールアドレスが表示される', () => {
+    // Given: viewerEmailを含むモック
+    renderWithProviders(() => ({
+      data: { viewerEmail, projects: mockProjects },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: 「〜として閲覧しています。」が表示される
+    expect(
+      screen.getByText('viewer@example.com として閲覧しています。'),
+    ).toBeDefined();
+  });
+
+  test('オーナー名があるprojectには「○○さんのタスク」が表示される', () => {
+    // Given: ownerNameが設定されたprojectとnullのprojectを含むモック
+    renderWithProviders(() => ({
+      data: { viewerEmail, projects: mockProjects },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: ownerNameを持つprojectのみ見出しが表示される
+    expect(screen.getByText('山田太郎さんのタスク')).toBeDefined();
+    expect(screen.getAllByText(/さんのタスク/)).toHaveLength(1);
   });
 
   test('ローディング中はローディング表示される', () => {
@@ -84,13 +117,27 @@ describe('ViewerTaskBoardContent', () => {
   test('招待0件時は空状態が表示される', () => {
     // Given: 空配列を返すモック
     renderWithProviders(() => ({
-      data: [],
+      data: { viewerEmail, projects: [] },
       isLoading: false,
       error: null,
     }));
 
     // When & Then: 空状態メッセージが表示される
     expect(screen.getByText('閲覧できるprojectがありません')).toBeDefined();
+  });
+
+  test('招待0件時でも閲覧者自身のメールアドレスは表示される', () => {
+    // Given: 空配列を返すモック
+    renderWithProviders(() => ({
+      data: { viewerEmail, projects: [] },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: 空状態でも「〜として閲覧しています。」が表示される
+    expect(
+      screen.getByText('viewer@example.com として閲覧しています。'),
+    ).toBeDefined();
   });
 
   test('無効なトークンの場合はエラーメッセージが表示され再発行導線は表示されない', () => {

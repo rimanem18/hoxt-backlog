@@ -53,7 +53,7 @@ const statusLabelMap: Record<string, string> = {
  */
 export function ViewerTaskBoardContent(): React.ReactNode {
   const { useViewerAccessibleProjects } = useViewerServices();
-  const { data: projects, isLoading, error } = useViewerAccessibleProjects();
+  const { data, isLoading, error } = useViewerAccessibleProjects();
 
   if (isLoading) {
     return (
@@ -71,7 +71,7 @@ export function ViewerTaskBoardContent(): React.ReactNode {
     );
   }
 
-  if (!projects || projects.length === 0) {
+  if (!data) {
     return (
       <div aria-live="polite">
         <span className="text-sm text-gray-500">
@@ -81,8 +81,22 @@ export function ViewerTaskBoardContent(): React.ReactNode {
     );
   }
 
+  const { viewerEmail, projects } = data;
+
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
+      <span className="text-sm text-gray-500">
+        {viewerEmail} として閲覧しています。
+      </span>
+
+      {projects.length === 0 && (
+        <div aria-live="polite">
+          <span className="text-sm text-gray-500">
+            閲覧できるprojectがありません
+          </span>
+        </div>
+      )}
+
       {projects.map((project: ViewerAccessibleProject) => (
         <div
           key={project.projectId}
@@ -91,6 +105,12 @@ export function ViewerTaskBoardContent(): React.ReactNode {
           <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">
             {project.projectName}
           </h2>
+
+          {project.ownerName && (
+            <p className="text-sm text-gray-500 -mt-2 mb-2 sm:mb-4">
+              {project.ownerName}さんのタスク
+            </p>
+          )}
 
           <div className="flex flex-col divide-y divide-gray-200">
             {project.tasks.map((task) => (

@@ -33,7 +33,7 @@ export function useViewerAccessibleProjects() {
           throw new Error('project一覧を取得できませんでした');
         }
 
-        return data.data.projects;
+        return data.data;
       } catch (err) {
         throw new Error(
           handleApiError(err, '通信エラーが発生しました。再試行してください'),

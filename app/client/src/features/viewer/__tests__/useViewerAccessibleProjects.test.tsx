@@ -57,10 +57,12 @@ describe('useViewerAccessibleProjects', () => {
         JSON.stringify({
           success: true,
           data: {
+            viewerEmail: 'viewer@example.com',
             projects: [
               {
                 projectId: '770e8400-e29b-41d4-a716-446655440001',
                 projectName: 'project A',
+                ownerName: '山田太郎',
                 tasks: [
                   {
                     id: '880e8400-e29b-41d4-a716-446655440001',
@@ -74,6 +76,7 @@ describe('useViewerAccessibleProjects', () => {
               {
                 projectId: '770e8400-e29b-41d4-a716-446655440002',
                 projectName: 'project B',
+                ownerName: null,
                 tasks: [],
               },
             ],
@@ -86,21 +89,28 @@ describe('useViewerAccessibleProjects', () => {
     // When: useViewerAccessibleProjectsを呼び出し
     const { result } = renderViewerAccessibleProjects();
 
-    // Then: 2件のprojectが返却される
+    // Then: 閲覧者メールと2件のprojectが返却される
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.length).toBe(2);
-    expect(result.current.data?.[0].projectName).toBe('project A');
-    expect(result.current.data?.[0].tasks[0].title).toBe('task A1');
+    expect(result.current.data?.viewerEmail).toBe('viewer@example.com');
+    expect(result.current.data?.projects).toHaveLength(2);
+    expect(result.current.data?.projects[0]?.projectName).toBe('project A');
+    expect(result.current.data?.projects[0]?.tasks[0]?.title).toBe('task A1');
   });
 
   test('正常系 - 招待0件の場合は空配列が返る', async () => {
     // Given: モックAPIが空配列を返す（全招待取り消し後の状態）
     mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: { projects: [] } }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: { viewerEmail: 'viewer@example.com', projects: [] },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
     );
 
     // When: useViewerAccessibleProjectsを呼び出し
@@ -109,7 +119,7 @@ describe('useViewerAccessibleProjects', () => {
     // Then: 空配列が返却される
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toEqual([]);
+    expect(result.current.data?.projects).toEqual([]);
   });
 
   test('異常系 - 無効なトークンの場合はエラーメッセージが伝播する', async () => {

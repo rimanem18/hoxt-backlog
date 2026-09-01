@@ -57,6 +57,7 @@ describe('viewerAccessRoutes統合テスト', () => {
         {
           projectId: 'project-1',
           projectName: 'プロジェクト1',
+          ownerName: 'プロジェクト太郎',
           tasks: [
             {
               id: 'task-1',
@@ -74,12 +75,14 @@ describe('viewerAccessRoutes統合テスト', () => {
         headers: { 'Viewer-Access-Token': 'valid-raw-token' },
       });
 
-      // Then: 200でグルーピングされたデータを返す
+      // Then: 200でグルーピングされたデータと閲覧者メール・オーナー名を返す
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
+      expect(data.data.viewerEmail).toBe('viewer@example.com');
       expect(data.data.projects).toHaveLength(1);
       expect(data.data.projects[0].projectName).toBe('プロジェクト1');
+      expect(data.data.projects[0].ownerName).toBe('プロジェクト太郎');
       expect(data.data.projects[0].tasks[0]).toMatchObject({
         title: 'タスク1',
         status: 'not_started',

@@ -3377,6 +3377,9 @@ paths:
                   data:
                     type: object
                     properties:
+                      viewerEmail:
+                        type: string
+                        format: email
                       projects:
                         type: array
                         items:
@@ -3387,6 +3390,9 @@ paths:
                               format: uuid
                             projectName:
                               type: string
+                            ownerName:
+                              type: string
+                              nullable: true
                             tasks:
                               type: array
                               items:
@@ -3413,8 +3419,10 @@ paths:
                           required:
                             - projectId
                             - projectName
+                            - ownerName
                             - tasks
                     required:
+                      - viewerEmail
                       - projects
                 required:
                   - success

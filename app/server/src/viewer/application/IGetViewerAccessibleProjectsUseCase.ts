@@ -23,6 +23,7 @@ export interface ViewerAccessibleTaskDTO {
 export interface ViewerAccessibleProjectDTO {
   projectId: string;
   projectName: string;
+  ownerName: string | null;
   tasks: ViewerAccessibleTaskDTO[];
 }
 

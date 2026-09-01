@@ -2282,10 +2282,13 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
+                                /** Format: email */
+                                viewerEmail: string;
                                 projects: {
                                     /** Format: uuid */
                                     projectId: string;
                                     projectName: string;
+                                    ownerName: string | null;
                                     tasks: {
                                         /** Format: uuid */
                                         id: string;

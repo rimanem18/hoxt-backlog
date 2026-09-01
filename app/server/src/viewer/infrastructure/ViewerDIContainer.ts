@@ -102,6 +102,7 @@ export class ViewerDIContainer {
           ViewerDIContainer.getProjectViewerRepository(),
           ProjectDIContainer.getProjectRepository(),
           TaskDIContainer.getTaskRepository(),
+          AuthDIContainer.getUserRepository(),
         );
     }
     return ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance;

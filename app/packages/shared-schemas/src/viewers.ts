@@ -53,6 +53,7 @@ export const viewerAccessibleTaskSchema = z.object({
 export const viewerAccessibleProjectSchema = z.object({
   projectId: z.uuid(),
   projectName: z.string(),
+  ownerName: z.string().nullable(),
   tasks: z.array(viewerAccessibleTaskSchema),
 }).openapi('ViewerAccessibleProject', {
   description: 'viewerが閲覧できるprojectとそのtask一覧',
@@ -60,6 +61,7 @@ export const viewerAccessibleProjectSchema = z.object({
 
 export const getViewerTasksResponseSchema = apiResponseSchema(
   z.object({
+    viewerEmail: z.email(),
     projects: z.array(viewerAccessibleProjectSchema),
   }),
 ).openapi('GetViewerTasksResponse');

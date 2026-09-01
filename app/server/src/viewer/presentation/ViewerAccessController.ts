@@ -10,6 +10,7 @@ import type {
 interface SuccessResponse {
   success: true;
   data: {
+    viewerEmail: string;
     projects: ViewerAccessibleProjectDTO[];
   };
 }
@@ -40,6 +41,9 @@ export class ViewerAccessController {
       viewerEmail,
     });
 
-    return c.json<SuccessResponse>({ success: true, data: { projects } }, 200);
+    return c.json<SuccessResponse>(
+      { success: true, data: { viewerEmail, projects } },
+      200,
+    );
   }
 }

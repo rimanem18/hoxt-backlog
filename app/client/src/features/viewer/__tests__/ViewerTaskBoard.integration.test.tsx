@@ -50,10 +50,16 @@ describe('ViewerTaskBoard', () => {
   test('propsのtokenがViewer-Access-Tokenヘッダとして送信される', async () => {
     // Given: モックAPIが空のproject一覧を返す
     mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: { projects: [] } }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: { viewerEmail: 'viewer@example.com', projects: [] },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
     );
 
     // When: token propを指定してレンダリング

@@ -1,3 +1,4 @@
+import { ViewerShell } from '@/features/viewer/components/ViewerShell';
 import ViewerTaskBoard from '@/features/viewer/components/ViewerTaskBoard';
 
 /**
@@ -16,5 +17,9 @@ export default async function ViewerTaskBoardPage(props: {
   const params = await props.params;
   const token = params.token;
 
-  return <ViewerTaskBoard token={token} />;
+  return (
+    <ViewerShell>
+      <ViewerTaskBoard token={token} />
+    </ViewerShell>
+  );
 }
