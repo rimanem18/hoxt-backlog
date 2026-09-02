@@ -22,6 +22,7 @@ describe('UserAggregate', () => {
       findByExternalId: mock(async () => null),
       findById: mock(async () => null),
       findByEmail: mock(async () => null),
+      findByIds: mock(async () => []),
       create: mock(async () => ({}) as User),
       update: mock(async () => ({}) as User),
       delete: mock(async () => {}),

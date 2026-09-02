@@ -62,6 +62,7 @@ function createDeps() {
     findByExternalId: mock(() => Promise.resolve(null)),
     findById: mock(() => Promise.resolve(null)),
     findByEmail: mock(() => Promise.resolve(null)),
+    findByIds: mock(() => Promise.resolve([])),
     create: mock(() => Promise.reject(new Error('not used'))),
     update: mock(() => Promise.reject(new Error('not used'))),
     delete: mock(() => Promise.resolve()),
@@ -208,12 +209,11 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
       ]),
     );
     deps.taskRepository.findByProjectIds = mock(() => Promise.resolve([]));
-    deps.userRepository.findById = mock((id: string) =>
-      Promise.resolve(
-        id === ownerUserId1
-          ? createMockUser({ id: ownerUserId1, name: '太郎' })
-          : createMockUser({ id: ownerUserId2, name: '花子' }),
-      ),
+    deps.userRepository.findByIds = mock(() =>
+      Promise.resolve([
+        createMockUser({ id: ownerUserId1, name: '太郎' }),
+        createMockUser({ id: ownerUserId2, name: '花子' }),
+      ]),
     );
     const useCase = new GetViewerAccessibleProjectsUseCase(
       deps.projectViewerRepository,
@@ -225,11 +225,16 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     // When: viewerEmailで実行
     const result = await useCase.execute({ viewerEmail });
 
-    // Then: projectごとに対応するオーナー名が入る
+    // Then: projectごとに対応するオーナー名が入り、findByIdsが1回だけ呼ばれる
     const project1Result = result.find((p) => p.projectId === projectId1);
     const project2Result = result.find((p) => p.projectId === projectId2);
     expect(project1Result?.ownerName).toBe('太郎');
     expect(project2Result?.ownerName).toBe('花子');
+    expect(deps.userRepository.findByIds).toHaveBeenCalledTimes(1);
+    const calledIds = (deps.userRepository.findByIds as ReturnType<typeof mock>)
+      .mock.calls[0]?.[0] as string[];
+    expect([...calledIds].sort()).toEqual([ownerUserId1, ownerUserId2].sort());
+    expect(deps.userRepository.findById).not.toHaveBeenCalled();
   });
 
   test('オーナーユーザーが見つからない場合はownerNameがnullになる', async () => {
@@ -242,7 +247,7 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
       Promise.resolve([createProject(projectId1, 'プロジェクト1')]),
     );
     deps.taskRepository.findByProjectIds = mock(() => Promise.resolve([]));
-    deps.userRepository.findById = mock(() => Promise.resolve(null));
+    deps.userRepository.findByIds = mock(() => Promise.resolve([]));
     const useCase = new GetViewerAccessibleProjectsUseCase(
       deps.projectViewerRepository,
       deps.projectRepository,
@@ -255,5 +260,39 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
 
     // Then: 例外にならずownerNameがnullになる
     expect(result[0]?.ownerName).toBeNull();
+  });
+
+  test('同一オーナーが複数projectを所有していてもfindByIdsは1回だけ呼ばれる', async () => {
+    // Given: 同一オーナーが所有する2つのprojectへactive招待がある
+    const ownerUserId = 'owner-user-id';
+    const deps = createDeps();
+    deps.projectViewerRepository.findActiveByEmail = mock(() =>
+      Promise.resolve([projectId1, projectId2]),
+    );
+    deps.projectRepository.findByIds = mock(() =>
+      Promise.resolve([
+        createProject(projectId1, 'プロジェクト1', ownerUserId),
+        createProject(projectId2, 'プロジェクト2', ownerUserId),
+      ]),
+    );
+    deps.taskRepository.findByProjectIds = mock(() => Promise.resolve([]));
+    deps.userRepository.findByIds = mock(() =>
+      Promise.resolve([createMockUser({ id: ownerUserId, name: '太郎' })]),
+    );
+    const useCase = new GetViewerAccessibleProjectsUseCase(
+      deps.projectViewerRepository,
+      deps.projectRepository,
+      deps.taskRepository,
+      deps.userRepository,
+    );
+
+    // When: viewerEmailで実行
+    await useCase.execute({ viewerEmail });
+
+    // Then: 重複IDが排除され、findByIdsは1回・要素数1で呼ばれる
+    expect(deps.userRepository.findByIds).toHaveBeenCalledTimes(1);
+    const calledIds = (deps.userRepository.findByIds as ReturnType<typeof mock>)
+      .mock.calls[0]?.[0] as string[];
+    expect(calledIds).toEqual([ownerUserId]);
   });
 });

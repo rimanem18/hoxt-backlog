@@ -22,6 +22,7 @@ describe('IUserRepository インターフェース仕様', () => {
       findByExternalId: async () => null,
       findById: async () => null,
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async () => ({}) as User,
       delete: async () => {},
@@ -49,6 +50,7 @@ describe('IUserRepository インターフェース仕様', () => {
       },
       findById: async () => null,
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async () => ({}) as User,
       delete: async () => {},
@@ -65,6 +67,7 @@ describe('IUserRepository インターフェース仕様', () => {
         return null;
       },
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async () => ({}) as User,
       delete: async () => {},
@@ -81,6 +84,7 @@ describe('IUserRepository インターフェース仕様', () => {
         expect(typeof email).toBe('string');
         return null;
       },
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async () => ({}) as User,
       delete: async () => {},
@@ -94,6 +98,7 @@ describe('IUserRepository インターフェース仕様', () => {
       findByExternalId: async () => null,
       findById: async () => null,
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async (input: CreateUserInput): Promise<User> => {
         expect(input).toHaveProperty('externalId');
         expect(input).toHaveProperty('provider');
@@ -113,6 +118,7 @@ describe('IUserRepository インターフェース仕様', () => {
       findByExternalId: async () => null,
       findById: async () => null,
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async (id: string, input: UpdateUserInput): Promise<User> => {
         expect(typeof id).toBe('string');
@@ -130,6 +136,7 @@ describe('IUserRepository インターフェース仕様', () => {
       findByExternalId: async () => null,
       findById: async () => null,
       findByEmail: async () => null,
+      findByIds: async () => [],
       create: async () => ({}) as User,
       update: async () => ({}) as User,
       delete: async (id: string): Promise<void> => {

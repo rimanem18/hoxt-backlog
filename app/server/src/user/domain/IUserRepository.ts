@@ -38,6 +38,13 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
 
   /**
+   * 複数のユーザーIDで一括検索する
+   * @param ids - 検索対象のユーザーID配列
+   * @returns 見つかったユーザーエンティティの配列（存在しないIDは結果に含まれない）
+   */
+  findByIds(ids: string[]): Promise<User[]>;
+
+  /**
    * 新規ユーザー作成
    * @param input - ユーザー作成時の値オブジェクト
    * @returns 作成されたユーザーエンティティ

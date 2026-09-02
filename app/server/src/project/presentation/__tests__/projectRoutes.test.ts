@@ -35,6 +35,7 @@ describe('projectRoutes統合テスト', () => {
       findByExternalId: mock(() => Promise.resolve(mockUser)),
       findById: mock(() => Promise.resolve(mockUser)),
       findByEmail: mock(() => Promise.resolve(null)),
+      findByIds: mock(() => Promise.resolve([])),
       create: mock(() => Promise.resolve(mockUser)),
       update: mock(() => Promise.resolve(mockUser)),
       delete: mock(() => Promise.resolve()),

@@ -75,23 +75,15 @@ export class GetViewerAccessibleProjectsUseCase
   }
 
   /**
-   * projectのオーナーuserIdをユニーク化し、並列取得した表示名で
-   * userId→表示名のMapを作る。ユーザーが見つからない場合はnullを入れる。
-   *
-   * TODO: viewer1人あたりの招待project数が増える場合、オーナー数分の
-   * findById呼び出し（N+1）がボトルネックになりうる。その際は
-   * IUserRepositoryへの一括取得メソッド追加を検討する。
+   * projectのオーナーuserIdをユニーク化し、一括取得した表示名で
+   * userId→表示名のMapを作る。呼び出し側で `?? null` により
+   * 未取得（Mapに存在しない）オーナーはnull扱いになる。
    */
   private async resolveOwnerNames(
     projects: ProjectEntity[],
-  ): Promise<Map<string, string | null>> {
+  ): Promise<Map<string, string>> {
     const ownerUserIds = [...new Set(projects.map((p) => p.getUserId()))];
-    const ownerNameEntries = await Promise.all(
-      ownerUserIds.map(async (userId) => {
-        const owner = await this.userRepository.findById(userId);
-        return [userId, owner?.name ?? null] as const;
-      }),
-    );
-    return new Map(ownerNameEntries);
+    const owners = await this.userRepository.findByIds(ownerUserIds);
+    return new Map(owners.map((owner) => [owner.id, owner.name]));
   }
 }

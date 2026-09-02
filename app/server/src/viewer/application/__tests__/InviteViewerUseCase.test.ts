@@ -82,6 +82,7 @@ function createDeps() {
     findByExternalId: mock(() => Promise.resolve(null)),
     findById: mock(() => Promise.resolve(createMockUser())),
     findByEmail: mock(() => Promise.resolve(null)),
+    findByIds: mock(() => Promise.resolve([])),
     create: mock(() => Promise.reject(new Error('not used'))),
     update: mock(() => Promise.reject(new Error('not used'))),
     delete: mock(() => Promise.resolve()),

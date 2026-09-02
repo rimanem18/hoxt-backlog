@@ -22,6 +22,7 @@ describe('UserRepository契約テスト', () => {
       findByExternalId: mock(),
       findById: mock(),
       findByEmail: mock(),
+      findByIds: mock(),
       create: mock(),
       update: mock(),
       delete: mock(),

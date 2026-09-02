@@ -36,6 +36,7 @@ function makeUserRepository(
     ),
     findById: mock((_id: string) => Promise.resolve(null)),
     findByEmail: mock((_email: string) => Promise.resolve(findByEmailResult)),
+    findByIds: mock((_ids: string[]) => Promise.resolve([])),
     create: mock((_input: CreateUserInput) => Promise.resolve({} as User)),
     update: mock((_id: string, _input: UpdateUserInput) =>
       Promise.resolve({} as User),

@@ -64,6 +64,7 @@ function createDefaultDependencies(): SUTDependencies {
       findByExternalId: mock((_externalId: string) => Promise.resolve(null)),
       findById: mock((_id: string) => Promise.resolve(null)),
       findByEmail: mock((_email: string) => Promise.resolve(null)),
+      findByIds: mock((_ids: string[]) => Promise.resolve([])),
       create: mock((_input: CreateUserInput) => Promise.resolve({} as User)),
       update: mock((_id: string, _input: UpdateUserInput) =>
         Promise.resolve({} as User),
