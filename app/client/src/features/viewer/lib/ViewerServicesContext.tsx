@@ -8,6 +8,7 @@
  */
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { useUpdateNotificationSetting } from '../hooks/useUpdateNotificationSetting';
 import { useViewerAccessibleProjects } from '../hooks/useViewerAccessibleProjects';
 
 /**
@@ -17,6 +18,7 @@ import { useViewerAccessibleProjects } from '../hooks/useViewerAccessibleProject
  */
 export interface ViewerServices {
   useViewerAccessibleProjects: typeof useViewerAccessibleProjects;
+  useUpdateNotificationSetting: typeof useUpdateNotificationSetting;
 }
 
 const ViewerServicesContext = createContext<ViewerServices | null>(null);
@@ -55,6 +57,7 @@ export function ViewerServicesProvider(props: ViewerServicesProviderProps) {
     () =>
       props.services || {
         useViewerAccessibleProjects,
+        useUpdateNotificationSetting,
       },
     [props.services],
   );

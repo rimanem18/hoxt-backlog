@@ -6,11 +6,13 @@ import { useMemo } from 'react';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
 import { getApiBaseUrl } from '@/lib/env';
+import { FormAlert } from '@/shared/components/FormAlert';
 import { formatJapaneseDate } from '../lib/formatJapaneseDate';
 import {
   useViewerServices,
   ViewerServicesProvider,
 } from '../lib/ViewerServicesContext';
+import { NotificationToggle } from './NotificationToggle';
 
 /**
  * 優先度に応じたテキストカラーとスタイルのマップ
@@ -45,6 +47,84 @@ const statusLabelMap: Record<string, string> = {
   in_review: 'レビュー中',
   completed: '完了',
 };
+
+interface ViewerProjectCardProps {
+  project: ViewerAccessibleProject;
+}
+
+/**
+ * project 1件分のtask一覧と通知トグルを描画するコンポーネント
+ *
+ * projectごとに独立したミューテーション状態を持つため、hooksルールを
+ * 守るべく`projects.map`のコールバックから切り出している。
+ */
+function ViewerProjectCard(props: ViewerProjectCardProps): React.ReactNode {
+  const { useUpdateNotificationSetting } = useViewerServices();
+  const mutation = useUpdateNotificationSetting();
+
+  return (
+    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
+        <h2 className="text-lg sm:text-xl font-semibold">
+          {props.project.projectName}
+        </h2>
+
+        <NotificationToggle
+          checked={props.project.notificationEnabled}
+          onChange={(enabled) =>
+            mutation.mutate({ projectId: props.project.projectId, enabled })
+          }
+          disabled={mutation.isPending}
+          label={`${props.project.projectName} の通知`}
+        />
+      </div>
+
+      {mutation.isError && mutation.error && (
+        <FormAlert
+          variant="error"
+          message={mutation.error.message}
+          className="mb-2 sm:mb-4"
+        />
+      )}
+
+      {props.project.ownerName && (
+        <p className="text-sm text-gray-500 -mt-2 mb-2 sm:mb-4">
+          {props.project.ownerName}さんのタスク
+        </p>
+      )}
+
+      <div className="flex flex-col divide-y divide-gray-200">
+        {props.project.tasks.map((task) => (
+          <div key={task.id} className="py-3 sm:py-4 first:pt-0">
+            <h3 className="text-base sm:text-lg font-semibold truncate">
+              {task.title}
+            </h3>
+
+            {task.description && task.description.trim() !== '' && (
+              <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">
+                {task.description}
+              </p>
+            )}
+
+            <div className="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
+              <span
+                className={`text-xs sm:text-sm ${priorityColorMap[task.priority] ?? 'text-gray-700'}`}
+              >
+                {priorityLabelMap[task.priority] ?? task.priority}
+              </span>
+
+              <span
+                className={`inline-block px-2 py-1 text-xs font-medium rounded ${statusBadgeMap[task.status] ?? 'bg-gray-200 text-gray-700'}`}
+              >
+                {statusLabelMap[task.status] ?? task.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * viewer向けtask一覧の表示コンポーネント
@@ -103,50 +183,7 @@ export function ViewerTaskBoardContent(): React.ReactNode {
       )}
 
       {projects.map((project: ViewerAccessibleProject) => (
-        <div
-          key={project.projectId}
-          className="bg-white rounded-lg shadow p-4 sm:p-6"
-        >
-          <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">
-            {project.projectName}
-          </h2>
-
-          {project.ownerName && (
-            <p className="text-sm text-gray-500 -mt-2 mb-2 sm:mb-4">
-              {project.ownerName}さんのタスク
-            </p>
-          )}
-
-          <div className="flex flex-col divide-y divide-gray-200">
-            {project.tasks.map((task) => (
-              <div key={task.id} className="py-3 sm:py-4 first:pt-0">
-                <h3 className="text-base sm:text-lg font-semibold truncate">
-                  {task.title}
-                </h3>
-
-                {task.description && task.description.trim() !== '' && (
-                  <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">
-                    {task.description}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
-                  <span
-                    className={`text-xs sm:text-sm ${priorityColorMap[task.priority] ?? 'text-gray-700'}`}
-                  >
-                    {priorityLabelMap[task.priority] ?? task.priority}
-                  </span>
-
-                  <span
-                    className={`inline-block px-2 py-1 text-xs font-medium rounded ${statusBadgeMap[task.status] ?? 'bg-gray-200 text-gray-700'}`}
-                  >
-                    {statusLabelMap[task.status] ?? task.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ViewerProjectCard key={project.projectId} project={project} />
       ))}
     </div>
   );

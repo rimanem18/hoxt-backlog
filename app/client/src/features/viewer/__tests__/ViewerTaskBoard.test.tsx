@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import type { ViewerAccessibleProject } from '@hoxt-backlog/shared-schemas/viewers';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ViewerTaskBoardContent } from '../components/ViewerTaskBoard';
+import type { useUpdateNotificationSetting } from '../hooks/useUpdateNotificationSetting';
 import { ViewerServicesProvider } from '../lib/ViewerServicesContext';
 
 const mockProjects: ViewerAccessibleProject[] = [
@@ -9,6 +11,7 @@ const mockProjects: ViewerAccessibleProject[] = [
     projectId: '770e8400-e29b-41d4-a716-446655440001',
     projectName: 'project A',
     ownerName: '山田太郎',
+    notificationEnabled: true,
     tasks: [
       {
         id: '880e8400-e29b-41d4-a716-446655440001',
@@ -23,6 +26,7 @@ const mockProjects: ViewerAccessibleProject[] = [
     projectId: '770e8400-e29b-41d4-a716-446655440002',
     projectName: 'project B',
     ownerName: null,
+    notificationEnabled: false,
     tasks: [
       {
         id: '880e8400-e29b-41d4-a716-446655440002',
@@ -38,6 +42,16 @@ const mockProjects: ViewerAccessibleProject[] = [
 const viewerEmail = 'viewer@example.com';
 const tokenExpiresAt = '2026-09-15T00:00:00.000Z';
 
+const defaultMockMutate = mock(() => {});
+const defaultMockUseUpdateNotificationSetting: typeof useUpdateNotificationSetting =
+  mock(() => ({
+    mutate: defaultMockMutate,
+    isPending: false,
+    isError: false,
+    error: null,
+    variables: undefined,
+  }));
+
 function renderWithProviders(
   useViewerAccessibleProjects: () => {
     data:
@@ -50,9 +64,17 @@ function renderWithProviders(
     isLoading: boolean;
     error: Error | null;
   },
+  useUpdateNotificationSettingOverride?: typeof useUpdateNotificationSetting,
 ) {
   return render(
-    <ViewerServicesProvider services={{ useViewerAccessibleProjects }}>
+    <ViewerServicesProvider
+      services={{
+        useViewerAccessibleProjects,
+        useUpdateNotificationSetting:
+          useUpdateNotificationSettingOverride ??
+          defaultMockUseUpdateNotificationSetting,
+      }}
+    >
       <ViewerTaskBoardContent />
     </ViewerServicesProvider>,
   );
@@ -173,5 +195,128 @@ describe('ViewerTaskBoardContent', () => {
     // Then: 再発行を促す導線（リンク・ボタン）は表示されない
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  test('各projectの通知トグルが初期状態を反映して表示される', () => {
+    // Given: 通知ONのprojectAと通知OFFのprojectBを含むモック
+    renderWithProviders(() => ({
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: 各projectのトグルが対応する初期状態を反映する
+    expect(
+      screen.getByRole('switch', { name: 'project A の通知' }),
+    ).toHaveAttribute('aria-checked', 'true');
+    expect(
+      screen.getByRole('switch', { name: 'project B の通知' }),
+    ).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('通知トグルをクリックすると対象projectのIDと反転した値でmutateが呼ばれる', async () => {
+    // Given: 通知ONのprojectAを含むモック
+    const user = userEvent.setup();
+    const mockMutate = mock(() => {});
+    const mockUseUpdateNotificationSetting: typeof useUpdateNotificationSetting =
+      mock(() => ({
+        mutate: mockMutate,
+        isPending: false,
+        isError: false,
+        error: null,
+        variables: undefined,
+      }));
+
+    renderWithProviders(
+      () => ({
+        data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
+        isLoading: false,
+        error: null,
+      }),
+      mockUseUpdateNotificationSetting,
+    );
+
+    // When: projectAのトグルをクリック
+    await user.click(screen.getByRole('switch', { name: 'project A の通知' }));
+
+    // Then: projectAのIDと反転した値（false）でmutateが呼ばれる
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: '770e8400-e29b-41d4-a716-446655440001',
+        enabled: false,
+      }),
+    );
+  });
+
+  test('あるprojectのトグル操作は他projectの初期表示に影響しない', async () => {
+    // Given: 通知ONのprojectAと通知OFFのprojectBを含むモック
+    const user = userEvent.setup();
+    renderWithProviders(() => ({
+      data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
+      isLoading: false,
+      error: null,
+    }));
+
+    // When: projectAのトグルをクリック
+    await user.click(screen.getByRole('switch', { name: 'project A の通知' }));
+
+    // Then: projectBのトグル表示はOFFのまま変化しない
+    expect(
+      screen.getByRole('switch', { name: 'project B の通知' }),
+    ).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('更新中は通知トグルが無効化される', () => {
+    // Given: 更新中（isPending）状態のモック
+    const mockUseUpdateNotificationSettingPending: typeof useUpdateNotificationSetting =
+      mock(() => ({
+        mutate: mock(() => {}),
+        isPending: true,
+        isError: false,
+        error: null,
+        variables: undefined,
+      }));
+
+    renderWithProviders(
+      () => ({
+        data: { viewerEmail, tokenExpiresAt, projects: mockProjects },
+        isLoading: false,
+        error: null,
+      }),
+      mockUseUpdateNotificationSettingPending,
+    );
+
+    // When & Then: 通知トグルが無効化されている
+    expect(
+      screen.getByRole('switch', { name: 'project A の通知' }),
+    ).toBeDisabled();
+  });
+
+  test('通知設定変更が失敗した場合はエラーメッセージが表示される', () => {
+    // Given: 更新エラー状態のモック
+    const mockUseUpdateNotificationSettingError: typeof useUpdateNotificationSetting =
+      mock(() => ({
+        mutate: mock(() => {}),
+        isPending: false,
+        isError: true,
+        error: new Error('通知設定の変更に失敗しました'),
+        variables: undefined,
+      }));
+
+    renderWithProviders(
+      () => ({
+        data: {
+          viewerEmail,
+          tokenExpiresAt,
+          projects: [mockProjects[0] as ViewerAccessibleProject],
+        },
+        isLoading: false,
+        error: null,
+      }),
+      mockUseUpdateNotificationSettingError,
+    );
+
+    // When & Then: 通知設定変更のエラーメッセージが表示される
+    expect(screen.getByText('通知設定の変更に失敗しました')).toBeDefined();
   });
 });
