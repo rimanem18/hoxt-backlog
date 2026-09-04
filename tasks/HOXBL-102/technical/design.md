@@ -37,7 +37,7 @@
 
 すべて技術設計フェーズのヒアリングで確認済み（未決の確認事項はない）。
 
-- **DQ-01（確定）**: task変更イベントの配信はHTTPレスポンスをブロックしない非同期実行（fire-and-forget、内部でcatchしログのみ）とする。**ユーザー確認済み**: viewer数・デバイス数が多くてもtask更新APIのレスポンスタイムに影響させない方針を優先する
+- **DQ-01（確定）**: task変更イベントの配信は、DBコミット後・同一HTTPリクエスト内で`await`して完了を待ってからレスポンスを返す同期実行とする（内部で`try/catch`しログのみ、REQ-302に基づき失敗時もtaskユースケース自体は成功応答を返す）。**ユーザー確認済み**: サーバーはAWS Lambda（Function URL、`hono/aws-lambda`）上で稼働し、レスポンス返却直後に実行環境が凍結されるため、配信処理はレスポンス返却前に完了させる方針を採用する
 - **DQ-02（確定）**: 通知本文の日本語文言は本設計で確定する（7.3節）。**ユーザー確認済み**: 設計側提案（タイトル=project名、本文=「『{taskTitle}』が追加されました／のステータスが変更されました／の優先度が変更されました」）を採用する
 - **DQ-03（確定）**: 購読解除専用APIは設けない（2.1節「対象外」）。**ユーザー確認済み**: ブラウザの通知許可取り消し後の送信失敗時に該当購読を自動削除するクリーンアップのみ実装する
 - **DQ-04（確定）**: VAPID鍵ペアはTerraformで管理する（10.3節）。**ユーザー確認済み**: 既存SES `from_address`と同様のパターンをTerraform側に追加する
@@ -49,9 +49,10 @@
 - **通知発行を`viewer`ドメインの延長として実装し、`task`ドメインには依存させない。`task`側は`ITaskChangeNotifier`ポートのみを持ち、実装配線は合成ルートで行う**
   - **根拠**: technical-spec TS-001, TDQ-01。HOXBL-101で確立した「viewerが一方向にtask/projectを参照する」依存方向（design.md 4.3節）を崩さないため、逆方向の直接import（`task`→`viewer`）は避ける。ポート＆アダプタで依存方向を保つ
   - **確信度**: 高
-- **task変更イベントの配信は、DBコミット後・同一HTTPリクエスト内で非同期（awaitしない）に実行し、成否に関わらずAPIレスポンスに影響させない**
-  - **根拠**: REQ-302（送信失敗時も処理を終了するのみ）、NFR-001（間引き・レート制限をしない＝配信そのものは即時実行してよい）。Outboxのような別プロセスを新設するインフラコストに見合う要件（高頻度・厳密な配信保証）が明記されていないため、既存プロセス内での非同期実行を採用（3.2節で不採用理由も記載）。DQ-01としてユーザー確認済み
+- **task変更イベントの配信は、DBコミット後・同一HTTPリクエスト内で`await`し、配信処理（送信結果の成否は問わない）が完了してからAPIレスポンスを返す。送信の成否自体はtaskユースケースの戻り値・例外に影響させない**
+  - **根拠**: サーバーはAWS Lambda（Function URL、`hono/aws-lambda`。10.3節・`terraform/modules/lambda`参照）上で稼働し、レスポンス返却後に実行環境が凍結されるため、`await`しないPromiseの完走は保証されない。REQ-101〜REQ-103（イベント発生時に確実に通知すること）を満たすには、配信処理の完了をレスポンス返却前に待つ必要がある。REQ-302（送信失敗時も処理を終了するのみ）は「送信を試みた上で失敗したら諦める」という業務要件であり、`await`の有無を規定しないため、同期実行と矛盾しない。DQ-01としてユーザー確認済み
   - **確信度**: 高（ユーザー確認済み）
+  - **トレードオフ**: viewer数・デバイス数が多いprojectでは、task更新APIのレスポンスタイムが配信対象数に応じて増加する（`Promise.allSettled`による並列送信で最小化を図るが、線形的な増加は避けられない）。NFR-001は間引き・レート制限を禁止するのみでレスポンスタイムの上限を定めていないため要件違反ではないが、実装時にLambdaのタイムアウト設定（`terraform/modules/lambda`の`timeout`変数）が配信対象数のワーストケースを許容できる値か確認すること
 - **`project_viewers`テーブルに`notificationEnabled boolean not null default true`列を追加する（別テーブル化しない）**
   - **根拠**: technical-spec TS-102, TDQ-02。通知設定はproject×viewer（＝招待関係そのもの）に1:1で従属する属性であり、招待の状態（`status`）と同じ主キーを共有する。別テーブルにすると招待の作成・取り消し・復元のたびに2テーブルへの整合的な書き込みが必要になり複雑化する
   - **確信度**: 高
@@ -75,7 +76,7 @@
 
 - **`task_notification_events`テーブル＋非同期ワーカーによるOutboxパターン**（technical-spec TS-001, TS-401の案）: 不採用。`compose.yaml`にワーカー実行基盤が存在せず新設が必要になる。REQ-302が「送信失敗時に再送信しない」と明言しており、Outboxが本来解決する「配信保証」への要求が要件上存在しない。TS-402（将来のダイジェスト配信）はスコープ外であり、今回のためにOutboxを先行導入する理由にならない
 - **通知ON/OFFを別テーブル`project_viewer_notification_settings`として分離**: 不採用。3.1節の通り、招待のライフサイクル（作成・取り消し・復元）と通知設定の初期化タイミングが密結合しており、分離すると2テーブル間の整合性維持コードが増える
-- **task変更イベント配信をHTTPレスポンス前にawaitする同期方式**: 不採用（DQ-01, ユーザー確認済み）。viewer数・デバイス数が多い場合にtask更新APIのレスポンスタイムが線形に悪化するため、非同期実行を優先する
+- **task変更イベント配信をHTTPレスポンス前にawaitしない非同期（fire-and-forget）方式**: 不採用（DQ-01, ユーザー確認済み）。viewer数・デバイス数が多い場合のレスポンスタイム悪化を避けられる利点はあるが、サーバーがAWS Lambda上で稼働しレスポンス返却後に実行環境が凍結されるため、配信処理の完走が保証されない。REQ-101〜REQ-103を確実に満たすため、`await`する同期方式を採用する（3.1節）
 - **Push通知ペイロードに生トークンを含めてURLを直接埋め込む**: 不採用。HOXBL-101で確立した「生トークンをサーバーに保存しない」方針と衝突する。購読登録時にトークンをサーバーへ送って保存する経路を作ると、実質的にトークンの平文保存経路を新設することになる
 
 ## 4. システム構成と責務分割
@@ -117,7 +118,7 @@
 - **`ITaskChangeNotifier`（新規, `task/application/ports/`）**: `notify(event: TaskChangeEvent): Promise<void>`。`task`ドメインはこのインタフェースのみを知り、実装（`viewer`ドメイン）を一切importしない
 - **`TaskChangeEvent`（新規, `task/application/ports/`）**: `{ type: 'task_added' | 'status_changed' | 'priority_changed'; taskId: string; taskTitle: string; projectId: string; newStatus?: TaskStatusValue; newPriority?: TaskPriorityValue }`。`newStatus`は`type === 'status_changed'`、`newPriority`は`type === 'priority_changed'`のときのみ設定する。UseCaseは更新後の値をすでに保持しているため、通知発行のための追加DB取得は発生しない（REQ-104改訂、2026-09-02）
 - **`TaskChangeNotifierRegistry`（新規, `task/infrastructure/`）**: モジュールレベルの差し替え可能な保持箱。デフォルトはNoop実装（何もしない）。`setNotifier()`で合成ルートから実体を注入する。既存`viewerAccessRoutes.ts`の「遅延評価プロキシ」と同じ思想（未配線でもサーバー起動を止めない・taskドメイン単体のテストでも動く）
-- **`CreateTaskUseCase` / `ChangeTaskStatusUseCase` / `UpdateTaskUseCase`（既存変更）**: 保存成功後に`TaskChangeNotifierRegistry.getNotifier().notify(event)`を呼び出す。呼び出しはUseCase内で`try/catch`し、失敗をログ出力のみに留めtaskユースケース自体の戻り値・例外には一切影響させない（REQ-302, fail-open）
+- **`CreateTaskUseCase` / `ChangeTaskStatusUseCase` / `UpdateTaskUseCase`（既存変更）**: 保存成功後に`TaskChangeNotifierRegistry.getNotifier().notify(event)`を`await`して呼び出す（3.1節）。呼び出しはUseCase内で`try/catch`し、失敗をログ出力のみに留めtaskユースケース自体の戻り値・例外には一切影響させない（REQ-302, fail-open）
 
 ### 4.3 システム境界
 
@@ -131,7 +132,7 @@
 ### 5.1 正常系フロー（task変更イベントの通知配信）
 
 1. `CreateTaskUseCase`/`ChangeTaskStatusUseCase`/`UpdateTaskUseCase`がDB保存に成功する
-2. UseCaseが`TaskChangeEvent`を組み立て、`TaskChangeNotifierRegistry.getNotifier().notify(event)`を**awaitせず**呼び出す（内部で`.catch()`しログのみ）。REQ-305対応: `UpdateTaskUseCase`は`projectId`のみの変更では`notify()`を呼ばない。`priority`が変更された場合のみ`priority_changed`イベントを、変更後の`projectId`を宛先として発行する
+2. UseCaseが`TaskChangeEvent`を組み立て、`TaskChangeNotifierRegistry.getNotifier().notify(event)`を`await`して呼び出す（内部で`try/catch`しログのみ、失敗してもUseCaseの戻り値・例外には影響させない。3.1節）。REQ-305対応: `UpdateTaskUseCase`は`projectId`のみの変更では`notify()`を呼ばない。`priority`が変更された場合のみ`priority_changed`イベントを、変更後の`projectId`を宛先として発行する
 3. `TaskChangeNotifierAdapter.notify()`が`DispatchTaskEventNotificationsUseCase.execute()`を呼ぶ
 4. `IProjectRepository.findByIds([projectId])`でproject名を取得
 5. `IProjectViewerRepository.findActiveByProject(projectId)`で`active`な招待を取得し、`notificationEnabled === true`のものだけに絞る（REQ-303, REQ-304を満たす。取り消し済み・OFF設定のviewerはこの時点で除外される）
@@ -179,7 +180,7 @@ stateDiagram-v2
 - **状態**: `project_viewers.notificationEnabled`（true/false）。招待`status`（active/revoked）とは独立した軸だが、`status`が`revoked`の間は5.1節手順5の`findActiveByProject`で除外されるため実質的に無効化される
 - **整合性方針**: 通知設定の読み書きは`project_viewers`の単一行に対する更新のみで完結する（トランザクション不要な単純CRUD）。招待の復元時（既存`RevokeViewerUseCase`/復元ロジック）の`notificationEnabled`強制ONは、招待状態の更新と同一トランザクション内で行う
 - **重複実行対策**: Push購読登録は`(email, endpoint)`の一意制約でupsertとして扱い、二重登録を防ぐ。通知設定変更はべき等（同じ値を再設定してもエラーにしない）
-- **再試行方針**: Push送信は3.1節の通りallowlist（410/404のみクリーンアップ、それ以外は再試行なし）。task変更UseCase内の`notify()`呼び出し自体はawaitしないため、UseCase側での再試行は発生しない
+- **再試行方針**: Push送信は3.1節の通りallowlist（410/404のみクリーンアップ、それ以外は再試行なし）。task変更UseCase内の`notify()`呼び出しは`await`するが、失敗しても再試行は行わず`try/catch`でログのみに留める
 - **部分成功の扱い**: 複数viewer・複数デバイスへの送信は`Promise.allSettled`で個別に成否を扱う。1件の失敗が他の送信を妨げない（REQ-501の「個別配信」の実装上の帰結）
 
 ## 7. インターフェース設計
@@ -250,7 +251,7 @@ REQ-104が求める情報要素（project名・task名・イベント種別）�
 ### 10.1 パフォーマンス
 
 - NFR-001（間引き・レート制限をしない）は、5.1節の配信ロジックに一切のスロットリング・キューイングを入れないことで満たす
-- task変更APIのレスポンス時間への影響は、配信処理をawaitしない非同期実行（3.1節）で最小化する
+- task変更APIのレスポンス時間は、配信処理を`await`する同期実行（3.1節）により、配信対象数に応じて増加しうる。`Promise.allSettled`による並列送信で影響を最小化するが、レスポンスタイムの上限自体は本要件で規定されていない（NFR-001は間引き・レート制限の禁止のみを定める）ため要件違反ではない。ただしLambdaのタイムアウト設定（`terraform/modules/lambda`の`timeout`）が配信対象数のワーストケースを許容できるか、実装時に確認すること
   - **根拠**: NFR-001、DQ-01（ユーザー確認済み）
   - **確信度**: 高
 
@@ -291,8 +292,9 @@ REQ-104が求める情報要素（project名・task名・イベント種別）�
 
 - **RISK-01**: Web Push/VAPID/Service Workerが未実装であるため、新規インフラ要素（npm依存、VAPID鍵管理、Service Workerファイル配信）の導入が必要になる（technical-spec RISK-01）
 - **RISK-02**: task変更3ユースケースに`notify()`呼び出しを追加することで、`task`ドメインに「配信に失敗しても例外を外へ漏らさない」という新しい責務（fail-open処理）が生まれる。UseCase内の`try/catch`漏れは、REQ-302の「送信失敗が既存のtask機能に影響しない」という前提を壊すため、実装時のテストで重点的に検証する必要がある
-- **RISK-03**: Push送信を非同期（awaitしない）で実行する設計（DQ-01、ユーザー確認済み）は、テスト時に完了タイミングが不定になりやすい。ユニットテストでは`DispatchTaskEventNotificationsUseCase`を直接同期的に呼び出して検証し、UseCase層の`notify()`呼び出しは「呼ばれたこと」のみをモックで検証する方針とする
+- **RISK-03**: Push送信を`await`する同期実行のため、viewer数・デバイス数が多いprojectではtask変更APIのレスポンスタイムが増加する。ユニットテストでは`DispatchTaskEventNotificationsUseCase`の呼び出しが完了してから戻り値・例外を検証すればよい（通常の同期呼び出しとしての検証で足りる）
 - **RISK-04**: VAPID鍵ペアのTerraform管理（DQ-04）は、既存SESの`terraform/modules/ses`パターンを踏襲するが、新規モジュールとして切り出すか既存モジュールに同居させるかは未設計であり、実装フェーズでの詳細化が必要
+- **RISK-05**: task変更APIのレスポンスタイムがLambdaのタイムアウト設定に収まるか、また実際の配信対象数の見積もり（NFR-001補足、TI-REF-06）に対して許容できるレイテンシか、実装フェーズで検証すること
 
 DQ-01〜DQ-04はすべて2.3節の通りユーザー確認済みであり、本書時点で未決の確認事項はない。
 
