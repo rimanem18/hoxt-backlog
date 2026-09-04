@@ -21,7 +21,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-2-01: 通知設定変更フックの追加**
+- [x] **TASK-2-01: 通知設定変更フックの追加**
   - **タイプ**: TDD
   - **依存タスク**: Phase 1完了
   - **関連要件**: REQ-002, REQ-106
@@ -30,7 +30,7 @@
   - **完了条件**: `app/client/src/features/viewer/__tests__/useUpdateNotificationSetting.test.ts`が通過する
   - **単体テスト要件**: 成功時にキャッシュが更新されること、失敗時にエラーが伝播すること
 
-- [ ] **TASK-2-02: 通知設定トグルUIの追加**
+- [x] **TASK-2-02: 通知設定トグルUIの追加**
   - **タイプ**: TDD
   - **依存タスク**: TASK-2-01
   - **関連要件**: REQ-002, REQ-106, AC-06
@@ -48,6 +48,24 @@
   - **関連設計**: なし
   - **実装詳細**: quality-gate-runnerサブエージェントへclientの`tsc --noEmit`・`bun test`・`biome`・`semgrep`・`knip`の実行を依頼する。あわせてブラウザでの手動確認（2つ以上のprojectに招待されたviewerで一方のみOFFにし、他方がONのままであることを確認）を行う
   - **完了条件**: 全チェックがパスし、AC-06の期待結果がブラウザ上で再現できる
+
+## 実施記録
+
+- 開始時刻（JST）: 2026-09-04 22:48
+- 終了時刻（JST）: 2026-09-04 23:05
+- 合計時間: 17分
+- typecheck / test / lint / build: 全チェックが正常終了（quality-gate-runnerサブエージェントによる実施。tsc（client）・bun test（client全体56 pass, 0 fail）・biome fix（差分なし）・knip・cpd・semgrep（対象ディレクトリ）を確認。メインエージェントによる再確認でも`tsc --noEmit`エラーなし・`src/features/viewer`配下56 pass, 0 failを確認）
+
+### 差異の記録
+
+- TASK-2-03のうち、quality-gate-runnerサブエージェントによる自動チェック（tsc/test/biome/knip/cpd/semgrep）は完了したが、「ブラウザでの手動確認（2つ以上のprojectに招待されたviewerで一方のみOFFにし、他方がONのままであることを確認）」は本セッションでは実施していない（対話的ブラウザ操作の手段がなかったため）。ユーザー側での実機確認を推奨する
+- Codex MCPによる8観点レビュー（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）を実施し、以下を反映した:
+  - `ViewerProjectCard`が`useUpdateNotificationSetting`をpropsで受け取る設計を、`useViewerServices()`から直接取得する形に簡素化（simplification指摘）
+  - エラーメッセージ表示を独自の`<p>`タグから既存の`FormAlert`コンポーネントへ差し替え（reuse指摘）
+  - `const { project } = props`を`props.project`形式に修正（conventions指摘、`frontend.md`のprops使用規約）
+  - `ViewerTaskBoard.tsx`の未使用import（`useUpdateNotificationSetting`の型import）を削除（line-by-line指摘）
+  - テストコード中の`as unknown as typeof useUpdateNotificationSetting`キャストが不要（型注釈なしでも`tsc`が通る）と判明したため削除
+  - `useUpdateNotificationSetting`の`onSuccess`で`queryClient.invalidateQueries`によりproject一覧全体を再取得している点（efficiency指摘）は、既存の`useInviteViewer`/`useRevokeViewer`と同一パターンであり一貫性を優先し今回は見送った
 
 ## 6. このフェーズの完了条件
 
