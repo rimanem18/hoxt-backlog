@@ -13,6 +13,7 @@ import auth from '@/user/presentation/authRoutes';
 import authTest from '@/user/presentation/authTestRoutes';
 import emailSignup from '@/user/presentation/emailSignupRoutes';
 import user from '@/user/presentation/userRoutes';
+import notification from '@/viewer/presentation/notificationRoutes';
 import viewerAccess from '@/viewer/presentation/viewerAccessRoutes';
 import viewerManagement from '@/viewer/presentation/viewerManagementRoutes';
 import viewerTest from '@/viewer/presentation/viewerTestRoutes';
@@ -62,6 +63,7 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', project);
   app.route('/api', viewerManagement);
   app.route('/api', viewerAccess);
+  app.route('/api', notification);
   app.route('/api', docs);
 
   // テスト専用エンドポイント（E2E用の送信内容キャプチャ・トークン発行）

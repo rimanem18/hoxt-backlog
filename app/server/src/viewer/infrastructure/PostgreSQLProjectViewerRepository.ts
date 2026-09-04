@@ -24,6 +24,7 @@ export class PostgreSQLProjectViewerRepository
         status: entity.getStatus(),
         revokedAt: entity.getRevokedAt(),
         updatedAt: entity.getUpdatedAt(),
+        notificationEnabled: entity.isNotificationEnabled(),
       })
       .where(eq(projectViewers.id, entity.getId()))
       .returning();
@@ -43,6 +44,7 @@ export class PostgreSQLProjectViewerRepository
         revokedAt: entity.getRevokedAt(),
         createdAt: entity.getCreatedAt(),
         updatedAt: entity.getUpdatedAt(),
+        notificationEnabled: entity.isNotificationEnabled(),
       })
       .returning();
 
@@ -85,7 +87,12 @@ export class PostgreSQLProjectViewerRepository
   async restore(id: string): Promise<void> {
     await this.db
       .update(projectViewers)
-      .set({ status: 'active', revokedAt: null, updatedAt: new Date() })
+      .set({
+        status: 'active',
+        revokedAt: null,
+        updatedAt: new Date(),
+        notificationEnabled: true,
+      })
       .where(eq(projectViewers.id, id));
   }
 
@@ -104,9 +111,9 @@ export class PostgreSQLProjectViewerRepository
     return result.map((row) => this.toDomain(row));
   }
 
-  async findActiveByEmail(email: string): Promise<string[]> {
+  async findActiveByEmail(email: string): Promise<ProjectViewerEntity[]> {
     const result = await this.db
-      .select({ projectId: projectViewers.projectId })
+      .select()
       .from(projectViewers)
       .where(
         and(
@@ -115,7 +122,39 @@ export class PostgreSQLProjectViewerRepository
         ),
       );
 
-    return result.map((row) => row.projectId);
+    return result.map((row) => this.toDomain(row));
+  }
+
+  async updateNotificationEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<ProjectViewerEntity | null> {
+    const result = await this.db
+      .update(projectViewers)
+      .set({ notificationEnabled: enabled, updatedAt: new Date() })
+      .where(eq(projectViewers.id, id))
+      .returning();
+
+    return result[0] ? this.toDomain(result[0]) : null;
+  }
+
+  async findActiveByProjectAndEmail(
+    projectId: string,
+    email: string,
+  ): Promise<ProjectViewerEntity | null> {
+    const result = await this.db
+      .select()
+      .from(projectViewers)
+      .where(
+        and(
+          eq(projectViewers.projectId, projectId),
+          sql`lower(${projectViewers.email}) = lower(${email})`,
+          eq(projectViewers.status, 'active'),
+        ),
+      )
+      .limit(1);
+
+    return result[0] ? this.toDomain(result[0]) : null;
   }
 
   async findById(id: string): Promise<ProjectViewerEntity | null> {
@@ -146,6 +185,7 @@ export class PostgreSQLProjectViewerRepository
       revokedAt: row.revokedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      notificationEnabled: row.notificationEnabled,
     });
   }
 }

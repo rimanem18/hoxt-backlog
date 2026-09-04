@@ -51,11 +51,11 @@ export interface IProjectViewerRepository {
   findActiveByProject(projectId: string): Promise<ProjectViewerEntity[]>;
 
   /**
-   * emailに紐づくactive状態の招待のprojectId一覧を取得する
+   * emailに紐づくactive状態の招待一覧を取得する
    * @param email - 正規化済みメールアドレス
-   * @returns active状態の招待のprojectId配列
+   * @returns active状態のProjectViewerEntity配列
    */
-  findActiveByEmail(email: string): Promise<string[]>;
+  findActiveByEmail(email: string): Promise<ProjectViewerEntity[]>;
 
   /**
    * IDで招待を取得する
@@ -63,4 +63,26 @@ export interface IProjectViewerRepository {
    * @returns 見つかったProjectViewerEntity、存在しない場合はnull
    */
   findById(id: string): Promise<ProjectViewerEntity | null>;
+
+  /**
+   * 招待の通知設定を更新する
+   * @param id - 更新対象の招待ID
+   * @param enabled - 通知を有効にする場合true
+   * @returns 更新されたProjectViewerEntity、存在しない場合はnull
+   */
+  updateNotificationEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<ProjectViewerEntity | null>;
+
+  /**
+   * projectIdとemailでactive状態の招待を取得する
+   * @param projectId - プロジェクトID
+   * @param email - 正規化済みメールアドレス
+   * @returns active状態のProjectViewerEntity、存在しない場合はnull
+   */
+  findActiveByProjectAndEmail(
+    projectId: string,
+    email: string,
+  ): Promise<ProjectViewerEntity | null>;
 }

@@ -3396,6 +3396,8 @@ paths:
                             ownerName:
                               type: string
                               nullable: true
+                            notificationEnabled:
+                              type: boolean
                             tasks:
                               type: array
                               items:
@@ -3423,6 +3425,7 @@ paths:
                             - projectId
                             - projectName
                             - ownerName
+                            - notificationEnabled
                             - tasks
                     required:
                       - viewerEmail
@@ -3433,6 +3436,149 @@ paths:
                   - data
         '401':
           description: アクセストークンが不正・失効・期限切れです
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /viewer/projects/{projectId}/notification-setting:
+    patch:
+      tags:
+        - viewer閲覧
+      summary: 通知ON/OFF変更
+      description: viewerアクセストークンで、指定projectの通知ON/OFF設定を変更します。
+      security:
+        - ViewerAccessTokenAuth: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            example: 550e8400-e29b-41d4-a716-446655440000
+          required: true
+          name: projectId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+              required:
+                - enabled
+      responses:
+        '200':
+          description: 通知設定を変更しました
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      projectId:
+                        type: string
+                        format: uuid
+                      notificationEnabled:
+                        type: boolean
+                    required:
+                      - projectId
+                      - notificationEnabled
+                required:
+                  - success
+                  - data
+        '401':
+          description: アクセストークンが不正・失効・期限切れです
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        anyOf:
+                          - type: object
+                            additionalProperties:
+                              type: string
+                          - type: string
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        '404':
+          description: 指定projectへのactive招待が存在しません
           content:
             application/json:
               schema:

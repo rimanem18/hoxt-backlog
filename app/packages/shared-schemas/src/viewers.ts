@@ -54,6 +54,7 @@ export const viewerAccessibleProjectSchema = z.object({
   projectId: z.uuid(),
   projectName: z.string(),
   ownerName: z.string().nullable(),
+  notificationEnabled: z.boolean(),
   tasks: z.array(viewerAccessibleTaskSchema),
 }).openapi('ViewerAccessibleProject', {
   description: 'viewerが閲覧できるprojectとそのtask一覧',
@@ -66,6 +67,23 @@ export const getViewerTasksResponseSchema = apiResponseSchema(
     projects: z.array(viewerAccessibleProjectSchema),
   }),
 ).openapi('GetViewerTasksResponse');
+
+// ===== 通知設定変更スキーマ =====
+
+export const updateNotificationSettingBodySchema = z.object({
+  enabled: z.boolean(),
+}).openapi('UpdateNotificationSettingBody');
+
+export const projectViewerNotificationSettingSchema = z.object({
+  projectId: z.uuid(),
+  notificationEnabled: z.boolean(),
+}).openapi('ProjectViewerNotificationSetting', {
+  description: 'project単位の通知ON/OFF設定',
+});
+
+export const updateNotificationSettingResponseSchema = apiResponseSchema(
+  projectViewerNotificationSettingSchema,
+).openapi('UpdateNotificationSettingResponse');
 
 // ===== 型エクスポート =====
 
@@ -81,4 +99,13 @@ export type ViewerAccessibleProject = z.infer<
 >;
 export type GetViewerTasksResponse = z.infer<
   typeof getViewerTasksResponseSchema
+>;
+export type UpdateNotificationSettingBody = z.infer<
+  typeof updateNotificationSettingBodySchema
+>;
+export type ProjectViewerNotificationSetting = z.infer<
+  typeof projectViewerNotificationSettingSchema
+>;
+export type UpdateNotificationSettingResponse = z.infer<
+  typeof updateNotificationSettingResponseSchema
 >;

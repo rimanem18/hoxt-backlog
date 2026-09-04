@@ -18,6 +18,19 @@ describe('ProjectViewerEntity', () => {
       expect(viewer.getEmail()).toBe('viewer@example.com');
     });
 
+    test('新規招待の通知設定がtrueで生成される', () => {
+      // Given: projectIdとemail
+
+      // When: 新規招待を生成
+      const viewer = ProjectViewerEntity.create({
+        projectId: 'project-1',
+        email: 'viewer@example.com',
+      });
+
+      // Then: 通知設定がtrue
+      expect(viewer.isNotificationEnabled()).toBe(true);
+    });
+
     test('emailが正規化（trim + 小文字化）されて保持される', () => {
       // Given: 前後空白と大文字を含むemail
       const email = '  Viewer@Example.COM  ';
@@ -57,6 +70,7 @@ describe('ProjectViewerEntity', () => {
         revokedAt: new Date('2026-01-02T00:00:00.000Z'),
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        notificationEnabled: false,
       };
 
       // When: エンティティを復元
@@ -66,6 +80,7 @@ describe('ProjectViewerEntity', () => {
       expect(viewer.getId()).toBe('viewer-1');
       expect(viewer.getStatus()).toBe('revoked');
       expect(viewer.getRevokedAt()).toEqual(props.revokedAt);
+      expect(viewer.isNotificationEnabled()).toBe(false);
     });
   });
 
@@ -98,6 +113,7 @@ describe('ProjectViewerEntity', () => {
         revokedAt: new Date('2026-01-02T00:00:00.000Z'),
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        notificationEnabled: true,
       });
 
       // When: 復元を実行
@@ -106,6 +122,58 @@ describe('ProjectViewerEntity', () => {
       // Then: statusがactiveかつrevokedAtがnullになる
       expect(viewer.getStatus()).toBe('active');
       expect(viewer.getRevokedAt()).toBeNull();
+    });
+
+    test('取り消し前に通知OFFだった招待もrestore()で強制的に通知ONへ戻る', () => {
+      // Given: 通知OFFのままrevokedになった招待
+      const viewer = ProjectViewerEntity.reconstruct({
+        id: 'viewer-1',
+        projectId: 'project-1',
+        email: 'viewer@example.com',
+        status: 'revoked',
+        invitedAt: new Date('2026-01-01T00:00:00.000Z'),
+        revokedAt: new Date('2026-01-02T00:00:00.000Z'),
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        notificationEnabled: false,
+      });
+
+      // When: 復元を実行
+      viewer.restore();
+
+      // Then: 直前の値に関わらず通知ONに強制される
+      expect(viewer.isNotificationEnabled()).toBe(true);
+    });
+  });
+
+  describe('disableNotification/enableNotification', () => {
+    test('disableNotification()で通知設定がfalseになる', () => {
+      // Given: 通知ONの招待
+      const viewer = ProjectViewerEntity.create({
+        projectId: 'project-1',
+        email: 'viewer@example.com',
+      });
+
+      // When: 通知を無効化
+      viewer.disableNotification();
+
+      // Then: 通知設定がfalse
+      expect(viewer.isNotificationEnabled()).toBe(false);
+    });
+
+    test('enableNotification()で通知設定がtrueになる', () => {
+      // Given: 通知OFFの招待
+      const viewer = ProjectViewerEntity.create({
+        projectId: 'project-1',
+        email: 'viewer@example.com',
+      });
+      viewer.disableNotification();
+
+      // When: 通知を有効化
+      viewer.enableNotification();
+
+      // Then: 通知設定がtrue
+      expect(viewer.isNotificationEnabled()).toBe(true);
     });
   });
 
@@ -121,6 +189,7 @@ describe('ProjectViewerEntity', () => {
         revokedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        notificationEnabled: true,
       };
       const first = ProjectViewerEntity.reconstruct(props);
       const second = ProjectViewerEntity.reconstruct(props);

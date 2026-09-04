@@ -24,6 +24,7 @@ export interface ViewerAccessibleProjectDTO {
   projectId: string;
   projectName: string;
   ownerName: string | null;
+  notificationEnabled: boolean;
   tasks: ViewerAccessibleTaskDTO[];
 }
 

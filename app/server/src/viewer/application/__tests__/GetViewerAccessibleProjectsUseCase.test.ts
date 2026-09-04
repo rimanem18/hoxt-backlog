@@ -10,6 +10,7 @@ import { TaskTitle } from '@/task/domain/valueobjects/TaskTitle';
 import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { User } from '@/user/domain/UserEntity';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
+import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
 import { GetViewerAccessibleProjectsUseCase } from '../GetViewerAccessibleProjectsUseCase';
 
 const viewerEmail = 'viewer@example.com';
@@ -41,6 +42,8 @@ function createDeps() {
     findActiveByProject: mock(() => Promise.resolve([])),
     findById: mock(() => Promise.resolve(null)),
     findActiveByEmail: mock(() => Promise.resolve([])),
+    updateNotificationEnabled: mock(() => Promise.resolve(null)),
+    findActiveByProjectAndEmail: mock(() => Promise.resolve(null)),
   };
   const projectRepository: IProjectRepository = {
     save: mock(() => Promise.reject(new Error('not used'))),
@@ -105,12 +108,26 @@ function createTask(projectId: string, title: string): TaskEntity {
   });
 }
 
+function createViewer(
+  projectId: string,
+  notificationEnabled = true,
+): ProjectViewerEntity {
+  const viewer = ProjectViewerEntity.create({
+    projectId,
+    email: viewerEmail,
+  });
+  if (!notificationEnabled) {
+    viewer.disableNotification();
+  }
+  return viewer;
+}
+
 describe('GetViewerAccessibleProjectsUseCase', () => {
   test('active招待のあるproject群をtask込みでグルーピングして返す', async () => {
     // Given: 2つのprojectへactive招待があり、それぞれtaskが存在する
     const deps = createDeps();
     deps.projectViewerRepository.findActiveByEmail = mock(() =>
-      Promise.resolve([projectId1, projectId2]),
+      Promise.resolve([createViewer(projectId1), createViewer(projectId2)]),
     );
     deps.projectRepository.findByIds = mock(() =>
       Promise.resolve([
@@ -173,7 +190,7 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     // Given: active招待のあるprojectにtaskが1件もない
     const deps = createDeps();
     deps.projectViewerRepository.findActiveByEmail = mock(() =>
-      Promise.resolve([projectId1]),
+      Promise.resolve([createViewer(projectId1)]),
     );
     deps.projectRepository.findByIds = mock(() =>
       Promise.resolve([createProject(projectId1, 'プロジェクト1')]),
@@ -200,7 +217,7 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     const ownerUserId2 = 'owner-user-id-2';
     const deps = createDeps();
     deps.projectViewerRepository.findActiveByEmail = mock(() =>
-      Promise.resolve([projectId1, projectId2]),
+      Promise.resolve([createViewer(projectId1), createViewer(projectId2)]),
     );
     deps.projectRepository.findByIds = mock(() =>
       Promise.resolve([
@@ -241,7 +258,7 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     // Given: オーナーのuserIdに対応するユーザーが存在しない
     const deps = createDeps();
     deps.projectViewerRepository.findActiveByEmail = mock(() =>
-      Promise.resolve([projectId1]),
+      Promise.resolve([createViewer(projectId1)]),
     );
     deps.projectRepository.findByIds = mock(() =>
       Promise.resolve([createProject(projectId1, 'プロジェクト1')]),
@@ -267,7 +284,7 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     const ownerUserId = 'owner-user-id';
     const deps = createDeps();
     deps.projectViewerRepository.findActiveByEmail = mock(() =>
-      Promise.resolve([projectId1, projectId2]),
+      Promise.resolve([createViewer(projectId1), createViewer(projectId2)]),
     );
     deps.projectRepository.findByIds = mock(() =>
       Promise.resolve([
@@ -294,5 +311,38 @@ describe('GetViewerAccessibleProjectsUseCase', () => {
     const calledIds = (deps.userRepository.findByIds as ReturnType<typeof mock>)
       .mock.calls[0]?.[0] as string[];
     expect(calledIds).toEqual([ownerUserId]);
+  });
+
+  test('各projectのnotificationEnabledが対応するProjectViewerEntityの値を反映する', async () => {
+    // Given: 通知ONのprojectと通知OFFのprojectへのactive招待
+    const deps = createDeps();
+    deps.projectViewerRepository.findActiveByEmail = mock(() =>
+      Promise.resolve([
+        createViewer(projectId1, true),
+        createViewer(projectId2, false),
+      ]),
+    );
+    deps.projectRepository.findByIds = mock(() =>
+      Promise.resolve([
+        createProject(projectId1, 'プロジェクト1'),
+        createProject(projectId2, 'プロジェクト2'),
+      ]),
+    );
+    deps.taskRepository.findByProjectIds = mock(() => Promise.resolve([]));
+    const useCase = new GetViewerAccessibleProjectsUseCase(
+      deps.projectViewerRepository,
+      deps.projectRepository,
+      deps.taskRepository,
+      deps.userRepository,
+    );
+
+    // When: viewerEmailで実行
+    const result = await useCase.execute({ viewerEmail });
+
+    // Then: 各projectのnotificationEnabledが対応する招待の値と一致する
+    const project1Result = result.find((p) => p.projectId === projectId1);
+    const project2Result = result.find((p) => p.projectId === projectId2);
+    expect(project1Result?.notificationEnabled).toBe(true);
+    expect(project2Result?.notificationEnabled).toBe(false);
   });
 });

@@ -7,6 +7,7 @@
 
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   char,
   check,
   index,
@@ -378,6 +379,11 @@ export const projectViewers = schema.table(
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
+
+    // 通知ON/OFF設定（project単位、新規招待・復元時はtrueに初期化）
+    notificationEnabled: boolean('notification_enabled')
+      .notNull()
+      .default(true),
   },
   (table) => {
     return {

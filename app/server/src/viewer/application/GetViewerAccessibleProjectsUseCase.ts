@@ -24,7 +24,7 @@ function toTaskDTO(task: TaskEntity): ViewerAccessibleTaskDTO {
 /**
  * viewerがアクセス可能なプロジェクト取得ユースケース
  *
- * emailに紐づくactive招待のprojectId一覧を取得し、
+ * emailに紐づくactive招待の一覧を取得し、
  * 該当プロジェクトとタスクをprojectIdごとにグルーピングして返す。
  */
 export class GetViewerAccessibleProjectsUseCase
@@ -40,12 +40,17 @@ export class GetViewerAccessibleProjectsUseCase
   public async execute(
     input: GetViewerAccessibleProjectsInput,
   ): Promise<ViewerAccessibleProjectDTO[]> {
-    const projectIds = await this.projectViewerRepository.findActiveByEmail(
+    const viewers = await this.projectViewerRepository.findActiveByEmail(
       input.viewerEmail,
     );
-    if (projectIds.length === 0) {
+    if (viewers.length === 0) {
       return [];
     }
+
+    const projectIds = viewers.map((v) => v.getProjectId());
+    const notificationEnabledByProjectId = new Map(
+      viewers.map((v) => [v.getProjectId(), v.isNotificationEnabled()]),
+    );
 
     const [projects, tasks] = await Promise.all([
       this.projectRepository.findByIds(projectIds),
@@ -70,6 +75,8 @@ export class GetViewerAccessibleProjectsUseCase
       projectId: project.getId(),
       projectName: project.getName(),
       ownerName: ownerNameByUserId.get(project.getUserId()) ?? null,
+      notificationEnabled:
+        notificationEnabledByProjectId.get(project.getId()) ?? true,
       tasks: tasksByProjectId.get(project.getId()) ?? [],
     }));
   }

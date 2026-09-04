@@ -13,9 +13,11 @@ import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUse
 import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
 import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
+import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
 import type { IViewerInvitationUnitOfWork } from '@/viewer/application/IViewerInvitationUnitOfWork';
 import { ListProjectViewersUseCase } from '@/viewer/application/ListProjectViewersUseCase';
 import { RevokeViewerUseCase } from '@/viewer/application/RevokeViewerUseCase';
+import { UpdateNotificationSettingUseCase } from '@/viewer/application/UpdateNotificationSettingUseCase';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { FakeInvitationMailGateway } from './FakeInvitationMailGateway';
@@ -38,6 +40,8 @@ export class ViewerDIContainer {
     null;
   private static revokeViewerUseCaseInstance: RevokeViewerUseCase | null = null;
   private static getViewerAccessibleProjectsUseCaseInstance: GetViewerAccessibleProjectsUseCase | null =
+    null;
+  private static updateNotificationSettingUseCaseInstance: UpdateNotificationSettingUseCase | null =
     null;
   private static projectViewerRepositoryInstance: PostgreSQLProjectViewerRepository | null =
     null;
@@ -106,6 +110,19 @@ export class ViewerDIContainer {
         );
     }
     return ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance;
+  }
+
+  /**
+   * UpdateNotificationSettingUseCaseのインスタンスを返す
+   */
+  static getUpdateNotificationSettingUseCase(): IUpdateNotificationSettingUseCase {
+    if (!ViewerDIContainer.updateNotificationSettingUseCaseInstance) {
+      ViewerDIContainer.updateNotificationSettingUseCaseInstance =
+        new UpdateNotificationSettingUseCase(
+          ViewerDIContainer.getProjectViewerRepository(),
+        );
+    }
+    return ViewerDIContainer.updateNotificationSettingUseCaseInstance;
   }
 
   /**
@@ -182,6 +199,7 @@ export class ViewerDIContainer {
     ViewerDIContainer.listProjectViewersUseCaseInstance = null;
     ViewerDIContainer.revokeViewerUseCaseInstance = null;
     ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance = null;
+    ViewerDIContainer.updateNotificationSettingUseCaseInstance = null;
     ViewerDIContainer.projectViewerRepositoryInstance = null;
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;
