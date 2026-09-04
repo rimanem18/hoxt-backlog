@@ -64,6 +64,13 @@ function ProjectDetail(props: ProjectDetailProps): React.ReactNode {
 
   return (
     <div className="space-y-4">
+      <a
+        href="/dashboard/projects"
+        className="block text-primary hover:underline text-sm"
+      >
+        プロジェクト一覧に戻る
+      </a>
+
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-semibold truncate">
