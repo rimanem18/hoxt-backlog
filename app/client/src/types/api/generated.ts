@@ -2465,6 +2465,123 @@ export interface paths {
         };
         trace?: never;
     };
+    "/viewer/push-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push購読登録
+         * @description viewerアクセストークンで、ブラウザのWeb Push購読情報を登録します。同一email・endpointで再度呼び出した場合は鍵情報を上書きします。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        endpoint: string;
+                        keys: {
+                            p256dh: string;
+                            auth: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Push購読を登録しました */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: email */
+                                email: string;
+                                endpoint: string;
+                            };
+                        };
+                    };
+                };
+                /** @description endpoint形式不正・keys欠落等の入力エラーです */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: string;
+                                } | string;
+                            };
+                        };
+                    };
+                };
+                /** @description アクセストークンが不正・失効・期限切れです */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: string;
+                                } | string;
+                            };
+                        };
+                    };
+                };
+                /** @description サーバーエラー */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: string;
+                                } | string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

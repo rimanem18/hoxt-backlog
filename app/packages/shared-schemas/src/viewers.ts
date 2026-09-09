@@ -85,6 +85,33 @@ export const updateNotificationSettingResponseSchema = apiResponseSchema(
   projectViewerNotificationSettingSchema,
 ).openapi('UpdateNotificationSettingResponse');
 
+// ===== Push購読登録スキーマ =====
+
+export const registerPushSubscriptionBodySchema = z.object({
+  endpoint: z
+    .url('endpointは有効なURLである必要があります')
+    .refine(
+      (value) => value.startsWith('https://'),
+      'endpointはhttps URLである必要があります',
+    ),
+  keys: z.object({
+    p256dh: z.string().min(1, 'p256dhは必須です'),
+    auth: z.string().min(1, 'authは必須です'),
+  }),
+}).openapi('RegisterPushSubscriptionBody');
+
+export const pushSubscriptionSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  endpoint: z.string(),
+}).openapi('PushSubscription', {
+  description: 'viewerのWeb Push購読情報',
+});
+
+export const registerPushSubscriptionResponseSchema = apiResponseSchema(
+  pushSubscriptionSchema,
+).openapi('RegisterPushSubscriptionResponse');
+
 // ===== 型エクスポート =====
 
 export type ProjectViewer = z.infer<typeof projectViewerSchema>;

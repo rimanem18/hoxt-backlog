@@ -465,6 +465,58 @@ export type ViewerAccessToken = typeof viewerAccessTokens.$inferSelect;
 export type NewViewerAccessToken = typeof viewerAccessTokens.$inferInsert;
 
 /**
+ * viewer Web Push購読テーブル
+ * email × endpointの購読情報を管理するテーブル（1email = 複数デバイス許容）
+ */
+export const viewerPushSubscriptions = schema.table(
+  'viewer_push_subscriptions',
+  {
+    // プライマリキー（UUID v4）
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // 購読先メールアドレス
+    email: varchar('email', { length: 320 }).notNull(), // RFC 5321準拠の最大長
+
+    // Push Serviceのendpoint URL
+    endpoint: text('endpoint').notNull(),
+
+    // Push暗号化用の鍵情報
+    p256dhKey: text('p256dh_key').notNull(),
+    authKey: text('auth_key').notNull(),
+
+    // タイムスタンプ
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => {
+    return {
+      // email × endpointの一意制約（同一購読の重複登録を防止、大文字小文字を区別しない）
+      uniqueEmailEndpoint: uniqueIndex(
+        'unique_viewer_push_subscriptions_email_endpoint',
+      ).on(sql`lower(${table.email})`, table.endpoint),
+
+      // 配信時の購読解決用インデックス
+      emailIdx: index('idx_viewer_push_subscriptions_email').on(
+        sql`lower(${table.email})`,
+      ),
+    };
+  },
+);
+
+/**
+ * viewer_push_subscriptionsテーブルの型定義
+ * Drizzleから自動推論される型
+ */
+export type ViewerPushSubscription =
+  typeof viewerPushSubscriptions.$inferSelect;
+export type NewViewerPushSubscription =
+  typeof viewerPushSubscriptions.$inferInsert;
+
+/**
  * Row-Level Security (RLS) ポリシー定義
  *
  * 注意: RLSポリシーはマイグレーション完了後に手動で適用する必要があります

@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { IRegisterPushSubscriptionUseCase } from '@/viewer/application/IRegisterPushSubscriptionUseCase';
 import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
 import { ViewerNotFoundError } from '@/viewer/domain/errors';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { ProjectViewerEntity } from '@/viewer/domain/ProjectViewerEntity';
+import { PushSubscriptionEntity } from '@/viewer/domain/PushSubscriptionEntity';
 import { ViewerAccessTokenEntity } from '@/viewer/domain/ViewerAccessTokenEntity';
 import type { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
 
 describe('notificationRoutes統合テスト', () => {
   let app: OpenAPIHono;
   let updateNotificationSettingUseCase: {
+    execute: ReturnType<typeof mock>;
+  };
+  let registerPushSubscriptionUseCase: {
     execute: ReturnType<typeof mock>;
   };
   let viewerAccessTokenRepository: IViewerAccessTokenRepository;
@@ -28,6 +33,7 @@ describe('notificationRoutes統合テスト', () => {
 
   beforeEach(async () => {
     updateNotificationSettingUseCase = { execute: mock() };
+    registerPushSubscriptionUseCase = { execute: mock() };
     viewerAccessTokenRepository = {
       findByEmail: mock(() => Promise.resolve(null)),
       findByTokenHash: mock((hash: string) =>
@@ -49,6 +55,8 @@ describe('notificationRoutes統合テスト', () => {
     app = createNotificationRoutes({
       updateNotificationSettingUseCase:
         updateNotificationSettingUseCase as unknown as IUpdateNotificationSettingUseCase,
+      registerPushSubscriptionUseCase:
+        registerPushSubscriptionUseCase as unknown as IRegisterPushSubscriptionUseCase,
       viewerAccessTokenRepository,
       tokenHasher,
     });
@@ -163,6 +171,126 @@ describe('notificationRoutes統合テスト', () => {
       expect(updateNotificationSettingUseCase.execute).not.toHaveBeenCalledWith(
         expect.objectContaining({ projectId: otherProjectId }),
       );
+    });
+  });
+
+  describe('POST /viewer/push-subscriptions', () => {
+    test('正常系: 有効なトークンで購読を登録できる', async () => {
+      // Given: 登録後のエンティティを返すモック
+      const saved = PushSubscriptionEntity.create({
+        email: 'viewer@example.com',
+        endpoint: 'https://push.example.com/subscription/abc',
+        p256dhKey: 'p256dh-value',
+        authKey: 'auth-value',
+      });
+      registerPushSubscriptionUseCase.execute.mockResolvedValue(saved);
+
+      // When: 有効なトークンでPOSTリクエスト
+      const res = await app.request('/viewer/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Viewer-Access-Token': 'valid-raw-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: 'https://push.example.com/subscription/abc',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-value' },
+        }),
+      });
+
+      // Then: 200で登録結果を返す
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.data.email).toBe('viewer@example.com');
+      expect(data.data.endpoint).toBe(
+        'https://push.example.com/subscription/abc',
+      );
+      expect(registerPushSubscriptionUseCase.execute).toHaveBeenCalledWith({
+        email: 'viewer@example.com',
+        endpoint: 'https://push.example.com/subscription/abc',
+        p256dhKey: 'p256dh-value',
+        authKey: 'auth-value',
+      });
+    });
+
+    test('異常系: Viewer-Access-Tokenヘッダが無い場合401を返す', async () => {
+      // When: ヘッダ無しでリクエスト
+      const res = await app.request('/viewer/push-subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: 'https://push.example.com/subscription/abc',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-value' },
+        }),
+      });
+
+      // Then: 401
+      expect(res.status).toBe(401);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
+
+    test('異常系: endpointが不正な形式の場合400を返す', async () => {
+      // When: endpointがURL形式でないリクエスト
+      const res = await app.request('/viewer/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Viewer-Access-Token': 'valid-raw-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: 'not-a-url',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-value' },
+        }),
+      });
+
+      // Then: 400
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(registerPushSubscriptionUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    test('異常系: endpointがhttps以外のスキームの場合400を返す', async () => {
+      // When: endpointがhttp URLのリクエスト
+      const res = await app.request('/viewer/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Viewer-Access-Token': 'valid-raw-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: 'http://push.example.com/subscription/abc',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-value' },
+        }),
+      });
+
+      // Then: 400
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(registerPushSubscriptionUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    test('異常系: keysが欠落している場合400を返す', async () => {
+      // When: keysを含まないリクエスト
+      const res = await app.request('/viewer/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Viewer-Access-Token': 'valid-raw-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: 'https://push.example.com/subscription/abc',
+        }),
+      });
+
+      // Then: 400
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      expect(registerPushSubscriptionUseCase.execute).not.toHaveBeenCalled();
     });
   });
 });

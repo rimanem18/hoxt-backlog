@@ -1,7 +1,10 @@
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
+import { formatZodError } from '@/shared/utils/zodErrorFormatter';
+import type { IRegisterPushSubscriptionUseCase } from '@/viewer/application/IRegisterPushSubscriptionUseCase';
 import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
 import {
   InvalidViewerAccessTokenError,
+  InvalidViewerDataError,
   ViewerNotFoundError,
 } from '@/viewer/domain/errors';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
@@ -9,22 +12,52 @@ import type { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
 import { ViewerDIContainer } from '@/viewer/infrastructure/ViewerDIContainer';
 import { viewerTokenMiddleware } from './middleware/viewerTokenMiddleware';
 import { NotificationController } from './NotificationController';
-import { updateNotificationSettingRoute } from './notificationRoutes.schema';
+import {
+  registerPushSubscriptionRoute,
+  updateNotificationSettingRoute,
+} from './notificationRoutes.schema';
 
 /**
  * notificationRoutes依存性定義（テスト用）
  *
- * 通知設定変更UseCaseとviewerトークン検証に必要な依存を注入する。
+ * 通知設定変更・Push購読登録UseCaseとviewerトークン検証に必要な依存を注入する。
  * 依存性注入により、テスト時にモックを差し替え可能。
  */
 export interface NotificationRoutesDependencies {
   /** 通知設定変更ユースケース */
   updateNotificationSettingUseCase: IUpdateNotificationSettingUseCase;
+  /** Push購読登録ユースケース */
+  registerPushSubscriptionUseCase: IRegisterPushSubscriptionUseCase;
   /** viewerアクセストークンリポジトリ（viewerTokenMiddleware用） */
   viewerAccessTokenRepository: IViewerAccessTokenRepository;
   /** トークンハッシュ化ユーティリティ（viewerTokenMiddleware用） */
   tokenHasher: TokenHasher;
 }
+
+/**
+ * リクエストボディのZodバリデーション失敗をハンドリングするフック
+ *
+ * registerPushSubscriptionBodySchemaのendpoint形式・keys欠落チェックなど、
+ * UseCase実行前のスキーマレベルの検証エラーもapiErrorResponseSchema形式に揃える。
+ */
+// biome-ignore lint/suspicious/noExplicitAny: @hono/zod-openapiのHook型引数の制限
+const validationHook: Hook<any, any, any, any> = (result, c) => {
+  if (result.success) {
+    return;
+  }
+
+  return c.json(
+    {
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'バリデーションエラー',
+        details: formatZodError(result.error.issues),
+      },
+    },
+    400,
+  );
+};
 
 /**
  * notificationRoutesファクトリー関数（テスト用）
@@ -40,9 +73,10 @@ export function createNotificationRoutes(
 ): OpenAPIHono {
   const controller = new NotificationController(
     dependencies.updateNotificationSettingUseCase,
+    dependencies.registerPushSubscriptionUseCase,
   );
 
-  const app = new OpenAPIHono();
+  const app = new OpenAPIHono({ defaultHook: validationHook });
 
   // viewerTokenMiddlewareでViewer-Access-Token認証を実施
   // Why: '*'ではなく個別パスに限定する。app.route()でこのルーターが
@@ -58,6 +92,13 @@ export function createNotificationRoutes(
       tokenHasher: dependencies.tokenHasher,
     }),
   );
+  app.use(
+    '/viewer/push-subscriptions',
+    viewerTokenMiddleware({
+      viewerAccessTokenRepository: dependencies.viewerAccessTokenRepository,
+      tokenHasher: dependencies.tokenHasher,
+    }),
+  );
 
   // エンドポイントを登録
   app.openapi(
@@ -65,6 +106,12 @@ export function createNotificationRoutes(
     (c) =>
       // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
       controller.updateNotificationSetting(c) as any,
+  );
+  app.openapi(
+    registerPushSubscriptionRoute,
+    (c) =>
+      // biome-ignore lint/suspicious/noExplicitAny: OpenAPIHonoの型推論の制限
+      controller.registerPushSubscription(c) as any,
   );
 
   // グローバルエラーハンドラー
@@ -97,6 +144,19 @@ export function createNotificationRoutes(
       );
     }
 
+    if (err instanceof InvalidViewerDataError) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: err.code,
+            message: err.message,
+          },
+        },
+        400,
+      );
+    }
+
     // その他のエラー → 500
     return c.json(
       {
@@ -125,6 +185,11 @@ const lazyUpdateNotificationSettingUseCase: IUpdateNotificationSettingUseCase =
     execute: (input) =>
       ViewerDIContainer.getUpdateNotificationSettingUseCase().execute(input),
   };
+
+const lazyRegisterPushSubscriptionUseCase: IRegisterPushSubscriptionUseCase = {
+  execute: (input) =>
+    ViewerDIContainer.getRegisterPushSubscriptionUseCase().execute(input),
+};
 
 const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository = {
   findByEmail: (email) =>
@@ -159,6 +224,7 @@ const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository = {
  */
 const notification = createNotificationRoutes({
   updateNotificationSettingUseCase: lazyUpdateNotificationSettingUseCase,
+  registerPushSubscriptionUseCase: lazyRegisterPushSubscriptionUseCase,
   viewerAccessTokenRepository: lazyViewerAccessTokenRepository,
   tokenHasher: ViewerDIContainer.getTokenHasher(),
 });

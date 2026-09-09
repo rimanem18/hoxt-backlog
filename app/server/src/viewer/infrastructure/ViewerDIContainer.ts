@@ -12,16 +12,20 @@ import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMai
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
 import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
+import type { IRegisterPushSubscriptionUseCase } from '@/viewer/application/IRegisterPushSubscriptionUseCase';
 import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
 import type { IViewerInvitationUnitOfWork } from '@/viewer/application/IViewerInvitationUnitOfWork';
 import { ListProjectViewersUseCase } from '@/viewer/application/ListProjectViewersUseCase';
+import { RegisterPushSubscriptionUseCase } from '@/viewer/application/RegisterPushSubscriptionUseCase';
 import { RevokeViewerUseCase } from '@/viewer/application/RevokeViewerUseCase';
 import { UpdateNotificationSettingUseCase } from '@/viewer/application/UpdateNotificationSettingUseCase';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
+import type { IPushSubscriptionRepository } from '@/viewer/domain/IPushSubscriptionRepository';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { FakeInvitationMailGateway } from './FakeInvitationMailGateway';
 import { PostgreSQLProjectViewerRepository } from './PostgreSQLProjectViewerRepository';
+import { PostgreSQLPushSubscriptionRepository } from './PostgreSQLPushSubscriptionRepository';
 import { PostgreSQLViewerAccessTokenRepository } from './PostgreSQLViewerAccessTokenRepository';
 import { PostgreSQLViewerInvitationUnitOfWork } from './PostgreSQLViewerInvitationUnitOfWork';
 import { SesInvitationMailGateway } from './SesInvitationMailGateway';
@@ -43,9 +47,13 @@ export class ViewerDIContainer {
     null;
   private static updateNotificationSettingUseCaseInstance: UpdateNotificationSettingUseCase | null =
     null;
+  private static registerPushSubscriptionUseCaseInstance: RegisterPushSubscriptionUseCase | null =
+    null;
   private static projectViewerRepositoryInstance: PostgreSQLProjectViewerRepository | null =
     null;
   private static viewerAccessTokenRepositoryInstance: PostgreSQLViewerAccessTokenRepository | null =
+    null;
+  private static pushSubscriptionRepositoryInstance: PostgreSQLPushSubscriptionRepository | null =
     null;
   private static mailGatewayInstance: IInvitationMailGateway | null = null;
   private static tokenHasherInstance: TokenHasher | null = null;
@@ -126,6 +134,19 @@ export class ViewerDIContainer {
   }
 
   /**
+   * RegisterPushSubscriptionUseCaseのインスタンスを返す
+   */
+  static getRegisterPushSubscriptionUseCase(): IRegisterPushSubscriptionUseCase {
+    if (!ViewerDIContainer.registerPushSubscriptionUseCaseInstance) {
+      ViewerDIContainer.registerPushSubscriptionUseCaseInstance =
+        new RegisterPushSubscriptionUseCase(
+          ViewerDIContainer.getPushSubscriptionRepository(),
+        );
+    }
+    return ViewerDIContainer.registerPushSubscriptionUseCaseInstance;
+  }
+
+  /**
    * PostgreSQLViewerInvitationUnitOfWorkの共有インスタンスを返す
    */
   static getViewerInvitationUnitOfWork(): IViewerInvitationUnitOfWork {
@@ -156,6 +177,17 @@ export class ViewerDIContainer {
         new PostgreSQLViewerAccessTokenRepository(db);
     }
     return ViewerDIContainer.viewerAccessTokenRepositoryInstance;
+  }
+
+  /**
+   * PostgreSQLPushSubscriptionRepositoryの共有インスタンスを返す
+   */
+  static getPushSubscriptionRepository(): IPushSubscriptionRepository {
+    if (!ViewerDIContainer.pushSubscriptionRepositoryInstance) {
+      ViewerDIContainer.pushSubscriptionRepositoryInstance =
+        new PostgreSQLPushSubscriptionRepository(db);
+    }
+    return ViewerDIContainer.pushSubscriptionRepositoryInstance;
   }
 
   /**
@@ -200,8 +232,10 @@ export class ViewerDIContainer {
     ViewerDIContainer.revokeViewerUseCaseInstance = null;
     ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance = null;
     ViewerDIContainer.updateNotificationSettingUseCaseInstance = null;
+    ViewerDIContainer.registerPushSubscriptionUseCaseInstance = null;
     ViewerDIContainer.projectViewerRepositoryInstance = null;
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
+    ViewerDIContainer.pushSubscriptionRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;
     ViewerDIContainer.tokenHasherInstance = null;
     ViewerDIContainer.viewerInvitationUnitOfWorkInstance = null;
