@@ -3,6 +3,7 @@ import type { ViewerAccessibleProject } from '@hoxt-backlog/shared-schemas/viewe
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ViewerTaskBoardContent } from '../components/ViewerTaskBoard';
+import type { useRegisterPushSubscription } from '../hooks/useRegisterPushSubscription';
 import type { useUpdateNotificationSetting } from '../hooks/useUpdateNotificationSetting';
 import { ViewerServicesProvider } from '../lib/ViewerServicesContext';
 
@@ -52,6 +53,14 @@ const defaultMockUseUpdateNotificationSetting: typeof useUpdateNotificationSetti
     variables: undefined,
   }));
 
+const defaultMockUseRegisterPushSubscription: typeof useRegisterPushSubscription =
+  mock(() => ({
+    permissionState: 'unsupported',
+    isRegistering: false,
+    error: null,
+    requestPermission: mock(() => {}),
+  }));
+
 function renderWithProviders(
   useViewerAccessibleProjects: () => {
     data:
@@ -73,6 +82,7 @@ function renderWithProviders(
         useUpdateNotificationSetting:
           useUpdateNotificationSettingOverride ??
           defaultMockUseUpdateNotificationSetting,
+        useRegisterPushSubscription: defaultMockUseRegisterPushSubscription,
       }}
     >
       <ViewerTaskBoardContent />

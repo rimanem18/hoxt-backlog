@@ -8,6 +8,7 @@
  */
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { useRegisterPushSubscription } from '../hooks/useRegisterPushSubscription';
 import { useUpdateNotificationSetting } from '../hooks/useUpdateNotificationSetting';
 import { useViewerAccessibleProjects } from '../hooks/useViewerAccessibleProjects';
 
@@ -19,6 +20,7 @@ import { useViewerAccessibleProjects } from '../hooks/useViewerAccessibleProject
 export interface ViewerServices {
   useViewerAccessibleProjects: typeof useViewerAccessibleProjects;
   useUpdateNotificationSetting: typeof useUpdateNotificationSetting;
+  useRegisterPushSubscription: typeof useRegisterPushSubscription;
 }
 
 const ViewerServicesContext = createContext<ViewerServices | null>(null);
@@ -58,6 +60,7 @@ export function ViewerServicesProvider(props: ViewerServicesProviderProps) {
       props.services || {
         useViewerAccessibleProjects,
         useUpdateNotificationSetting,
+        useRegisterPushSubscription,
       },
     [props.services],
   );

@@ -7,6 +7,9 @@ process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
   'test-publishable-key-for-testing';
 process.env.NEXT_PUBLIC_API_BASE_URL ??= 'http://localhost:3001';
 process.env.NEXT_PUBLIC_TRUSTED_DOMAINS ??= 'localhost:3000,localhost:3001';
+// 実際のVAPID公開鍵と同じ87文字（65バイトのURL-safe Base64、パディング1文字）の形式
+process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ??=
+  'BNJzMLEdg8_ouo5mIQTeLrov15DlOpDn5lae7RP8snT_v9Bd2SQ1n-MQTCYgiQLlyu0YH78PNrMGSiSdAbUoMUY';
 
 // JSDOM環境のセットアップ
 const { JSDOM } = require('jsdom');

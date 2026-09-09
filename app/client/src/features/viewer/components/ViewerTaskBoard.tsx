@@ -13,6 +13,7 @@ import {
   ViewerServicesProvider,
 } from '../lib/ViewerServicesContext';
 import { NotificationToggle } from './NotificationToggle';
+import { PushNotificationPermission } from './PushNotificationPermission';
 
 /**
  * 優先度に応じたテキストカラーとスタイルのマップ
@@ -173,6 +174,8 @@ export function ViewerTaskBoardContent(): React.ReactNode {
       <span className="text-sm text-gray-500">
         このURLの有効期限は{formatJapaneseDate(tokenExpiresAt)}までです。
       </span>
+
+      <PushNotificationPermission />
 
       {projects.length === 0 && (
         <div aria-live="polite">
