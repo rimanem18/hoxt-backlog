@@ -23,7 +23,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-3-01: VAPID鍵ペア生成とローカル/E2E環境変数の準備**
+- [x] **TASK-3-01: VAPID鍵ペア生成とローカル/E2E環境変数の準備**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-001
@@ -32,7 +32,7 @@
   - **完了条件**: `docker compose exec server bunx tsc --noEmit`が通り、ローカル環境で該当環境変数が読み込めることを確認する
   - **注意点**: 秘密鍵は`.env`等の非コミット領域にのみ配置し、リポジトリへコミットしない
 
-- [ ] **TASK-3-02: `viewer_push_subscriptions`テーブル新設とスキーマ再生成**
+- [x] **TASK-3-02: `viewer_push_subscriptions`テーブル新設とスキーマ再生成**
   - **タイプ**: DIRECT
   - **依存タスク**: なし
   - **関連要件**: REQ-001, TS-301
@@ -40,7 +40,7 @@
   - **実装詳細**: `app/server/src/shared/database/schema.ts`に`viewerPushSubscriptions`テーブル（`id`(uuid, PK), `email`(varchar(320), NOT NULL), `endpoint`(text, NOT NULL), `p256dhKey`(text, NOT NULL), `authKey`(text, NOT NULL), `createdAt`, `updatedAt`）を新設し、一意制約`(lower(email), endpoint)`とインデックス`(lower(email))`を`viewerAccessTokens`のemail正規化パターンに倣って追加。`app/server/scripts/generate-schemas.ts`の`tableConfigs`に`viewer_push_subscriptions`を追加。`db:generate`でマイグレーション生成。`app/server/scripts/setup-rls.ts`に、`anon`/`authenticated`ロールへの許可ポリシーを追加しない旨のコメント付きで対象テーブルを追記。`generate:schemas`→`generate:openapi`→`generate:types`を実行
   - **完了条件**: マイグレーションファイルが生成されコミット可能な状態であり、`server`・`client`双方の型チェックが通る
 
-- [ ] **TASK-3-03: PushSubscriptionEntity・IPushSubscriptionRepository新規作成**
+- [x] **TASK-3-03: PushSubscriptionEntity・IPushSubscriptionRepository新規作成**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-02
   - **関連要件**: REQ-001, TS-301
@@ -49,7 +49,7 @@
   - **完了条件**: `app/server/src/viewer/domain/__tests__/PushSubscriptionEntity.test.ts`が通過する
   - **単体テスト要件**: 生成時の各プロパティ保持、不正な値（空email・空endpoint等）でのバリデーションエラー
 
-- [ ] **TASK-3-04: PostgreSQLPushSubscriptionRepository新規実装**
+- [x] **TASK-3-04: PostgreSQLPushSubscriptionRepository新規実装**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-03
   - **関連要件**: REQ-001, TS-301
@@ -58,7 +58,7 @@
   - **完了条件**: `app/server/src/viewer/infrastructure/__tests__/PostgreSQLPushSubscriptionRepository.test.ts`が通過する
   - **統合テスト要件**: 同一email・endpointでの`save()`が新規行を増やさず鍵情報を上書きすること（べき等性）、`findByEmail`が複数デバイス分を返せること
 
-- [ ] **TASK-3-05: RegisterPushSubscriptionUseCase新規実装**
+- [x] **TASK-3-05: RegisterPushSubscriptionUseCase新規実装**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-04
   - **関連要件**: REQ-001
@@ -67,7 +67,7 @@
   - **完了条件**: `app/server/src/viewer/application/__tests__/RegisterPushSubscriptionUseCase.test.ts`が通過する
   - **単体テスト要件**: 新規登録・既存endpoint再登録（鍵情報上書き）の両方を検証
 
-- [ ] **TASK-3-06: Push購読登録API（POST）の追加**
+- [x] **TASK-3-06: Push購読登録API（POST）の追加**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-05
   - **関連要件**: REQ-001
@@ -76,7 +76,7 @@
   - **完了条件**: 統合テストが通過する
   - **統合テスト要件**: `notificationRoutes.integration.test.ts`に200/201・400（不正入力）・401（トークン不正）を追加
 
-- [ ] **TASK-3-07: Phase 3品質ゲート確認**
+- [x] **TASK-3-07: Phase 3品質ゲート確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-3-01〜TASK-3-06
   - **関連要件**: なし（品質保証）
@@ -89,3 +89,23 @@
 - `POST /api/viewer/push-subscriptions`で購読情報が保存され、同一email・endpointからの再登録が重複行を生まずべき等に処理されることが統合テストで確認できる
 - Phase 3で追加したドメイン・リポジトリ・UseCase・APIコードがすべてテストされている
 - VAPID鍵のローカル/E2E運用が完了している
+
+## 実施記録
+
+- 開始時刻（JST）: 2026-09-09 21:07
+- 終了時刻（JST）: 2026-09-09 21:45
+- 合計時間: 38分
+- typecheck / test / lint / build: 全チェックが正常終了。`docker compose exec server bunx tsc --noEmit`・`docker compose exec client bunx tsc --noEmit`（いずれもエラーなし）、`docker compose exec server bun test`（1030 pass, 0 fail）、`docker compose exec server bun run fix`（biome、差分なし）、`docker compose exec server bun run knip`（今回追加した`web-push`/`@types/web-push`の未使用検知と、既存パターンと同様の自動生成schemaファイル検知のみ。Phase 5でWebPushGatewayが使用する予定であり許容）、`docker compose exec server bun run cpd`（既存ルート間の重複と同程度で新規の重大な重複なし）、`docker compose run --rm semgrep semgrep --config=auto`（0 findings）、`docker compose exec server bun run build:lambda`（成功）
+- 手動疎通確認: `/api/__test__/viewer-tokens`でトークンを発行し、実際に起動中のserverコンテナへ`POST /api/viewer/push-subscriptions`を実行。新規登録（200）、endpoint形式不正（400）、keys欠落（400）、httpスキーム拒否（400）、同一email・endpointへの並行2リクエスト（`Promise.allSettled`）が両方成功し重複行を生まず鍵情報が上書きされることをDB直接確認で検証した
+
+### 差異の記録
+
+- Codex MCPによる8観点レビュー（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）を実施し、以下を反映した:
+  - **[correctness, 重要]** `PostgreSQLPushSubscriptionRepository.save()`の当初実装（UPDATE試行→0件ならINSERT、既存`PostgreSQLViewerAccessTokenRepository`と同型の擬似upsert）は、同一email×endpointへの並行リクエストで両方のUPDATEが0件になり一方のINSERTが一意制約違反になる競合状態を持っていた（5つの観点で共通して指摘）。一意制約が式インデックス`(lower(email), endpoint)`のためDrizzleの`onConflictDoUpdate`（プレーンな列のみtarget可）が使えず、生SQLで`INSERT ... ON CONFLICT (lower(email), endpoint) DO UPDATE ...`による単一クエリの原子的upsertに書き換えた。並行2リクエストでの重複行なし・鍵情報上書きを実際に検証済み
+  - **[correctness]** `EnvironmentConfig.test.ts`の`getVapidKeys`用`afterEach`が、テスト実行前の環境変数が`undefined`だった場合に削除処理を行わず、テスト間で値が漏れる可能性があった（conventions観点で指摘）。`delete`を先に実行してから復元する形に修正
+  - **[simplification]** upsertをリポジトリ側の単一クエリに一本化したことで、`PushSubscriptionEntity.updateKeys()`が呼び出し元を持たない不要なコードになったため削除（対応するテストケースも削除）。合わせて可変フィールドを`readonly`化した
+  - **[correctness, 軽微]** Push Service endpointとして`ftp:`等の非httpsスキームも`z.url()`だけでは受理されてしまうため、`.refine()`で`https://`必須のチェックを追加。対応する統合テストケースも追加
+  - **[simplification, 軽微]** `RegisterPushSubscriptionUseCase.test.ts`の2つ目のテストが実質的に1つ目と同じ内容で、upsertの検証（リポジトリの責務）になっていなかったため削除
+  - **[altitude]** `PushSubscriptionEntity`が`user`ドメインの`isValidEmail`に依存する点、および`getVapidKeys()`をPhase 3時点で使用箇所なく先行追加している点は指摘があったが、前者は既存の`InviteViewerUseCase`も同型のクロスドメイン参照をしており一貫性を優先し見送り、後者はdesign.md 10.3節・タスク計画（TASK-3-01）が明示的に要求している内容のため見送った
+- TASK-3-01（VAPID鍵生成）で、サンドボックス制約により`.env`への直接読み書きができなかったため、生成したVAPID鍵ペアの値をユーザーに提示し、ユーザー自身が`.env`に追記する形をとった（`.env.example`・`compose.yaml`・`.github/workflows/e2e-test.yml`は本セッションで更新済み）
+- E2E CI（`e2e-test.yml`）用のVAPID鍵は、本番用とは別に生成した鍵ペアを直接ワークフローファイルに記載した（E2E専用のダミー用途であり実運用の購読とは無関係）
