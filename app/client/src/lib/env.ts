@@ -25,3 +25,19 @@ export function getApiBaseUrl(): string {
   // 末尾のスラッシュを除去してから/apiを追加
   return `${baseUrl.replace(/\/+$/, '')}/api`;
 }
+
+/**
+ * VAPID公開鍵を取得する
+ *
+ * 環境変数 NEXT_PUBLIC_VAPID_PUBLIC_KEY から値を取得する
+ *
+ * @returns VAPID公開鍵
+ * @throws {Error} 環境変数が未設定の場合
+ */
+export function getVapidPublicKey(): string {
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapidPublicKey) {
+    throw new Error('NEXT_PUBLIC_VAPID_PUBLIC_KEY環境変数が設定されていません');
+  }
+  return vapidPublicKey;
+}

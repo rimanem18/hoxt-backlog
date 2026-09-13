@@ -59,3 +59,21 @@ variable "supabase_publishable_key" {
   type        = string
   sensitive   = true
 }
+
+variable "vapid_public_key" {
+  description = "VAPID public key for Web Push notifications (shared with frontend)"
+  type        = string
+  sensitive   = true
+}
+
+variable "vapid_private_key" {
+  description = "VAPID private key for signing Web Push notifications"
+  type        = string
+  sensitive   = true
+}
+
+variable "vapid_subject" {
+  description = "VAPID subject (mailto: contact) for Web Push notifications"
+  type        = string
+  sensitive   = true
+}

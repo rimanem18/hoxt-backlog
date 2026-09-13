@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["open-next.config.ts"],
-  "ignoreDependencies": ["@hoxt-backlog/shared-schemas"]
+  "ignoreDependencies": ["@hoxt-backlog/shared-schemas"],
+  "ignore": ["public/**"]
 }

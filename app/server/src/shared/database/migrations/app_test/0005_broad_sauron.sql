@@ -1,0 +1,1 @@
+ALTER TABLE "app_test"."project_viewers" ADD COLUMN "notification_enabled" boolean DEFAULT true NOT NULL;

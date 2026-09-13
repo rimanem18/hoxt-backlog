@@ -43,6 +43,9 @@ import {
 import {
 	viewerAccessRoutes,
 } from "../src/viewer/presentation/viewerAccessRoutes.schema";
+import {
+	notificationRoutes,
+} from "../src/viewer/presentation/notificationRoutes.schema";
 
 /**
  * OpenAPI仕様を生成してファイルに出力
@@ -87,6 +90,11 @@ async function generateOpenAPISpec(): Promise<void> {
 
 	// viewer横断閲覧ルート
 	viewerAccessRoutes.forEach((route) =>
+		app.openapi(route, noopHandler as any),
+	);
+
+	// viewer通知設定ルート
+	notificationRoutes.forEach((route) =>
 		app.openapi(route, noopHandler as any),
 	);
 

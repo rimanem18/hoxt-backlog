@@ -103,6 +103,9 @@ resource "aws_lambda_function" "production" {
       METRICS_NAMESPACE        = var.metrics_namespace
       SES_FROM_ADDRESS         = module.ses.from_address_production
       VIEWER_ACCESS_BASE_URL   = "https://${var.domain_name}"
+      VAPID_PUBLIC_KEY         = var.vapid_public_key
+      VAPID_PRIVATE_KEY        = var.vapid_private_key
+      VAPID_SUBJECT            = var.vapid_subject
     }
   }
 
@@ -146,6 +149,9 @@ resource "aws_lambda_function" "preview" {
       METRICS_NAMESPACE        = var.metrics_namespace
       SES_FROM_ADDRESS         = module.ses.from_address_preview
       VIEWER_ACCESS_BASE_URL   = "https://preview.${var.domain_name}"
+      VAPID_PUBLIC_KEY         = var.vapid_public_key
+      VAPID_PRIVATE_KEY        = var.vapid_private_key
+      VAPID_SUBJECT            = var.vapid_subject
     }
   }
 

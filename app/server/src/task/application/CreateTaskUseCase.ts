@@ -1,7 +1,9 @@
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
+import type { TaskChangeEvent } from '@/task/application/ports/ITaskChangeNotifier';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import { TaskEntity } from '@/task/domain/TaskEntity';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import type { CreateTaskInput, ICreateTaskUseCase } from './ICreateTaskUseCase';
 
 /**
@@ -49,6 +51,21 @@ export class CreateTaskUseCase implements ICreateTaskUseCase {
     });
 
     // リポジトリで永続化
-    return await this.taskRepository.save(task);
+    const savedTask = await this.taskRepository.save(task);
+
+    // RISK-02: 通知失敗はtask作成自体に影響させない（fail-open）
+    const event: TaskChangeEvent = {
+      type: 'task_added',
+      taskId: savedTask.getId(),
+      taskTitle: savedTask.getTitle(),
+      projectId: input.projectId,
+    };
+    try {
+      await TaskChangeNotifierRegistry.getNotifier().notify(event);
+    } catch (error) {
+      console.error('task変更通知の送信に失敗しました', error);
+    }
+
+    return savedTask;
   }
 }

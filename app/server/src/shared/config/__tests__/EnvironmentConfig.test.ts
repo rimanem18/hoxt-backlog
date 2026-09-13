@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { getDatabaseConfig, validateConfig } from '../env';
+import { getDatabaseConfig, getVapidKeys, validateConfig } from '../env';
 
 describe('EnvironmentConfig', () => {
   // 環境変数の元の値を保存
@@ -77,6 +77,67 @@ describe('EnvironmentConfig', () => {
 
       // When & Then: 詳細なエラーが発生
       expect(() => validateConfig()).toThrow('環境変数設定エラー');
+    });
+  });
+
+  describe('getVapidKeys', () => {
+    let originalPublicKey: string | undefined;
+    let originalPrivateKey: string | undefined;
+    let originalSubject: string | undefined;
+
+    beforeEach(() => {
+      originalPublicKey = process.env.VAPID_PUBLIC_KEY;
+      originalPrivateKey = process.env.VAPID_PRIVATE_KEY;
+      originalSubject = process.env.VAPID_SUBJECT;
+
+      delete process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PRIVATE_KEY;
+      delete process.env.VAPID_SUBJECT;
+    });
+
+    afterEach(() => {
+      delete process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PRIVATE_KEY;
+      delete process.env.VAPID_SUBJECT;
+
+      if (originalPublicKey !== undefined) {
+        process.env.VAPID_PUBLIC_KEY = originalPublicKey;
+      }
+      if (originalPrivateKey !== undefined) {
+        process.env.VAPID_PRIVATE_KEY = originalPrivateKey;
+      }
+      if (originalSubject !== undefined) {
+        process.env.VAPID_SUBJECT = originalSubject;
+      }
+    });
+
+    test('環境変数が設定されている場合はその値を返すこと', () => {
+      // Given: VAPID関連の環境変数を設定
+      process.env.VAPID_PUBLIC_KEY = 'public-key';
+      process.env.VAPID_PRIVATE_KEY = 'private-key';
+      process.env.VAPID_SUBJECT = 'mailto:owner@example.com';
+
+      // When: 鍵ペアを取得
+      const keys = getVapidKeys();
+
+      // Then: 環境変数の値が返る
+      expect(keys).toEqual({
+        publicKey: 'public-key',
+        privateKey: 'private-key',
+        subject: 'mailto:owner@example.com',
+      });
+    });
+
+    test('未設定でもNODE_ENV=testの場合はテスト用の既定値を返すこと', () => {
+      // Given: 環境変数を設定しない（beforeEachでNODE_ENV=testのまま）
+
+      // When: 鍵ペアを取得
+      const keys = getVapidKeys();
+
+      // Then: テスト用の既定値が返る
+      expect(keys.publicKey).toBeTruthy();
+      expect(keys.privateKey).toBeTruthy();
+      expect(keys.subject).toBe('mailto:test@example.com');
     });
   });
 });

@@ -57,6 +57,28 @@ describe('PostgreSQLProjectViewerRepository', () => {
       expect(saved.getProjectId()).toBe(testProjectId);
       expect(saved.getEmail()).toBe('viewer@example.com');
       expect(saved.getStatus()).toBe('active');
+      expect(saved.isNotificationEnabled()).toBe(true);
+    });
+
+    test('通知OFFの状態を保存し取得しても値が保持される', async () => {
+      // Given: 通知OFFにした新規招待のエンティティ
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'notification-off@example.com',
+      });
+      entity.disableNotification();
+
+      // When: 招待を保存
+      const saved = await repository.save(entity);
+
+      // Then: 通知OFFの状態が保存される
+      expect(saved.isNotificationEnabled()).toBe(false);
+
+      const found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'notification-off@example.com',
+      );
+      expect(found?.isNotificationEnabled()).toBe(false);
     });
 
     test('既存招待（同一ID）を保存すると更新される', async () => {
@@ -260,6 +282,115 @@ describe('PostgreSQLProjectViewerRepository', () => {
       expect(found?.getStatus()).toBe('revoked');
       expect(found?.getRevokedAt()).not.toBeNull();
     });
+
+    test('取り消し前に通知OFFだった招待もrestore()でDB上の通知設定が強制的にONへ戻る', async () => {
+      // Given: 通知OFFで取り消し済みの招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'restore-notification@example.com',
+      });
+      entity.disableNotification();
+      await repository.save(entity);
+      await repository.revoke(entity.getId());
+
+      // When: restoreを実行
+      await repository.restore(entity.getId());
+
+      // Then: 通知設定が強制的にtrueになる
+      const found = await repository.findByProjectAndEmail(
+        testProjectId,
+        'restore-notification@example.com',
+      );
+      expect(found?.isNotificationEnabled()).toBe(true);
+    });
+  });
+
+  describe('updateNotificationEnabled', () => {
+    test('対象行の通知設定のみを更新する', async () => {
+      // Given: 2件の招待（別project、同一email）
+      const target = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'update-notification@example.com',
+      });
+      const other = ProjectViewerEntity.create({
+        projectId: testProjectId2,
+        email: 'update-notification@example.com',
+      });
+      await repository.save(target);
+      await repository.save(other);
+
+      // When: 対象行の通知をOFFに更新
+      const updated = await repository.updateNotificationEnabled(
+        target.getId(),
+        false,
+      );
+
+      // Then: 対象行のみ更新され他行に影響しない
+      expect(updated?.isNotificationEnabled()).toBe(false);
+      const otherFound = await repository.findById(other.getId());
+      expect(otherFound?.isNotificationEnabled()).toBe(true);
+    });
+
+    test('存在しないIDを指定した場合nullを返す', async () => {
+      // When: 存在しないIDで更新を試みる
+      const updated = await repository.updateNotificationEnabled(
+        '999e4567-e89b-12d3-a456-426614174999',
+        false,
+      );
+
+      // Then: nullが返る
+      expect(updated).toBeNull();
+    });
+  });
+
+  describe('findActiveByProjectAndEmail', () => {
+    test('active状態の招待を取得できる', async () => {
+      // Given: active状態の招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'active-target@example.com',
+      });
+      await repository.save(entity);
+
+      // When: projectIdとemailで検索
+      const found = await repository.findActiveByProjectAndEmail(
+        testProjectId,
+        'active-target@example.com',
+      );
+
+      // Then: 招待が取得できる
+      expect(found?.getId()).toBe(entity.getId());
+    });
+
+    test('revoked状態の場合nullを返す', async () => {
+      // Given: revoked状態の招待
+      const entity = ProjectViewerEntity.create({
+        projectId: testProjectId,
+        email: 'revoked-active-target@example.com',
+      });
+      entity.revoke();
+      await repository.save(entity);
+
+      // When: projectIdとemailで検索
+      const found = await repository.findActiveByProjectAndEmail(
+        testProjectId,
+        'revoked-active-target@example.com',
+      );
+
+      // Then: nullが返される
+      expect(found).toBeNull();
+    });
+
+    test('該当する招待が存在しない場合nullを返す', async () => {
+      // When: 存在しない組み合わせで検索
+      const found = await repository.findActiveByProjectAndEmail(
+        testProjectId,
+        'not-found-active@example.com',
+      );
+
+      // Then: nullが返される
+      expect(found).toBeNull();
+    });
   });
 
   describe('findActiveByProject', () => {
@@ -317,7 +448,7 @@ describe('PostgreSQLProjectViewerRepository', () => {
   });
 
   describe('findActiveByEmail', () => {
-    test('activeな招待のprojectId一覧を取得できる', async () => {
+    test('activeな招待のエンティティ一覧を取得できる', async () => {
       // Given: 同一emailで複数projectへのactive招待
       await repository.save(
         ProjectViewerEntity.create({
@@ -325,20 +456,24 @@ describe('PostgreSQLProjectViewerRepository', () => {
           email: 'multi-project@example.com',
         }),
       );
-      await repository.save(
-        ProjectViewerEntity.create({
-          projectId: testProjectId2,
-          email: 'multi-project@example.com',
-        }),
-      );
+      const secondEntity = ProjectViewerEntity.create({
+        projectId: testProjectId2,
+        email: 'multi-project@example.com',
+      });
+      secondEntity.disableNotification();
+      await repository.save(secondEntity);
 
-      // When: emailでactive招待のprojectId一覧を取得
+      // When: emailでactive招待のエンティティ一覧を取得
       const result = await repository.findActiveByEmail(
         'multi-project@example.com',
       );
 
-      // Then: 両方のprojectIdが取得できる
-      expect(result.sort()).toEqual([testProjectId, testProjectId2].sort());
+      // Then: 両方のprojectIdと各行のnotificationEnabled値が取得できる
+      expect(result.map((v) => v.getProjectId()).sort()).toEqual(
+        [testProjectId, testProjectId2].sort(),
+      );
+      const second = result.find((v) => v.getProjectId() === testProjectId2);
+      expect(second?.isNotificationEnabled()).toBe(false);
     });
 
     test('revoked状態の招待は含まれない', async () => {
@@ -356,13 +491,13 @@ describe('PostgreSQLProjectViewerRepository', () => {
       revoked.revoke();
       await repository.save(revoked);
 
-      // When: emailでactive招待のprojectId一覧を取得
+      // When: emailでactive招待のエンティティ一覧を取得
       const result = await repository.findActiveByEmail(
         'mixed-status@example.com',
       );
 
-      // Then: activeなprojectIdのみ返る
-      expect(result).toEqual([testProjectId]);
+      // Then: activeな招待のみ返る
+      expect(result.map((v) => v.getProjectId())).toEqual([testProjectId]);
     });
 
     test('招待が0件のemailでは空配列を返す（境界値）', async () => {
@@ -419,6 +554,22 @@ describe('PostgreSQLProjectViewerRepository', () => {
 
       // Then: nullが返る
       expect(found).toBeNull();
+    });
+  });
+
+  describe('notification_enabled列のDEFAULT制約', () => {
+    test('notificationEnabledを指定せずにINSERTするとtrueが格納される（AC-10）', async () => {
+      // Given: notificationEnabledを指定しないINSERT
+      const [inserted] = await db
+        .insert(projectViewers)
+        .values({
+          projectId: testProjectId,
+          email: 'default-notification@example.com',
+        })
+        .returning();
+
+      // When & Then: DEFAULT trueが機能し格納値がtrueになる
+      expect(inserted?.notificationEnabled).toBe(true);
     });
   });
 });

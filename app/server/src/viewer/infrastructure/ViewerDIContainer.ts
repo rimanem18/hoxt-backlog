@@ -4,26 +4,38 @@ import {
   isTestEndpointsEnabled,
 } from '@/shared/config/env';
 import { db } from '@/shared/database/DatabaseConnection';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
 import { TaskDIContainer } from '@/task/infrastructure/TaskDIContainer';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
+import { DispatchTaskEventNotificationsUseCase } from '@/viewer/application/DispatchTaskEventNotificationsUseCase';
 import { GetViewerAccessibleProjectsUseCase } from '@/viewer/application/GetViewerAccessibleProjectsUseCase';
+import type { IDispatchTaskEventNotificationsUseCase } from '@/viewer/application/IDispatchTaskEventNotificationsUseCase';
 import type { IGetViewerAccessibleProjectsUseCase } from '@/viewer/application/IGetViewerAccessibleProjectsUseCase';
 import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMailGateway';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
 import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
+import type { IPushNotificationGateway } from '@/viewer/application/IPushNotificationGateway';
+import type { IRegisterPushSubscriptionUseCase } from '@/viewer/application/IRegisterPushSubscriptionUseCase';
 import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
+import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
 import type { IViewerInvitationUnitOfWork } from '@/viewer/application/IViewerInvitationUnitOfWork';
 import { ListProjectViewersUseCase } from '@/viewer/application/ListProjectViewersUseCase';
+import { RegisterPushSubscriptionUseCase } from '@/viewer/application/RegisterPushSubscriptionUseCase';
 import { RevokeViewerUseCase } from '@/viewer/application/RevokeViewerUseCase';
+import { UpdateNotificationSettingUseCase } from '@/viewer/application/UpdateNotificationSettingUseCase';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
+import type { IPushSubscriptionRepository } from '@/viewer/domain/IPushSubscriptionRepository';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import { FakeInvitationMailGateway } from './FakeInvitationMailGateway';
 import { PostgreSQLProjectViewerRepository } from './PostgreSQLProjectViewerRepository';
+import { PostgreSQLPushSubscriptionRepository } from './PostgreSQLPushSubscriptionRepository';
 import { PostgreSQLViewerAccessTokenRepository } from './PostgreSQLViewerAccessTokenRepository';
 import { PostgreSQLViewerInvitationUnitOfWork } from './PostgreSQLViewerInvitationUnitOfWork';
 import { SesInvitationMailGateway } from './SesInvitationMailGateway';
+import { TaskChangeNotifierAdapter } from './TaskChangeNotifierAdapter';
 import { TokenHasher } from './TokenHasher';
+import { WebPushGateway } from './WebPushGateway';
 
 /**
  * viewer招待・閲覧の依存性注入を管理するDIコンテナ
@@ -39,13 +51,25 @@ export class ViewerDIContainer {
   private static revokeViewerUseCaseInstance: RevokeViewerUseCase | null = null;
   private static getViewerAccessibleProjectsUseCaseInstance: GetViewerAccessibleProjectsUseCase | null =
     null;
+  private static updateNotificationSettingUseCaseInstance: UpdateNotificationSettingUseCase | null =
+    null;
+  private static registerPushSubscriptionUseCaseInstance: RegisterPushSubscriptionUseCase | null =
+    null;
   private static projectViewerRepositoryInstance: PostgreSQLProjectViewerRepository | null =
     null;
   private static viewerAccessTokenRepositoryInstance: PostgreSQLViewerAccessTokenRepository | null =
     null;
+  private static pushSubscriptionRepositoryInstance: PostgreSQLPushSubscriptionRepository | null =
+    null;
   private static mailGatewayInstance: IInvitationMailGateway | null = null;
   private static tokenHasherInstance: TokenHasher | null = null;
   private static viewerInvitationUnitOfWorkInstance: PostgreSQLViewerInvitationUnitOfWork | null =
+    null;
+  private static pushNotificationGatewayInstance: IPushNotificationGateway | null =
+    null;
+  private static dispatchTaskEventNotificationsUseCaseInstance: DispatchTaskEventNotificationsUseCase | null =
+    null;
+  private static taskChangeNotifierAdapterInstance: TaskChangeNotifierAdapter | null =
     null;
 
   /**
@@ -109,6 +133,32 @@ export class ViewerDIContainer {
   }
 
   /**
+   * UpdateNotificationSettingUseCaseのインスタンスを返す
+   */
+  static getUpdateNotificationSettingUseCase(): IUpdateNotificationSettingUseCase {
+    if (!ViewerDIContainer.updateNotificationSettingUseCaseInstance) {
+      ViewerDIContainer.updateNotificationSettingUseCaseInstance =
+        new UpdateNotificationSettingUseCase(
+          ViewerDIContainer.getProjectViewerRepository(),
+        );
+    }
+    return ViewerDIContainer.updateNotificationSettingUseCaseInstance;
+  }
+
+  /**
+   * RegisterPushSubscriptionUseCaseのインスタンスを返す
+   */
+  static getRegisterPushSubscriptionUseCase(): IRegisterPushSubscriptionUseCase {
+    if (!ViewerDIContainer.registerPushSubscriptionUseCaseInstance) {
+      ViewerDIContainer.registerPushSubscriptionUseCaseInstance =
+        new RegisterPushSubscriptionUseCase(
+          ViewerDIContainer.getPushSubscriptionRepository(),
+        );
+    }
+    return ViewerDIContainer.registerPushSubscriptionUseCaseInstance;
+  }
+
+  /**
    * PostgreSQLViewerInvitationUnitOfWorkの共有インスタンスを返す
    */
   static getViewerInvitationUnitOfWork(): IViewerInvitationUnitOfWork {
@@ -139,6 +189,63 @@ export class ViewerDIContainer {
         new PostgreSQLViewerAccessTokenRepository(db);
     }
     return ViewerDIContainer.viewerAccessTokenRepositoryInstance;
+  }
+
+  /**
+   * IPushNotificationGatewayの共有インスタンスを返す
+   *
+   * bun test実行時（NODE_ENV=test）ではVAPID鍵の既定値（env.tsのテスト用フォールバック）
+   * を使うWebPushGatewayを使用する。
+   */
+  static getPushNotificationGateway(): IPushNotificationGateway {
+    if (!ViewerDIContainer.pushNotificationGatewayInstance) {
+      ViewerDIContainer.pushNotificationGatewayInstance =
+        WebPushGateway.getInstance();
+    }
+    return ViewerDIContainer.pushNotificationGatewayInstance;
+  }
+
+  /**
+   * DispatchTaskEventNotificationsUseCaseのインスタンスを返す
+   */
+  static getDispatchTaskEventNotificationsUseCase(): IDispatchTaskEventNotificationsUseCase {
+    if (!ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance) {
+      ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance =
+        new DispatchTaskEventNotificationsUseCase(
+          ProjectDIContainer.getProjectRepository(),
+          ViewerDIContainer.getProjectViewerRepository(),
+          ViewerDIContainer.getPushSubscriptionRepository(),
+          ViewerDIContainer.getPushNotificationGateway(),
+        );
+    }
+    return ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance;
+  }
+
+  /**
+   * TaskChangeNotifierAdapterのインスタンスを返す
+   *
+   * taskドメインが定義するITaskChangeNotifierポートの実装。
+   * entrypoints/index.tsの合成ルートからTaskChangeNotifierRegistryへ配線される。
+   */
+  static getTaskChangeNotifierAdapter(): ITaskChangeNotifier {
+    if (!ViewerDIContainer.taskChangeNotifierAdapterInstance) {
+      ViewerDIContainer.taskChangeNotifierAdapterInstance =
+        new TaskChangeNotifierAdapter(
+          ViewerDIContainer.getDispatchTaskEventNotificationsUseCase(),
+        );
+    }
+    return ViewerDIContainer.taskChangeNotifierAdapterInstance;
+  }
+
+  /**
+   * PostgreSQLPushSubscriptionRepositoryの共有インスタンスを返す
+   */
+  static getPushSubscriptionRepository(): IPushSubscriptionRepository {
+    if (!ViewerDIContainer.pushSubscriptionRepositoryInstance) {
+      ViewerDIContainer.pushSubscriptionRepositoryInstance =
+        new PostgreSQLPushSubscriptionRepository(db);
+    }
+    return ViewerDIContainer.pushSubscriptionRepositoryInstance;
   }
 
   /**
@@ -182,10 +289,16 @@ export class ViewerDIContainer {
     ViewerDIContainer.listProjectViewersUseCaseInstance = null;
     ViewerDIContainer.revokeViewerUseCaseInstance = null;
     ViewerDIContainer.getViewerAccessibleProjectsUseCaseInstance = null;
+    ViewerDIContainer.updateNotificationSettingUseCaseInstance = null;
+    ViewerDIContainer.registerPushSubscriptionUseCaseInstance = null;
     ViewerDIContainer.projectViewerRepositoryInstance = null;
     ViewerDIContainer.viewerAccessTokenRepositoryInstance = null;
+    ViewerDIContainer.pushSubscriptionRepositoryInstance = null;
     ViewerDIContainer.mailGatewayInstance = null;
     ViewerDIContainer.tokenHasherInstance = null;
     ViewerDIContainer.viewerInvitationUnitOfWorkInstance = null;
+    ViewerDIContainer.pushNotificationGatewayInstance = null;
+    ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance = null;
+    ViewerDIContainer.taskChangeNotifierAdapterInstance = null;
   }
 }

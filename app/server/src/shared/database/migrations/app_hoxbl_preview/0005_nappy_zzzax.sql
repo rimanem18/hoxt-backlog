@@ -1,0 +1,1 @@
+ALTER TABLE "app_hoxbl_preview"."project_viewers" ADD COLUMN "notification_enabled" boolean DEFAULT true NOT NULL;

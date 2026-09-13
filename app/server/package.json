@@ -38,6 +38,7 @@
     "pg": "^8.22.0",
     "postgres": "^3.4.9",
     "swagger-ui-dist": "^5.32.8",
+    "web-push": "^3.6.7",
     "zod": "4.1.12"
   },
   "devDependencies": {
@@ -46,6 +47,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.2",
     "@types/pg": "^8.20.0",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.25.12",
     "jscpd": "^5.0.14",

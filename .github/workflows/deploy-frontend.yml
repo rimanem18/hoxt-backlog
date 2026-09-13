@@ -80,6 +80,8 @@ jobs:
           # デモユーザーログイン設定
           NEXT_PUBLIC_DEMO_USER_EMAIL: ${{ vars.NEXT_PUBLIC_DEMO_USER_EMAIL }}
           NEXT_PUBLIC_DEMO_USER_PASSWORD: ${{ vars.NEXT_PUBLIC_DEMO_USER_PASSWORD }}
+          # Web Push VAPID公開鍵（秘密鍵とは異なり公開情報のためvarsで管理）
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
         run: |
           echo "🔍 Build-time Environment Variables:"
           echo "NEXT_PUBLIC_API_BASE_URL: $NEXT_PUBLIC_API_BASE_URL"

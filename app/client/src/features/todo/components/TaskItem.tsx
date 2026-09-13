@@ -1,4 +1,9 @@
-import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
+import {
+  type Task,
+  type TaskStatus,
+  taskPriorityLabels,
+  taskStatusLabels,
+} from '@hoxt-backlog/shared-schemas/tasks';
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -37,14 +42,6 @@ const statusBadgeMap = {
   in_progress: 'bg-blue-200 text-blue-700',
   in_review: 'bg-yellow-200 text-yellow-700',
   completed: 'bg-green-200 text-green-700',
-} as const;
-
-/** ステータス値から表示ラベルへの変換マップ */
-const statusLabelMap = {
-  not_started: '未着手',
-  in_progress: '進行中',
-  in_review: 'レビュー中',
-  completed: '完了',
 } as const;
 
 function TaskItem(props: TaskItemProps): React.ReactNode {
@@ -103,17 +100,13 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
           {/* 優先度バッジとステータスバッジ */}
           <div className="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
             <span className={`text-xs sm:text-sm ${priorityColor}`}>
-              {props.task.priority === 'high'
-                ? '高'
-                : props.task.priority === 'medium'
-                  ? '中'
-                  : '低'}
+              {taskPriorityLabels[props.task.priority]}
             </span>
 
             <span
               className={`inline-block px-2 py-1 text-xs font-medium rounded ${statusBadge}`}
             >
-              {statusLabelMap[props.task.status]}
+              {taskStatusLabels[props.task.status]}
             </span>
           </div>
         </div>
