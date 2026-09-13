@@ -22,7 +22,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-5-01: ITaskChangeNotifierポートとTaskChangeNotifierRegistry新設**
+- [x] **TASK-5-01: ITaskChangeNotifierポートとTaskChangeNotifierRegistry新設**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-101, REQ-102, REQ-103（型は3イベント種別を最初から定義するが、本フェーズではtask_addedのみ使用）
@@ -32,7 +32,7 @@
   - **単体テスト要件**: Noop実装が例外を投げず`Promise<void>`を返すこと、`setNotifier()`後は差し替えた実装が呼ばれること
   - **注意点**: テスト間の汚染防止のため、テスト用に`resetForTesting()`相当のリセット手段を用意する
 
-- [ ] **TASK-5-02: IPushNotificationGateway・WebPushGateway新規実装**
+- [x] **TASK-5-02: IPushNotificationGateway・WebPushGateway新規実装**
   - **タイプ**: TDD
   - **依存タスク**: TASK-3-01（VAPID鍵の環境変数が必要）
   - **関連要件**: REQ-001, REQ-302
@@ -41,7 +41,7 @@
   - **完了条件**: `app/server/src/viewer/infrastructure/__tests__/WebPushGateway.test.ts`が通過する
   - **単体テスト要件**: `web-push`はモック化し、成功時・410/404失敗時・その他失敗時でそれぞれ異なる`PushSendResult`を返すことを検証
 
-- [ ] **TASK-5-03: DispatchTaskEventNotificationsUseCase新規実装**
+- [x] **TASK-5-03: DispatchTaskEventNotificationsUseCase新規実装**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-02
   - **関連要件**: REQ-101, REQ-104（task_added部分）, REQ-301, REQ-302, REQ-303, REQ-304
@@ -50,7 +50,7 @@
   - **完了条件**: `app/server/src/viewer/application/__tests__/DispatchTaskEventNotificationsUseCase.test.ts`が通過する
   - **単体テスト要件**: AC-04相当（revokedなviewerが除外される）／AC-05相当（購読0件のviewerには何も送信されない）／REQ-304相当（`notificationEnabled=false`のviewerが除外される）／REQ-302相当（410/404の場合のみ購読削除、それ以外は削除も再送信もしない）／複数購読への送信が`Promise.allSettled`で個別に扱われ1件の失敗が他に影響しないこと
 
-- [ ] **TASK-5-04: TaskChangeNotifierAdapterと合成ルート配線**
+- [x] **TASK-5-04: TaskChangeNotifierAdapterと合成ルート配線**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-01, TASK-5-03
   - **関連要件**: REQ-101〜REQ-103
@@ -59,7 +59,7 @@
   - **完了条件**: サーバー起動時にエラーなく配線されることを確認する
   - **単体テスト要件**: `TaskChangeNotifierAdapter.notify()`が`DispatchTaskEventNotificationsUseCase.execute()`へイベントをそのまま渡すことをモックで検証
 
-- [ ] **TASK-5-05: CreateTaskUseCaseへの通知発行追加**
+- [x] **TASK-5-05: CreateTaskUseCaseへの通知発行追加**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-04
   - **関連要件**: REQ-101
@@ -69,7 +69,7 @@
   - **単体テスト要件**: task作成成功時に`notify()`が正しいイベントで`await`されて呼ばれること／`notify()`が失敗（reject）してもUseCaseの戻り値・例外に影響しないこと（RISK-02の直接的な検証）
   - **注意点**: レスポンスタイムは配信対象数に応じて増加しうる（design.md 10.1節・RISK-05）。多数viewer・多数デバイスを想定したテストケースでも、UseCaseの応答自体は`Promise.allSettled`により有限時間で完了することを確認する
 
-- [ ] **TASK-5-06: 購読登録フローへのトークン永続化追加とService Workerのpush/クリック処理**
+- [x] **TASK-5-06: 購読登録フローへのトークン永続化追加とService Workerのpush/クリック処理**
   - **タイプ**: TDD
   - **依存タスク**: TASK-4-01, TASK-5-05
   - **関連要件**: REQ-105
@@ -83,13 +83,40 @@
   - **UI/UX要件**: 通知タイトル・本文が7.3節の文言通り表示されること
   - **注意点**: 生アクセストークンをPush payloadやサーバーに含めない方針（design.md 2.2節）を厳守する。1台のブラウザ・1つのService Worker登録に対し複数のviewerトークンが保存されうる場合（同一デバイスで複数の招待リンクを開いた場合）、直近に登録した購読のトークンが使われる前提とし、複数アイデンティティの同時利用は本要件のスコープでは厳密に扱わない（overview.md RISK-05）
 
-- [ ] **TASK-5-07: Phase 5品質ゲート確認と手動疎通確認**
+- [x] **TASK-5-07: Phase 5品質ゲート確認と手動疎通確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-5-01〜TASK-5-06
   - **関連要件**: なし（品質保証）
   - **関連設計**: なし
   - **実装詳細**: quality-gate-runnerサブエージェントへserver・client双方の`tsc --noEmit`・`bun test`・`biome`・`semgrep`・`knip`の実行を依頼する。加えてローカル環境でtask追加→ブラウザ通知受信→クリック遷移までの手動疎通確認を行う
   - **完了条件**: 全チェックがパスし、手動疎通確認でAC-01（task_added部分）・AC-04・AC-05・AC-07の期待結果が再現できる
+
+## 実施記録
+
+- 開始時刻（JST）: 2026-09-13 12:54
+- 終了時刻（JST）: 2026-09-13 13:28
+- 合計時間: 34分
+- typecheck / test / lint / build:
+  - `docker compose exec server bunx tsc --noEmit`（エラーなし）
+  - `docker compose exec server bun test`（1047 pass, 0 fail）
+  - `docker compose exec client bunx tsc --noEmit`（エラーなし）
+  - `docker compose exec client bun test`（585 pass, 0 fail）
+  - `docker compose exec server bunx biome check .` / `docker compose exec client bunx biome check .`（issueなし）
+  - `docker compose run --rm semgrep semgrep --config=auto`（13件、すべてTerraformインフラの既存警告でapp配下は0件）
+  - `docker compose exec server bun run knip` / `docker compose exec client bun run knip`（Phase4時点と同数の既存未使用ファイル・exports・依存関係のみで新規増加なし）
+  - `docker compose exec server bun run cpd` / `docker compose exec client bun run cpd`（新規重複コードなし）
+
+### 差異の記録
+
+- design.md 4.2〜4.3節は「`entrypoints/index.ts`に`TaskChangeNotifierRegistry.setNotifier(ViewerDIContainer.getTaskChangeNotifierAdapter())`を1行追加する」としていたが、`.claude/rules/backend.md`の「新しいドメインがDB接続以外の新しい必須環境変数に依存する場合は遅延評価プロキシを挟む」という必須ルールと、過去セッションのナレッジ（`knowledge/backend/eager-di-container-import-time-crash.md`）に従い、素直な1行呼び出しではなく`lazyTaskChangeNotifier`という遅延評価プロキシ経由で配線した。`WebPushGateway`は`VAPID_PUBLIC_KEY`等の新規必須環境変数に依存するため、`entrypoints/index.ts`のモジュールトップレベルで`ViewerDIContainer.getTaskChangeNotifierAdapter()`を即時評価すると、VAPID鍵未設定なだけでtask機能を含むサーバー全体の起動が失敗しうるため
+- Codex MCPによる8観点レビュー（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）を実施し、以下を反映した:
+  - **[efficiency, 対応済み]** `app/client/public/sw.js`の`getTokenByEndpoint`が、IndexedDBの読み取り失敗時に`db.close()`を呼ばずコネクションをリークする指摘。`saveEndpointToken`と同じ`try/finally`パターンに統一した
+  - **[reuse, 対応済み]** `IProjectRepository.findByIds`のJSDocが「呼び出し元は`GetViewerAccessibleProjectsUseCase`に限定」という古い制約を記載したままだった指摘。`DispatchTaskEventNotificationsUseCase`も正当な呼び出し元として追加されたため、コメントを実態に合わせて更新した
+  - **[altitude, 見送り]** `CreateTaskUseCase`（application層）が`TaskChangeNotifierRegistry`（infrastructure層）を直接importしている点がClean Architectureの依存方向に反するという指摘。task-plan・design.md双方が明示的に「`TaskChangeNotifierRegistry.getNotifier().notify(event)`を直接呼び出す」設計を指定しており、これは既存の`viewerAccessRoutes.ts`等と同じ「モジュールレベルの差し替え可能な保持箱」パターンを意図的に採用したもの（コンストラクタDIにすると`TaskDIContainer`・既存テストへの波及が大きくなる）。設計判断として見送った
+  - **[efficiency, 見送り]** `DispatchTaskEventNotificationsUseCase`がviewerごとに`findByEmail`を逐次awaitしている点（並列化の余地）。design.md 3.1・10.1節がviewer数に比例した呼び出し増加を許容範囲内と明記しており、RISK-05として実装フェーズでの検証事項に留めている性質のため、Phase5時点では見送った
+  - **[conventions, 見送り]** 新規テストの`describe`名・コメントに`REQ-302`/`RISK-02`等の識別子を残している指摘。既存コードベース（`EmailAlreadyRegisteredGoogleError.ts`のJSDoc、`project`/`task`ドメインの多数のテストケース名）で`REQ-XXX`/`AC-XXX`をテスト名・コメントに残す慣習が既に定着しており、既存慣習との整合を優先し見送った
+  - **[conventions, 誤検知]** `__tests__`から親ディレクトリへの相対import（`../TaskChangeNotifierRegistry`等）が絶対import規約違反という指摘があったが、`SesInvitationMailGateway.test.ts`等の既存`__tests__`ファイルすべてが同じ相対import慣習であり、`__tests__`はその直上ディレクトリと同一サブディレクトリ相当として扱われている既存実態と整合している。誤検知と判断し対応しなかった
+- Phase 5完了条件のうち「ブラウザでの手動疎通確認（push通知受信→クリック→遷移）」は、Phase4と同様に本環境（サンドボックス）では実ブラウザでの通知許可・Push受信・Service Worker実行の確認ができない。ユニットテスト（`buildNotificationClickUrl`の純関数テスト、`WebPushGateway`/`DispatchTaskEventNotificationsUseCase`のモックテスト）とAPI結合済みの型チェックで代替した。実ブラウザでの疎通確認はユーザー側での確認を推奨する
 
 ## 6. このフェーズの完了条件
 
