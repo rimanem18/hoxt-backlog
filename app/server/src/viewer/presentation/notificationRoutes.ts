@@ -10,6 +10,7 @@ import {
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import type { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
 import { ViewerDIContainer } from '@/viewer/infrastructure/ViewerDIContainer';
+import { createLazyViewerAccessTokenRepository } from './lazyViewerAccessTokenRepository';
 import { viewerTokenMiddleware } from './middleware/viewerTokenMiddleware';
 import { NotificationController } from './NotificationController';
 import {
@@ -191,24 +192,8 @@ const lazyRegisterPushSubscriptionUseCase: IRegisterPushSubscriptionUseCase = {
     ViewerDIContainer.getRegisterPushSubscriptionUseCase().execute(input),
 };
 
-const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository = {
-  findByEmail: (email) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().findByEmail(email),
-  findByTokenHash: (tokenHash) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().findByTokenHash(
-      tokenHash,
-    ),
-  save: (entity) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().save(entity),
-  deleteById: (id) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().deleteById(id),
-  replace: (existingId, newTokenHash, newExpiresAt) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().replace(
-      existingId,
-      newTokenHash,
-      newExpiresAt,
-    ),
-};
+const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository =
+  createLazyViewerAccessTokenRepository();
 
 /**
  * viewer通知設定変更APIのOpenAPIルート定義

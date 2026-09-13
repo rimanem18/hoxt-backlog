@@ -35,6 +35,9 @@ export class UpdateNotificationSettingUseCase
         viewer.getId(),
         input.enabled,
       );
-    return updated as ProjectViewerEntity;
+    if (!updated) {
+      throw ViewerNotFoundError.forViewerId(viewer.getId());
+    }
+    return updated;
   }
 }

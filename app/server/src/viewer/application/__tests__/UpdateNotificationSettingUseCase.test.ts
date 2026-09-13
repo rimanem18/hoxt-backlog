@@ -126,6 +126,37 @@ describe('UpdateNotificationSettingUseCase', () => {
     ).not.toHaveBeenCalled();
   });
 
+  test('更新対象が更新直前に削除された場合ViewerNotFoundErrorになる（fail-closed）', async () => {
+    // Given: active招待の検索直後にレコードが削除され、更新が0件ヒットした
+    const deps = createDeps();
+    const target = ProjectViewerEntity.create({
+      projectId: testProjectId,
+      email: testEmail,
+    });
+    (
+      deps.projectViewerRepository.findActiveByProjectAndEmail as ReturnType<
+        typeof mock
+      >
+    ).mockResolvedValue(target);
+    (
+      deps.projectViewerRepository.updateNotificationEnabled as ReturnType<
+        typeof mock
+      >
+    ).mockResolvedValue(null);
+    const useCase = new UpdateNotificationSettingUseCase(
+      deps.projectViewerRepository,
+    );
+
+    // When & Then: nullを握りつぶさずViewerNotFoundErrorになる
+    await expect(
+      useCase.execute({
+        viewerEmail: testEmail,
+        projectId: testProjectId,
+        enabled: false,
+      }),
+    ).rejects.toBeInstanceOf(ViewerNotFoundError);
+  });
+
   test('対象project以外の通知設定は変更されない', async () => {
     // Given: 対象projectのactive招待のみが存在する
     const deps = createDeps();
