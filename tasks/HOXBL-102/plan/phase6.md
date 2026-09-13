@@ -25,7 +25,7 @@
 
 ## 5. タスク一覧
 
-- [ ] **TASK-6-01: ステータス・優先度ラベルのshared-schemas共通定数化**
+- [x] **TASK-6-01: ステータス・優先度ラベルのshared-schemas共通定数化**
   - **タイプ**: TDD
   - **依存タスク**: なし
   - **関連要件**: REQ-104
@@ -35,7 +35,7 @@
   - **単体テスト要件**: 全ステータス値・全優先度値に対応するラベルが定義されていること
   - **注意点**: 既存の表示文言を変更しない（車輪の再発明防止、CLAUDE.mdの重複排除方針）
 
-- [ ] **TASK-6-02: DispatchTaskEventNotificationsUseCaseのstatus_changed/priority_changed対応**
+- [x] **TASK-6-02: DispatchTaskEventNotificationsUseCaseのstatus_changed/priority_changed対応**
   - **タイプ**: TDD
   - **依存タスク**: TASK-6-01
   - **関連要件**: REQ-102, REQ-103, REQ-104, REQ-303, REQ-304, REQ-501
@@ -44,7 +44,7 @@
   - **完了条件**: `DispatchTaskEventNotificationsUseCase.test.ts`の追加テストが通過する
   - **単体テスト要件**: AC-01相当（status_changed/priority_changedそれぞれで変更後の値を含む通知が生成されること、変更前の値が含まれないこと）／AC-08相当（同一taskへの複数イベントがそれぞれ個別のpayloadとして生成され1通に集約されないこと）／REQ-303・REQ-304相当（`status_changed`・`priority_changed`いずれも、revoked・通知OFFのviewerが除外されること。task_addedと同じフィルタが3イベント種別すべてで機能することをパラメータ化テストで検証する）
 
-- [ ] **TASK-6-03: ChangeTaskStatusUseCaseへの通知発行追加**
+- [x] **TASK-6-03: ChangeTaskStatusUseCaseへの通知発行追加**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-05, TASK-6-02
   - **関連要件**: REQ-102
@@ -53,7 +53,7 @@
   - **完了条件**: `ChangeTaskStatusUseCase.test.ts`が通過する
   - **単体テスト要件**: AC-02相当（前進方向・後退方向どちらのステータス変更でも`notify()`が呼ばれること）／`notify()`失敗時もUseCaseの戻り値・例外に影響しないこと
 
-- [ ] **TASK-6-04: UpdateTaskUseCaseへの優先度変更通知追加とproject付け替え除外**
+- [x] **TASK-6-04: UpdateTaskUseCaseへの優先度変更通知追加とproject付け替え除外**
   - **タイプ**: TDD
   - **依存タスク**: TASK-5-05, TASK-6-02
   - **関連要件**: REQ-103, REQ-305
@@ -62,13 +62,42 @@
   - **完了条件**: `UpdateTaskUseCase.test.ts`が通過する
   - **単体テスト要件**: AC-09相当（`projectId`のみ変更時に`notify()`が呼ばれないこと）／priority変更時に変更後の`projectId`を宛先として`notify()`が呼ばれること／priorityとprojectIdが同時に変わった場合も「追加」イベントとしては送信されないこと／**同一値のpriorityを再設定した場合に`notify()`が呼ばれないこと**（REQ-103「優先度が変更されたとき」の解釈補強）
 
-- [ ] **TASK-6-05: Phase 6品質ゲート確認と全体疎通確認**
+- [x] **TASK-6-05: Phase 6品質ゲート確認と全体疎通確認**
   - **タイプ**: DIRECT
   - **依存タスク**: TASK-6-01〜TASK-6-04
   - **関連要件**: なし（品質保証）
   - **関連設計**: なし
   - **実装詳細**: quality-gate-runnerサブエージェントへserver・client双方の`tsc --noEmit`・`bun test`・`biome`・`semgrep`・`knip`の実行を依頼する。加えてAC-01〜AC-10全項目の手動疎通確認チェックリストを実施する
   - **完了条件**: 全チェックがパスし、AC-01〜AC-10のいずれも期待結果通りであることを確認する
+
+## 実施記録
+
+- 開始時刻（JST）: 2026-09-13 13:41
+- 終了時刻（JST）: 2026-09-13 14:03
+- 合計時間: 22分
+- typecheck / test / lint / build:
+  - `docker compose exec server bunx tsc --noEmit`（エラーなし）
+  - `docker compose exec server bun test`（1060 pass, 0 fail）
+  - `docker compose exec server bun test ../packages/shared-schemas/__tests__/`（13 pass, 0 fail）
+  - `docker compose exec client bunx tsc --noEmit`（エラーなし）
+  - `docker compose exec client bun test`（585 pass, 0 fail）
+  - `docker compose exec server bunx biome check .` / `docker compose exec client bunx biome check .`（issueなし。importの並び順エラーを1件検出・`--write`で修正済み）
+  - `docker compose run --rm semgrep semgrep --config=auto`（13件、すべてTerraformインフラの既存警告でapp配下は0件、Phase5時点と同数）
+  - `docker compose exec server bun run knip` / `docker compose exec client bun run knip`（Phase5時点と同数の既存未使用ファイル・exports・依存関係のみで新規増加なし）
+  - `docker compose exec server bun run cpd` / `docker compose exec client bun run cpd`（新規重複コードなし、既存クローン数のみ）
+
+### 差異の記録
+
+- Codex MCPによる8観点レビュー（line-by-line, removed-behavior, cross-file, reuse, simplification, efficiency, altitude, conventions）を実施し、以下を反映した:
+  - **[conventions, 対応済み]** テストファイルで`TaskChangeNotifierRegistry.setNotifier({ notify } as ITaskChangeNotifier)`という型アサーションを使っていた箇所（`UpdateTaskUseCase.test.ts`）を、既存の`CreateTaskUseCase.test.ts`・`ChangeTaskStatusUseCase.test.ts`と同じ「`const mockNotifier: ITaskChangeNotifier = { notify };`で型付けしてから渡す」記法に統一した
+  - **[line-by-line/cross-file/efficiency, 見送り]** `ChangeTaskStatusUseCase`が、変更前後のステータスが同一の場合でも`status_changed`通知を発行する点への指摘（`UpdateTaskUseCase`のpriority変更は同一値を除外しているため非対称に見える）。design.md 4.2節が「UseCaseは更新後の値をすでに保持しているため、通知発行のための追加DB取得は発生しない」と明記しており、`ChangeTaskStatusUseCase`は`updateStatus()`という単一クエリの更新のみで変更前の値を持たない。同一値判定を追加するには`findById()`等の追加DB取得が必要になり、この設計方針と矛盾するため今回は見送った。将来的にrepository層が実際に値が変化したかを返せるようになった場合の改善候補として残す
+  - **[altitude, 見送り]** `UpdateTaskUseCase`・`ChangeTaskStatusUseCase`（application層）が`TaskChangeNotifierRegistry`（infrastructure層）を直接呼び出す点への指摘。Phase 5の`CreateTaskUseCase`で同型の指摘を受けた際と同じ理由（design.md・task-planが明示的にこの直接呼び出しパターンを指定しており、コンストラクタDIへの変更は既存`TaskDIContainer`・既存テスト群への波及が大きい）で見送った
+  - **[altitude, 見送り]** priorityの「同一値への再設定は変更ではない」という判定をUseCaseではなくdomain層（`TaskEntity`）に置くべきという指摘。task-plan TASK-6-04が明示的に「UseCase側で明示的に比較する」と設計を指定しているため、計画との整合を優先し見送った
+  - **[reuse, 見送り]** `app/client/src/features/viewer/components/ViewerTaskBoard.tsx`が今回追加した共有ラベル定数を使わず独自のラベルマップを保持している指摘。TASK-6-01のスコープは`TaskItem.tsx`のみと明示されており、対象外ファイルへの横展開はタスク範囲外と判断し見送った
+  - **[reuse, 見送り]** `CreateTaskUseCase`/`ChangeTaskStatusUseCase`/`UpdateTaskUseCase`でfail-open通知発行ロジックが3か所重複している指摘。Phase 5時点で同種の指摘を受けた際と同じ理由（既存パターンへの意図的な追従）で見送った
+  - **[efficiency, 見送り]** viewerごとの`findByEmail`直列呼び出し（N+1）・`findActiveByProject`がSQL側で`notificationEnabled`を絞り込んでいない点への指摘。いずれもPhase 5で導入された既存の配信パイプラインの特性であり、design.md 8節・10.1節が「将来的に検討」と明記した既知のトレードオフのため、Phase 6の変更範囲外として見送った
+  - **[conventions, 誤検知]** テストファイルの`mockRepository as unknown as ITaskRepository`・`{ getId: () => id } as ProjectEntity`が「乱暴なキャスト」という指摘があったが、いずれも既存の`CreateTaskUseCase.test.ts`等で以前から使われている確立された既存パターンであり、今回の差分で新たに導入したものではない。誤検知と判断し対応しなかった
+- Phase 5と同様、本環境（サンドボックス）では実ブラウザでのWeb Push受信・通知クリック遷移の確認ができないため、TASK-6-05の「AC-01〜AC-10全項目の手動疎通確認」はユニットテスト（`DispatchTaskEventNotificationsUseCase`のパラメータ化テスト等）と型チェックで代替した。実ブラウザでの疎通確認はユーザー側での確認を推奨する
 
 ## 6. このフェーズの完了条件
 
