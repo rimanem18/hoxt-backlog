@@ -1,6 +1,8 @@
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
+import type { ProjectEntity } from '@/project/domain/ProjectEntity';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
+import type { IUserRepository } from '@/user/domain/IUserRepository';
 import type { IProjectViewerRepository } from '@/viewer/domain/IProjectViewerRepository';
 import type {
   GetViewerAccessibleProjectsInput,
@@ -22,7 +24,7 @@ function toTaskDTO(task: TaskEntity): ViewerAccessibleTaskDTO {
 /**
  * viewerがアクセス可能なプロジェクト取得ユースケース
  *
- * emailに紐づくactive招待のprojectId一覧を取得し、
+ * emailに紐づくactive招待の一覧を取得し、
  * 該当プロジェクトとタスクをprojectIdごとにグルーピングして返す。
  */
 export class GetViewerAccessibleProjectsUseCase
@@ -32,22 +34,30 @@ export class GetViewerAccessibleProjectsUseCase
     private readonly projectViewerRepository: IProjectViewerRepository,
     private readonly projectRepository: IProjectRepository,
     private readonly taskRepository: ITaskRepository,
+    private readonly userRepository: IUserRepository,
   ) {}
 
   public async execute(
     input: GetViewerAccessibleProjectsInput,
   ): Promise<ViewerAccessibleProjectDTO[]> {
-    const projectIds = await this.projectViewerRepository.findActiveByEmail(
+    const viewers = await this.projectViewerRepository.findActiveByEmail(
       input.viewerEmail,
     );
-    if (projectIds.length === 0) {
+    if (viewers.length === 0) {
       return [];
     }
+
+    const projectIds = viewers.map((v) => v.getProjectId());
+    const notificationEnabledByProjectId = new Map(
+      viewers.map((v) => [v.getProjectId(), v.isNotificationEnabled()]),
+    );
 
     const [projects, tasks] = await Promise.all([
       this.projectRepository.findByIds(projectIds),
       this.taskRepository.findByProjectIds(projectIds),
     ]);
+
+    const ownerNameByUserId = await this.resolveOwnerNames(projects);
 
     const tasksByProjectId = new Map<string, ViewerAccessibleTaskDTO[]>();
     for (const task of tasks) {
@@ -64,7 +74,23 @@ export class GetViewerAccessibleProjectsUseCase
     return projects.map((project) => ({
       projectId: project.getId(),
       projectName: project.getName(),
+      ownerName: ownerNameByUserId.get(project.getUserId()) ?? null,
+      notificationEnabled:
+        notificationEnabledByProjectId.get(project.getId()) ?? true,
       tasks: tasksByProjectId.get(project.getId()) ?? [],
     }));
+  }
+
+  /**
+   * projectのオーナーuserIdをユニーク化し、一括取得した表示名で
+   * userId→表示名のMapを作る。呼び出し側で `?? null` により
+   * 未取得（Mapに存在しない）オーナーはnull扱いになる。
+   */
+  private async resolveOwnerNames(
+    projects: ProjectEntity[],
+  ): Promise<Map<string, string>> {
+    const ownerUserIds = [...new Set(projects.map((p) => p.getUserId()))];
+    const owners = await this.userRepository.findByIds(ownerUserIds);
+    return new Map(owners.map((owner) => [owner.id, owner.name]));
   }
 }

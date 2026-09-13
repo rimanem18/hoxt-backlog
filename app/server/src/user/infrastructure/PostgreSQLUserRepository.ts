@@ -1,4 +1,4 @@
-import { and, eq, type SQL, sql } from 'drizzle-orm';
+import { and, eq, inArray, type SQL, sql } from 'drizzle-orm';
 import { db } from '@/shared/database/DatabaseConnection';
 import type { User as DrizzleUser } from '@/shared/database/schema';
 import { users } from '@/shared/database/schema';
@@ -227,6 +227,29 @@ export class PostgreSQLUserRepository implements IUserRepository {
         return null;
       }
       return this.drizzleRowToUser(row);
+    } catch (error) {
+      this.handleDatabaseError(error);
+    }
+  }
+
+  /**
+   * 複数のユーザーIDで一括検索する
+   *
+   * @param ids - 検索対象のユーザーID配列
+   * @returns 見つかったユーザーエンティティの配列（存在しないIDは結果に含まれない）
+   */
+  async findByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    try {
+      const result = await db
+        .select()
+        .from(users)
+        .where(inArray(users.id, ids));
+
+      return result.map((row) => this.drizzleRowToUser(row));
     } catch (error) {
       this.handleDatabaseError(error);
     }

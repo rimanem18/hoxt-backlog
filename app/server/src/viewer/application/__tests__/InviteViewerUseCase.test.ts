@@ -52,6 +52,8 @@ function createDeps() {
     findActiveByProject: mock(() => Promise.resolve([])),
     findById: mock(() => Promise.resolve(null)),
     findActiveByEmail: mock(() => Promise.resolve([])),
+    updateNotificationEnabled: mock(() => Promise.resolve(null)),
+    findActiveByProjectAndEmail: mock(() => Promise.resolve(null)),
   };
   const viewerAccessTokenRepository: IViewerAccessTokenRepository = {
     findByEmail: mock(() => Promise.resolve(null)),
@@ -82,6 +84,7 @@ function createDeps() {
     findByExternalId: mock(() => Promise.resolve(null)),
     findById: mock(() => Promise.resolve(createMockUser())),
     findByEmail: mock(() => Promise.resolve(null)),
+    findByIds: mock(() => Promise.resolve([])),
     create: mock(() => Promise.reject(new Error('not used'))),
     update: mock(() => Promise.reject(new Error('not used'))),
     delete: mock(() => Promise.resolve()),

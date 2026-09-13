@@ -1,6 +1,9 @@
+import type { TaskChangeEvent } from '@/task/application/ports/ITaskChangeNotifier';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
+import type { TaskStatusValue } from '@/task/domain/valueobjects/TaskStatus';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import type {
   ChangeTaskStatusInput,
   IChangeTaskStatusUseCase,
@@ -31,6 +34,24 @@ export class ChangeTaskStatusUseCase implements IChangeTaskStatusUseCase {
 
     if (!task) {
       throw TaskNotFoundError.forTaskId(input.taskId);
+    }
+
+    // RISK-02: 通知失敗はステータス変更自体に影響させない（fail-open）
+    const projectId = task.getProjectId();
+    if (projectId !== null) {
+      const event: TaskChangeEvent = {
+        type: 'status_changed',
+        taskId: task.getId(),
+        taskTitle: task.getTitle(),
+        projectId,
+        // getStatus()はTaskStatus値オブジェクトが生成時に検証済みの値を返す
+        newStatus: task.getStatus() as TaskStatusValue,
+      };
+      try {
+        await TaskChangeNotifierRegistry.getNotifier().notify(event);
+      } catch (error) {
+        console.error('task変更通知の送信に失敗しました', error);
+      }
     }
 
     return task;

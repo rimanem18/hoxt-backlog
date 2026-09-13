@@ -1,8 +1,11 @@
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
+import type { TaskChangeEvent } from '@/task/application/ports/ITaskChangeNotifier';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
+import type { TaskPriorityValue } from '@/task/domain/valueobjects/TaskPriority';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import type { IUpdateTaskUseCase, UpdateTaskInput } from './IUpdateTaskUseCase';
 
 /**
@@ -44,6 +47,9 @@ export class UpdateTaskUseCase implements IUpdateTaskUseCase {
       }
     }
 
+    const previousPriority = task.getPriority();
+    const previousProjectId = task.getProjectId();
+
     if (input.data.title !== undefined) {
       task.updateTitle(input.data.title);
     }
@@ -69,6 +75,35 @@ export class UpdateTaskUseCase implements IUpdateTaskUseCase {
     // 万一の競合状態（更新直前に削除された等）に対するfail-closedのフォールバック
     if (!updatedTask) {
       throw TaskNotFoundError.forTaskId(input.taskId);
+    }
+
+    // RISK-02: 通知失敗はタスク更新自体に影響させない（fail-open）
+    // REQ-305: project付け替えのみ（priority変更を伴わない）ではイベントを発行しない
+    const priorityChanged =
+      input.data.priority !== undefined &&
+      input.data.priority !== previousPriority;
+
+    if (priorityChanged) {
+      const notifyProjectId =
+        input.data.projectId !== undefined
+          ? input.data.projectId
+          : previousProjectId;
+
+      if (notifyProjectId !== null) {
+        const event: TaskChangeEvent = {
+          type: 'priority_changed',
+          taskId: updatedTask.getId(),
+          taskTitle: updatedTask.getTitle(),
+          projectId: notifyProjectId,
+          // changePriority()はTaskPriority値オブジェクトが生成時に検証済みの値を返す
+          newPriority: updatedTask.getPriority() as TaskPriorityValue,
+        };
+        try {
+          await TaskChangeNotifierRegistry.getNotifier().notify(event);
+        } catch (error) {
+          console.error('task変更通知の送信に失敗しました', error);
+        }
+      }
     }
 
     return updatedTask;

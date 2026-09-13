@@ -48,6 +48,7 @@ export const viewerTokenMiddleware = (
     }
 
     c.set('viewerEmail', token.getEmail());
+    c.set('viewerTokenExpiresAt', token.getExpiresAt());
 
     await next();
   });

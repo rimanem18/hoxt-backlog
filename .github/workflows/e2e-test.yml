@@ -157,6 +157,7 @@ jobs:
           # Additional client environment variables from compose.yaml
           NEXT_PUBLIC_TRUSTED_DOMAINS: localhost:3000,localhost:3001
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: BNJzMLEdg8_ouo5mIQTeLrov15DlOpDn5lae7RP8snT_v9Bd2SQ1n-MQTCYgiQLlyu0YH78PNrMGSiSdAbUoMUY
         run: |
           set -e
 
@@ -171,6 +172,9 @@ jobs:
           SUPABASE_URL=http://localhost:54321 \
           SUPABASE_PUBLISHABLE_KEY=test_publishable_key \
           VIEWER_ACCESS_BASE_URL=http://localhost:3000 \
+          VAPID_PUBLIC_KEY=BNJzMLEdg8_ouo5mIQTeLrov15DlOpDn5lae7RP8snT_v9Bd2SQ1n-MQTCYgiQLlyu0YH78PNrMGSiSdAbUoMUY \
+          VAPID_PRIVATE_KEY=AJ8hc24YzRn0z3m3TuIGHvUMtk6amMJNVXN2JOIJHgI \
+          VAPID_SUBJECT=mailto:e2e@example.com \
           DB_HOST=db \
           DB_PORT=5432 \
           DB_NAME=postgres \

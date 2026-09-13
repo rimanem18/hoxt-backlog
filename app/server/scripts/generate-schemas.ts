@@ -33,6 +33,7 @@ import {
   viewerStatus,
   projectViewers,
   viewerAccessTokens,
+  viewerPushSubscriptions,
 } from '../src/shared/database/schema';
 
 /**
@@ -167,6 +168,11 @@ const tableConfigs: TableConfig[] = [
     tableName: 'viewer_access_tokens',
     tableObject: viewerAccessTokens,
     outputFile: 'viewer-access-tokens.ts',
+  },
+  {
+    tableName: 'viewer_push_subscriptions',
+    tableObject: viewerPushSubscriptions,
+    outputFile: 'viewer-push-subscriptions.ts',
   },
 ];
 

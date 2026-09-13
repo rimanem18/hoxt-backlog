@@ -53,6 +53,8 @@ export const viewerAccessibleTaskSchema = z.object({
 export const viewerAccessibleProjectSchema = z.object({
   projectId: z.uuid(),
   projectName: z.string(),
+  ownerName: z.string().nullable(),
+  notificationEnabled: z.boolean(),
   tasks: z.array(viewerAccessibleTaskSchema),
 }).openapi('ViewerAccessibleProject', {
   description: 'viewerが閲覧できるprojectとそのtask一覧',
@@ -60,9 +62,55 @@ export const viewerAccessibleProjectSchema = z.object({
 
 export const getViewerTasksResponseSchema = apiResponseSchema(
   z.object({
+    viewerEmail: z.email(),
+    tokenExpiresAt: z.iso.datetime(),
     projects: z.array(viewerAccessibleProjectSchema),
   }),
 ).openapi('GetViewerTasksResponse');
+
+// ===== 通知設定変更スキーマ =====
+
+export const updateNotificationSettingBodySchema = z.object({
+  enabled: z.boolean(),
+}).openapi('UpdateNotificationSettingBody');
+
+export const projectViewerNotificationSettingSchema = z.object({
+  projectId: z.uuid(),
+  notificationEnabled: z.boolean(),
+}).openapi('ProjectViewerNotificationSetting', {
+  description: 'project単位の通知ON/OFF設定',
+});
+
+export const updateNotificationSettingResponseSchema = apiResponseSchema(
+  projectViewerNotificationSettingSchema,
+).openapi('UpdateNotificationSettingResponse');
+
+// ===== Push購読登録スキーマ =====
+
+export const registerPushSubscriptionBodySchema = z.object({
+  endpoint: z
+    .url('endpointは有効なURLである必要があります')
+    .refine(
+      (value) => value.startsWith('https://'),
+      'endpointはhttps URLである必要があります',
+    ),
+  keys: z.object({
+    p256dh: z.string().min(1, 'p256dhは必須です'),
+    auth: z.string().min(1, 'authは必須です'),
+  }),
+}).openapi('RegisterPushSubscriptionBody');
+
+export const pushSubscriptionSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  endpoint: z.string(),
+}).openapi('PushSubscription', {
+  description: 'viewerのWeb Push購読情報',
+});
+
+export const registerPushSubscriptionResponseSchema = apiResponseSchema(
+  pushSubscriptionSchema,
+).openapi('RegisterPushSubscriptionResponse');
 
 // ===== 型エクスポート =====
 
@@ -78,4 +126,13 @@ export type ViewerAccessibleProject = z.infer<
 >;
 export type GetViewerTasksResponse = z.infer<
   typeof getViewerTasksResponseSchema
+>;
+export type UpdateNotificationSettingBody = z.infer<
+  typeof updateNotificationSettingBodySchema
+>;
+export type ProjectViewerNotificationSetting = z.infer<
+  typeof projectViewerNotificationSettingSchema
+>;
+export type UpdateNotificationSettingResponse = z.infer<
+  typeof updateNotificationSettingResponseSchema
 >;

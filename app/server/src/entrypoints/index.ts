@@ -8,14 +8,32 @@ import corsMiddleware from '@/shared/middleware/corsMiddleware';
 import { createErrorHandler } from '@/shared/middleware/errors/ErrorHandlerMiddleware';
 import { metricsMiddleware } from '@/shared/middleware/metricsMiddleware';
 import { CloudWatchMonitoringService } from '@/shared/monitoring/CloudWatchMonitoringService';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import task from '@/task/presentation/taskRoutes';
 import auth from '@/user/presentation/authRoutes';
 import authTest from '@/user/presentation/authTestRoutes';
 import emailSignup from '@/user/presentation/emailSignupRoutes';
 import user from '@/user/presentation/userRoutes';
+import { ViewerDIContainer } from '@/viewer/infrastructure/ViewerDIContainer';
+import notification from '@/viewer/presentation/notificationRoutes';
 import viewerAccess from '@/viewer/presentation/viewerAccessRoutes';
 import viewerManagement from '@/viewer/presentation/viewerManagementRoutes';
 import viewerTest from '@/viewer/presentation/viewerTestRoutes';
+
+/**
+ * ViewerDIContainerへの解決をtask変更イベント発生時まで遅延させるプロキシ
+ *
+ * Why: WebPushGatewayはVAPID_PUBLIC_KEY等の新規環境変数に依存する。
+ * このファイルのトップレベルでViewerDIContainerを即時解決すると、
+ * 当該環境変数が未設定なだけでサーバー全体の起動が失敗してしまう
+ * （viewer/presentation/notificationRoutes.tsと同じ遅延評価プロキシの思想）。
+ */
+const lazyTaskChangeNotifier: ITaskChangeNotifier = {
+  notify: (event) =>
+    ViewerDIContainer.getTaskChangeNotifierAdapter().notify(event),
+};
+TaskChangeNotifierRegistry.setNotifier(lazyTaskChangeNotifier);
 
 /**
  * OpenAPIHono アプリケーションサーバーを作成する
@@ -62,6 +80,7 @@ const createServer = (): OpenAPIHono => {
   app.route('/api', project);
   app.route('/api', viewerManagement);
   app.route('/api', viewerAccess);
+  app.route('/api', notification);
   app.route('/api', docs);
 
   // テスト専用エンドポイント（E2E用の送信内容キャプチャ・トークン発行）

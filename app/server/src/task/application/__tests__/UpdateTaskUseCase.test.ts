@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
 import { InvalidTaskDataError } from '@/task/domain/errors/InvalidTaskDataError';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import { TaskEntity } from '@/task/domain/TaskEntity';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import { UpdateTaskUseCase } from '../UpdateTaskUseCase';
 
 describe('UpdateTaskUseCase', () => {
@@ -212,6 +214,131 @@ describe('UpdateTaskUseCase', () => {
       await expect(
         useCase.execute({ userId, taskId, data: { title: '更新' } }),
       ).rejects.toThrow('Database connection failed');
+    });
+  });
+
+  describe('task変更通知（RISK-02: fail-open, REQ-305: project付け替え除外）', () => {
+    const originalProjectId = '880e8400-e29b-41d4-a716-446655440003';
+    const newProjectId = '990e8400-e29b-41d4-a716-446655440004';
+
+    beforeEach(() => {
+      // Given: 既にprojectに所属しているタスクを返すよう上書き
+      const existingTask = TaskEntity.create({
+        userId,
+        title: '元のタイトル',
+        description: '元の説明',
+        priority: 'low',
+        projectId: originalProjectId,
+      });
+      mockRepository.findById = mock(() => Promise.resolve(existingTask));
+      mockProjectRepository.findById = mock(() =>
+        Promise.resolve({ getId: () => newProjectId } as ProjectEntity),
+      );
+    });
+
+    afterEach(() => {
+      TaskChangeNotifierRegistry.resetForTesting();
+    });
+
+    test('projectIdのみ変更時にnotify()が呼ばれない（AC-09）', async () => {
+      // Given: notify()をモック化した通知実装を登録する
+      const notify = mock(() => Promise.resolve());
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+
+      // When: projectIdのみ変更
+      await useCase.execute({
+        userId,
+        taskId,
+        data: { projectId: newProjectId },
+      });
+
+      // Then: notify()は呼ばれない
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    test('priority変更時に変更後のprojectIdを宛先としてnotify()が呼ばれる', async () => {
+      // Given: notify()をモック化した通知実装を登録する
+      const notify = mock(() => Promise.resolve());
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+
+      // When: priorityのみ変更（projectIdは元のまま）
+      const result = await useCase.execute({
+        userId,
+        taskId,
+        data: { priority: 'high' },
+      });
+
+      // Then: 元のprojectId宛にpriority_changedイベントでnotify()が呼ばれる
+      expect(notify).toHaveBeenCalledWith({
+        type: 'priority_changed',
+        taskId: result.getId(),
+        taskTitle: result.getTitle(),
+        projectId: originalProjectId,
+        newPriority: 'high',
+      });
+    });
+
+    test('priorityとprojectIdが同時に変わった場合、変更後のprojectId宛にpriority_changedイベントが送信される（task_addedではない）', async () => {
+      // Given: notify()をモック化した通知実装を登録する
+      const notify = mock(() => Promise.resolve());
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+
+      // When: priorityとprojectIdを同時に変更
+      const result = await useCase.execute({
+        userId,
+        taskId,
+        data: { priority: 'high', projectId: newProjectId },
+      });
+
+      // Then: 新projectId宛にpriority_changedイベントが送信される
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(notify).toHaveBeenCalledWith({
+        type: 'priority_changed',
+        taskId: result.getId(),
+        taskTitle: result.getTitle(),
+        projectId: newProjectId,
+        newPriority: 'high',
+      });
+    });
+
+    test('同一値のpriorityを再設定した場合notify()が呼ばれない', async () => {
+      // Given: notify()をモック化した通知実装を登録する
+      const notify = mock(() => Promise.resolve());
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+
+      // When: 既存と同じ値（low）を再設定
+      await useCase.execute({
+        userId,
+        taskId,
+        data: { priority: 'low' },
+      });
+
+      // Then: notify()は呼ばれない
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    test('notify()が失敗してもUseCaseの戻り値・例外に影響しない', async () => {
+      // Given: 常に失敗する通知実装を登録する
+      const notify = mock(() =>
+        Promise.reject(new Error('送信に失敗しました')),
+      );
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+
+      // When: priorityを変更
+      const result = await useCase.execute({
+        userId,
+        taskId,
+        data: { priority: 'high' },
+      });
+
+      // Then: notify()の失敗に関わらず結果は正常に返る
+      expect(result.getPriority()).toBe('high');
+      expect(notify).toHaveBeenCalledTimes(1);
     });
   });
 });

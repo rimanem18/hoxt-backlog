@@ -21,7 +21,12 @@ function buildApp(
     '*',
     viewerTokenMiddleware({ viewerAccessTokenRepository, tokenHasher }),
   );
-  app.get('/test', (c) => c.json({ viewerEmail: c.get('viewerEmail') }));
+  app.get('/test', (c) =>
+    c.json({
+      viewerEmail: c.get('viewerEmail'),
+      tokenExpiresAt: c.get('viewerTokenExpiresAt'),
+    }),
+  );
   app.onError((err, c) => {
     if (err instanceof InvalidViewerAccessTokenError) {
       return c.json({ success: false, error: { code: err.code } }, 401);
@@ -41,11 +46,12 @@ function createStubTokenHasher(hashResult: string): TokenHasher {
 describe('viewerTokenMiddleware', () => {
   test('有効なトークンでcontextにviewerEmailがセットされ次へ進む', async () => {
     // Given: 有効期限内のトークンが見つかるリポジトリ
+    const expiresAt = new Date('2026-09-15T00:00:00.000Z');
     const token = ViewerAccessTokenEntity.reconstruct({
       id: 'token-id-1',
       email: 'viewer@example.com',
       tokenHash: 'hashed-value',
-      expiresAt: new Date(Date.now() + 60_000),
+      expiresAt,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -63,10 +69,13 @@ describe('viewerTokenMiddleware', () => {
       headers: { 'Viewer-Access-Token': 'raw-token' },
     });
 
-    // Then: 200でviewerEmailがセットされている
+    // Then: 200でviewerEmailとトークン有効期限がセットされている
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ viewerEmail: 'viewer@example.com' });
+    expect(body).toEqual({
+      viewerEmail: 'viewer@example.com',
+      tokenExpiresAt: expiresAt.toISOString(),
+    });
     expect(repository.findByTokenHash).toHaveBeenCalledWith('hashed-value');
   });
 

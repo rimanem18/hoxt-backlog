@@ -172,6 +172,13 @@ async function applyRlsPolicies(): Promise<void> {
 			`ALTER TABLE "${BASE_SCHEMA}".viewer_access_tokens ENABLE ROW LEVEL SECURITY`,
 		);
 
+		// viewer_access_tokensと同様、anon/authenticatedロールへの許可ポリシーは
+		// 追加しない（アプリの直接DB接続経由のみを許可するデフォルト拒否）。
+		console.log("viewer_push_subscriptionsテーブルのRLSを有効化中...");
+		await client.query(
+			`ALTER TABLE "${BASE_SCHEMA}".viewer_push_subscriptions ENABLE ROW LEVEL SECURITY`,
+		);
+
 		console.log("RLSポリシー適用完了");
 	} catch (error) {
 		console.error(

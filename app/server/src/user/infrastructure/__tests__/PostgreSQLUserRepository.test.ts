@@ -185,6 +185,44 @@ describe('PostgreSQLUserRepository統合テスト', () => {
     });
   });
 
+  describe('findByIds', () => {
+    test('複数のユーザーIDを指定して一括取得できること', async () => {
+      // Given: 2件のテストユーザー
+      const user1 = await repository.create(createTestUserInput());
+      const user2 = await repository.create(createTestUserInput());
+
+      // When: 両方のユーザーIDを指定して取得
+      const result = await repository.findByIds([user1.id, user2.id]);
+
+      // Then: 両方のユーザーが取得できる
+      expect(result).toHaveLength(2);
+      expect(result.map((u) => u.id).sort()).toEqual(
+        [user1.id, user2.id].sort(),
+      );
+    });
+
+    test('存在しないIDが混在していても存在する分のみ返されること', async () => {
+      // Given: 保存済みのユーザー1件
+      const user1 = await repository.create(createTestUserInput());
+      const nonExistentId = crypto.randomUUID();
+
+      // When: 存在するIDと存在しないIDを混在させて取得
+      const result = await repository.findByIds([user1.id, nonExistentId]);
+
+      // Then: 存在する分のみ返る
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe(user1.id);
+    });
+
+    test('空配列を渡すと空配列が返されること', async () => {
+      // When: 空配列で取得
+      const result = await repository.findByIds([]);
+
+      // Then: 空配列が返る
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('create', () => {
     test('有効な入力でユーザーが正常に作成されること', async () => {
       // Given: 有効なユーザー作成入力

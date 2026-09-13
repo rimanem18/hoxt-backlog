@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
 import { TaskNotFoundError } from '@/task/domain/errors/TaskNotFoundError';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import { ChangeTaskStatusUseCase } from '../ChangeTaskStatusUseCase';
 
 // テスト用のステータス値定義（TaskStatusの許容値と同期）
@@ -37,6 +39,8 @@ describe('ChangeTaskStatusUseCase', () => {
       getStatus: () => overrides.getStatus?.() ?? 'not_started',
       getCreatedAt: () => overrides.getCreatedAt?.() ?? new Date(),
       getUpdatedAt: () => overrides.getUpdatedAt?.() ?? new Date(),
+      getProjectId: () =>
+        overrides.getProjectId?.() ?? '770e8400-e29b-41d4-a716-446655440002',
     } as TaskEntity;
   };
 
@@ -190,6 +194,80 @@ describe('ChangeTaskStatusUseCase', () => {
       await expect(useCase.execute(input)).rejects.toThrow(
         'Database connection failed',
       );
+    });
+  });
+
+  describe('task変更通知（RISK-02: fail-open）', () => {
+    afterEach(() => {
+      TaskChangeNotifierRegistry.resetForTesting();
+    });
+
+    test.each(['in_progress', 'not_started'] as const)(
+      'ステータス変更成功時に%sへの変更でstatus_changedイベントでnotify()がawaitされて呼ばれる（AC-02: 前進・後退どちらの遷移でも）',
+      async (status) => {
+        // Given: notify()をモック化した通知実装を登録する
+        const notify = mock(() => Promise.resolve());
+        const mockNotifier: ITaskChangeNotifier = { notify };
+        TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+        const mockTask = createMockTask({
+          getId: () => '660e8400-e29b-41d4-a716-446655440001',
+          getTitle: () => 'テストタスク',
+          getStatus: () => status,
+          getProjectId: () => '770e8400-e29b-41d4-a716-446655440002',
+        });
+        mockRepository.updateStatus = mock(() => Promise.resolve(mockTask));
+        useCase = new ChangeTaskStatusUseCase(
+          mockRepository as unknown as ITaskRepository,
+        );
+
+        const input = {
+          userId: '550e8400-e29b-41d4-a716-446655440000',
+          taskId: '660e8400-e29b-41d4-a716-446655440001',
+          status,
+        };
+
+        // When: ユースケースを実行
+        await useCase.execute(input);
+
+        // Then: 変更後のステータスを含むイベントでnotify()が呼ばれる
+        expect(notify).toHaveBeenCalledWith({
+          type: 'status_changed',
+          taskId: '660e8400-e29b-41d4-a716-446655440001',
+          taskTitle: 'テストタスク',
+          projectId: '770e8400-e29b-41d4-a716-446655440002',
+          newStatus: status,
+        });
+      },
+    );
+
+    test('notify()が失敗してもUseCaseの戻り値・例外に影響しない', async () => {
+      // Given: 常に失敗する通知実装を登録する
+      const notify = mock(() =>
+        Promise.reject(new Error('送信に失敗しました')),
+      );
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+      const mockTask = createMockTask({
+        getId: () => '660e8400-e29b-41d4-a716-446655440001',
+        getStatus: () => 'completed',
+      });
+      mockRepository.updateStatus = mock(() => Promise.resolve(mockTask));
+      useCase = new ChangeTaskStatusUseCase(
+        mockRepository as unknown as ITaskRepository,
+      );
+
+      const input = {
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        taskId: '660e8400-e29b-41d4-a716-446655440001',
+        status: 'completed',
+      };
+
+      // When: ユースケースを実行
+      const result = await useCase.execute(input);
+
+      // Then: notify()の失敗に関わらず結果は正常に返る
+      expect(result.getStatus()).toBe('completed');
+      expect(notify).toHaveBeenCalledTimes(1);
     });
   });
 });

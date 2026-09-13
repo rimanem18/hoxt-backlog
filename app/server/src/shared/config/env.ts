@@ -125,6 +125,51 @@ export function getViewerAccessBaseUrl(): string {
 }
 
 /**
+ * Web Push送信に使用するVAPID鍵ペア
+ */
+export interface VapidKeys {
+  publicKey: string;
+  privateKey: string;
+  subject: string;
+}
+
+/**
+ * テスト実行時のみ使用するVAPID鍵ペア（`web-push generate-vapid-keys`で生成した固定値）
+ *
+ * 実運用の購読には使われないため、テストコードに含めても問題ない。
+ */
+const TEST_VAPID_KEYS: VapidKeys = {
+  publicKey:
+    'BNJzMLEdg8_ouo5mIQTeLrov15DlOpDn5lae7RP8snT_v9Bd2SQ1n-MQTCYgiQLlyu0YH78PNrMGSiSdAbUoMUY',
+  privateKey: 'AJ8hc24YzRn0z3m3TuIGHvUMtk6amMJNVXN2JOIJHgI',
+  subject: 'mailto:test@example.com',
+};
+
+/**
+ * Web Push送信用のVAPID鍵ペアを取得する
+ *
+ * @throws VAPID_PUBLIC_KEY・VAPID_PRIVATE_KEY・VAPID_SUBJECTのいずれかが未設定の場合
+ */
+export function getVapidKeys(): VapidKeys {
+  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT;
+
+  if (publicKey && privateKey && subject) {
+    return { publicKey, privateKey, subject };
+  }
+
+  // bun testはNODE_ENVを自動的に'test'にするため、テスト実行時のみ既定値で補う
+  if (process.env.NODE_ENV === 'test') {
+    return TEST_VAPID_KEYS;
+  }
+
+  throw new Error(
+    'VAPID_PUBLIC_KEY・VAPID_PRIVATE_KEY・VAPID_SUBJECT環境変数が設定されていません',
+  );
+}
+
+/**
  * テスト専用エンドポイントの有効化を許可する環境の許可リスト
  *
  * Why: 除外方式（'production'以外は許可）は、ENVIRONMENTが未設定・タイプミス・

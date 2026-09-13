@@ -62,6 +62,21 @@ describe('ProjectDetail', () => {
     expect(screen.getByText('タスクA')).toBeDefined();
   });
 
+  test('project一覧に戻るリンクが表示され一覧ページを指す', () => {
+    // Given: project詳細取得成功のモック
+    renderWithProviders(() => ({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    }));
+
+    // When & Then: 一覧に戻るリンクが一覧ページ（/dashboard/projects）を指す
+    const backLink = screen.getByRole('link', {
+      name: 'プロジェクト一覧に戻る',
+    });
+    expect(backLink).toHaveAttribute('href', '/dashboard/projects');
+  });
+
   test('編集ボタンが表示される', () => {
     // Given: project詳細取得成功のモック
     renderWithProviders(() => ({

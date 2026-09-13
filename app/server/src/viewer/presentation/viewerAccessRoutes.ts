@@ -4,6 +4,7 @@ import { InvalidViewerAccessTokenError } from '@/viewer/domain/errors';
 import type { IViewerAccessTokenRepository } from '@/viewer/domain/IViewerAccessTokenRepository';
 import type { TokenHasher } from '@/viewer/infrastructure/TokenHasher';
 import { ViewerDIContainer } from '@/viewer/infrastructure/ViewerDIContainer';
+import { createLazyViewerAccessTokenRepository } from './lazyViewerAccessTokenRepository';
 import { viewerTokenMiddleware } from './middleware/viewerTokenMiddleware';
 import { ViewerAccessController } from './ViewerAccessController';
 import { getViewerTasksRoute } from './viewerAccessRoutes.schema';
@@ -106,24 +107,8 @@ const lazyGetViewerAccessibleProjectsUseCase: IGetViewerAccessibleProjectsUseCas
       ViewerDIContainer.getGetViewerAccessibleProjectsUseCase().execute(input),
   };
 
-const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository = {
-  findByEmail: (email) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().findByEmail(email),
-  findByTokenHash: (tokenHash) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().findByTokenHash(
-      tokenHash,
-    ),
-  save: (entity) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().save(entity),
-  deleteById: (id) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().deleteById(id),
-  replace: (existingId, newTokenHash, newExpiresAt) =>
-    ViewerDIContainer.getViewerAccessTokenRepository().replace(
-      existingId,
-      newTokenHash,
-      newExpiresAt,
-    ),
-};
+const lazyViewerAccessTokenRepository: IViewerAccessTokenRepository =
+  createLazyViewerAccessTokenRepository();
 
 /**
  * viewer横断閲覧APIのOpenAPIルート定義

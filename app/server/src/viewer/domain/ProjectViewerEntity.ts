@@ -21,6 +21,7 @@ export interface ProjectViewerEntityProps {
   revokedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  notificationEnabled: boolean;
 }
 
 /**
@@ -37,6 +38,7 @@ export class ProjectViewerEntity {
   private revokedAt: Date | null;
   private readonly createdAt: Date;
   private updatedAt: Date;
+  private notificationEnabled: boolean;
 
   /**
    * プライベートコンストラクタ
@@ -51,6 +53,7 @@ export class ProjectViewerEntity {
     revokedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    notificationEnabled: boolean;
   }) {
     this.id = props.id;
     this.projectId = props.projectId;
@@ -60,6 +63,7 @@ export class ProjectViewerEntity {
     this.revokedAt = props.revokedAt;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.notificationEnabled = props.notificationEnabled;
   }
 
   /**
@@ -82,6 +86,7 @@ export class ProjectViewerEntity {
       revokedAt: null,
       createdAt: now,
       updatedAt: now,
+      notificationEnabled: true,
     });
   }
 
@@ -104,6 +109,7 @@ export class ProjectViewerEntity {
       revokedAt: props.revokedAt,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
+      notificationEnabled: props.notificationEnabled,
     });
   }
 
@@ -143,6 +149,10 @@ export class ProjectViewerEntity {
     return this.updatedAt;
   }
 
+  public isNotificationEnabled(): boolean {
+    return this.notificationEnabled;
+  }
+
   // ==========================================================================
   // ビジネスロジック
   // ==========================================================================
@@ -162,6 +172,23 @@ export class ProjectViewerEntity {
   public restore(): void {
     this.status = 'active';
     this.revokedAt = null;
+    this.notificationEnabled = true;
+    this.touch();
+  }
+
+  /**
+   * 通知を有効化する
+   */
+  public enableNotification(): void {
+    this.notificationEnabled = true;
+    this.touch();
+  }
+
+  /**
+   * 通知を無効化する
+   */
+  public disableNotification(): void {
+    this.notificationEnabled = false;
     this.touch();
   }
 
