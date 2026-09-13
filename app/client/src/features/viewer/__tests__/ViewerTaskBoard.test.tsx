@@ -85,7 +85,7 @@ function renderWithProviders(
         useRegisterPushSubscription: defaultMockUseRegisterPushSubscription,
       }}
     >
-      <ViewerTaskBoardContent />
+      <ViewerTaskBoardContent token="test-token-abc" />
     </ViewerServicesProvider>,
   );
 }

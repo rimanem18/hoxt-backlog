@@ -133,7 +133,14 @@ function ViewerProjectCard(props: ViewerProjectCardProps): React.ReactNode {
  * projectごとにtaskをグルーピングして表示するプレゼンテーションコンポーネント。
  * 無効なトークンの場合でも再発行導線（リンク・ボタン）は表示しない（REQ-306）。
  */
-export function ViewerTaskBoardContent(): React.ReactNode {
+interface ViewerTaskBoardContentProps {
+  /** viewerアクセストークン（通知クリック時の遷移先組み立てに使用） */
+  token: string;
+}
+
+export function ViewerTaskBoardContent(
+  props: ViewerTaskBoardContentProps,
+): React.ReactNode {
   const { useViewerAccessibleProjects } = useViewerServices();
   const { data, isLoading, error } = useViewerAccessibleProjects();
 
@@ -175,7 +182,7 @@ export function ViewerTaskBoardContent(): React.ReactNode {
         このURLの有効期限は{formatJapaneseDate(tokenExpiresAt)}までです。
       </span>
 
-      <PushNotificationPermission />
+      <PushNotificationPermission token={props.token} />
 
       {projects.length === 0 && (
         <div aria-live="polite">
@@ -220,7 +227,7 @@ export default function ViewerTaskBoard(
   return (
     <ApiClientProvider client={apiClient}>
       <ViewerServicesProvider>
-        <ViewerTaskBoardContent />
+        <ViewerTaskBoardContent token={props.token} />
       </ViewerServicesProvider>
     </ApiClientProvider>
   );

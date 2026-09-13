@@ -18,7 +18,7 @@ function renderWithMock(
         useRegisterPushSubscription: useRegisterPushSubscriptionMock,
       }}
     >
-      <PushNotificationPermission />
+      <PushNotificationPermission token="test-token-abc" />
     </ViewerServicesProvider>,
   );
 }

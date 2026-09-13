@@ -93,7 +93,9 @@ function renderUseRegisterPushSubscription() {
     <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
   );
 
-  return renderHook(() => useRegisterPushSubscription(), { wrapper });
+  return renderHook(() => useRegisterPushSubscription('test-token-abc'), {
+    wrapper,
+  });
 }
 
 describe('useRegisterPushSubscription', () => {

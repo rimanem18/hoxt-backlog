@@ -9,10 +9,17 @@
 import { FormAlert } from '@/shared/components/FormAlert';
 import { useViewerServices } from '../lib/ViewerServicesContext';
 
-export function PushNotificationPermission(): React.ReactNode {
+interface PushNotificationPermissionProps {
+  /** viewerアクセストークン（通知クリック時の遷移先組み立てに使用） */
+  token: string;
+}
+
+export function PushNotificationPermission(
+  props: PushNotificationPermissionProps,
+): React.ReactNode {
   const { useRegisterPushSubscription } = useViewerServices();
   const { permissionState, isRegistering, error, requestPermission } =
-    useRegisterPushSubscription();
+    useRegisterPushSubscription(props.token);
 
   if (permissionState === 'unsupported') {
     return null;

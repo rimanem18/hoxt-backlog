@@ -11,6 +11,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApiClient } from '@/lib/apiClientContext';
 import { handleApiError } from '@/lib/apiErrorHandler';
 import { getVapidPublicKey } from '@/lib/env';
+import { debugLog } from '@/lib/utils/logger';
+import { saveEndpointToken } from '../lib/subscriptionTokenStore';
 import { urlBase64ToUint8Array } from '../lib/vapidKey';
 
 /**
@@ -46,7 +48,7 @@ function getInitialPermissionState(): PushPermissionState {
   return window.Notification.permission;
 }
 
-export function useRegisterPushSubscription(): {
+export function useRegisterPushSubscription(token: string): {
   permissionState: PushPermissionState;
   isRegistering: boolean;
   error: Error | null;
@@ -93,12 +95,21 @@ export function useRegisterPushSubscription(): {
       if (apiError) {
         throw new Error(handleApiError(apiError, '購読の登録に失敗しました'));
       }
+
+      // 通知クリック時の遷移先組み立てに使うため、endpoint→トークンの
+      // 対応をブラウザ側（IndexedDB）に保存する。失敗しても購読登録自体は
+      // 成功しているため、通知登録の成否には影響させない
+      try {
+        await saveEndpointToken(endpoint, token);
+      } catch (err) {
+        debugLog.error('endpoint→トークンの保存に失敗しました', err);
+      }
     } catch (err) {
       setError(new Error(handleApiError(err, '購読の登録に失敗しました')));
     } finally {
       setIsRegistering(false);
     }
-  }, [apiClient]);
+  }, [apiClient, token]);
 
   const requestPermission = useCallback(() => {
     if (permissionState === 'unsupported') {
