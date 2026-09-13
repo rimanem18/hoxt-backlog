@@ -432,8 +432,8 @@ describe('InviteViewerUseCase', () => {
     );
   });
 
-  test('取り消し済み招待+有効トークンへの再招待で招待が復元されメールは送信されない', async () => {
-    // Given: revoked状態の招待と有効なトークンが存在する
+  test('取り消し済み招待+有効トークンへの再招待でも招待復元とトークン再発行の両方が行われメールが送信される', async () => {
+    // Given: revoked状態の招待と有効期限内のトークンが存在する
     const deps = createDeps();
     const revokedViewer = ProjectViewerEntity.create({
       projectId: testProjectId,
@@ -463,7 +463,7 @@ describe('InviteViewerUseCase', () => {
       email: 'viewer@example.com',
     });
 
-    // Then: 招待がactiveに復元され保存される。トークン・メールは変化しない
+    // Then: 招待がactiveに復元され、有効期限内でもトークンが再発行されメールが送信される
     expect(result.getStatus()).toBe('active');
     expect(deps.projectViewerRepository.save).toHaveBeenCalledTimes(1);
     const savedEntity = (
@@ -473,8 +473,21 @@ describe('InviteViewerUseCase', () => {
     expect(savedEntity.getStatus()).toBe('active');
     expect(deps.projectViewerRepository.restore).not.toHaveBeenCalled();
     expect(deps.viewerAccessTokenRepository.save).not.toHaveBeenCalled();
-    expect(deps.viewerAccessTokenRepository.replace).not.toHaveBeenCalled();
-    expect(deps.mailGateway.send).not.toHaveBeenCalled();
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledTimes(1);
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledWith(
+      validToken.getId(),
+      expect.any(String),
+      expect.any(Date),
+    );
+    expect(deps.mailGateway.send).toHaveBeenCalledTimes(1);
+    const [email, projectName, accessUrl] = (
+      deps.mailGateway.send as ReturnType<typeof mock>
+    ).mock.calls[0] as [string, string, string];
+    expect(email).toBe('viewer@example.com');
+    expect(projectName).toBe('テストプロジェクト');
+    expect(accessUrl.startsWith('https://viewer.example.com/viewer/')).toBe(
+      true,
+    );
   });
 
   test('取り消し済み招待+期限切れトークンへの再招待で招待復元とトークン再発行の両方が行われメールが送信される（複合）', async () => {

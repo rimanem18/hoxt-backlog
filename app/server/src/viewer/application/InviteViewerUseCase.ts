@@ -51,7 +51,9 @@ interface TransactionResult {
  * 招待保存・アクセストークン発行はUnit of Work経由で単一のDBトランザクション
  * として実行し、招待メール送信はコミット後（トランザクション外）に行う。
  * 既存の招待・トークンの状態（no-op / 追加招待 / 期限切れ再発行 / 取り消し済み
- * 招待の復元）に応じてトランザクション内での保存内容を分岐する。
+ * 招待の復元）に応じてトランザクション内での保存内容を分岐する。取り消し済み
+ * 招待の復元時は、既存トークンの有効期限に関わらず必ず新しいトークンを再発行し
+ * アクセスURLを再送する。
  * メール送信失敗時は保存済みデータを補償操作で削除・復元する。
  */
 export class InviteViewerUseCase implements IInviteViewerUseCase {
@@ -110,6 +112,9 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
           };
         }
 
+        const wasRevoked =
+          existingViewer !== null && existingViewer.getStatus() === 'revoked';
+
         let savedViewer: ProjectViewerEntity;
         let viewerCompensation: ViewerCompensation = { type: 'none' };
         if (existingViewer === null) {
@@ -122,7 +127,7 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
             type: 'deleteViewer',
             viewerId: savedViewer.getId(),
           };
-        } else if (existingViewer.getStatus() === 'revoked') {
+        } else if (wasRevoked) {
           existingViewer.restore();
           savedViewer =
             await repos.projectViewerRepository.save(existingViewer);
@@ -137,8 +142,10 @@ export class InviteViewerUseCase implements IInviteViewerUseCase {
         let rawToken: string | null = null;
         let tokenCompensation: TokenCompensation = { type: 'none' };
 
+        // 取り消し後の再招待は新しいアクセスURLを届ける必要があるため、
+        // 既存トークンが有効期限内でも再発行してメールを送り直す。
         const needsTokenIssuance =
-          existingToken === null || existingToken.isExpired(now);
+          wasRevoked || existingToken === null || existingToken.isExpired(now);
         if (needsTokenIssuance) {
           const newRawToken = this.tokenHasher.generate();
           const tokenHash = this.tokenHasher.hash(newRawToken);
