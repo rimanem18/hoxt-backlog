@@ -31,6 +31,21 @@ export const taskSortSchema = z.enum([
   description: 'タスクのソート順',
 });
 
+// ===== ラベルマップ =====
+
+export const taskStatusLabels: Record<TaskStatus, string> = {
+  not_started: '未着手',
+  in_progress: '進行中',
+  in_review: 'レビュー中',
+  completed: '完了',
+};
+
+export const taskPriorityLabels: Record<TaskPriority, string> = {
+  high: '高',
+  medium: '中',
+  low: '低',
+};
+
 // ===== 基本Taskスキーマ =====
 
 export const taskSchema = z.object({

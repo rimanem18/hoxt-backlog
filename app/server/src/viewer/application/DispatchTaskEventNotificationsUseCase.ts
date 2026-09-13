@@ -1,3 +1,7 @@
+import {
+  taskPriorityLabels,
+  taskStatusLabels,
+} from '@/packages/shared-schemas/src/tasks';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { TaskChangeEvent } from '@/task/application/ports/ITaskChangeNotifier';
 import type {
@@ -67,6 +71,28 @@ export class DispatchTaskEventNotificationsUseCase
           body: `「${event.taskTitle}」が追加されました`,
           taskId: event.taskId,
         };
+      case 'status_changed': {
+        if (!event.newStatus) {
+          return null;
+        }
+        const label = taskStatusLabels[event.newStatus];
+        return {
+          title: projectName,
+          body: `「${event.taskTitle}」のステータスが${label}に変更されました`,
+          taskId: event.taskId,
+        };
+      }
+      case 'priority_changed': {
+        if (!event.newPriority) {
+          return null;
+        }
+        const label = taskPriorityLabels[event.newPriority];
+        return {
+          title: projectName,
+          body: `「${event.taskTitle}」の優先度が${label}に変更されました`,
+          taskId: event.taskId,
+        };
+      }
       default:
         return null;
     }

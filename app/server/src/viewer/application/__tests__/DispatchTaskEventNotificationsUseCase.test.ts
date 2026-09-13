@@ -284,4 +284,148 @@ describe('DispatchTaskEventNotificationsUseCase', () => {
     await expect(useCase.execute(testEvent)).resolves.toBeUndefined();
     expect(deps.pushNotificationGateway.send).toHaveBeenCalledTimes(2);
   });
+
+  describe('status_changed/priority_changed対応', () => {
+    test.each([
+      [
+        'status_changed' as const,
+        { newStatus: 'in_review' as const },
+        '「テストタスク」のステータスがレビュー中に変更されました',
+      ],
+      [
+        'priority_changed' as const,
+        { newPriority: 'high' as const },
+        '「テストタスク」の優先度が高に変更されました',
+      ],
+    ])(
+      '%sイベントで変更後の値を含む通知本文が生成される（変更前の値は含まれない）',
+      async (type, extra, expectedBody) => {
+        // Given: 通知ONのviewerが1件、購読が1件存在する
+        const deps = createDeps();
+        const viewer = createViewer('viewer@example.com');
+        const subscription = createSubscription(
+          'viewer@example.com',
+          'https://push.example.com/endpoint-1',
+        );
+        (
+          deps.projectViewerRepository.findActiveByProject as ReturnType<
+            typeof mock
+          >
+        ).mockResolvedValue([viewer]);
+        (
+          deps.pushSubscriptionRepository.findByEmail as ReturnType<typeof mock>
+        ).mockResolvedValue([subscription]);
+        const useCase = new DispatchTaskEventNotificationsUseCase(
+          deps.projectRepository,
+          deps.projectViewerRepository,
+          deps.pushSubscriptionRepository,
+          deps.pushNotificationGateway,
+        );
+
+        // When: イベントを配信
+        await useCase.execute({ ...testEvent, type, ...extra });
+
+        // Then: 変更後の値のみを含む本文で送信される
+        expect(deps.pushNotificationGateway.send).toHaveBeenCalledWith(
+          subscription,
+          {
+            title: 'テストプロジェクト',
+            body: expectedBody,
+            taskId: testEvent.taskId,
+          },
+        );
+      },
+    );
+
+    test('同一taskへの複数イベントがそれぞれ個別のpayloadとして生成される（AC-08）', async () => {
+      // Given: 通知ONのviewerが1件、購読が1件存在する
+      const deps = createDeps();
+      const viewer = createViewer('viewer@example.com');
+      const subscription = createSubscription(
+        'viewer@example.com',
+        'https://push.example.com/endpoint-1',
+      );
+      (
+        deps.projectViewerRepository.findActiveByProject as ReturnType<
+          typeof mock
+        >
+      ).mockResolvedValue([viewer]);
+      (
+        deps.pushSubscriptionRepository.findByEmail as ReturnType<typeof mock>
+      ).mockResolvedValue([subscription]);
+      const useCase = new DispatchTaskEventNotificationsUseCase(
+        deps.projectRepository,
+        deps.projectViewerRepository,
+        deps.pushSubscriptionRepository,
+        deps.pushNotificationGateway,
+      );
+
+      // When: 同一taskへステータス変更と優先度変更を続けて配信
+      await useCase.execute({
+        ...testEvent,
+        type: 'status_changed',
+        newStatus: 'completed',
+      });
+      await useCase.execute({
+        ...testEvent,
+        type: 'priority_changed',
+        newPriority: 'low',
+      });
+
+      // Then: 1通に集約されず、それぞれ個別のpayloadで送信される
+      expect(deps.pushNotificationGateway.send).toHaveBeenCalledTimes(2);
+      expect(deps.pushNotificationGateway.send).toHaveBeenNthCalledWith(
+        1,
+        subscription,
+        {
+          title: 'テストプロジェクト',
+          body: '「テストタスク」のステータスが完了に変更されました',
+          taskId: testEvent.taskId,
+        },
+      );
+      expect(deps.pushNotificationGateway.send).toHaveBeenNthCalledWith(
+        2,
+        subscription,
+        {
+          title: 'テストプロジェクト',
+          body: '「テストタスク」の優先度が低に変更されました',
+          taskId: testEvent.taskId,
+        },
+      );
+    });
+
+    test.each(['status_changed' as const, 'priority_changed' as const])(
+      '%sイベントでも招待取り消し済み・通知OFFのviewerには送信されない（REQ-303, REQ-304）',
+      async (type) => {
+        // Given: 通知OFFのviewerのみが存在する
+        const deps = createDeps();
+        const viewer = createViewer('viewer@example.com', false);
+        (
+          deps.projectViewerRepository.findActiveByProject as ReturnType<
+            typeof mock
+          >
+        ).mockResolvedValue([viewer]);
+        const useCase = new DispatchTaskEventNotificationsUseCase(
+          deps.projectRepository,
+          deps.projectViewerRepository,
+          deps.pushSubscriptionRepository,
+          deps.pushNotificationGateway,
+        );
+
+        // When: イベントを配信
+        await useCase.execute({
+          ...testEvent,
+          type,
+          newStatus: 'completed',
+          newPriority: 'low',
+        });
+
+        // Then: task_addedと同じフィルタが機能し送信されない
+        expect(
+          deps.pushSubscriptionRepository.findByEmail,
+        ).not.toHaveBeenCalled();
+        expect(deps.pushNotificationGateway.send).not.toHaveBeenCalled();
+      },
+    );
+  });
 });
