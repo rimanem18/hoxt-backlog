@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import type { ProjectEntity } from '@/project/domain/ProjectEntity';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
 import type { ITaskRepository } from '@/task/domain/ITaskRepository';
 import type { TaskEntity } from '@/task/domain/TaskEntity';
+import { TaskChangeNotifierRegistry } from '@/task/infrastructure/TaskChangeNotifierRegistry';
 import { CreateTaskUseCase } from '../CreateTaskUseCase';
 
 describe('CreateTaskUseCase', () => {
@@ -211,6 +213,56 @@ describe('CreateTaskUseCase', () => {
       await expect(useCase.execute(input)).rejects.toThrow(
         'Database connection failed',
       );
+    });
+  });
+
+  describe('task変更通知（RISK-02: fail-open）', () => {
+    afterEach(() => {
+      TaskChangeNotifierRegistry.resetForTesting();
+    });
+
+    test('task作成成功時にtask_addedイベントでnotify()がawaitされて呼ばれる', async () => {
+      // Given: notify()をモック化した通知実装を登録する
+      const notify = mock(() => Promise.resolve());
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+      const input = {
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'テストタスク',
+        projectId: mockProjectId,
+      };
+
+      // When: ユースケースを実行
+      const result = await useCase.execute(input);
+
+      // Then: 作成されたtaskの情報でtask_addedイベントが呼ばれる
+      expect(notify).toHaveBeenCalledWith({
+        type: 'task_added',
+        taskId: result.getId(),
+        taskTitle: result.getTitle(),
+        projectId: mockProjectId,
+      });
+    });
+
+    test('notify()が失敗してもUseCaseの戻り値・例外に影響しない', async () => {
+      // Given: 常に失敗する通知実装を登録する
+      const notify = mock(() =>
+        Promise.reject(new Error('送信に失敗しました')),
+      );
+      const mockNotifier: ITaskChangeNotifier = { notify };
+      TaskChangeNotifierRegistry.setNotifier(mockNotifier);
+      const input = {
+        userId: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'テストタスク',
+        projectId: mockProjectId,
+      };
+
+      // When: ユースケースを実行
+      const result = await useCase.execute(input);
+
+      // Then: notify()の失敗に関わらずtaskは正常に返る
+      expect(result.getTitle()).toBe('テストタスク');
+      expect(notify).toHaveBeenCalledTimes(1);
     });
   });
 });

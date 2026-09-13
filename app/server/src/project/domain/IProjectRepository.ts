@@ -33,7 +33,7 @@ export interface IProjectRepository {
    * 複数のプロジェクトIDで一括取得する（所有者検証なし）
    *
    * 所有者スコープなしの強い権限を持つため、呼び出し元は
-   * GetViewerAccessibleProjectsUseCaseに限定すること。
+   * viewerドメインのユースケース（project横断閲覧・通知配信）に限定すること。
    * @param projectIds - 取得するプロジェクトIDの配列
    * @returns 見つかったProjectEntityの配列
    */

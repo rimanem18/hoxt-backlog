@@ -4,14 +4,18 @@ import {
   isTestEndpointsEnabled,
 } from '@/shared/config/env';
 import { db } from '@/shared/database/DatabaseConnection';
+import type { ITaskChangeNotifier } from '@/task/application/ports/ITaskChangeNotifier';
 import { TaskDIContainer } from '@/task/infrastructure/TaskDIContainer';
 import { AuthDIContainer } from '@/user/infrastructure/AuthDIContainer';
+import { DispatchTaskEventNotificationsUseCase } from '@/viewer/application/DispatchTaskEventNotificationsUseCase';
 import { GetViewerAccessibleProjectsUseCase } from '@/viewer/application/GetViewerAccessibleProjectsUseCase';
+import type { IDispatchTaskEventNotificationsUseCase } from '@/viewer/application/IDispatchTaskEventNotificationsUseCase';
 import type { IGetViewerAccessibleProjectsUseCase } from '@/viewer/application/IGetViewerAccessibleProjectsUseCase';
 import type { IInvitationMailGateway } from '@/viewer/application/IInvitationMailGateway';
 import type { IInviteViewerUseCase } from '@/viewer/application/IInviteViewerUseCase';
 import type { IListProjectViewersUseCase } from '@/viewer/application/IListProjectViewersUseCase';
 import { InviteViewerUseCase } from '@/viewer/application/InviteViewerUseCase';
+import type { IPushNotificationGateway } from '@/viewer/application/IPushNotificationGateway';
 import type { IRegisterPushSubscriptionUseCase } from '@/viewer/application/IRegisterPushSubscriptionUseCase';
 import type { IRevokeViewerUseCase } from '@/viewer/application/IRevokeViewerUseCase';
 import type { IUpdateNotificationSettingUseCase } from '@/viewer/application/IUpdateNotificationSettingUseCase';
@@ -29,7 +33,9 @@ import { PostgreSQLPushSubscriptionRepository } from './PostgreSQLPushSubscripti
 import { PostgreSQLViewerAccessTokenRepository } from './PostgreSQLViewerAccessTokenRepository';
 import { PostgreSQLViewerInvitationUnitOfWork } from './PostgreSQLViewerInvitationUnitOfWork';
 import { SesInvitationMailGateway } from './SesInvitationMailGateway';
+import { TaskChangeNotifierAdapter } from './TaskChangeNotifierAdapter';
 import { TokenHasher } from './TokenHasher';
+import { WebPushGateway } from './WebPushGateway';
 
 /**
  * viewer招待・閲覧の依存性注入を管理するDIコンテナ
@@ -58,6 +64,12 @@ export class ViewerDIContainer {
   private static mailGatewayInstance: IInvitationMailGateway | null = null;
   private static tokenHasherInstance: TokenHasher | null = null;
   private static viewerInvitationUnitOfWorkInstance: PostgreSQLViewerInvitationUnitOfWork | null =
+    null;
+  private static pushNotificationGatewayInstance: IPushNotificationGateway | null =
+    null;
+  private static dispatchTaskEventNotificationsUseCaseInstance: DispatchTaskEventNotificationsUseCase | null =
+    null;
+  private static taskChangeNotifierAdapterInstance: TaskChangeNotifierAdapter | null =
     null;
 
   /**
@@ -180,6 +192,52 @@ export class ViewerDIContainer {
   }
 
   /**
+   * IPushNotificationGatewayの共有インスタンスを返す
+   *
+   * bun test実行時（NODE_ENV=test）ではVAPID鍵の既定値（env.tsのテスト用フォールバック）
+   * を使うWebPushGatewayを使用する。
+   */
+  static getPushNotificationGateway(): IPushNotificationGateway {
+    if (!ViewerDIContainer.pushNotificationGatewayInstance) {
+      ViewerDIContainer.pushNotificationGatewayInstance =
+        WebPushGateway.getInstance();
+    }
+    return ViewerDIContainer.pushNotificationGatewayInstance;
+  }
+
+  /**
+   * DispatchTaskEventNotificationsUseCaseのインスタンスを返す
+   */
+  static getDispatchTaskEventNotificationsUseCase(): IDispatchTaskEventNotificationsUseCase {
+    if (!ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance) {
+      ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance =
+        new DispatchTaskEventNotificationsUseCase(
+          ProjectDIContainer.getProjectRepository(),
+          ViewerDIContainer.getProjectViewerRepository(),
+          ViewerDIContainer.getPushSubscriptionRepository(),
+          ViewerDIContainer.getPushNotificationGateway(),
+        );
+    }
+    return ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance;
+  }
+
+  /**
+   * TaskChangeNotifierAdapterのインスタンスを返す
+   *
+   * taskドメインが定義するITaskChangeNotifierポートの実装。
+   * entrypoints/index.tsの合成ルートからTaskChangeNotifierRegistryへ配線される。
+   */
+  static getTaskChangeNotifierAdapter(): ITaskChangeNotifier {
+    if (!ViewerDIContainer.taskChangeNotifierAdapterInstance) {
+      ViewerDIContainer.taskChangeNotifierAdapterInstance =
+        new TaskChangeNotifierAdapter(
+          ViewerDIContainer.getDispatchTaskEventNotificationsUseCase(),
+        );
+    }
+    return ViewerDIContainer.taskChangeNotifierAdapterInstance;
+  }
+
+  /**
    * PostgreSQLPushSubscriptionRepositoryの共有インスタンスを返す
    */
   static getPushSubscriptionRepository(): IPushSubscriptionRepository {
@@ -239,5 +297,8 @@ export class ViewerDIContainer {
     ViewerDIContainer.mailGatewayInstance = null;
     ViewerDIContainer.tokenHasherInstance = null;
     ViewerDIContainer.viewerInvitationUnitOfWorkInstance = null;
+    ViewerDIContainer.pushNotificationGatewayInstance = null;
+    ViewerDIContainer.dispatchTaskEventNotificationsUseCaseInstance = null;
+    ViewerDIContainer.taskChangeNotifierAdapterInstance = null;
   }
 }
