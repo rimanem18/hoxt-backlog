@@ -48,7 +48,10 @@ function getInitialPermissionState(): PushPermissionState {
   return window.Notification.permission;
 }
 
-export function useRegisterPushSubscription(token: string): {
+export function useRegisterPushSubscription(
+  token: string,
+  swActivationTimeoutMs: number = 10_000,
+): {
   permissionState: PushPermissionState;
   isRegistering: boolean;
   error: Error | null;
@@ -72,8 +75,22 @@ export function useRegisterPushSubscription(token: string): {
 
       // register()の解決は登録の受理を意味するのみで、activate済みを
       // 保証しない。activate前にpushManager.subscribe()を呼ぶと失敗する
-      // ため、activate済みのregistrationに解決するreadyを待つ
-      const registration = await navigator.serviceWorker.ready;
+      // ため、activate済みのregistrationに解決するreadyを待つ。
+      // readyが永久に解決しない環境（一部ブラウザ・拡張機能干渉等）で
+      // 処理が固まり続けないよう、タイムアウトで打ち切る
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () =>
+              reject(
+                new Error('Service Workerのactivateがタイムアウトしました'),
+              ),
+            swActivationTimeoutMs,
+          );
+        }),
+      ]).finally(() => clearTimeout(timeoutId));
 
       const applicationServerKey = urlBase64ToUint8Array(getVapidPublicKey());
       const subscription = await registration.pushManager.subscribe({
@@ -114,7 +131,7 @@ export function useRegisterPushSubscription(token: string): {
     } finally {
       setIsRegistering(false);
     }
-  }, [apiClient, token]);
+  }, [apiClient, token, swActivationTimeoutMs]);
 
   const requestPermission = useCallback(() => {
     if (permissionState === 'unsupported') {

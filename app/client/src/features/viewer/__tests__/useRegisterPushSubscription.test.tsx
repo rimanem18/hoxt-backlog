@@ -20,7 +20,8 @@ let mockFetch: MockFetch;
  * ブラウザのNotification/ServiceWorker/PushManager APIをテスト用に定義する
  *
  * `activationLifecycle: 'deferred'` は、activate前にsubscribe()を
- * 呼んでしまう回帰を検出するためのオプション
+ * 呼んでしまう回帰を検出するためのオプション。
+ * `'never'` は、readyが永久に未解決のままになるケース（タイムアウト検証用）
  */
 function setupSupportedBrowserApis(options: {
   permission: NotificationPermission;
@@ -31,7 +32,7 @@ function setupSupportedBrowserApis(options: {
       keys?: Record<string, string>;
     };
   }>;
-  activationLifecycle?: 'immediate' | 'deferred';
+  activationLifecycle?: 'immediate' | 'deferred' | 'never';
 }) {
   const mockRequestPermission = mock(() =>
     Promise.resolve(options.requestPermissionResult ?? options.permission),
@@ -84,10 +85,15 @@ function setupSupportedBrowserApis(options: {
     ),
   );
 
+  const neverResolvingReady = new Promise<never>(() => {});
+
   Object.defineProperty(navigator, 'serviceWorker', {
     value: {
       register: mockRegister,
-      ready: Promise.resolve(activatedRegistration),
+      ready:
+        options.activationLifecycle === 'never'
+          ? neverResolvingReady
+          : Promise.resolve(activatedRegistration),
     },
     configurable: true,
   });
@@ -117,7 +123,7 @@ afterEach(() => {
   mock.clearAllMocks();
 });
 
-function renderUseRegisterPushSubscription() {
+function renderUseRegisterPushSubscription(swActivationTimeoutMs?: number) {
   const mockClient = createApiClient('http://localhost:3001/api', undefined, {
     fetch: mockFetch as unknown as typeof fetch,
   });
@@ -126,9 +132,10 @@ function renderUseRegisterPushSubscription() {
     <ApiClientProvider client={mockClient}>{children}</ApiClientProvider>
   );
 
-  return renderHook(() => useRegisterPushSubscription('test-token-abc'), {
-    wrapper,
-  });
+  return renderHook(
+    () => useRegisterPushSubscription('test-token-abc', swActivationTimeoutMs),
+    { wrapper },
+  );
 }
 
 describe('useRegisterPushSubscription', () => {
@@ -264,6 +271,26 @@ describe('useRegisterPushSubscription', () => {
     expect(mockSubscribeBeforeActivation).not.toHaveBeenCalled();
     expect(mockSubscribe).toHaveBeenCalled();
     await waitFor(() => expect(result.current.error).toBeNull());
+  });
+
+  test('Service Workerのactivateが指定時間内に完了しない場合、タイムアウトしてエラー状態になる', async () => {
+    // Given: register()は成功するが、readyが永久に未解決の環境
+    const { mockSubscribe } = setupSupportedBrowserApis({
+      permission: 'default',
+      requestPermissionResult: 'granted',
+      activationLifecycle: 'never',
+    });
+
+    const { result } = renderUseRegisterPushSubscription(10);
+
+    // When: 通知許可をリクエスト
+    result.current.requestPermission();
+
+    // Then: タイムアウト後にエラー状態になり、購読登録APIは呼ばれない
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.current.isRegistering).toBe(false);
   });
 
   test('拒否された場合は購読登録APIが呼ばれずpermissionStateがdeniedになる', async () => {
