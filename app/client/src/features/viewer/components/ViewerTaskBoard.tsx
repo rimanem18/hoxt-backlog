@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { createApiClient } from '@/lib/api';
 import { ApiClientProvider } from '@/lib/apiClientContext';
 import { getApiBaseUrl } from '@/lib/env';
+import { AsyncStateMessage } from '@/shared/components/AsyncStateMessage';
 import { FormAlert } from '@/shared/components/FormAlert';
 import TaskSummary from '@/shared/components/TaskSummary';
 import { formatJapaneseDate } from '../lib/formatJapaneseDate';
@@ -95,28 +96,19 @@ export function ViewerTaskBoardContent(
   const { data, isLoading, error } = useViewerAccessibleProjects();
 
   if (isLoading) {
-    return (
-      <div aria-live="polite">
-        <span className="text-sm text-gray-500">読み込み中...</span>
-      </div>
-    );
+    return <AsyncStateMessage variant="info" message="読み込み中..." />;
   }
 
   if (error) {
-    return (
-      <div aria-live="assertive">
-        <span className="text-sm text-red-700">{error.message}</span>
-      </div>
-    );
+    return <AsyncStateMessage variant="error" message={error.message} />;
   }
 
   if (!data) {
     return (
-      <div aria-live="polite">
-        <span className="text-sm text-gray-500">
-          閲覧できるprojectがありません
-        </span>
-      </div>
+      <AsyncStateMessage
+        variant="info"
+        message="閲覧できるprojectがありません"
+      />
     );
   }
 
@@ -135,11 +127,10 @@ export function ViewerTaskBoardContent(
       <PushNotificationPermission token={props.token} />
 
       {projects.length === 0 && (
-        <div aria-live="polite">
-          <span className="text-sm text-gray-500">
-            閲覧できるprojectがありません
-          </span>
-        </div>
+        <AsyncStateMessage
+          variant="info"
+          message="閲覧できるprojectがありません"
+        />
       )}
 
       {projects.map((project: ViewerAccessibleProject) => (

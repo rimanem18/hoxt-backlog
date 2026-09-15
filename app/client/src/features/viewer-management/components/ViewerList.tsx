@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AsyncStateMessage } from '@/shared/components/AsyncStateMessage';
 import { FormAlert } from '@/shared/components/FormAlert';
 import { useViewerManagementServices } from '../lib/ViewerManagementServicesContext';
 
@@ -37,28 +38,16 @@ function ViewerList(props: ViewerListProps): React.ReactNode {
   const [revokeError, setRevokeError] = useState('');
 
   if (isLoading) {
-    return (
-      <div aria-live="polite">
-        <span className="text-sm text-gray-500">読み込み中...</span>
-      </div>
-    );
+    return <AsyncStateMessage variant="info" message="読み込み中..." />;
   }
 
   if (error) {
-    return (
-      <div aria-live="assertive">
-        <span className="text-sm text-red-700">エラーが発生しました</span>
-      </div>
-    );
+    return <AsyncStateMessage variant="error" message="エラーが発生しました" />;
   }
 
   if (!viewers || viewers.length === 0) {
     return (
-      <div aria-live="polite">
-        <span className="text-sm text-gray-500">
-          招待済みの閲覧者はいません
-        </span>
-      </div>
+      <AsyncStateMessage variant="info" message="招待済みの閲覧者はいません" />
     );
   }
 
