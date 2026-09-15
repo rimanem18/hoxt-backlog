@@ -1,13 +1,6 @@
-import {
-  type Task,
-  type TaskStatus,
-  taskPriorityLabels,
-  taskStatusLabels,
-} from '@hoxt-backlog/shared-schemas/tasks';
-import React, { useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
+import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
+import React from 'react';
+import TaskSummary from '@/shared/components/TaskSummary';
 
 /**
  * TaskItemコンポーネント
@@ -29,34 +22,7 @@ interface TaskItemProps {
   onStatusChange: (id: string, status: TaskStatus) => void;
 }
 
-/** 優先度に応じたテキストカラーとスタイルのマップ */
-const priorityColorMap = {
-  high: 'text-accent font-bold',
-  medium: 'text-gray-700',
-  low: 'text-gray-400',
-} as const;
-
-/** ステータスに応じたバッジスタイルのマップ */
-const statusBadgeMap = {
-  not_started: 'bg-gray-200 text-gray-700',
-  in_progress: 'bg-blue-200 text-blue-700',
-  in_review: 'bg-yellow-200 text-yellow-700',
-  completed: 'bg-green-200 text-green-700',
-} as const;
-
 function TaskItem(props: TaskItemProps): React.ReactNode {
-  // 優先度色をメモ化（無駄な再計算を防止）
-  const priorityColor = useMemo(
-    () => priorityColorMap[props.task.priority] || 'text-gray-700',
-    [props.task.priority],
-  );
-
-  // ステータスバッジスタイルをメモ化
-  const statusBadge = useMemo(
-    () => statusBadgeMap[props.task.status] || 'bg-gray-200 text-gray-700',
-    [props.task.status],
-  );
-
   /**
    * ステータス変更ハンドラ
    * 同じ値の場合は親コンポーネントへ通知しない（不要なAPI呼び出しを回避）
@@ -71,45 +37,12 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
   return (
     <div className="border-l-4 border-primary bg-white p-4 sm:p-5 md:p-6 hover:bg-gray-50 transition-colors">
       <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
-        <div className="flex-1 min-w-0 w-full">
-          {/* タスクタイトル。長い場合は省略記号で表示 */}
-          <h3 className="text-base sm:text-lg font-semibold truncate">
-            {props.task.title}
-          </h3>
-
-          {/* Markdown形式の説明。null/空文字列時は非表示、2行制限で表示 */}
-          {props.task.description && props.task.description.trim() !== '' && (
-            <div
-              className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2"
-              style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeSanitize]}
-              >
-                {props.task.description}
-              </ReactMarkdown>
-            </div>
-          )}
-
-          {/* 優先度バッジとステータスバッジ */}
-          <div className="flex items-center gap-2 mt-2 sm:mt-3 flex-wrap">
-            <span className={`text-xs sm:text-sm ${priorityColor}`}>
-              {taskPriorityLabels[props.task.priority]}
-            </span>
-
-            <span
-              className={`inline-block px-2 py-1 text-xs font-medium rounded ${statusBadge}`}
-            >
-              {taskStatusLabels[props.task.status]}
-            </span>
-          </div>
-        </div>
+        <TaskSummary
+          title={props.task.title}
+          description={props.task.description}
+          priority={props.task.priority}
+          status={props.task.status}
+        />
 
         {/* ステータス変更、編集、削除の操作ボタン */}
         <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto">
