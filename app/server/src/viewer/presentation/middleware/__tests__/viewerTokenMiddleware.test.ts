@@ -46,7 +46,7 @@ function createStubTokenHasher(hashResult: string): TokenHasher {
 describe('viewerTokenMiddleware', () => {
   test('有効なトークンでcontextにviewerEmailがセットされ次へ進む', async () => {
     // Given: 有効期限内のトークンが見つかるリポジトリ
-    const expiresAt = new Date('2026-09-15T00:00:00.000Z');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const token = ViewerAccessTokenEntity.reconstruct({
       id: 'token-id-1',
       email: 'viewer@example.com',
