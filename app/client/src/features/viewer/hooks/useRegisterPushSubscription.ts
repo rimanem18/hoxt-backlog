@@ -14,6 +14,7 @@ import { getVapidPublicKey } from '@/lib/env';
 import { debugLog } from '@/lib/utils/logger';
 import { saveEndpointToken } from '../lib/subscriptionTokenStore';
 import { urlBase64ToUint8Array } from '../lib/vapidKey';
+import { waitForServiceWorkerReady } from '../lib/waitForServiceWorkerReady';
 
 /**
  * 通知許可状態
@@ -78,19 +79,10 @@ export function useRegisterPushSubscription(
       // ため、activate済みのregistrationに解決するreadyを待つ。
       // readyが永久に解決しない環境（一部ブラウザ・拡張機能干渉等）で
       // 処理が固まり続けないよう、タイムアウトで打ち切る
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const registration = await Promise.race([
+      const registration = await waitForServiceWorkerReady(
         navigator.serviceWorker.ready,
-        new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(
-            () =>
-              reject(
-                new Error('Service Workerのactivateがタイムアウトしました'),
-              ),
-            swActivationTimeoutMs,
-          );
-        }),
-      ]).finally(() => clearTimeout(timeoutId));
+        swActivationTimeoutMs,
+      );
 
       const applicationServerKey = urlBase64ToUint8Array(getVapidPublicKey());
       const subscription = await registration.pushManager.subscribe({
