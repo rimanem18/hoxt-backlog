@@ -1,5 +1,6 @@
 import type { Task, TaskStatus } from '@hoxt-backlog/shared-schemas/tasks';
 import React from 'react';
+import TaskRow from '@/shared/components/TaskRow';
 import TaskSummary from '@/shared/components/TaskSummary';
 
 /**
@@ -35,7 +36,7 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
   };
 
   return (
-    <div className="border-l-4 border-primary bg-white p-4 sm:p-5 md:p-6 hover:bg-gray-50 transition-colors">
+    <TaskRow interactive>
       <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
         <TaskSummary
           title={props.task.title}
@@ -80,7 +81,7 @@ function TaskItem(props: TaskItemProps): React.ReactNode {
           </button>
         </div>
       </div>
-    </div>
+    </TaskRow>
   );
 }
 

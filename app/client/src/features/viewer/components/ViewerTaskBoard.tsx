@@ -8,6 +8,8 @@ import { ApiClientProvider } from '@/lib/apiClientContext';
 import { getApiBaseUrl } from '@/lib/env';
 import { AsyncStateMessage } from '@/shared/components/AsyncStateMessage';
 import { FormAlert } from '@/shared/components/FormAlert';
+import TaskRow from '@/shared/components/TaskRow';
+import TaskSectionHeader from '@/shared/components/TaskSectionHeader';
 import TaskSummary from '@/shared/components/TaskSummary';
 import { formatJapaneseDate } from '../lib/formatJapaneseDate';
 import {
@@ -32,46 +34,43 @@ function ViewerProjectCard(props: ViewerProjectCardProps): React.ReactNode {
   const mutation = useUpdateNotificationSetting();
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-4">
-        <h2 className="text-lg sm:text-xl font-semibold">
-          {props.project.projectName}
-        </h2>
-
-        <NotificationToggle
-          checked={props.project.notificationEnabled}
-          onChange={(enabled) =>
-            mutation.mutate({ projectId: props.project.projectId, enabled })
-          }
-          disabled={mutation.isPending}
-          label={`${props.project.projectName} の通知`}
-        />
-      </div>
+    <div className="bg-white rounded-lg shadow">
+      <TaskSectionHeader
+        title={props.project.projectName}
+        actions={
+          <NotificationToggle
+            checked={props.project.notificationEnabled}
+            onChange={(enabled) =>
+              mutation.mutate({ projectId: props.project.projectId, enabled })
+            }
+            disabled={mutation.isPending}
+            label={`${props.project.projectName} の通知`}
+          />
+        }
+      >
+        {props.project.ownerName && (
+          <p className="text-sm text-gray-500 mt-1">
+            {props.project.ownerName}さんのタスク
+          </p>
+        )}
+      </TaskSectionHeader>
 
       {mutation.isError && mutation.error && (
-        <FormAlert
-          variant="error"
-          message={mutation.error.message}
-          className="mb-2 sm:mb-4"
-        />
-      )}
-
-      {props.project.ownerName && (
-        <p className="text-sm text-gray-500 -mt-2 mb-2 sm:mb-4">
-          {props.project.ownerName}さんのタスク
-        </p>
+        <div className="px-4 sm:px-6 pt-3 sm:pt-4">
+          <FormAlert variant="error" message={mutation.error.message} />
+        </div>
       )}
 
       <div className="flex flex-col divide-y divide-gray-200">
         {props.project.tasks.map((task) => (
-          <div key={task.id} className="py-3 sm:py-4 first:pt-0">
+          <TaskRow key={task.id}>
             <TaskSummary
               title={task.title}
               description={task.description}
               priority={task.priority}
               status={task.status}
             />
-          </div>
+          </TaskRow>
         ))}
       </div>
     </div>
