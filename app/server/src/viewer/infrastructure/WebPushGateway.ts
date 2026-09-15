@@ -13,6 +13,18 @@ import type { PushSubscriptionEntity } from '@/viewer/domain/PushSubscriptionEnt
 type SendNotificationFn = typeof webpush.sendNotification;
 
 /**
+ * web-pushの送信エラーがHTTPステータスコードを持つか判定する
+ */
+function hasStatusCode(err: unknown): err is { statusCode: number } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'statusCode' in err &&
+    typeof (err as { statusCode?: unknown }).statusCode === 'number'
+  );
+}
+
+/**
  * web-pushを使ったPush通知送信の実装
  *
  * 購読無効化（410/404）のみ呼び出し元へ`gone`として通知する。
@@ -73,7 +85,7 @@ export class WebPushGateway implements IPushNotificationGateway {
 
       return { outcome: 'sent' };
     } catch (err) {
-      const statusCode = (err as { statusCode?: number })?.statusCode;
+      const statusCode = hasStatusCode(err) ? err.statusCode : undefined;
 
       if (statusCode === 410 || statusCode === 404) {
         return { outcome: 'gone' };
