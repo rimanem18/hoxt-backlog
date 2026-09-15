@@ -16,7 +16,12 @@ import { useRegisterPushSubscription } from '../hooks/useRegisterPushSubscriptio
 type MockFetch = Mock<[input: Request], Promise<Response>>;
 let mockFetch: MockFetch;
 
-/** ブラウザのNotification/ServiceWorker/PushManager APIをテスト用に定義する */
+/**
+ * ブラウザのNotification/ServiceWorker/PushManager APIをテスト用に定義する
+ *
+ * `activationLifecycle: 'deferred'` は、activate前にsubscribe()を
+ * 呼んでしまう回帰を検出するためのオプション
+ */
 function setupSupportedBrowserApis(options: {
   permission: NotificationPermission;
   requestPermissionResult?: NotificationPermission;
@@ -26,6 +31,7 @@ function setupSupportedBrowserApis(options: {
       keys?: Record<string, string>;
     };
   }>;
+  activationLifecycle?: 'immediate' | 'deferred';
 }) {
   const mockRequestPermission = mock(() =>
     Promise.resolve(options.requestPermissionResult ?? options.permission),
@@ -55,16 +61,43 @@ function setupSupportedBrowserApis(options: {
         })),
   );
 
+  const activatedRegistration = {
+    active: { state: 'activated' },
+    pushManager: { subscribe: mockSubscribe },
+  };
+
+  // 実ブラウザでactivate前にsubscribe()を呼ぶとAbortErrorになる挙動を再現する
+  const mockSubscribeBeforeActivation = mock(() =>
+    Promise.reject(new Error('Registration failed - no active Service Worker')),
+  );
+
+  const isDeferred = options.activationLifecycle === 'deferred';
+
   const mockRegister = mock(() =>
-    Promise.resolve({ pushManager: { subscribe: mockSubscribe } }),
+    Promise.resolve(
+      isDeferred
+        ? {
+            active: null,
+            pushManager: { subscribe: mockSubscribeBeforeActivation },
+          }
+        : activatedRegistration,
+    ),
   );
 
   Object.defineProperty(navigator, 'serviceWorker', {
-    value: { register: mockRegister },
+    value: {
+      register: mockRegister,
+      ready: Promise.resolve(activatedRegistration),
+    },
     configurable: true,
   });
 
-  return { mockRequestPermission, mockRegister, mockSubscribe };
+  return {
+    mockRequestPermission,
+    mockRegister,
+    mockSubscribe,
+    mockSubscribeBeforeActivation,
+  };
 }
 
 function cleanupBrowserApis() {
@@ -194,6 +227,43 @@ describe('useRegisterPushSubscription', () => {
     expect(mockRegister).toHaveBeenCalledWith('/sw.js');
     expect(mockSubscribe).toHaveBeenCalled();
     expect(result.current.error).toBeNull();
+  });
+
+  test('Service Workerがactivateされる前に購読を要求しない', async () => {
+    // Given: register()直後はactivateされておらず、
+    // navigator.serviceWorker.readyの解決を待つ必要がある環境
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: '9f7f0e1a-1b2c-4d3e-8f5a-1234567890ab',
+            email: 'viewer@example.com',
+            endpoint: 'https://push.example.com/endpoint-1',
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    const { mockSubscribe, mockSubscribeBeforeActivation } =
+      setupSupportedBrowserApis({
+        permission: 'default',
+        requestPermissionResult: 'granted',
+        activationLifecycle: 'deferred',
+      });
+
+    const { result } = renderUseRegisterPushSubscription();
+
+    // When: 通知許可をリクエスト
+    result.current.requestPermission();
+
+    // Then: activate前のregistrationに対するsubscribeは呼ばれず、
+    // activate済みのregistrationに対するsubscribeのみが呼ばれ、
+    // 購読登録APIまで到達しエラーにならない
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    expect(mockSubscribeBeforeActivation).not.toHaveBeenCalled();
+    expect(mockSubscribe).toHaveBeenCalled();
+    await waitFor(() => expect(result.current.error).toBeNull());
   });
 
   test('拒否された場合は購読登録APIが呼ばれずpermissionStateがdeniedになる', async () => {

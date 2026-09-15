@@ -15,8 +15,10 @@ type SendNotificationFn = typeof webpush.sendNotification;
 /**
  * web-pushを使ったPush通知送信の実装
  *
- * 購読無効化（410/404）のみ呼び出し元へ`gone`として通知し、
- * それ以外の失敗はfail-openで`failed`として扱う（REQ-302: 再送信・削除は行わない）。
+ * 購読無効化（410/404）のみ呼び出し元へ`gone`として通知する。
+ * VAPID鍵の設定不備・署名不正（401/403）は`misconfigured`として
+ * ログに区別可能な形で記録する。それ以外の失敗はfail-openで
+ * `failed`として扱う（REQ-302: いずれも再送信・削除は行わない）。
  */
 export class WebPushGateway implements IPushNotificationGateway {
   private static instance: WebPushGateway | null = null;
@@ -75,6 +77,15 @@ export class WebPushGateway implements IPushNotificationGateway {
 
       if (statusCode === 410 || statusCode === 404) {
         return { outcome: 'gone' };
+      }
+
+      if (statusCode === 401 || statusCode === 403) {
+        console.error(
+          'VAPID鍵の設定不備によりWeb Push通知の送信に失敗しました',
+          err,
+        );
+
+        return { outcome: 'misconfigured' };
       }
 
       console.error('Web Push通知の送信に失敗しました', err);

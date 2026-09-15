@@ -68,7 +68,12 @@ export function useRegisterPushSubscription(token: string): {
     setError(null);
 
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.register('/sw.js');
+
+      // register()の解決は登録の受理を意味するのみで、activate済みを
+      // 保証しない。activate前にpushManager.subscribe()を呼ぶと失敗する
+      // ため、activate済みのregistrationに解決するreadyを待つ
+      const registration = await navigator.serviceWorker.ready;
 
       const applicationServerKey = urlBase64ToUint8Array(getVapidPublicKey());
       const subscription = await registration.pushManager.subscribe({
