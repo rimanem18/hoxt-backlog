@@ -5,6 +5,7 @@ import { TaskServicesProvider } from '@/features/todo/lib/TaskServicesContext';
 import ViewerInviteForm from '@/features/viewer-management/components/ViewerInviteForm';
 import ViewerList from '@/features/viewer-management/components/ViewerList';
 import { ViewerManagementServicesProvider } from '@/features/viewer-management/lib/ViewerManagementServicesContext';
+import TaskSectionHeader from '@/shared/components/TaskSectionHeader';
 
 /**
  * project詳細・編集画面（Server Component）
@@ -36,9 +37,7 @@ export default async function ProjectDetailPage(props: {
         }
         taskListSection={
           <div className="bg-white rounded-lg shadow">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">タスク一覧</h2>
-            </div>
+            <TaskSectionHeader title="タスク一覧" />
             <EditableTaskList projectId={projectId} />
           </div>
         }

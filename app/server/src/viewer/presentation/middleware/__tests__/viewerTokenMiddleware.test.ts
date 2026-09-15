@@ -43,10 +43,27 @@ function createStubTokenHasher(hashResult: string): TokenHasher {
   };
 }
 
+/**
+ * save/replaceが呼ばれない前提のテストで戻り値として使う未使用トークン
+ *
+ * このミドルウェアはfindByTokenHashのみを使用するため、
+ * save/replaceの戻り値の中身自体はテストの検証対象にならない
+ */
+function createUnusedToken(): ViewerAccessTokenEntity {
+  return ViewerAccessTokenEntity.reconstruct({
+    id: 'unused-token-id',
+    email: 'unused@example.com',
+    tokenHash: 'unused-hash',
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
 describe('viewerTokenMiddleware', () => {
   test('有効なトークンでcontextにviewerEmailがセットされ次へ進む', async () => {
     // Given: 有効期限内のトークンが見つかるリポジトリ
-    const expiresAt = new Date('2026-09-15T00:00:00.000Z');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const token = ViewerAccessTokenEntity.reconstruct({
       id: 'token-id-1',
       email: 'viewer@example.com',
@@ -84,9 +101,9 @@ describe('viewerTokenMiddleware', () => {
     const repository: IViewerAccessTokenRepository = {
       findByEmail: mock(() => Promise.resolve(null)),
       findByTokenHash: mock(() => Promise.resolve(null)),
-      save: mock(() => Promise.resolve({} as ViewerAccessTokenEntity)),
+      save: mock(() => Promise.resolve(createUnusedToken())),
       deleteById: mock(() => Promise.resolve()),
-      replace: mock(() => Promise.resolve({} as ViewerAccessTokenEntity)),
+      replace: mock(() => Promise.resolve(createUnusedToken())),
     };
     const app = buildApp(repository, createStubTokenHasher('irrelevant'));
 
@@ -103,9 +120,9 @@ describe('viewerTokenMiddleware', () => {
     const repository: IViewerAccessTokenRepository = {
       findByEmail: mock(() => Promise.resolve(null)),
       findByTokenHash: mock(() => Promise.resolve(null)),
-      save: mock(() => Promise.resolve({} as ViewerAccessTokenEntity)),
+      save: mock(() => Promise.resolve(createUnusedToken())),
       deleteById: mock(() => Promise.resolve()),
-      replace: mock(() => Promise.resolve({} as ViewerAccessTokenEntity)),
+      replace: mock(() => Promise.resolve(createUnusedToken())),
     };
     const app = buildApp(repository, createStubTokenHasher('hashed-value'));
 

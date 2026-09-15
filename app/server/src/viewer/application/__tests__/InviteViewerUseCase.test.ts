@@ -1,4 +1,4 @@
-import { describe, expect, mock, spyOn, test } from 'bun:test';
+import { describe, expect, type Mock, mock, spyOn, test } from 'bun:test';
 import { ProjectNotFoundError } from '@/project/domain/errors';
 import type { IProjectRepository } from '@/project/domain/IProjectRepository';
 import { ProjectEntity } from '@/project/domain/ProjectEntity';
@@ -19,6 +19,24 @@ import type { IViewerInvitationUnitOfWork } from '../IViewerInvitationUnitOfWork
 
 const testUserId = '123e4567-e89b-12d3-a456-426614174000';
 const testProjectId = '223e4567-e89b-12d3-a456-426614174001';
+
+type MockedProjectViewerRepository = {
+  [K in keyof IProjectViewerRepository]: Mock<IProjectViewerRepository[K]>;
+};
+type MockedViewerAccessTokenRepository = {
+  [K in keyof IViewerAccessTokenRepository]: Mock<
+    IViewerAccessTokenRepository[K]
+  >;
+};
+type MockedProjectRepository = {
+  [K in keyof IProjectRepository]: Mock<IProjectRepository[K]>;
+};
+type MockedUserRepository = {
+  [K in keyof IUserRepository]: Mock<IUserRepository[K]>;
+};
+type MockedInvitationMailGateway = {
+  [K in keyof IInvitationMailGateway]: Mock<IInvitationMailGateway[K]>;
+};
 
 function createMockUser(overrides?: Partial<User>): User {
   return {
@@ -43,7 +61,7 @@ function createMockProject(): ProjectEntity {
 }
 
 function createDeps() {
-  const projectViewerRepository: IProjectViewerRepository = {
+  const projectViewerRepository: MockedProjectViewerRepository = {
     findByProjectAndEmail: mock(() => Promise.resolve(null)),
     save: mock((entity) => Promise.resolve(entity)),
     deleteById: mock(() => Promise.resolve()),
@@ -55,7 +73,7 @@ function createDeps() {
     updateNotificationEnabled: mock(() => Promise.resolve(null)),
     findActiveByProjectAndEmail: mock(() => Promise.resolve(null)),
   };
-  const viewerAccessTokenRepository: IViewerAccessTokenRepository = {
+  const viewerAccessTokenRepository: MockedViewerAccessTokenRepository = {
     findByEmail: mock(() => Promise.resolve(null)),
     findByTokenHash: mock(() => Promise.resolve(null)),
     save: mock((entity) => Promise.resolve(entity)),
@@ -73,14 +91,14 @@ function createDeps() {
       ),
     ),
   };
-  const projectRepository: IProjectRepository = {
+  const projectRepository: MockedProjectRepository = {
     save: mock(() => Promise.reject(new Error('not used'))),
     findById: mock(() => Promise.resolve(createMockProject())),
     findByUserId: mock(() => Promise.resolve([])),
     update: mock(() => Promise.resolve(null)),
     findByIds: mock(() => Promise.resolve([])),
   };
-  const userRepository: IUserRepository = {
+  const userRepository: MockedUserRepository = {
     findByExternalId: mock(() => Promise.resolve(null)),
     findById: mock(() => Promise.resolve(createMockUser())),
     findByEmail: mock(() => Promise.resolve(null)),
@@ -89,7 +107,7 @@ function createDeps() {
     update: mock(() => Promise.reject(new Error('not used'))),
     delete: mock(() => Promise.resolve()),
   };
-  const mailGateway: IInvitationMailGateway = {
+  const mailGateway: MockedInvitationMailGateway = {
     send: mock(() => Promise.resolve()),
   };
   const unitOfWork: IViewerInvitationUnitOfWork = {
@@ -138,12 +156,11 @@ describe('InviteViewerUseCase', () => {
     expect(deps.projectViewerRepository.save).toHaveBeenCalledTimes(1);
     expect(deps.viewerAccessTokenRepository.save).toHaveBeenCalledTimes(1);
     expect(deps.mailGateway.send).toHaveBeenCalledTimes(1);
-    const [email, projectName, accessUrl] = (
-      deps.mailGateway.send as ReturnType<typeof mock>
-    ).mock.calls[0] as [string, string, string];
+    const [email, projectName, accessUrl] =
+      deps.mailGateway.send.mock.calls[0] ?? [];
     expect(email).toBe('viewer@example.com');
     expect(projectName).toBe('テストプロジェクト');
-    expect(accessUrl.startsWith('https://viewer.example.com/viewer/')).toBe(
+    expect(accessUrl?.startsWith('https://viewer.example.com/viewer/')).toBe(
       true,
     );
   });
@@ -167,7 +184,7 @@ describe('InviteViewerUseCase', () => {
   test('自己招待の場合InvalidViewerDataErrorになる', async () => {
     // Given: 作成者自身のメールアドレスを招待先に指定
     const deps = createDeps();
-    (deps.userRepository.findById as ReturnType<typeof mock>).mockResolvedValue(
+    deps.userRepository.findById.mockResolvedValue(
       createMockUser({ email: 'owner@example.com' }),
     );
     const useCase = createUseCase(deps);
@@ -186,9 +203,7 @@ describe('InviteViewerUseCase', () => {
   test('他ユーザーのプロジェクトへの招待はProjectNotFoundErrorになる', async () => {
     // Given: 所有権のないプロジェクトID（findByIdがnullを返す）
     const deps = createDeps();
-    (
-      deps.projectRepository.findById as ReturnType<typeof mock>
-    ).mockResolvedValue(null);
+    deps.projectRepository.findById.mockResolvedValue(null);
     const useCase = createUseCase(deps);
 
     // When & Then: 招待がProjectNotFoundErrorになる
@@ -206,9 +221,7 @@ describe('InviteViewerUseCase', () => {
     // Given: トークン保存が失敗するモック
     const deps = createDeps();
     const tokenSaveError = new Error('DB接続エラー');
-    (
-      deps.viewerAccessTokenRepository.save as ReturnType<typeof mock>
-    ).mockRejectedValue(tokenSaveError);
+    deps.viewerAccessTokenRepository.save.mockRejectedValue(tokenSaveError);
     const useCase = createUseCase(deps);
 
     // When & Then: 元のエラーがそのままスローされる
@@ -228,9 +241,7 @@ describe('InviteViewerUseCase', () => {
   test('メール送信失敗時に招待・トークンが補償操作で削除されInvitationMailDeliveryErrorになる', async () => {
     // Given: メール送信が失敗するモック
     const deps = createDeps();
-    (deps.mailGateway.send as ReturnType<typeof mock>).mockRejectedValue(
-      new Error('SES送信エラー'),
-    );
+    deps.mailGateway.send.mockRejectedValue(new Error('SES送信エラー'));
     const useCase = createUseCase(deps);
 
     // When & Then: 招待がInvitationMailDeliveryErrorになる
@@ -252,12 +263,10 @@ describe('InviteViewerUseCase', () => {
   test('補償操作自体が失敗した場合もInvitationMailDeliveryErrorになりエラーログが出力される', async () => {
     // Given: メール送信と補償操作の両方が失敗するモック
     const deps = createDeps();
-    (deps.mailGateway.send as ReturnType<typeof mock>).mockRejectedValue(
-      new Error('SES送信エラー'),
+    deps.mailGateway.send.mockRejectedValue(new Error('SES送信エラー'));
+    deps.projectViewerRepository.deleteById.mockRejectedValue(
+      new Error('DB接続エラー'),
     );
-    (
-      deps.projectViewerRepository.deleteById as ReturnType<typeof mock>
-    ).mockRejectedValue(new Error('DB接続エラー'));
     const consoleErrorSpy = spyOn(console, 'error').mockImplementation(
       () => undefined,
     );
@@ -285,9 +294,7 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'existing-hash',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(validToken);
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(validToken);
     const useCase = createUseCase(deps);
 
     // When: 別projectへ招待を実行
@@ -318,14 +325,10 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'existing-hash',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(existingViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(validToken);
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      existingViewer,
+    );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(validToken);
     const useCase = createUseCase(deps);
 
     // When: 同じproject×emailへ再招待
@@ -356,14 +359,12 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'expired-hash',
       expiresAt: new Date(Date.now() - 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(existingViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(expiredToken);
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      existingViewer,
+    );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(
+      expiredToken,
+    );
     const useCase = createUseCase(deps);
 
     // When: 同じproject×emailへ再招待
@@ -399,17 +400,13 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'expired-hash-value',
       expiresAt: new Date(Date.now() - 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(existingViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(expiredToken);
-    (deps.mailGateway.send as ReturnType<typeof mock>).mockRejectedValue(
-      new Error('SES送信エラー'),
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      existingViewer,
     );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(
+      expiredToken,
+    );
+    deps.mailGateway.send.mockRejectedValue(new Error('SES送信エラー'));
     const useCase = createUseCase(deps);
 
     // When & Then: 招待がInvitationMailDeliveryErrorになる
@@ -432,8 +429,8 @@ describe('InviteViewerUseCase', () => {
     );
   });
 
-  test('取り消し済み招待+有効トークンへの再招待で招待が復元されメールは送信されない', async () => {
-    // Given: revoked状態の招待と有効なトークンが存在する
+  test('取り消し済み招待+有効トークンへの再招待でも招待復元とトークン再発行の両方が行われメールが送信される', async () => {
+    // Given: revoked状態の招待と有効期限内のトークンが存在する
     const deps = createDeps();
     const revokedViewer = ProjectViewerEntity.create({
       projectId: testProjectId,
@@ -446,14 +443,10 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'existing-hash',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(revokedViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(validToken);
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      revokedViewer,
+    );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(validToken);
     const useCase = createUseCase(deps);
 
     // When: 同じproject×emailへ再招待
@@ -463,18 +456,28 @@ describe('InviteViewerUseCase', () => {
       email: 'viewer@example.com',
     });
 
-    // Then: 招待がactiveに復元され保存される。トークン・メールは変化しない
+    // Then: 招待がactiveに復元され、有効期限内でもトークンが再発行されメールが送信される
     expect(result.getStatus()).toBe('active');
     expect(deps.projectViewerRepository.save).toHaveBeenCalledTimes(1);
-    const savedEntity = (
-      deps.projectViewerRepository.save as ReturnType<typeof mock>
-    ).mock.calls[0]?.[0] as ProjectViewerEntity;
-    expect(savedEntity.getId()).toBe(revokedViewer.getId());
-    expect(savedEntity.getStatus()).toBe('active');
+    const savedEntity = deps.projectViewerRepository.save.mock.calls[0]?.[0];
+    expect(savedEntity?.getId()).toBe(revokedViewer.getId());
+    expect(savedEntity?.getStatus()).toBe('active');
     expect(deps.projectViewerRepository.restore).not.toHaveBeenCalled();
     expect(deps.viewerAccessTokenRepository.save).not.toHaveBeenCalled();
-    expect(deps.viewerAccessTokenRepository.replace).not.toHaveBeenCalled();
-    expect(deps.mailGateway.send).not.toHaveBeenCalled();
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledTimes(1);
+    expect(deps.viewerAccessTokenRepository.replace).toHaveBeenCalledWith(
+      validToken.getId(),
+      expect.any(String),
+      expect.any(Date),
+    );
+    expect(deps.mailGateway.send).toHaveBeenCalledTimes(1);
+    const [email, projectName, accessUrl] =
+      deps.mailGateway.send.mock.calls[0] ?? [];
+    expect(email).toBe('viewer@example.com');
+    expect(projectName).toBe('テストプロジェクト');
+    expect(accessUrl?.startsWith('https://viewer.example.com/viewer/')).toBe(
+      true,
+    );
   });
 
   test('取り消し済み招待+期限切れトークンへの再招待で招待復元とトークン再発行の両方が行われメールが送信される（複合）', async () => {
@@ -491,14 +494,12 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'expired-hash',
       expiresAt: new Date(Date.now() - 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(revokedViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(expiredToken);
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      revokedViewer,
+    );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(
+      expiredToken,
+    );
     const useCase = createUseCase(deps);
 
     // When: 同じproject×emailへ再招待
@@ -529,17 +530,13 @@ describe('InviteViewerUseCase', () => {
       tokenHash: 'expired-hash-value',
       expiresAt: new Date(Date.now() - 1000),
     });
-    (
-      deps.projectViewerRepository.findByProjectAndEmail as ReturnType<
-        typeof mock
-      >
-    ).mockResolvedValue(revokedViewer);
-    (
-      deps.viewerAccessTokenRepository.findByEmail as ReturnType<typeof mock>
-    ).mockResolvedValue(expiredToken);
-    (deps.mailGateway.send as ReturnType<typeof mock>).mockRejectedValue(
-      new Error('SES送信エラー'),
+    deps.projectViewerRepository.findByProjectAndEmail.mockResolvedValue(
+      revokedViewer,
     );
+    deps.viewerAccessTokenRepository.findByEmail.mockResolvedValue(
+      expiredToken,
+    );
+    deps.mailGateway.send.mockRejectedValue(new Error('SES送信エラー'));
     const useCase = createUseCase(deps);
 
     // When & Then: 招待がInvitationMailDeliveryErrorになる

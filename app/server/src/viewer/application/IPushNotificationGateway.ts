@@ -16,11 +16,13 @@ export interface PushNotificationPayload {
  * Push送信結果
  *
  * gone: 購読が無効化されている（410/404）。呼び出し元は該当購読を削除する
+ * misconfigured: VAPID鍵の設定不備・署名不正など（401/403）。410/404のgoneとは異なり購読自体は有効
  * failed: 上記以外の失敗。REQ-302に基づき再送信・削除のいずれも行わない
  */
 export type PushSendResult =
   | { outcome: 'sent' }
   | { outcome: 'gone' }
+  | { outcome: 'misconfigured' }
   | { outcome: 'failed' };
 
 /**

@@ -14,6 +14,7 @@ import { getVapidPublicKey } from '@/lib/env';
 import { debugLog } from '@/lib/utils/logger';
 import { saveEndpointToken } from '../lib/subscriptionTokenStore';
 import { urlBase64ToUint8Array } from '../lib/vapidKey';
+import { waitForServiceWorkerReady } from '../lib/waitForServiceWorkerReady';
 
 /**
  * 通知許可状態
@@ -48,7 +49,10 @@ function getInitialPermissionState(): PushPermissionState {
   return window.Notification.permission;
 }
 
-export function useRegisterPushSubscription(token: string): {
+export function useRegisterPushSubscription(
+  token: string,
+  swActivationTimeoutMs: number = 10_000,
+): {
   permissionState: PushPermissionState;
   isRegistering: boolean;
   error: Error | null;
@@ -68,7 +72,17 @@ export function useRegisterPushSubscription(token: string): {
     setError(null);
 
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.register('/sw.js');
+
+      // register()の解決は登録の受理を意味するのみで、activate済みを
+      // 保証しない。activate前にpushManager.subscribe()を呼ぶと失敗する
+      // ため、activate済みのregistrationに解決するreadyを待つ。
+      // readyが永久に解決しない環境（一部ブラウザ・拡張機能干渉等）で
+      // 処理が固まり続けないよう、タイムアウトで打ち切る
+      const registration = await waitForServiceWorkerReady(
+        navigator.serviceWorker.ready,
+        swActivationTimeoutMs,
+      );
 
       const applicationServerKey = urlBase64ToUint8Array(getVapidPublicKey());
       const subscription = await registration.pushManager.subscribe({
@@ -109,7 +123,7 @@ export function useRegisterPushSubscription(token: string): {
     } finally {
       setIsRegistering(false);
     }
-  }, [apiClient, token]);
+  }, [apiClient, token, swActivationTimeoutMs]);
 
   const requestPermission = useCallback(() => {
     if (permissionState === 'unsupported') {

@@ -13,10 +13,24 @@ import type { PushSubscriptionEntity } from '@/viewer/domain/PushSubscriptionEnt
 type SendNotificationFn = typeof webpush.sendNotification;
 
 /**
+ * web-pushの送信エラーがHTTPステータスコードを持つか判定する
+ */
+function hasStatusCode(err: unknown): err is { statusCode: number } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'statusCode' in err &&
+    typeof (err as { statusCode?: unknown }).statusCode === 'number'
+  );
+}
+
+/**
  * web-pushを使ったPush通知送信の実装
  *
- * 購読無効化（410/404）のみ呼び出し元へ`gone`として通知し、
- * それ以外の失敗はfail-openで`failed`として扱う（REQ-302: 再送信・削除は行わない）。
+ * 購読無効化（410/404）のみ呼び出し元へ`gone`として通知する。
+ * VAPID鍵の設定不備・署名不正（401/403）は`misconfigured`として
+ * ログに区別可能な形で記録する。それ以外の失敗はfail-openで
+ * `failed`として扱う（REQ-302: いずれも再送信・削除は行わない）。
  */
 export class WebPushGateway implements IPushNotificationGateway {
   private static instance: WebPushGateway | null = null;
@@ -71,10 +85,19 @@ export class WebPushGateway implements IPushNotificationGateway {
 
       return { outcome: 'sent' };
     } catch (err) {
-      const statusCode = (err as { statusCode?: number })?.statusCode;
+      const statusCode = hasStatusCode(err) ? err.statusCode : undefined;
 
       if (statusCode === 410 || statusCode === 404) {
         return { outcome: 'gone' };
+      }
+
+      if (statusCode === 401 || statusCode === 403) {
+        console.error(
+          'VAPID鍵の設定不備によりWeb Push通知の送信に失敗しました',
+          err,
+        );
+
+        return { outcome: 'misconfigured' };
       }
 
       console.error('Web Push通知の送信に失敗しました', err);
