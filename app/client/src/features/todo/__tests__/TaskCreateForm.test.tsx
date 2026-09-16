@@ -385,7 +385,7 @@ describe('TaskCreateForm', () => {
     const link = screen.getByRole('link', {
       name: 'プロジェクトを作成する',
     }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/dashboard/projects');
+    expect(link.getAttribute('href')).toBe('/dashboard');
   });
 
   test('projectが1件以上ある場合はプロジェクト作成画面への導線が表示されない', () => {

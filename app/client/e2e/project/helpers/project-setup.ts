@@ -6,6 +6,7 @@ import type {
   UpdateProjectInput,
 } from '@hoxt-backlog/shared-schemas/projects';
 import { setupAuthenticatedApiMocks } from '../../shared/helpers/auth-session';
+import { expectDashboard } from '../../shared/helpers/dashboard';
 import type { SetupTaskApiMocksOptions } from '../../todo/helpers/task-setup';
 import { buildMockProject, setupTaskApiMocks } from '../../todo/helpers/task-setup';
 
@@ -28,7 +29,7 @@ function projectNotFoundResponse() {
   };
 }
 
-export interface SetupProjectCrudApiMocksOptions {
+interface SetupProjectCrudApiMocksOptions {
   initialProjects?: Project[];
 }
 
@@ -36,7 +37,7 @@ export interface SetupProjectCrudApiMocksOptions {
  * `/api/projects` への一覧取得・詳細取得・作成・更新リクエストをインターセプトするモック。
  * 変更成功時はクロージャ内のプロジェクト配列へ反映し、以降のGETに反映する。
  */
-export async function setupProjectCrudApiMocks(
+async function setupProjectCrudApiMocks(
   page: Page,
   options?: SetupProjectCrudApiMocksOptions,
 ): Promise<void> {
@@ -120,7 +121,7 @@ export interface OpenProjectsPageOptions {
 }
 
 /**
- * 認証・プロジェクトAPIモックを登録した上でプロジェクト一覧画面を開き、表示完了を待つ。
+ * 認証・プロジェクトAPIモックを登録した上でプロジェクト一覧画面（/dashboard）を開き、表示完了を待つ。
  * 各テストのGiven部分（認証済みページ生成〜一覧画面表示待機）の重複を集約する。
  * 一覧項目のリンクは通常のaタグでフルページ遷移するため、遷移先の詳細画面が
  * 発行するタスクAPIも未モックのまま実ネットワークへ漏れないようここで登録しておく。
@@ -134,10 +135,8 @@ export async function openProjectsPage(
     initialProjects: options?.initialProjects,
   });
   await setupTaskApiMocks(page, { initialTasks: [] });
-  await page.goto('/dashboard/projects');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'プロジェクト' }),
-  ).toBeVisible({ timeout: 15000 });
+  await page.goto('/dashboard');
+  await expectDashboard(page);
 }
 
 /**
@@ -151,9 +150,22 @@ export function getProjectListLink(page: Page, name: string): Locator {
     .filter({ has: page.getByRole('heading', { level: 3, name }) });
 }
 
+/**
+ * サイドバー「最近のプロジェクト」内のプロジェクト名リンクを特定するロケータを返す。
+ * プロジェクト一覧本体にも同名リンクが表示されるため、
+ * h3見出しを内包しないリンク（サイドバー側）に絞り込む。
+ */
+export function getRecentProjectsLink(page: Page, name: string): Locator {
+  return page
+    .getByRole('link', { name })
+    .filter({ hasNot: page.getByRole('heading', { level: 3 }) });
+}
+
 export interface OpenProjectDetailPageOptions {
   initialProjects?: Project[];
   initialTasks?: SetupTaskApiMocksOptions['initialTasks'];
+  failCreate?: SetupTaskApiMocksOptions['failCreate'];
+  failUpdate?: SetupTaskApiMocksOptions['failUpdate'];
 }
 
 /**
@@ -170,7 +182,11 @@ export async function openProjectDetailPage(
   await setupProjectCrudApiMocks(page, {
     initialProjects: options?.initialProjects,
   });
-  await setupTaskApiMocks(page, { initialTasks: options?.initialTasks ?? [] });
+  await setupTaskApiMocks(page, {
+    initialTasks: options?.initialTasks ?? [],
+    failCreate: options?.failCreate,
+    failUpdate: options?.failUpdate,
+  });
   await page.goto(`/dashboard/projects/${projectId}`);
   // 成功・404いずれの場合も「読み込み中...」表示がすべて消えた時点で表示完了とみなす
   // （プロジェクト詳細・タスク一覧・最近のプロジェクトの各ローディング表示が対象）

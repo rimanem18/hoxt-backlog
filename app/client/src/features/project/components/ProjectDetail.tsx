@@ -65,7 +65,7 @@ function ProjectDetail(props: ProjectDetailProps): React.ReactNode {
   return (
     <div className="space-y-4">
       <a
-        href="/dashboard/projects"
+        href="/dashboard"
         className="block text-primary hover:underline text-sm"
       >
         プロジェクト一覧に戻る

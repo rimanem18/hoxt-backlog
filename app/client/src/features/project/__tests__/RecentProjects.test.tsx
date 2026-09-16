@@ -145,6 +145,6 @@ describe('RecentProjects', () => {
     // When & Then: 空状態メッセージとプロジェクト一覧への導線が表示される
     expect(screen.getByText(/まだプロジェクトがありません/)).toBeDefined();
     const link = screen.getByRole('link', { name: /プロジェクト/ });
-    expect(link.getAttribute('href')).toBe('/dashboard/projects');
+    expect(link.getAttribute('href')).toBe('/dashboard');
   });
 });

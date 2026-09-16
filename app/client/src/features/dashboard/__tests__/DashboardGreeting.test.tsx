@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 import { Provider as ReduxProvider } from 'react-redux';
 import authReducer from '@/features/auth/store/authSlice';
 import { DashboardGreeting } from '@/features/dashboard/components/DashboardGreeting';
-import { buildAuthState, buildUser } from './helpers/renderDashboardShell';
+import { buildAuthState, buildUser } from './helpers/authTestBuilders';
 
 describe('DashboardGreeting 挨拶メッセージ', () => {
   afterEach(() => {

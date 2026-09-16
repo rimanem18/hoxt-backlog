@@ -51,7 +51,7 @@ export interface DashboardServicesProviderProps {
  * ```tsx
  * // 本番環境（デフォルトの実装を使用）
  * <DashboardServicesProvider>
- *   <DashboardShell />
+ *   <DashboardSessionMonitor />
  * </DashboardServicesProvider>
  *
  * // テスト環境（mockを注入）
@@ -59,7 +59,7 @@ export interface DashboardServicesProviderProps {
  *   fetchUserStatus: mock(() => Promise.resolve(new Response(null, { status: 200 }))),
  * };
  * <DashboardServicesProvider services={mockServices}>
- *   <DashboardShell />
+ *   <DashboardSessionMonitor />
  * </DashboardServicesProvider>
  * ```
  */

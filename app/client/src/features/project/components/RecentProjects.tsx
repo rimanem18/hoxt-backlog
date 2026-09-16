@@ -58,7 +58,7 @@ function renderBody(
       >
         <p className="mb-4">まだプロジェクトがありません</p>
         <a
-          href="/dashboard/projects"
+          href="/dashboard"
           className="text-primary hover:underline font-semibold"
         >
           プロジェクト一覧へ

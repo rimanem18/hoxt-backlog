@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 import { Provider as ReduxProvider } from 'react-redux';
 import authReducer, { type AuthState } from '@/features/auth/store/authSlice';
 import { DashboardDebugInfo } from '../components/DashboardDebugInfo';
-import { buildAuthState, buildUser } from './helpers/renderDashboardShell';
+import { buildAuthState, buildUser } from './helpers/authTestBuilders';
 
 function renderDashboardDebugInfo(authState: AuthState) {
   const store = configureStore({

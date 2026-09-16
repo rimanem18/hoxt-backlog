@@ -70,11 +70,11 @@ describe('ProjectDetail', () => {
       error: null,
     }));
 
-    // When & Then: 一覧に戻るリンクが一覧ページ（/dashboard/projects）を指す
+    // When & Then: 一覧に戻るリンクが一覧ページ（/dashboard）を指す
     const backLink = screen.getByRole('link', {
       name: 'プロジェクト一覧に戻る',
     });
-    expect(backLink).toHaveAttribute('href', '/dashboard/projects');
+    expect(backLink).toHaveAttribute('href', '/dashboard');
   });
 
   test('編集ボタンが表示される', () => {

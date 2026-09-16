@@ -3,10 +3,10 @@ import { cleanup, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
   buildDashboardServices,
-  renderDashboardShell,
-} from '../helpers/renderDashboardShell';
+  renderDashboardSessionMonitor,
+} from '../helpers/renderDashboardSessionMonitor';
 
-describe('DashboardShell ネットワーク状態確認', () => {
+describe('DashboardSessionMonitor ネットワーク状態確認', () => {
   afterEach(() => {
     cleanup();
     mock.restore();
@@ -21,8 +21,8 @@ describe('DashboardShell ネットワーク状態確認', () => {
       ),
     });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ dashboardServices });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ dashboardServices });
 
     // Then: ネットワークエラーが表示されない
     await waitFor(() => {
@@ -39,8 +39,8 @@ describe('DashboardShell ネットワーク状態確認', () => {
       ),
     });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ dashboardServices });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ dashboardServices });
 
     // Then: ネットワークエラーが表示される
     await waitFor(() => {
@@ -57,8 +57,8 @@ describe('DashboardShell ネットワーク状態確認', () => {
       ),
     });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ dashboardServices });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ dashboardServices });
 
     // Then: ネットワークエラーが表示される
     await waitFor(() => {
