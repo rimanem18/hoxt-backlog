@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { buildMockProject, DEFAULT_PROJECT_ID } from '../todo/helpers/task-setup';
 import {
   getRecentProjectsLink,
@@ -98,5 +99,23 @@ test.describe('プロジェクト詳細・編集 E2Eテスト', () => {
       page.getByRole('heading', { level: 1, name: 'プロジェクトB' }),
     ).toBeVisible();
     await expect(page.getByLabel('優先度フィルタ')).toHaveValue('all');
+  });
+
+  test('「プロジェクト一覧に戻る」をクリックすると、フルリロードなしでプロジェクト一覧へ遷移する', async ({
+    createAuthenticatedPage,
+  }) => {
+    // Given: プロジェクト詳細画面を表示している
+    const page = await createAuthenticatedPage();
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
+    });
+
+    // When: 「プロジェクト一覧に戻る」リンクをクリックする
+    // Then: フルページ遷移が発生せずプロジェクト一覧へ遷移する
+    await expectClientSideNavigation(
+      page,
+      page.getByRole('link', { name: 'プロジェクト一覧に戻る' }),
+      /\/dashboard$/,
+    );
   });
 });

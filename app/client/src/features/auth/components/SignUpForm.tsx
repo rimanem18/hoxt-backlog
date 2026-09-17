@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { EmailField } from '@/features/auth/components/fields/EmailField';
 import { FormErrorAlert } from '@/features/auth/components/fields/FormErrorAlert';
@@ -69,9 +70,9 @@ export function SignUpForm(): React.ReactNode {
       </form>
 
       <div className="text-center text-sm">
-        <a href="/" className="block text-primary hover:underline">
+        <Link href="/" className="block text-primary hover:underline">
           ログインはこちら
-        </a>
+        </Link>
       </div>
     </div>
   );

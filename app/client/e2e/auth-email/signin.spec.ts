@@ -4,6 +4,7 @@ import {
   setupAuthenticatedApiMocks,
 } from '../shared/helpers/auth-session';
 import { expectDashboard } from '../shared/helpers/dashboard';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import {
   mockSupabaseSignInError,
   mockSupabaseSignInSuccess,
@@ -97,5 +98,35 @@ test.describe('メールパスワード認証 E2Eテスト - サインイン', (
     await expect(
       page.getByRole('alert').filter({ hasText: 'メールアドレスの確認' }),
     ).toContainText('メールアドレスの確認が必要です');
+  });
+
+  test('「アカウントをお持ちでない方はこちら」をクリックすると、フルリロードなしでサインアップ画面へ遷移する', async ({
+    page,
+  }) => {
+    // Given: ログイン画面を表示している
+    await page.goto('/');
+
+    // When: サインアップ導線リンクをクリックする
+    // Then: フルページ遷移が発生せずサインアップ画面へ遷移する
+    await expectClientSideNavigation(
+      page,
+      page.getByRole('link', { name: 'アカウントをお持ちでない方はこちら' }),
+      /\/signup$/,
+    );
+  });
+
+  test('「パスワードを忘れた方はこちら」をクリックすると、フルリロードなしでパスワード再設定要求画面へ遷移する', async ({
+    page,
+  }) => {
+    // Given: ログイン画面を表示している
+    await page.goto('/');
+
+    // When: パスワード再設定導線リンクをクリックする
+    // Then: フルページ遷移が発生せずパスワード再設定要求画面へ遷移する
+    await expectClientSideNavigation(
+      page,
+      page.getByRole('link', { name: 'パスワードを忘れた方はこちら' }),
+      /\/auth\/forgot-password$/,
+    );
   });
 });

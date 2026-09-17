@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cleanupTestState } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import {
   mockEmailSignupConflict,
   mockEmailSignupConflictForNormalizedEmail,
@@ -79,5 +80,20 @@ test.describe('メールパスワード認証 E2Eテスト - サインアップ�
     await expect(
       page.getByRole('alert').filter({ hasText: 'メールアドレスの形式' }),
     ).toHaveText('メールアドレスの形式が正しくありません');
+  });
+
+  test('「ログインはこちら」をクリックすると、フルリロードなしでログイン画面へ遷移する', async ({
+    page,
+  }) => {
+    // Given: サインアップ画面を表示している
+    await page.goto('/signup');
+
+    // When: ログイン導線リンクをクリックする
+    // Then: フルページ遷移が発生せずログイン画面へ遷移する
+    await expectClientSideNavigation(
+      page,
+      page.getByRole('link', { name: 'ログインはこちら' }),
+      /\/$/,
+    );
   });
 });

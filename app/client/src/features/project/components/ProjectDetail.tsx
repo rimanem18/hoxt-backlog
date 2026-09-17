@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useState } from 'react';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 import ProjectEditForm from './ProjectEditForm';
@@ -64,12 +65,12 @@ function ProjectDetail(props: ProjectDetailProps): React.ReactNode {
 
   return (
     <div className="space-y-4">
-      <a
+      <Link
         href="/dashboard"
         className="block text-primary hover:underline text-sm"
       >
         プロジェクト一覧に戻る
-      </a>
+      </Link>
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">

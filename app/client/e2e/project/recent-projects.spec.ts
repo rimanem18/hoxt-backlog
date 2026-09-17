@@ -1,11 +1,8 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { buildMockProject } from '../todo/helpers/task-setup';
-import {
-  expectClientSideNavigation,
-  getRecentProjectsLink,
-  openProjectsPage,
-} from './helpers/project-setup';
+import { getRecentProjectsLink, openProjectsPage } from './helpers/project-setup';
 
 test.describe('最近のプロジェクト導線 E2Eテスト', () => {
   test('最近のプロジェクトからクリックすると、フルリロードなしでプロジェクト詳細へ遷移する', async ({

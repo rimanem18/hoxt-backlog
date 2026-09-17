@@ -1,6 +1,7 @@
 'use client';
 
 import { createTaskBodySchema } from '@hoxt-backlog/shared-schemas/tasks';
+import Link from 'next/link';
 import React, { useCallback, useState } from 'react';
 import { useProjectServices } from '@/features/project/lib/ProjectServicesContext';
 import { useTaskServices } from '../lib/TaskServicesContext';
@@ -181,12 +182,12 @@ function TaskCreateForm(props: TaskCreateFormProps = {}): React.ReactNode {
 
       {/* プロジェクト作成画面への導線（projectが0件の場合） */}
       {!props.fixedProjectId && projects?.length === 0 && (
-        <a
+        <Link
           href="/dashboard"
           className="mt-2 sm:mt-3 p-3 text-sm text-center bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors block"
         >
           プロジェクトを作成する
-        </a>
+        </Link>
       )}
     </div>
   );

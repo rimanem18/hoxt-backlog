@@ -1,11 +1,8 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { buildMockProject, DEFAULT_PROJECT_ID } from '../todo/helpers/task-setup';
-import {
-  expectClientSideNavigation,
-  getProjectListLink,
-  openProjectsPage,
-} from './helpers/project-setup';
+import { getProjectListLink, openProjectsPage } from './helpers/project-setup';
 
 test.describe('プロジェクト作成・一覧 E2Eテスト', () => {
   test('新規プロジェクトを作成すると、一覧に作成したプロジェクトが表示される', async ({

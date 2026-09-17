@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { useForgotPasswordFormServices } from '@/features/auth/components/ForgotPasswordFormServicesContext';
 import { EmailField } from '@/features/auth/components/fields/EmailField';
@@ -58,9 +59,9 @@ export function ForgotPasswordForm(): React.ReactNode {
       </form>
 
       <div className="text-center text-sm">
-        <a href="/" className="block text-primary hover:underline">
+        <Link href="/" className="block text-primary hover:underline">
           ログインに戻る
-        </a>
+        </Link>
       </div>
     </div>
   );
