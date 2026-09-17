@@ -75,8 +75,8 @@ describe('ProjectDetailPage', () => {
 
     const taskCreateFormElement = findElementByType(tree, TaskCreateForm);
     expect(
-      (taskCreateFormElement?.props as { fixedProjectId: string } | undefined)
-        ?.fixedProjectId,
+      (taskCreateFormElement?.props as { projectId: string } | undefined)
+        ?.projectId,
     ).toBe(projectId);
 
     const viewerInviteFormElement = findElementByType(tree, ViewerInviteForm);

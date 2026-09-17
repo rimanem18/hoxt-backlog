@@ -33,7 +33,7 @@ export default async function ProjectDetailPage(props: {
         taskCreateSection={
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <h2 className="text-xl font-semibold mb-4">新しいタスク</h2>
-            <TaskCreateForm fixedProjectId={projectId} />
+            <TaskCreateForm projectId={projectId} />
           </div>
         }
         taskListSection={
