@@ -123,7 +123,7 @@ export interface OpenProjectsPageOptions {
 /**
  * 認証・プロジェクトAPIモックを登録した上でプロジェクト一覧画面（/dashboard）を開き、表示完了を待つ。
  * 各テストのGiven部分（認証済みページ生成〜一覧画面表示待機）の重複を集約する。
- * 一覧項目のリンクは通常のaタグでフルページ遷移するため、遷移先の詳細画面が
+ * 一覧項目のリンクはクライアントサイド遷移するため、遷移先の詳細画面が
  * 発行するタスクAPIも未モックのまま実ネットワークへ漏れないようここで登録しておく。
  */
 export async function openProjectsPage(
@@ -159,6 +159,38 @@ export function getRecentProjectsLink(page: Page, name: string): Locator {
   return page
     .getByRole('link', { name })
     .filter({ hasNot: page.getByRole('heading', { level: 3 }) });
+}
+
+interface NavigationMarkerWindow extends Window {
+  __e2eNavigationMarker?: boolean;
+}
+
+async function markNavigationState(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as NavigationMarkerWindow).__e2eNavigationMarker = true;
+  });
+}
+
+async function hasNavigationMarker(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () => (window as NavigationMarkerWindow).__e2eNavigationMarker === true,
+  );
+}
+
+/**
+ * リンククリック後、フルページ遷移が発生していないことを検証する。
+ * クリック前にwindowへマーカーを設定し、フルページ遷移でJS実行コンテキストが
+ * 破棄されればマーカーが消え、クライアントサイド遷移なら残存する性質を利用する。
+ */
+export async function expectClientSideNavigation(
+  page: Page,
+  link: Locator,
+  expectedUrl: RegExp,
+): Promise<void> {
+  await markNavigationState(page);
+  await link.click();
+  await expect(page).toHaveURL(expectedUrl);
+  expect(await hasNavigationMarker(page)).toBe(true);
 }
 
 export interface OpenProjectDetailPageOptions {

@@ -3,8 +3,7 @@ import type React from 'react';
 import ProjectDetail from '@/features/project/components/ProjectDetail';
 import EditableTaskList from '@/features/todo/components/EditableTaskList';
 import TaskCreateForm from '@/features/todo/components/TaskCreateForm';
-import TaskFilter from '@/features/todo/components/TaskFilter';
-import TaskSort from '@/features/todo/components/TaskSort';
+import TaskFilterPanel from '@/features/todo/components/TaskFilterPanel';
 import { TaskServicesProvider } from '@/features/todo/lib/TaskServicesContext';
 import ViewerInviteForm from '@/features/viewer-management/components/ViewerInviteForm';
 import ViewerList from '@/features/viewer-management/components/ViewerList';
@@ -93,16 +92,21 @@ describe('ProjectDetailPage', () => {
     ).toBe(projectId);
   });
 
-  test('タスク一覧セクションに絞り込み・並び替えUIが配置される', async () => {
+  test('タスク一覧セクションに絞り込み・並び替えUIが配置され、projectIdが伝播する', async () => {
     // Given: 動的ルートセグメントidを含むparams
     const params = Promise.resolve({ id: 'proj-123' });
+    const projectId = 'proj-123';
 
     // When: ProjectDetailPageをparams付きで呼び出す
     const tree = (await ProjectDetailPage({ params })) as React.ReactElement;
 
-    // Then: TaskServicesProvider配下にTaskFilter/TaskSortが配置される
+    // Then: TaskServicesProvider配下にTaskFilterPanelが配置され、projectIdが伝播する
     expect(findElementByType(tree, TaskServicesProvider)).toBeDefined();
-    expect(findElementByType(tree, TaskFilter)).toBeDefined();
-    expect(findElementByType(tree, TaskSort)).toBeDefined();
+    const taskFilterPanelElement = findElementByType(tree, TaskFilterPanel);
+    expect(taskFilterPanelElement).toBeDefined();
+    expect(
+      (taskFilterPanelElement?.props as { projectId: string } | undefined)
+        ?.projectId,
+    ).toBe(projectId);
   });
 });
