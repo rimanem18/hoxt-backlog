@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
-import { buildMockTask, openDashboardWithTasks } from './helpers/task-setup';
+import { openProjectDetailPage } from '../project/helpers/project-setup';
+import { buildMockProject, buildMockTask, DEFAULT_PROJECT_ID } from './helpers/task-setup';
 
 /**
  * 編集モーダルを開いてタイトルを入力する。
@@ -23,7 +24,8 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   }) => {
     // Given: 既存タスクが1件表示されている
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [buildMockTask({ title: '編集前タスク' })],
     });
 
@@ -43,7 +45,8 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   }) => {
     // Given: 既存タスクが1件表示されている
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [buildMockTask({ title: '既存タスク' })],
     });
 
@@ -61,9 +64,10 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   test('編集APIが失敗するとエラーメッセージが表示されモーダルが開いたまま', async ({
     createAuthenticatedPage,
   }) => {
-    // Given: タスク更新APIが失敗するダッシュボード
+    // Given: タスク更新APIが失敗するプロジェクト詳細画面
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [buildMockTask({ title: '更新に失敗するタスク' })],
       failUpdate: true,
     });
@@ -84,7 +88,8 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   }) => {
     // Given: 既存タスクが1件表示されている
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [buildMockTask({ title: '変更しないタスク' })],
     });
 
@@ -104,7 +109,8 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   }) => {
     // Given: 既存タスクが1件表示されている
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [buildMockTask({ title: '消えるタスク' })],
     });
 
@@ -123,7 +129,8 @@ test.describe('タスク編集・削除・ステータス変更 E2Eテスト', (
   }) => {
     // Given: 未着手ステータスのタスクが1件表示されている
     const page = await createAuthenticatedPage();
-    await openDashboardWithTasks(page, {
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
       initialTasks: [
         buildMockTask({ title: '進行させるタスク', status: 'not_started' }),
       ],

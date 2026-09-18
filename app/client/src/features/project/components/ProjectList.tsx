@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React from 'react';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
@@ -57,11 +58,11 @@ function ProjectList(): React.ReactNode {
           key={project.id}
           className="border-l-4 border-primary bg-white p-4 sm:p-5 md:p-6 hover:bg-gray-50 transition-colors"
         >
-          <a href={`/dashboard/projects/${project.id}`} className="block">
+          <Link href={`/dashboard/projects/${project.id}`} className="block">
             <h3 className="text-base sm:text-lg font-semibold truncate">
               {project.name}
             </h3>
-          </a>
+          </Link>
 
           {project.description && (
             <div className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">

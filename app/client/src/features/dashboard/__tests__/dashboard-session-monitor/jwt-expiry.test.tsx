@@ -5,10 +5,10 @@ import { getSupabaseStorageKey } from '@/shared/utils/authValidation';
 import {
   buildAuthState,
   buildUser,
-  renderDashboardShell,
-} from '../helpers/renderDashboardShell';
+  renderDashboardSessionMonitor,
+} from '../helpers/renderDashboardSessionMonitor';
 
-describe('DashboardShell JWT期限切れ監視', () => {
+describe('DashboardSessionMonitor JWT期限切れ監視', () => {
   afterEach(() => {
     localStorage.clear();
     cleanup();
@@ -25,8 +25,8 @@ describe('DashboardShell JWT期限切れ監視', () => {
     );
     const authState = buildAuthState({ user: buildUser() });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ authState });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ authState });
 
     // Then: 認証状態が失効する
     await waitFor(() => {
@@ -44,8 +44,8 @@ describe('DashboardShell JWT期限切れ監視', () => {
     );
     const authState = buildAuthState({ user: buildUser() });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ authState });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ authState });
 
     // Then: 認証状態が失効しない
     await waitFor(() => {
@@ -59,8 +59,8 @@ describe('DashboardShell JWT期限切れ監視', () => {
     localStorage.setItem(getSupabaseStorageKey(), 'not-json');
     const authState = buildAuthState({ user: buildUser() });
 
-    // When: DashboardShellをレンダリング
-    const { store } = renderDashboardShell({ authState });
+    // When: DashboardSessionMonitorをレンダリング
+    const { store } = renderDashboardSessionMonitor({ authState });
 
     // Then: 認証状態が失効する
     await waitFor(() => {

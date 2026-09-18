@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { FormErrorAlert } from '@/features/auth/components/fields/FormErrorAlert';
 import { PasswordField } from '@/features/auth/components/fields/PasswordField';
@@ -28,12 +29,12 @@ export function ResetPasswordForm(): React.ReactNode {
       <div className="w-full space-y-5">
         <FormErrorAlert message={errorMessage} />
         <div className="text-center text-sm">
-          <a
+          <Link
             href="/auth/forgot-password"
             className="text-primary hover:underline"
           >
             再度パスワードリセットを要求する
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -54,9 +55,9 @@ export function ResetPasswordForm(): React.ReactNode {
           パスワードを更新しました。新しいパスワードでログインしてください。
         </p>
         <div className="text-center text-sm">
-          <a href="/" className="block text-primary hover:underline">
+          <Link href="/" className="block text-primary hover:underline">
             ホームに戻る
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -79,12 +80,12 @@ export function ResetPasswordForm(): React.ReactNode {
         {status === 'error' &&
           errorMessage?.includes(INVALID_RESET_LINK_MESSAGE) && (
             <div className="text-center text-sm">
-              <a
+              <Link
                 href="/auth/forgot-password"
                 className="text-primary hover:underline"
               >
                 再度パスワードリセットを要求する
-              </a>
+              </Link>
             </div>
           )}
 

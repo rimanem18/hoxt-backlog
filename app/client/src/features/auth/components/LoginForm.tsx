@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 import { DemoLoginButton } from '@/features/auth/components/DemoLoginButton';
 import { EmailField } from '@/features/auth/components/fields/EmailField';
@@ -71,15 +72,15 @@ export function LoginForm(): React.ReactNode {
       </form>
 
       <div className="space-y-2 text-center text-sm">
-        <a
+        <Link
           href="/auth/forgot-password"
           className="block text-primary hover:underline"
         >
           パスワードを忘れた方はこちら
-        </a>
-        <a href="/signup" className="block text-gray-500 hover:underline">
+        </Link>
+        <Link href="/signup" className="block text-gray-500 hover:underline">
           アカウントをお持ちでない方はこちら
-        </a>
+        </Link>
       </div>
 
       <DemoLoginButton signIn={signIn} isLoading={isLoading} />

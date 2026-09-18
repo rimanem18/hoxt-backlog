@@ -1,6 +1,7 @@
 'use client';
 
 import type { Project } from '@hoxt-backlog/shared-schemas/projects';
+import Link from 'next/link';
 import React from 'react';
 import { useProjectServices } from '../lib/ProjectServicesContext';
 
@@ -57,12 +58,12 @@ function renderBody(
         aria-live="polite"
       >
         <p className="mb-4">まだプロジェクトがありません</p>
-        <a
-          href="/dashboard/projects"
+        <Link
+          href="/dashboard"
           className="text-primary hover:underline font-semibold"
         >
           プロジェクト一覧へ
-        </a>
+        </Link>
       </div>
     );
   }
@@ -73,13 +74,13 @@ function renderBody(
   return (
     <div className="divide-y divide-gray-200">
       {displayProjects.map((project) => (
-        <a
+        <Link
           key={project.id}
           href={`/dashboard/projects/${project.id}`}
           className="block py-3 text-base font-medium text-primary hover:underline hover:bg-gray-50 transition-colors truncate"
         >
           {project.name}
-        </a>
+        </Link>
       ))}
     </div>
   );

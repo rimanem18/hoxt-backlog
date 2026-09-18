@@ -10,7 +10,7 @@ import {
   type ProjectServices,
   ProjectServicesProvider,
 } from '@/features/project/lib/ProjectServicesContext';
-import { buildAuthState, buildUser } from './helpers/renderDashboardShell';
+import { buildAuthState, buildUser } from './helpers/authTestBuilders';
 
 function buildProjectServices(
   overrides: Partial<ProjectServices> = {},

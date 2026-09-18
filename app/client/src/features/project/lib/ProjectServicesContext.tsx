@@ -41,7 +41,7 @@ export interface ProjectServicesProviderProps {
  * ```tsx
  * // 本番環境（デフォルトのhooksを使用）
  * <ProjectServicesProvider>
- *   <TaskCreateForm />
+ *   <ProjectList />
  * </ProjectServicesProvider>
  *
  * // テスト環境（mockを注入）
@@ -49,7 +49,7 @@ export interface ProjectServicesProviderProps {
  *   useProjects: mock(() => ({ data: [], isLoading: false, error: null })),
  * };
  * <ProjectServicesProvider services={mockServices}>
- *   <TaskCreateForm />
+ *   <ProjectList />
  * </ProjectServicesProvider>
  * ```
  */

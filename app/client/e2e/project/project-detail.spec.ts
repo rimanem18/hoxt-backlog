@@ -1,7 +1,9 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { buildMockProject, DEFAULT_PROJECT_ID } from '../todo/helpers/task-setup';
 import {
+  getRecentProjectsLink,
   openProjectDetailPage,
   OTHER_USER_PROJECT_ID,
 } from './helpers/project-setup';
@@ -72,5 +74,48 @@ test.describe('プロジェクト詳細・編集 E2Eテスト', () => {
     // Then: 「プロジェクトが見つかりません」のみが表示され、タスク一覧のエラーは表示されない
     await expect(page.getByText('プロジェクトが見つかりません')).toBeVisible();
     await expect(page.getByText('エラーが発生しました')).toHaveCount(0);
+  });
+
+  test('別プロジェクトへ遷移すると絞り込み条件がリセットされる', async ({
+    createAuthenticatedPage,
+  }) => {
+    // Given: プロジェクトA詳細画面で優先度フィルタを「高」に設定している
+    const page = await createAuthenticatedPage();
+    const projectB = buildMockProject({
+      id: '55555555-5555-4555-8555-555555555555',
+      name: 'プロジェクトB',
+    });
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject({ name: 'プロジェクトA' }), projectB],
+    });
+    await page.getByLabel('優先度フィルタ').selectOption('high');
+    await expect(page.getByLabel('優先度フィルタ')).toHaveValue('high');
+
+    // When: サイドバーの「最近のプロジェクト」からプロジェクトBへ遷移する
+    await getRecentProjectsLink(page, 'プロジェクトB').click();
+
+    // Then: プロジェクトB詳細画面に遷移し、優先度フィルタが初期状態に戻る
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'プロジェクトB' }),
+    ).toBeVisible();
+    await expect(page.getByLabel('優先度フィルタ')).toHaveValue('all');
+  });
+
+  test('「プロジェクト一覧に戻る」をクリックすると、フルリロードなしでプロジェクト一覧へ遷移する', async ({
+    createAuthenticatedPage,
+  }) => {
+    // Given: プロジェクト詳細画面を表示している
+    const page = await createAuthenticatedPage();
+    await openProjectDetailPage(page, DEFAULT_PROJECT_ID, {
+      initialProjects: [buildMockProject()],
+    });
+
+    // When: 「プロジェクト一覧に戻る」リンクをクリックする
+    // Then: フルページ遷移が発生せずプロジェクト一覧へ遷移する
+    await expectClientSideNavigation(
+      page,
+      page.getByRole('link', { name: 'プロジェクト一覧に戻る' }),
+      /\/dashboard$/,
+    );
   });
 });

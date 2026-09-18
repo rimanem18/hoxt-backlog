@@ -31,6 +31,7 @@ describe('Provider', () => {
   let mockLogout: Mock<[], { type: string }>;
   let mockUnsubscribeTokenRefresh: Mock<[], void>;
   let mockStartTokenRefreshSync: Mock<[], () => void>;
+  let mockGetPathname: Mock<[], string>;
   let registeredCallback:
     | ((error: { status: number; message?: string }) => void)
     | null = null;
@@ -55,6 +56,7 @@ describe('Provider', () => {
     mockLogout = mock(() => ({ type: 'auth/logout' }));
     mockUnsubscribeTokenRefresh = mock(() => {});
     mockStartTokenRefreshSync = mock(() => mockUnsubscribeTokenRefresh);
+    mockGetPathname = mock(() => '/');
 
     // モックサービスを作成
     mockServices = {
@@ -69,6 +71,7 @@ describe('Provider', () => {
       handleExpiredToken: mockHandleExpiredToken,
       logout: mockLogout,
       startTokenRefreshSync: mockStartTokenRefreshSync,
+      getPathname: mockGetPathname,
     };
   });
 
@@ -198,8 +201,9 @@ describe('Provider', () => {
     });
   });
 
-  test('認証情報が expired の場合、handleExpiredToken が dispatch される', () => {
-    // Given: 認証情報が expired を返すモック
+  test('viewer 以外のルートで認証情報が expired の場合、handleExpiredToken が dispatch される', () => {
+    // Given: viewer 以外のルートで、認証情報が expired を返すモック
+    mockGetPathname.mockImplementation(() => '/dashboard');
     mockValidateStoredAuth.mockImplementation(() => ({
       isValid: false,
       reason: 'expired',
@@ -217,6 +221,33 @@ describe('Provider', () => {
     expect(mockHandleExpiredToken).toHaveBeenCalled();
     expect(mockDispatch).toHaveBeenCalledWith({
       type: 'auth/handleExpiredToken',
+    });
+  });
+
+  test('viewer ルートで認証情報が expired の場合、handleExpiredToken は dispatch されない', () => {
+    // Given: viewer ルートで、認証情報が expired を返すモック
+    mockGetPathname.mockImplementation(() => '/viewer/test-token');
+    mockValidateStoredAuth.mockImplementation(() => ({
+      isValid: false,
+      reason: 'expired',
+    }));
+
+    // When: Provider をレンダリング
+    render(
+      <Provider services={mockServices}>
+        <div>Test</div>
+      </Provider>,
+    );
+
+    // Then: handleExpiredToken は dispatch されず、finishAuthRestore が dispatch される
+    expect(mockValidateStoredAuth).toHaveBeenCalled();
+    expect(mockHandleExpiredToken).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalledWith({
+      type: 'auth/handleExpiredToken',
+    });
+    expect(mockFinishAuthRestore).toHaveBeenCalled();
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'auth/finishAuthRestore',
     });
   });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConfirmPageServices } from '@/app/auth/confirm/ConfirmPageServicesContext';
 
@@ -43,9 +44,9 @@ export default function EmailConfirmPage(): React.ReactNode {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center space-y-4">
           <p className="text-gray-700">メールアドレスの確認が完了しました</p>
-          <a href="/" className="block text-primary hover:underline">
+          <Link href="/" className="block text-primary hover:underline">
             ホームへ
-          </a>
+          </Link>
         </div>
       </div>
     );

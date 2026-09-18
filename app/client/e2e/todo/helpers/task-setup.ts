@@ -5,8 +5,6 @@ import type {
   Task,
   UpdateTaskBody,
 } from '@hoxt-backlog/shared-schemas/tasks';
-import { setupAuthenticatedApiMocks } from '../../shared/helpers/auth-session';
-import { expectDashboard } from '../../shared/helpers/dashboard';
 
 const DEFAULT_USER_ID = '22222222-2222-4222-8222-222222222222';
 const TASK_ID_PATH = /^\/api\/tasks\/([^/]+)(?:\/status)?$/;
@@ -25,28 +23,6 @@ export function buildMockProject(overrides?: Partial<Project>): Project {
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
-}
-
-/**
- * `/api/projects` への一覧取得リクエストをインターセプトするモック。
- * task作成・編集フォームのproject選択セレクトが選択肢を表示できるようにする。
- */
-export async function setupProjectApiMocks(
-  page: Page,
-  projects: Project[] = [buildMockProject()],
-): Promise<void> {
-  await page.route('**/api/projects**', async (route) => {
-    if (route.request().method() !== 'GET') {
-      await route.continue();
-      return;
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: projects }),
-    });
-  });
 }
 
 /**
@@ -73,7 +49,6 @@ export interface SetupTaskApiMocksOptions {
   initialTasks?: Task[];
   failCreate?: boolean;
   failUpdate?: boolean;
-  projects?: Project[];
 }
 
 function notFoundResponse() {
@@ -221,19 +196,4 @@ export async function setupTaskApiMocks(
 
     await route.continue();
   });
-}
-
-/**
- * 認証・タスクAPIモックを登録した上でダッシュボードを開き、表示完了を待つ。
- * 各テストのGiven部分（認証済みページ生成〜ダッシュボード表示待機）の重複を集約する。
- */
-export async function openDashboardWithTasks(
-  page: Page,
-  options?: SetupTaskApiMocksOptions,
-): Promise<void> {
-  await setupAuthenticatedApiMocks(page);
-  await setupTaskApiMocks(page, options);
-  await setupProjectApiMocks(page, options?.projects);
-  await page.goto('/dashboard');
-  await expectDashboard(page);
 }

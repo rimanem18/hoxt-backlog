@@ -1,10 +1,8 @@
 import { expect } from '@playwright/test';
 import { test } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { buildMockProject, DEFAULT_PROJECT_ID } from '../todo/helpers/task-setup';
-import {
-  getProjectListLink,
-  openProjectsPage,
-} from './helpers/project-setup';
+import { getProjectListLink, openProjectsPage } from './helpers/project-setup';
 
 test.describe('プロジェクト作成・一覧 E2Eテスト', () => {
   test('新規プロジェクトを作成すると、一覧に作成したプロジェクトが表示される', async ({
@@ -27,7 +25,7 @@ test.describe('プロジェクト作成・一覧 E2Eテスト', () => {
     await expect(page.getByLabel('プロジェクト名')).toHaveValue('');
   });
 
-  test('プロジェクト一覧の項目をクリックすると、プロジェクト詳細画面へ遷移する', async ({
+  test('プロジェクト一覧の項目をクリックすると、フルリロードなしでプロジェクト詳細画面へ遷移する', async ({
     createAuthenticatedPage,
   }) => {
     // Given: サーバー側に既存プロジェクトが1件存在する
@@ -37,12 +35,14 @@ test.describe('プロジェクト作成・一覧 E2Eテスト', () => {
     });
 
     // When: プロジェクト一覧内のプロジェクト名リンクをクリックする
-    await getProjectListLink(page, '既存プロジェクトX').click();
-
-    // Then: プロジェクト詳細画面へ遷移し、詳細情報とタスク一覧が表示される
-    await expect(page).toHaveURL(
+    // Then: フルページ遷移が発生せずプロジェクト詳細画面へ遷移する
+    await expectClientSideNavigation(
+      page,
+      getProjectListLink(page, '既存プロジェクトX'),
       new RegExp(`/dashboard/projects/${DEFAULT_PROJECT_ID}$`),
     );
+
+    // Then: 詳細情報とタスク一覧が表示される
     await expect(
       page.getByRole('heading', { level: 1, name: '既存プロジェクトX' }),
     ).toBeVisible();

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cleanupTestState } from '../shared/helpers/auth-session';
+import { expectClientSideNavigation } from '../shared/helpers/navigation';
 import { mockPasswordResetRequestSuccess } from './helpers/mock-email-auth';
 
 test.describe('メールパスワード認証 E2Eテスト - パスワードリセット', () => {
@@ -24,7 +25,7 @@ test.describe('メールパスワード認証 E2Eテスト - パスワードリ�
     ).toBeVisible();
   });
 
-  test('無効なリセットリンクでアクセスすると、リンク無効メッセージが表示される', async ({
+  test('無効なリセットリンクでアクセスすると、リンク無効メッセージが表示され、再要求リンクがフルリロードなしで要求画面へ遷移する', async ({
     page,
   }) => {
     // Given & When: 期限切れリンクの error_code 付き URL に直接アクセス
@@ -37,9 +38,12 @@ test.describe('メールパスワード認証 E2Eテスト - パスワードリ�
       page.getByRole('alert').filter({ hasText: 'リンクが無効' }),
     ).toContainText('リンクが無効か期限切れです');
 
-    // And: 再度パスワードリセットを要求するリンクが正しい遷移先を指す
-    await expect(
+    // And: 再度パスワードリセットを要求するリンクをクリックすると、
+    // フルページ遷移が発生せずパスワード再設定要求画面へ遷移する
+    await expectClientSideNavigation(
+      page,
       page.getByRole('link', { name: '再度パスワードリセットを要求する' }),
-    ).toHaveAttribute('href', '/auth/forgot-password');
+      /\/auth\/forgot-password$/,
+    );
   });
 });
