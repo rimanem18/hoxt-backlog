@@ -49,6 +49,8 @@ export interface ProviderServices {
   logout: typeof logout;
   /** トークン更新購読開始関数 */
   startTokenRefreshSync: () => () => void;
+  /** 現在のパスを取得する関数 */
+  getPathname: () => string;
 }
 
 type ProviderProps = {
@@ -76,6 +78,7 @@ export default function Provider({ children, services }: ProviderProps) {
         handleExpiredToken,
         logout,
         startTokenRefreshSync: startDefaultTokenRefreshSync,
+        getPathname: () => window.location.pathname,
       },
     [services],
   );
@@ -119,10 +122,17 @@ export default function Provider({ children, services }: ProviderProps) {
     } else if (validationResult.reason) {
       // 検証失敗：理由に応じて処理を分岐
       switch (validationResult.reason) {
-        case 'expired':
-          // 期限切れの場合は専用のハンドラを呼び出す
-          authServices.store.dispatch(authServices.handleExpiredToken());
+        case 'expired': {
+          // viewerはURLトークンで閲覧するためJWTセッションに依存せず、
+          // 他ユーザーの期限切れセッションが残っていても通知を出す必要がない
+          const pathname = authServices.getPathname();
+          if (pathname.startsWith('/viewer/')) {
+            authServices.store.dispatch(authServices.finishAuthRestore());
+          } else {
+            authServices.store.dispatch(authServices.handleExpiredToken());
+          }
           break;
+        }
         case 'missing':
           // 認証情報がない場合は復元完了をマーク
           authServices.store.dispatch(authServices.finishAuthRestore());
