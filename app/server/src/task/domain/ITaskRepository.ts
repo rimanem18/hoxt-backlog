@@ -81,8 +81,9 @@ export interface ITaskRepository {
    *
    * 所有者スコープなしの強い権限を持つため、呼び出し元は
    * GetViewerAccessibleProjectsUseCaseに限定すること。
+   * 返却順は作成日時の降順で固定する。
    * @param projectIds - プロジェクトIDの配列
-   * @returns タスクエンティティの配列
+   * @returns タスクエンティティの配列（作成日時降順）
    */
   findByProjectIds(projectIds: string[]): Promise<TaskEntity[]>;
 

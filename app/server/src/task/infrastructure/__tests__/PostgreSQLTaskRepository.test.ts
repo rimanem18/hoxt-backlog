@@ -576,6 +576,55 @@ describe('PostgreSQLTaskRepository', () => {
       // Then: 空配列が返る
       expect(result).toEqual([]);
     });
+
+    test('project1に紐づく複数タスクがcreated_at降順で返る', async () => {
+      // Given: beforeEachで作成済みの'project1のタスク'の作成日時を固定し、
+      // それより古い・新しい作成日時を明示した2件のタスクを追加投入する
+      // （物理挿入順は古い→新しいで、期待順序と逆にする）
+      const olderTaskId = 'cc1e4567-e89b-12d3-a456-426614174040';
+      const newerTaskId = 'dd1e4567-e89b-12d3-a456-426614174041';
+
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2026-01-03T00:00:00Z') })
+        .where(sql`${tasks.title} = 'project1のタスク'`);
+
+      await db.insert(tasks).values([
+        {
+          id: olderTaskId,
+          userId: testUserId1,
+          title: '古い日時のタスク',
+          priority: 'medium',
+          status: 'not_started',
+          projectId: findByProjectIdsProjectId1,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: newerTaskId,
+          userId: testUserId1,
+          title: '新しい日時のタスク',
+          priority: 'medium',
+          status: 'not_started',
+          projectId: findByProjectIdsProjectId1,
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ]);
+
+      // When: project1のタスクを取得
+      const result = await repository.findByProjectIds([
+        findByProjectIdsProjectId1,
+      ]);
+
+      // Then: 作成日時が最新の'project1のタスク'を先頭に、
+      // created_at降順で並ぶ
+      expect(result.map((t) => t.getTitle())).toEqual([
+        'project1のタスク',
+        '新しい日時のタスク',
+        '古い日時のタスク',
+      ]);
+    });
   });
 
   describe('updateStatus', () => {

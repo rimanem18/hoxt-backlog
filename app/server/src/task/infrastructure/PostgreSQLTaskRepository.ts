@@ -159,7 +159,8 @@ export class PostgreSQLTaskRepository implements ITaskRepository {
     const results = await this.db
       .select()
       .from(tasks)
-      .where(inArray(tasks.projectId, projectIds));
+      .where(inArray(tasks.projectId, projectIds))
+      .orderBy(desc(tasks.createdAt));
 
     return results.map((row: typeof tasks.$inferSelect) => this.toDomain(row));
   }
