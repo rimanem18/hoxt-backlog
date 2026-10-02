@@ -45,8 +45,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
     FunctionName = var.lambda_function_name
   }
 
+  # OK復帰通知は送らない（障害検知のみ通知し、復帰通知のノイズを避ける）
   alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
-  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
 
   tags = var.tags
 }
@@ -66,8 +66,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
     FunctionName = var.lambda_function_name
   }
 
+  # OK復帰通知は送らない（障害検知のみ通知し、復帰通知のノイズを避ける）
   alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
-  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
 
   tags = var.tags
 }
@@ -114,8 +114,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_4xx_errors" {
   treat_missing_data  = "notBreaching"
 
   # SNS通知設定（既存Topicを使用）
+  # OK復帰通知は送らない（障害検知のみ通知し、復帰通知のノイズを避ける）
   alarm_actions = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
-  ok_actions    = try([one(aws_sns_topic.lambda_alerts[*].arn)], [])
 
   dimensions = {
     Environment = var.environment
